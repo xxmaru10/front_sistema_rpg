@@ -4,6 +4,7 @@ import { MENTION_COLORS } from "@/lib/mentionUtils";
 
 interface MentionEditorProps {
     value: string;
+    style?: React.CSSProperties;
     onChange: (value: string) => void;
     placeholder?: string;
     className?: string;
