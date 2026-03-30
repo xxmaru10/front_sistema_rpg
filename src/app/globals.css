@@ -1,0 +1,1008 @@
+/* Global variables and theme settings */
+:root {
+  /* Cores: Overridden by theme presets */
+  --bg-color: #0d0907;
+  --surface-color: rgba(22, 16, 12, 0.97);
+  --border-color: rgba(var(--accent-rgb), 0.2);
+  --text-primary: #e8dcc8;
+  --text-secondary: #8a7a60;
+
+  --accent-color: #C9A84C;
+  --accent-glow: rgba(var(--accent-rgb), 0.3);
+  --accent-rgb: 201, 168, 76;
+
+  --secondary-color: #8B2500;
+  --secondary-glow: rgba(139, 37, 0, 0.3);
+  --secondary-rgb: 139, 37, 0;
+
+  --danger-color: #5d0000;
+
+  /* Tipografia — driven by theme */
+  --font-header: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-narrative: 'Cormorant Garamond', serif;
+  --font-main: 'Crimson Text', serif;
+
+  /* Sombras e Efeitos */
+  --shadow-arcane: 0 10px 40px rgba(0, 0, 0, 0.9);
+  --gold-gradient: linear-gradient(135deg, var(--accent-color) 0%, #F9E79F 50%, var(--accent-color) 100%);
+  --ornament-glow: 0 0 15px rgba(var(--accent-rgb), 0.15);
+
+  /* Theme Decorations */
+  --border-style: 1px solid;
+  --border-radius: 2px;
+  --theme-transition: 0.5s;
+  --theme-hover-scale: 1.02;
+  --theme-input-bg: rgba(var(--accent-rgb), 0.02);
+  --theme-modal-border: var(--accent-color);
+  --theme-header-shadow: 0 0 30px rgba(var(--accent-rgb), 0.2);
+  --theme-button-transform: uppercase;
+  --theme-scrollbar-thumb: rgba(var(--accent-rgb), 0.2);
+  --theme-scrollbar-track: rgba(0, 0, 0, 0.2);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(10, 10, 10, 0) 0%, var(--bg-color) 100%);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  transition: background-color 0.8s ease, color 0.5s ease;
+}
+
+.glass {
+  background: var(--surface-color);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: var(--border-style) var(--border-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-arcane);
+  transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+.solid {
+  background: #121216;
+  border: var(--border-style) rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-arcane);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, border-radius 0.5s ease;
+}
+
+.solid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+  opacity: 0.5;
+}
+
+.btn {
+  padding: 12px 32px;
+  border-radius: var(--border-radius);
+  border: var(--border-style) var(--accent-color);
+  background: transparent;
+  color: var(--accent-color);
+  font-weight: 500;
+  text-transform: var(--theme-button-transform);
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all var(--theme-transition) cubic-bezier(0.19, 1, 0.22, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-family: var(--font-header);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent-color);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.btn:hover {
+  color: #000;
+  box-shadow: 0 0 25px var(--accent-glow);
+  letter-spacing: 0.25em;
+}
+
+.btn:hover::after {
+  opacity: 1;
+}
+
+.btn-primary {
+  background: var(--gold-gradient);
+  color: #000;
+  border: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px var(--accent-glow);
+}
+
+.btn-secondary {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  opacity: 0.8;
+}
+
+.btn-secondary:hover {
+  opacity: 1;
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.container {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-header);
+  font-weight: 400;
+  text-transform: var(--theme-button-transform);
+  letter-spacing: 0.15em;
+  line-height: 1.1;
+  color: var(--accent-color);
+  transition: color 0.5s ease, text-shadow 0.5s ease;
+}
+
+h1 {
+  font-size: 4rem;
+  text-shadow: var(--theme-header-shadow);
+}
+
+h2 {
+  font-size: 2.5rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+.main-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  height: 70px;
+  background: rgba(8, 8, 8, 0.4);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.15);
+  display: flex;
+  align-items: center;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.header-content h1 {
+  font-size: 0.8rem;
+  letter-spacing: 0.5em;
+  color: var(--accent-color);
+  font-weight: 400;
+  text-transform: uppercase;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent-color);
+  text-decoration: none;
+  font-family: var(--font-header);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  transition: all 0.3s ease;
+  background: rgba(var(--accent-rgb), 0.05);
+}
+
+.logout-btn:hover {
+  background: var(--accent-color);
+  color: #000;
+  box-shadow: 0 0 20px var(--accent-glow);
+  border-color: var(--accent-color);
+}
+
+/* Home Page Styles */
+.home-container {
+  padding-top: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 60px;
+  text-align: center;
+}
+
+.hero-section h2 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.hero-section p {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.action-card {
+  align-items: center;
+  text-align: center;
+}
+
+.icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 0;
+  padding: 16px 20px;
+  color: white;
+  font-size: 1rem;
+  font-family: var(--font-main);
+  outline: none;
+  transition: all 0.3s;
+  color-scheme: dark;
+}
+
+.glass-input:focus {
+  border-color: var(--secondary-color);
+  background: rgba(0, 240, 255, 0.05);
+  box-shadow: 0 0 15px var(--secondary-glow);
+}
+
+/* Session Page Styles */
+.session-container {
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.session-nav {
+  display: flex;
+  padding: 8px;
+  gap: 8px;
+  justify-content: center;
+}
+
+.nav-item {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.nav-item.active {
+  background: var(--accent-color);
+  color: white;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.scene-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.zones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 60px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.log-view {
+  padding: 24px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.log-entries {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-entry {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+
+.log-time {
+  color: var(--text-secondary);
+}
+
+.log-type {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Estilos Compartilhados para Inputs Místicos (DiceRoller & CombatSelector) */
+.select-ritual,
+.input-ritual {
+  background: rgba(var(--accent-rgb), 0.02) !important;
+  border: 1px solid rgba(197, 160, 89, 0.1) !important;
+  font-family: var(--font-header) !important;
+  font-size: 0.85rem !important;
+  color: var(--accent-color) !important;
+  padding: 14px 20px !important;
+  transition: all 0.4s;
+  outline: none;
+  cursor: pointer;
+}
+
+.select-ritual:focus,
+.input-ritual:focus {
+  border-color: var(--accent-color) !important;
+  background: rgba(var(--accent-rgb), 0.08) !important;
+  box-shadow: 0 0 20px rgba(197, 160, 89, 0.1);
+}
+
+.select-ritual option {
+  background: #080808;
+  color: var(--accent-color);
+  padding: 8px;
+}
+
+/* Consequence Modal Styles - Moved from localized scope */
+.consequence-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  /* High z-index to ensure it is on top */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+/* Generic Modal Overlay - For Bestiary and other modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.modal-content {
+  background: var(--bg-color, #1a1a1a);
+  border: var(--border-style) var(--theme-modal-border);
+  padding: 20px;
+  max-width: 80vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-arcane);
+  position: relative;
+  border-radius: var(--border-radius);
+  overflow-y: auto;
+  transition: background 0.5s ease, border-color 0.5s ease;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--accent-color);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  color: #fff;
+  transform: scale(1.2);
+}
+
+.consequence-modal {
+  background: #1a1a1a;
+  border: 1px solid var(--accent-color);
+  padding: 20px;
+  width: 80%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  position: relative;
+  /* Ensure relative positioning for children */
+}
+
+/* Modal Inputs */
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-family: var(--font-header);
+  color: var(--accent-color);
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+}
+
+.modal-symbol {
+  font-size: 1.2rem;
+}
+
+.modal-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  padding: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-narrative);
+  font-size: 1rem;
+  width: 100%;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.modal-input:focus {
+  border-color: var(--accent-color);
+  background: rgba(var(--accent-rgb), 0.05);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.consequence-debuff-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.debuff-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.debuff-field.value-field {
+  flex: 0 0 80px;
+}
+
+.debuff-field label {
+  font-family: var(--font-header);
+  font-size: 0.65rem;
+  color: var(--accent-color);
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+}
+
+.debuff-skill-select,
+.debuff-number-input {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(197, 160, 89, 0.2);
+  padding: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  outline: none;
+  width: 100%;
+}
+
+.debuff-skill-select:focus,
+.debuff-number-input:focus {
+  border-color: var(--accent-color);
+}
+
+.debuff-value-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.debuff-minus {
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: var(--font-header);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.modal-btn.save {
+  background: rgba(var(--accent-rgb), 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.modal-btn.save:hover {
+  background: var(--accent-color);
+  color: #000;
+}
+
+.modal-btn.cancel {
+  background: rgba(255, 77, 77, 0.1);
+  border-color: rgba(255, 77, 77, 0.3);
+  color: #ff6666;
+}
+
+.modal-btn.cancel:hover {
+  background: rgba(255, 77, 77, 0.2);
+  border-color: #ff4d4d;
+}
+
+/* Modal Title & Badges (Shared Reuse) */
+.modal-title {
+  text-align: center;
+  color: var(--accent-color);
+  font-family: var(--font-header);
+  margin: 0;
+  font-size: 1rem;
+}
+
+.modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-option-btn {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+  font-family: var(--font-header);
+}
+
+.modal-option-btn:hover {
+  background: rgba(197, 160, 89, 0.1);
+  border-color: var(--accent-color);
+}
+
+.badge {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  min-width: 24px;
+  text-align: center;
+}
+
+.modal-close-btn {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.modal-close-btn:hover {
+  color: #fff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  :root {
+    --container-padding: 16px;
+  }
+
+  .container {
+    padding: 0 var(--container-padding);
+  }
+
+  h1 {
+    font-size: 2.2rem;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+  }
+
+  .main-header {
+    height: 60px;
+  }
+
+  .header-content h1 {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+  }
+
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 0.6rem;
+  }
+
+  .home-container {
+    padding-top: 40px;
+    gap: 30px;
+  }
+
+  .hero-section h2 {
+    font-size: 2rem;
+  }
+
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .session-nav {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .nav-item {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    flex: 1 1 calc(33.33% - 8px);
+    justify-content: center;
+    border-radius: 6px;
+  }
+
+  .modal-content {
+    max-width: 95vw;
+    padding: 15px;
+  }
+
+  .consequence-modal {
+    width: 90%;
+  }
+
+  .bestiary-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Arcane Scrollbar System */
+.scrollbar-arcane::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-arcane::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track, rgba(0, 0, 0, 0.2));
+}
+
+.scrollbar-arcane::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb, rgba(var(--accent-rgb), 0.2));
+  border-radius: 4px;
+}
+
+.scrollbar-arcane::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--accent-rgb), 0.4);
+}
+
+/* ─── Theme Transition: smooth switching ─── */
+*:not(script):not(style) {
+  transition-property: color, background-color, border-color, box-shadow, text-shadow;
+  transition-duration: 0.4s;
+  transition-timing-function: ease;
+}
+
+/* Tarot Card System - Global */
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+    z-index: 2;
+    max-width: 900px;
+    width: 90%;
+    margin-top: 20px;
+}
+
+.tarot-card {
+    background: #080808;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    position: relative;
+    height: auto;
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tarot-inner {
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    padding: 4px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.1);
+    margin-bottom: 24px;
+}
+
+.arcana-number, .arcana-name {
+    font-family: var(--font-header);
+    font-size: 0.65rem;
+    color: var(--accent-color);
+    opacity: 0.5;
+    letter-spacing: 0.2em;
+}
+
+.tarot-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 40px 40px;
+}
+
+.icon-wrapper {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 1px solid var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px;
+    color: var(--accent-color);
+    box-shadow: 0 0 25px rgba(var(--accent-rgb), 0.1);
+    background: rgba(var(--accent-rgb), 0.02);
+}
+
+.tarot-body h3.victorian-title {
+    font-family: var(--font-header);
+    font-size: 2.2rem;
+    font-weight: 400;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-bottom: 40px;
+    color: var(--accent-color);
+    text-shadow: 0 0 15px var(--accent-glow);
+}
+
+.input-group, .selection-area {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.mystic-input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    padding: 14px 20px;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    text-align: center;
+    font-size: 0.85rem;
+    transition: all 0.3s;
+    width: 100%;
+    outline: none;
+}
+
+.mystic-input:focus {
+    border-color: var(--accent-color);
+    background: rgba(var(--accent-rgb), 0.05);
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.1);
+}
+
+.mystic-btn {
+    background: transparent;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 14px 20px;
+    font-family: var(--font-header);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.4s;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    width: 100%;
+}
+
+.mystic-btn:hover:not(:disabled) {
+    background: var(--accent-color);
+    color: #000;
+    box-shadow: 0 0 30px var(--accent-glow);
+}
+
+.mystic-btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    border-color: rgba(var(--accent-rgb), 0.2);
+}
+
+/* Role Selector & Selects */
+.role-selector {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.role-option {
+    flex: 1;
+    cursor: pointer;
+}
+
+.role-option input { display: none; }
+
+.role-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.02);
+    font-family: var(--font-header);
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    transition: all 0.3s;
+}
+
+.role-option input:checked + .role-box {
+    border-color: var(--accent-color);
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--accent-color);
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.1);
+}
+
+.mystic-select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    color: var(--accent-color);
+    padding: 14px;
+    font-family: var(--font-header);
+    font-size: 0.8rem;
+    outline: none;
+    cursor: pointer;
+    text-align-last: center;
+}
+
+@media (max-width: 768px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    .tarot-card {
+        min-height: auto;
+    }
+    .tarot-body {
+        padding: 0 20px 30px;
+    }
+}

@@ -1,0 +1,51 @@
+
+.battlemap-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    background: #0d0907;
+    overflow: hidden;
+}
+
+.battlemap-canvas-area {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
+}
+
+.battlemap-transform-layer {
+    position: absolute;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.battlemap-background-img {
+    display: block;
+    user-select: none;
+    opacity: 0.8;
+}
+
+.battlemap-svg-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.battlemap-grid-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20000px;
+    height: 20000px;
+    background-image: 
+        linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px);
+    pointer-events: none;
+}

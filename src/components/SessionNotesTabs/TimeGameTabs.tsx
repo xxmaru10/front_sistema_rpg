@@ -1,0 +1,770 @@
+import { Target, History, Zap, Package, Plus, Check, Trash2, ChevronDown, ChevronUp, Calendar, CheckSquare, Square, CheckCircle, Circle, EyeOff, Eye, X, Users } from "lucide-react";
+import { renderMentions } from "@/lib/mentionUtils";
+import { MentionEditor } from "../MentionEditor";
+import { LinkedNotes } from "./LinkedNotes";
+import { createPortal } from "react-dom";
+
+import { useState } from "react";
+
+import { v4 as uuidv4 } from "uuid";
+
+interface TimeTabProps {
+    subTabTempo: string;
+    setSubTabTempo: (tab: any) => void;
+    state: any;
+    handlers: any;
+    userRole?: string;
+    mentionEntities: any[];
+    userId?: string;
+}
+
+
+
+export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole, mentionEntities, userId }: TimeTabProps) {
+
+    const {
+        showAddMission, setShowAddMission,
+        newMissionName, setNewMissionName,
+        newMissionDescription, setNewMissionDescription,
+        newMissionSubTasks, setNewMissionSubTasks,
+        newSubTaskInput, setNewSubTaskInput,
+        newMissionDay, setNewMissionDay,
+        newMissionMonth, setNewMissionMonth,
+        newMissionYear, setNewMissionYear,
+        handleCreateMission, handleUpdateMission, handleDeleteMission, handleToggleSubTask, handleAddSubTask,
+
+
+        showAddTimelineEvent, setShowAddTimelineEvent,
+        newTimelineName, setNewTimelineName,
+        newTimelineDescription, setNewTimelineDescription,
+        newTimelineDay, setNewTimelineDay,
+        newTimelineMonth, setNewTimelineMonth,
+        newTimelineYear, setNewTimelineYear,
+        timelineSortAsc, setTimelineSortAsc,
+        handleCreateTimelineEvent, handleDeleteTimelineEvent,
+        handleStartEditMission, handleCancelMissionEdit,
+        handleStartEditTimelineEvent, handleCancelTimelineEdit,
+        handleAddEntityNote, handleDeleteEntityNote
+    } = handlers;
+
+    const missions = state.missions || [];
+    const timeline = state.timeline || [];
+
+    // Combine missions and manual events for the timeline
+    const allEvents = [
+        ...timeline,
+        ...missions
+            .filter((m: any) => !m.hideFromTimeline)
+            .map((m: any) => ({
+                id: m.id,
+                name: m.name,
+                description: m.description,
+                day: m.day,
+                month: m.month,
+                year: m.year,
+                type: "MISSION",
+                createdAt: m.createdAt
+            }))
+    ];
+
+
+    const sortedEvents = [...allEvents].sort((a, b) => {
+        // Sort by year, then month, then day
+        const yearA = a.year ?? 0;
+        const yearB = b.year ?? 0;
+        if (yearA !== yearB) return timelineSortAsc ? yearA - yearB : yearB - yearA;
+
+        const monthA = a.month ?? 0;
+        const monthB = b.month ?? 0;
+        if (monthA !== monthB) return timelineSortAsc ? monthA - monthB : monthB - monthA;
+
+        const dayA = a.day ?? 0;
+        const dayB = b.day ?? 0;
+        if (dayA !== dayB) return timelineSortAsc ? dayA - dayB : dayB - dayA;
+
+        return timelineSortAsc ? 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() : 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return (
+        <div className="tab-content-combined">
+            <div className="sub-menu-bar">
+                <div className="tabs-and-actions">
+                    <div className="tab-group">
+                        {[
+                            { id: "Missões", icon: <Target size={16} /> },
+                            { id: "Linha do Tempo", icon: <History size={16} /> }
+                        ].map(sub => (
+                            <button key={sub.id} className={`sub-tab-btn ${subTabTempo === sub.id ? "active" : ""}`} onClick={() => setSubTabTempo(sub.id as any)}>
+                                {sub.icon}
+                                <span>{sub.id.toUpperCase()}</span>
+                            </button>
+                        ))}
+                    </div>
+                    {(subTabTempo === "Missões" || (subTabTempo === "Linha do Tempo" && userRole === "GM")) && (
+                        <button 
+                            className="action-btn-mini plus-btn" 
+                            title={`Adicionar ${subTabTempo === "Missões" ? "Missão" : "Evento"}`}
+                            onClick={() => subTabTempo === "Missões" ? setShowAddMission(true) : setShowAddTimelineEvent(true)}
+                        >
+                            <Plus size={16} />
+                        </button>
+                    )}
+                </div>
+            </div>
+            
+            <div className="sub-content-area scrollbar-arcane">
+                {subTabTempo === "Missões" && (
+                    <div className="missions-page">
+                        <div className="missions-lists">
+
+                            <div className="mission-section">
+                                <h4 className="section-label">MISSÕES ATIVAS</h4>
+                                <div className="missions-grid">
+                                    {missions.filter((m: any) => !m.completed).length === 0 ? (
+                                        <p className="empty-msg">Nenhuma missão ativa.</p>
+                                    ) : (
+                                        missions.filter((m: any) => !m.completed).map((mission: any) => (
+                                            <MissionCard key={mission.id} mission={mission} onToggleSubTask={handleToggleSubTask} onAddSubTask={handleAddSubTask} onUpdate={handleUpdateMission} onDelete={handleDeleteMission} onEdit={handleStartEditMission} userRole={userRole} mentionEntities={mentionEntities} onAddNote={handleAddEntityNote} onDeleteNote={handleDeleteEntityNote} userId={userId} />
+                                        ))
+                                    )}
+
+                                </div>
+                            </div>
+
+                            <div className="mission-section mt-6">
+                                <h4 className="section-label">MISSÕES CONCLUÍDAS</h4>
+                                <div className="missions-grid completed">
+                                    {missions.filter((m: any) => m.completed).length === 0 ? (
+                                        <p className="empty-msg">Nenhuma missão concluída.</p>
+                                    ) : (
+                                        missions.filter((m: any) => m.completed).map((mission: any) => (
+                                            <MissionCard key={mission.id} mission={mission} onToggleSubTask={handleToggleSubTask} onAddSubTask={handleAddSubTask} onUpdate={handleUpdateMission} onDelete={handleDeleteMission} onEdit={handleStartEditMission} userRole={userRole} mentionEntities={mentionEntities} onAddNote={handleAddEntityNote} onDeleteNote={handleDeleteEntityNote} userId={userId} />
+                                        ))
+                                    )}
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {subTabTempo === "Linha do Tempo" && (
+                    <div className="timeline-page">
+                        <div className="timeline-header-actions">
+                            <button 
+                                className="action-btn-mini sort-btn" 
+                                onClick={() => setTimelineSortAsc(!timelineSortAsc)}
+                            >
+                                {timelineSortAsc ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                <span>{timelineSortAsc ? "ANTIGOS PRIMEIRO" : "RECENTES PRIMEIRO"}</span>
+                            </button>
+                        </div>
+
+                        <div className="timeline-list">
+                            {sortedEvents.length === 0 ? (
+                                <p className="empty-msg">Nenhum evento registrado.</p>
+                            ) : (
+                                sortedEvents.map((event: any) => (
+                                    <div key={event.id} className={`timeline-item ${event.type === 'MISSION' ? 'mission-event' : ''}`}>
+                                        <div className="timeline-marker"></div>
+                                        <div className="timeline-content card-bg ornate-border">
+                                            <div className="timeline-date">
+                                                <Calendar size={12} />
+                                                <span>{event.day ? `${event.day}/${event.month}/` : ""}{event.year}</span>
+                                                {event.type === 'MISSION' && <span className="mission-tag">MISSÃO</span>}
+                                            </div>
+                                            <div className="timeline-title-row">
+                                                <h5 className="event-name">{event.name.toUpperCase()}</h5>
+                                                <div className="event-actions">
+                                                    {userRole === 'GM' && (
+                                                        <>
+                                                            {event.type === 'MISSION' ? (
+                                                                <button 
+                                                                    className="hide-timeline-btn" 
+                                                                    onClick={() => handleUpdateMission(event.id, { hideFromTimeline: true })}
+                                                                    title="Remover da linha do tempo"
+                                                                >
+                                                                    <EyeOff size={14} />
+                                                                </button>
+                                                            ) : (
+                                                                <button 
+                                                                    className="edit-btn-mini" 
+                                                                    onClick={() => handleStartEditTimelineEvent(event.id)}
+                                                                    title="Editar evento"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                                </button>
+                                                            )}
+
+                                                            <button className="del-btn" onClick={() => (event.type === 'MISSION' ? handleDeleteMission(event.id) : handleDeleteTimelineEvent(event.id))} title="Excluir">
+                                                                <Trash2 size={20} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                             <p className="event-desc" dangerouslySetInnerHTML={{ __html: renderMentions(event.description) }} />
+                                             <LinkedNotes
+                                                notes={event.linkedNotes || []}
+                                                onAddNote={(content: string, isPrivate?: boolean) => handleAddEntityNote(event.type === 'MISSION' ? 'MISSION' : 'TIMELINE', event.id, content, isPrivate)}
+                                                onDeleteNote={(noteId: string) => handleDeleteEntityNote(event.type === 'MISSION' ? 'MISSION' : 'TIMELINE', event.id, noteId)}
+                                                mentionEntities={mentionEntities}
+                                                hideTitle={true}
+                                                userId={userId}
+                                                userRole={userRole}
+                                             />
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* MODALS */}
+            {showAddMission && typeof document !== 'undefined' ? createPortal(
+                <div className="modal-overlay">
+                    <div className="modal-content solid mission-modal ornate-border">
+                        <h3 className="modal-title gold-text">{handlers.editingMissionId ? "EDITAR MISSÃO" : "CRIAR NOVA MISSÃO"}</h3>
+
+                        <div className="form-group">
+                            <label>NOME DA MISSÃO</label>
+                            <input 
+                                type="text" 
+                                value={newMissionName} 
+                                onChange={(e) => setNewMissionName(e.target.value)}
+                                placeholder="Ex: O Resgate do Ferreiro" 
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>DESCRIÇÃO</label>
+                            <MentionEditor 
+                                value={newMissionDescription} 
+                                onChange={setNewMissionDescription}
+                                placeholder="Detalhes da missão..."
+                                mentionEntities={mentionEntities}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>SUB-TAREFAS (CHECKBOXES)</label>
+                            <div className="tag-input-wrapper">
+                                <input 
+                                    type="text" 
+                                    value={newSubTaskInput} 
+                                    onChange={(e) => setNewSubTaskInput(e.target.value)}
+                                    placeholder="Escreva e aperte Enter..."
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && newSubTaskInput.trim()) {
+                                            setNewMissionSubTasks([...newMissionSubTasks, { id: uuidv4(), text: newSubTaskInput, completed: false }]);
+                                            setNewSubTaskInput("");
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="mission-tasks-preview scrollbar-arcane">
+                                {newMissionSubTasks.length === 0 ? (
+                                    <div className="empty-tasks-hint">Nenhuma sub-tarefa adicionada.</div>
+                                ) : (
+                                    newMissionSubTasks.map((st: any) => (
+                                        <div key={st.id} className="task-preview-item">
+                                            <Square size={14} className="gold-text opacity-50" />
+                                            <span>{st.text}</span>
+                                            <button className="remove-task-btn" onClick={() => setNewMissionSubTasks(newMissionSubTasks.filter((t: any) => t.id !== st.id))}>×</button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="form-row-triple">
+                            <div className="form-group">
+                                <label>DIA (OPCIONAL)</label>
+                                <input type="number" value={newMissionDay || ""} onChange={(e) => setNewMissionDay(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
+                            </div>
+                            <div className="form-group">
+                                <label>MÊS (OPCIONAL)</label>
+                                <input type="number" value={newMissionMonth || ""} onChange={(e) => setNewMissionMonth(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
+                            </div>
+                            <div className="form-group">
+                                <label>ANO</label>
+                                <input type="number" value={newMissionYear} onChange={(e) => setNewMissionYear(parseInt(e.target.value))} />
+                            </div>
+                        </div>
+                        
+                        <div className="modal-footer">
+                            <button className="cancel-btn" onClick={handleCancelMissionEdit}>CANCELAR</button>
+                            <button className="confirm-btn" onClick={handleCreateMission}>
+                                {handlers.editingMissionId ? "SALVAR ALTERAÇÕES" : "CRIAR MISSÃO"}
+                            </button>
+                        </div>
+                    </div>
+                </div>, document.body
+            ) : null}
+
+            {showAddTimelineEvent && typeof document !== 'undefined' ? createPortal(
+                <div className="modal-overlay">
+                    <div className="modal-content solid event-modal ornate-border">
+                        <h3 className="modal-title gold-text">{handlers.editingTimelineEventId ? "EDITAR EVENTO" : "REGISTRAR EVENTO HISTÓRICO"}</h3>
+
+                        <div className="form-group">
+                            <label>NOME DO EVENTO</label>
+                            <input 
+                                type="text" 
+                                value={newTimelineName} 
+                                onChange={(e) => setNewTimelineName(e.target.value)}
+                                placeholder="Ex: O Grande Incêndio" 
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>DESCRIÇÃO</label>
+                            <MentionEditor 
+                                value={newTimelineDescription} 
+                                onChange={setNewTimelineDescription}
+                                placeholder="O que aconteceu?"
+                                mentionEntities={mentionEntities}
+                            />
+                        </div>
+                        <div className="form-row-triple">
+                            <div className="form-group">
+                                <label>DIA (OPCIONAL)</label>
+                                <input type="number" value={newTimelineDay || ""} onChange={(e) => setNewTimelineDay(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
+                            </div>
+                            <div className="form-group">
+                                <label>MÊS (OPCIONAL)</label>
+                                <input type="number" value={newTimelineMonth || ""} onChange={(e) => setNewTimelineMonth(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
+                            </div>
+                            <div className="form-group">
+                                <label>ANO</label>
+                                <input type="number" value={newTimelineYear} onChange={(e) => setNewTimelineYear(parseInt(e.target.value))} />
+                            </div>
+                        </div>
+                        
+                        <div className="modal-footer">
+                            <button className="cancel-btn" onClick={handleCancelTimelineEdit}>CANCELAR</button>
+                            <button className="confirm-btn" onClick={handleCreateTimelineEvent}>
+                                {handlers.editingTimelineEventId ? "SALVAR ALTERAÇÕES" : "REGISTRAR EVENTO"}
+                            </button>
+                        </div>
+                    </div>
+                </div>, document.body
+            ) : null}
+        </div>
+    );
+}
+
+function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelete, onEdit, userRole, mentionEntities, onAddNote, onDeleteNote, userId }: { mission: any, onToggleSubTask: any, onAddSubTask: any, onUpdate: any, onDelete: any, onEdit: any, userRole?: string, mentionEntities: any[], onAddNote: any, onDeleteNote?: any, userId?: string }) {
+
+
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState(mission.name);
+    const [editDesc, setEditDesc] = useState(mission.description);
+
+    const handleSave = () => {
+        onUpdate(mission.id, { name: editName, description: editDesc });
+        setIsEditing(false);
+    };
+
+    return (
+        <div className={`mission-card card-bg ornate-border ${mission.completed ? 'completed' : ''}`}>
+            <div className="mission-header">
+                <h5 className="mission-title">{mission.name.toUpperCase()}</h5>
+                <div className="mission-actions">
+                    {!mission.completed && (
+                        <button className="complete-btn" onClick={() => onUpdate(mission.id, { completed: true })} title="Concluir">
+                            <CheckCircle size={14} />
+                        </button>
+                    )}
+                    {mission.completed && (
+                        <button className="reopen-btn" onClick={() => onUpdate(mission.id, { completed: false })} title="Reabrir">
+                            <History size={14} />
+                        </button>
+                    )}
+                    
+                    {userRole === 'GM' && (
+                        <>
+                            <button className="edit-btn" onClick={() => onEdit(mission.id)} title="Editar missão completa">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+
+                            <button className="timeline-toggle-btn" onClick={() => onUpdate(mission.id, { hideFromTimeline: !mission.hideFromTimeline })} title={mission.hideFromTimeline ? "Mostrar na linha do tempo" : "Ocultar na linha do tempo"}>
+                                {mission.hideFromTimeline ? <Eye size={14} /> : <EyeOff size={14} />}
+                            </button>
+                        </>
+                    )}
+
+                    {userRole === 'GM' && (
+                        <button className="del-btn" onClick={() => onDelete(mission.id)} title="Excluir">
+                            <Trash2 size={20} />
+                        </button>
+                    )}
+
+                </div>
+            </div>
+            
+            <p className="mission-desc" dangerouslySetInnerHTML={{ __html: renderMentions(mission.description) }} />
+
+            <div className="mission-tasks">
+                {mission.subTasks.map((task: any) => (
+                    <div key={task.id} className={`mission-task-item ${task.completed ? 'done' : ''}`} onClick={() => onToggleSubTask(mission.id, task.id)}>
+                        {task.completed ? <CheckSquare size={14} className="check-icon" /> : <Square size={14} className="check-icon" />}
+                        <span>{task.text}</span>
+                    </div>
+                ))}
+            </div>
+
+            {!mission.completed && (
+                <div className="add-task-inline" style={{ marginTop: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Plus size={14} className="gold-text" />
+                    <input 
+                        type="text" 
+                        placeholder="Nova tarefa..." 
+                        style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            borderBottom: '1px solid rgba(197, 160, 89, 0.2)', 
+                            color: '#fff', 
+                            fontSize: '0.7rem', 
+                            flex: 1,
+                            padding: '2px 0'
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                onAddSubTask(mission.id, e.currentTarget.value);
+                                e.currentTarget.value = "";
+                            }
+                        }}
+                    />
+                </div>
+            )}
+
+            <LinkedNotes
+                notes={mission.linkedNotes || []}
+                onAddNote={(content: string, isPrivate?: boolean) => onAddNote('MISSION', mission.id, content, isPrivate)}
+                onDeleteNote={onDeleteNote ? (noteId: string) => onDeleteNote('MISSION', mission.id, noteId) : undefined}
+                mentionEntities={mentionEntities}
+                hideTitle={true}
+                userId={userId}
+                userRole={userRole}
+            />
+        </div>
+    );
+}
+
+interface GameTabProps {
+    subTabJogo: string;
+    setSubTabJogo: (tab: any) => void;
+    state: any;
+    handlers: any;
+    userRole?: string;
+    mentionEntities: any[];
+    userId?: string;
+}
+
+export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, mentionEntities, userId }: GameTabProps) {
+    const {
+        showAddSkill, setShowAddSkill,
+        newSkillName, setNewSkillName,
+        newSkillDescription, setNewSkillDescription,
+        newSkillRequirement, setNewSkillRequirement,
+        newSkillColor, setNewSkillColor,
+        handleCreateSkill, handleUpdateSkill, handleDeleteSkill,
+
+        showAddItem, setShowAddItem,
+        newItemName, setNewItemName,
+        newItemDescription, setNewItemDescription,
+        newItemPrice, setNewItemPrice,
+        newItemQuantity, setNewItemQuantity,
+        newItemRequirement, setNewItemRequirement,
+        newItemImageUrl, setNewItemImageUrl,
+        handleCreateItem, handleUpdateItem, handleDeleteItem,
+        handleStartEditSkill, handleCancelSkillEdit,
+        handleStartEditItem, handleCancelItemEdit,
+        handleAddEntityNote, handleDeleteEntityNote,
+        COLOR_PRESETS
+    } = handlers;
+
+
+    const skills = state.skills || [];
+    const items = state.items || [];
+
+    return (
+        <div className="tab-content-combined">
+            <div className="sub-menu-bar">
+                <div className="tabs-and-actions">
+                    <div className="tab-group">
+                        {[
+                            { id: "Habilidades", icon: <Zap size={16} /> },
+                            { id: "Itens", icon: <Package size={16} /> }
+                        ].map(sub => (
+                            <button key={sub.id} className={`sub-tab-btn ${subTabJogo === sub.id ? "active" : ""}`} onClick={() => setSubTabJogo(sub.id as any)}>
+                                {sub.icon}
+                                <span>{sub.id.toUpperCase()}</span>
+                            </button>
+                        ))}
+                    </div>
+                    {userRole === 'GM' && subTabJogo !== 'Jogadores' && (
+                        <button 
+                            className="action-btn-mini plus-btn" 
+                            title={`Adicionar ${subTabJogo === "Habilidades" ? "Habilidade" : "Item"}`}
+                            onClick={() => subTabJogo === "Habilidades" ? setShowAddSkill(true) : setShowAddItem(true)}
+                        >
+                            <Plus size={16} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="sub-content-area scrollbar-arcane">
+                {subTabJogo === "Habilidades" && (
+                    <div className="skills-page">
+                        <div className="skills-grid">
+                            {skills.length === 0 ? (
+                                <p className="empty-msg">Nenhuma habilidade registrada.</p>
+                            ) : (
+                                skills.map((skill: any) => (
+                                    <div key={skill.id} className="skill-item-card card-bg ornate-border" style={{ borderLeft: `4px solid ${skill.color || 'var(--accent-color)'}` }}>
+                                        <div className="skill-header">
+                                            <h5 className="skill-title" style={{ color: skill.color || 'var(--accent-color)' }}>{skill.name.toUpperCase()}</h5>
+                                            {userRole === 'GM' && (
+                                                <div className="card-actions-mini">
+                                                    <button className="edit-btn-mini" onClick={() => handleStartEditSkill(skill.id)} title="Editar">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                    </button>
+                                                    <button className="del-btn-mini" onClick={() => handleDeleteSkill(skill.id)} title="Excluir">
+                                                        <Trash2 size={20} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="skill-req">
+                                            <label>REQUISITO:</label>
+                                            <span>{skill.requirement || "NENHUM"}</span>
+                                        </div>
+                                         <p className="skill-desc" dangerouslySetInnerHTML={{ __html: renderMentions(skill.description) }} />
+                                         <LinkedNotes
+                                            notes={skill.linkedNotes || []}
+                                            onAddNote={(content: string, isPrivate?: boolean) => handleAddEntityNote('SKILL', skill.id, content, isPrivate)}
+                                            onDeleteNote={(noteId: string) => handleDeleteEntityNote('SKILL', skill.id, noteId)}
+                                            mentionEntities={mentionEntities}
+                                            hideTitle={true}
+                                            userId={userId}
+                                            userRole={userRole}
+                                         />
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {subTabJogo === "Itens" && (
+                    <div className="items-page">
+                        <div className="items-grid">
+                            {items.length === 0 ? (
+                                <p className="empty-msg">Nenhum item registrado.</p>
+                            ) : (
+                                items.map((item: any) => (
+                                    <div key={item.id} className="global-item-card card-bg ornate-border">
+                                        <div className="item-header">
+                                            <h5 className="item-title">{item.name.toUpperCase()}</h5>
+                                            <div className="item-meta">
+                                                <span className="item-price gold-text">${item.price}</span>
+
+                                                <span className="item-qty">QTD: {item.quantity}</span>
+                                                {userRole === 'GM' && (
+                                                    <div className="card-actions-mini">
+                                                        <button className="edit-btn-mini" onClick={() => handleStartEditItem(item.id)} title="Editar">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                        </button>
+                                                        <button className="del-btn-mini" onClick={() => handleDeleteItem(item.id)} title="Excluir">
+                                                            <Trash2 size={20} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="item-main-content">
+                                            {item.imageUrl && (
+                                                <div className="item-card-thumb">
+                                                    <img src={item.imageUrl} alt={item.name} />
+                                                </div>
+                                            )}
+                                            <div className="item-text-info">
+                                                <div className="skill-req">
+                                                    <label>REQUISITO:</label>
+                                                    <span>{item.requirement || "NENHUM"}</span>
+                                                </div>
+                                                <p className="item-desc" dangerouslySetInnerHTML={{ __html: renderMentions(item.description) }} />
+                                            </div>
+                                        </div>
+                                         <LinkedNotes
+                                            notes={item.linkedNotes || []}
+                                            onAddNote={(content: string, isPrivate?: boolean) => handleAddEntityNote('ITEM', item.id, content, isPrivate)}
+                                            onDeleteNote={(noteId: string) => handleDeleteEntityNote('ITEM', item.id, noteId)}
+                                            mentionEntities={mentionEntities}
+                                            hideTitle={true}
+                                            userId={userId}
+                                            userRole={userRole}
+                                         />
+                                    </div>
+
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+
+            </div>
+
+            {/* MODALS */}
+            {showAddSkill && typeof document !== 'undefined' ? createPortal(
+                <div className="modal-overlay">
+                    <div className="modal-content solid ornate-border mission-modal">
+                        <h3 className="modal-title gold-text">{handlers.editingSkillId ? "EDITAR HABILIDADE" : "CRIAR HABILIDADE"}</h3>
+                        <div className="form-group">
+                            <label>NOME DA HABILIDADE</label>
+                            <input type="text" value={newSkillName} onChange={(e) => setNewSkillName(e.target.value)} placeholder="Ex: Golpe Flamejante" />
+                        </div>
+                        <div className="form-group">
+                            <label>REQUISITO</label>
+                            <input type="text" value={newSkillRequirement} onChange={(e) => setNewSkillRequirement(e.target.value)} placeholder="Ex: Força 2+" />
+                        </div>
+                        <div className="form-group">
+                            <label>DESCRIÇÃO</label>
+                            <MentionEditor value={newSkillDescription} onChange={setNewSkillDescription} placeholder="O que esta habilidade faz?" mentionEntities={mentionEntities} />
+                        </div>
+                        <div className="form-group">
+                            <label>COR DO CARD</label>
+                            <div className="color-presets-row">
+                                {COLOR_PRESETS.map((c: string) => (
+                                    <div 
+                                        key={c} 
+
+                                        className={`color-preset-circle ${newSkillColor === c ? 'active' : ''}`} 
+                                        style={{ backgroundColor: c }}
+                                        onClick={() => setNewSkillColor(c)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="cancel-btn" onClick={handleCancelSkillEdit}>CANCELAR</button>
+                            <button className="confirm-btn" onClick={handleCreateSkill}>
+                                {handlers.editingSkillId ? "SALVAR ALTERAÇÕES" : "CRIAR"}
+                            </button>
+                        </div>
+                    </div>
+                </div>, document.body
+            ) : null}
+
+            {showAddItem && typeof document !== 'undefined' ? createPortal(
+                <div className="modal-overlay">
+                    <div className="modal-content solid ornate-border mission-modal">
+                        <h3 className="modal-title gold-text">{handlers.editingItemId ? "EDITAR ITEM" : "CRIAR ITEM"}</h3>
+                        <div className="form-group">
+                            <label>NOME DO ITEM</label>
+                            <input type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Ex: Poção de Cura" />
+                        </div>
+                        <div className="form-group">
+                            <label>REQUISITO</label>
+                            <input type="text" value={newItemRequirement} onChange={(e) => setNewItemRequirement(e.target.value)} placeholder="Ex: Inteligência 1+" />
+                        </div>
+
+                        <div className="form-group">
+                            <label>DESCRIÇÃO</label>
+                            <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={mentionEntities} />
+                        </div>
+                        <div className="form-row-double">
+                            <div className="form-group">
+                                <label>PREÇO ($)</label>
+                                <input type="number" value={newItemPrice} onChange={(e) => setNewItemPrice(parseInt(e.target.value))} />
+
+                            </div>
+                            <div className="form-group">
+                                <label>QUANTIDADE</label>
+                                <input type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(parseInt(e.target.value))} />
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>IMAGEM DO ITEM (PNG ou JPEG)</label>
+                            <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
+                                <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> Resolução recomendada: 800x800 para melhor performance.
+                            </p>
+                            <input 
+                                type="file" 
+                                accept=".png, .jpg, .jpeg" 
+                                onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                            const img = new Image();
+                                            img.onload = () => {
+                                                const canvas = document.createElement('canvas');
+                                                let width = img.width;
+                                                let height = img.height;
+                                                
+                                                const MAX_WIDTH = 800;
+                                                const MAX_HEIGHT = 800;
+                                                
+                                                if (width > height) {
+                                                    if (width > MAX_WIDTH) {
+                                                        height = Math.round((height * MAX_WIDTH) / width);
+                                                        width = MAX_WIDTH;
+                                                    }
+                                                } else {
+                                                    if (height > MAX_HEIGHT) {
+                                                        width = Math.round((width * MAX_HEIGHT) / height);
+                                                        height = MAX_HEIGHT;
+                                                    }
+                                                }
+                                                
+                                                canvas.width = width;
+                                                canvas.height = height;
+                                                const ctx = canvas.getContext('2d');
+                                                if (ctx) {
+                                                    ctx.drawImage(img, 0, 0, width, height);
+                                                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                                                    setNewItemImageUrl(compressedBase64);
+                                                } else {
+                                                    setNewItemImageUrl(reader.result as string);
+                                                }
+                                            };
+                                            img.src = reader.result as string;
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                }}
+                                style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}
+                            />
+                            {newItemImageUrl && (
+                                <div style={{ marginTop: '10px', position: 'relative', width: '200px', height: '120px', border: '1px solid #444', overflow: 'hidden' }}>
+                                    <img src={newItemImageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <button 
+                                        onClick={() => setNewItemImageUrl("")}
+                                        style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', border: 'none', color: '#fff', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="modal-footer">
+                            <button className="cancel-btn" onClick={handleCancelItemEdit}>CANCELAR</button>
+                            <button className="confirm-btn" onClick={handleCreateItem}>
+                                {handlers.editingItemId ? "SALVAR ALTERAÇÕES" : "CRIAR"}
+                            </button>
+                        </div>
+                    </div>
+                </div>, document.body
+            ) : null}
+        </div>
+    );
+}
+
+
+

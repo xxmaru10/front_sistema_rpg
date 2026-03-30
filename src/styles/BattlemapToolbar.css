@@ -1,0 +1,54 @@
+
+.battlemap-toolbar-container {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    background: rgba(255,255,255,0.03);
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+    z-index: 1001;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.battlemap-tools-strip {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.tool-icon-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.tool-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.tool-icon-btn.active {
+    background: rgba(197, 160, 89, 0.15);
+    border-color: rgba(197, 160, 89, 0.4);
+    color: #e0bb6b;
+}
+
+.tool-divider {
+    width: 1px;
+    height: 16px;
+    background: rgba(255,255,255,0.2);
+    margin: 0 4px;
+}

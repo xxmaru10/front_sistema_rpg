@@ -1,0 +1,480 @@
+import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2 } from "lucide-react";
+import { useState } from "react";
+import { renderMentions } from "@/lib/mentionUtils";
+
+interface WorldTabProps {
+    subTabMundo: string;
+    setSubTabMundo: (tab: any) => void;
+    setShowAddWorldEntity: (show: boolean) => void;
+    bestiarySearch: string;
+    setBestiarySearch: (search: string) => void;
+    bestiarySessionOnly: boolean;
+    setBestiarySessionOnly: (only: boolean) => void;
+    userRole?: "GM" | "PLAYER";
+    onRegisterThreat?: () => void;
+    bestiaryList: any[];
+    viewingBestiaryCharId: string | null;
+    setViewingBestiaryCharId: (id: string | null) => void;
+    sessionId: string;
+    userId: string;
+    worldEntitiesForCurrentTab: any[];
+    setViewingEntityId: (id: string | null) => void;
+    handleDeleteWorldEntity: (id: string) => void;
+    handleStartEditWorldEntity: (id: string) => void;
+    handleToggleAllVisibility?: (entityId: string, hideAll: boolean) => void;
+    handleUpdateFieldVisibility?: (entityId: string, fieldName: string, isHidden: boolean) => void;
+    worldSearch: string;
+    setWorldSearch: (search: string) => void;
+    worldSearchSuggestions: any[];
+    state: any;
+    globalEventStore: any;
+    uuidv4: any;
+    handleAddEntityNote: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, content: string, isPrivate?: boolean) => void;
+    handleDeleteEntityNote: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, noteId: string) => void;
+    mentionEntities: any[];
+    worldFilters: Record<string, string[]>;
+    toggleWorldFilter: (field: string, value: string) => void;
+    worldFilterAvailableOptions: any[];
+    setNewEntityType?: (type: any) => void;
+}
+
+export function WorldTab({
+    subTabMundo,
+    setSubTabMundo,
+    setShowAddWorldEntity,
+    bestiarySearch,
+    setBestiarySearch,
+    bestiarySessionOnly,
+    setBestiarySessionOnly,
+    userRole,
+    onRegisterThreat,
+    bestiaryList,
+    viewingBestiaryCharId,
+    setViewingBestiaryCharId,
+    sessionId,
+    userId,
+    worldEntitiesForCurrentTab,
+    setViewingEntityId,
+    handleDeleteWorldEntity,
+    handleStartEditWorldEntity,
+    handleToggleAllVisibility,
+    handleUpdateFieldVisibility,
+    worldSearch,
+    setWorldSearch,
+    worldSearchSuggestions,
+    state,
+    globalEventStore,
+    uuidv4,
+    handleAddEntityNote,
+    handleDeleteEntityNote,
+    mentionEntities,
+    worldFilters,
+    toggleWorldFilter,
+    worldFilterAvailableOptions,
+    setNewEntityType
+}: WorldTabProps) {
+    return (
+        <div className="tab-content-combined">
+            <div className="sub-menu-bar multi-row">
+                <div className="sub-menu-row">
+                    {[
+                        { id: "Personagens", icon: <User size={16} /> },
+                        { id: "Localizações", icon: <MapPin size={16} /> },
+                        { id: "Mapas", icon: <MapIcon size={16} /> },
+                        { id: "Facções", icon: <Shield size={16} /> },
+                    ].map(sub => (
+                        <button key={sub.id} className={`sub-tab-btn ${subTabMundo === sub.id ? "active" : ""}`} onClick={() => setSubTabMundo(sub.id as any)}>
+                            {sub.icon}
+                            <span>{sub.id.toUpperCase()}</span>
+                        </button>
+                    ))}
+                </div>
+                <div className="sub-menu-row">
+                    {[
+                        { id: "Famílias", icon: <Home size={16} /> },
+                        { id: "Criaturas", icon: <Skull size={16} /> },
+                        { id: "Raças", icon: <Dna size={16} /> },
+                        { id: "Outros", icon: <Layers size={16} /> }
+                    ].map(sub => (
+                        <button key={sub.id} className={`sub-tab-btn ${subTabMundo === sub.id ? "active" : ""}`} onClick={() => setSubTabMundo(sub.id as any)}>
+                            {sub.icon}
+                            <span>{sub.id.toUpperCase()}</span>
+                        </button>
+                    ))}
+                    {userRole === "GM" && (
+                        <button
+                            className="add-world-entity-btn-mini"
+                            onClick={() => {
+                                if (setNewEntityType) {
+                                    const tabToType: Record<string, string> = {
+                                        "Personagens": "PERSONAGEM",
+                                        "Localizações": "LOCALIZACAO",
+                                        "Mapas": "MAPA",
+                                        "Facções": "FACAO",
+                                        "Famílias": "FAMILIA",
+                                        "Criaturas": "BESTIARIO",
+                                        "Raças": "RACA",
+                                        "Outros": "OUTROS"
+                                    };
+                                    setNewEntityType(tabToType[subTabMundo] || "PERSONAGEM");
+                                }
+                                setShowAddWorldEntity(true);
+                            }}
+                            title="Adicionar Novo Elemento de Mundo"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="sub-content-area scrollbar-arcane">
+                <div className="world-entities-list-container">
+                        {worldEntitiesForCurrentTab.length > 0 ? (
+                            <div className="section-block">
+                                <div className={subTabMundo === "Mapas" ? "entities-grid" : "world-entities-list"}>
+                                    {worldEntitiesForCurrentTab.map(entity => {
+                                        const isGM = userRole === "GM";
+                                        const fieldVisibility = entity.fieldVisibility || {};
+                                        const isVisible = (field: string) => isGM || !fieldVisibility[field];
+                                        const isAllHidden = Object.values(fieldVisibility).every(v => v);
+                                        const displayColor = isVisible('color') ? entity.color : '#444';
+
+                                        if (entity.type === "MAPA") {
+                                            return (
+                                                <div
+                                                    key={entity.id}
+                                                    className="world-entity-card map-card"
+                                                    style={{ borderTop: `4px solid ${displayColor}`, cursor: 'default' }}
+                                                >
+                                                    <div className="map-thumbnail clickable" onClick={() => setViewingEntityId(entity.id)}>
+                                                        {isVisible('image') ? (
+                                                            entity.imageUrl ? (
+                                                                <img src={entity.imageUrl} alt={isGM || isVisible('name') ? entity.name : '????'} />
+                                                            ) : (
+                                                                <div className="no-map-img"><MapIcon size={32} /></div>
+                                                            )
+                                                        ) : (
+                                                            <div className="no-map-img" style={{ color: '#444' }}><EyeOff size={32} /></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="entity-card-content clickable" style={{ position: 'relative' }} onClick={() => setViewingEntityId(entity.id)}>
+                                                        <div className="entity-card-header">
+                                                            <span className="entity-name" style={{ color: displayColor }}>
+                                                                {isVisible('name') ? entity.name.toUpperCase() : "????"}
+                                                                {isGM && (
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); handleUpdateFieldVisibility?.(entity.id, 'name', !fieldVisibility['name']); }}
+                                                                        className="visibility-toggle-btn name-toggle"
+                                                                        title={fieldVisibility['name'] ? "Mostrar Nome" : "Ocultar Nome"}
+                                                                        style={{ background: 'none', border: 'none', color: fieldVisibility['name'] ? '#c5a059' : '#666', cursor: 'pointer', marginLeft: '6px' }}
+                                                                    >
+                                                                        {fieldVisibility['name'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                    </button>
+                                                                )}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="description-preview-box" dangerouslySetInnerHTML={{ __html: isVisible('description') ? (entity.description ? renderMentions(entity.description) : "Sem descrição.") : "????" }} />
+
+                                                        <div className="entity-location-label" style={{ marginBottom: '8px' }}>
+                                                            <MapPin size={10} />
+                                                            <span style={{ opacity: 0.6, marginRight: '4px' }}>VINCULADO A:</span>
+                                                            {isVisible('location_info') ? (entity.linkedLocationId ? state.worldEntities?.[entity.linkedLocationId as string]?.name.toUpperCase() : "NENHUM") : "????"}
+                                                        </div>
+
+                                                        <div className="entity-tags">
+                                                            {isVisible('tags') ? entity.tags.slice(0, 2).map((tag: string, i: number) => (
+                                                                <span key={i} className="entity-tag">#{tag}</span>
+                                                            )) : <span className="entity-tag" style={{ color: '#444' }}>#????</span>}
+                                                        </div>
+
+                                                        <div className="entity-actions" style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', justifyContent: 'center', gap: '12px' }} onClick={e => e.stopPropagation()}>
+                                                            {isGM && (
+                                                                <>
+                                                                    <button 
+                                                                        className="entity-visibility-btn" 
+                                                                        onClick={(e) => { e.stopPropagation(); handleToggleAllVisibility?.(entity.id, !isAllHidden); }}
+                                                                        title={isAllHidden ? "Mostrar Tudo" : "Ocultar Tudo"}
+                                                                        style={{ color: isAllHidden ? '#666' : '#c5a059', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                    >
+                                                                        {isAllHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                    </button>
+                                                                    <button
+                                                                        className="entity-add-block-btn"
+                                                                        onClick={(e) => { e.stopPropagation(); setViewingEntityId(entity.id); }}
+                                                                        title="Adicionar Bloco"
+                                                                        style={{ color: '#c5a059', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                    >
+                                                                        <Plus size={32} />
+                                                                    </button>
+                                                                    <button
+                                                                        className="entity-edit-btn"
+                                                                        onClick={(e) => { e.stopPropagation(); handleStartEditWorldEntity(entity.id); }}
+                                                                        title="Editar"
+                                                                        style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', padding: 0 }}
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                                    </button>
+                                                                    <button
+                                                                        className="entity-delete-btn"
+                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteWorldEntity(entity.id); }}
+                                                                        title="Excluir"
+                                                                        style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.6, cursor: 'pointer', padding: 0 }}
+                                                                    >
+                                                                        <Trash2 size={23} />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            <button
+                                                                className="entity-note-btn gold-text"
+                                                                onClick={(e) => { e.stopPropagation(); setViewingEntityId(entity.id); }}
+                                                                title="Notas"
+                                                                style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer' }}
+                                                            >
+                                                                <MessageSquare size={32} />
+                                                                {entity.linkedNotes && entity.linkedNotes.filter((n: any) => !(n.isPrivate || n.is_private) || n.authorId === userId).length > 0 && (
+                                                                    <span className="note-badge-count" style={{ scale: '0.8' }}>{entity.linkedNotes.filter((n: any) => !(n.isPrivate || n.is_private) || n.authorId === userId).length}</span>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div
+                                                key={entity.id}
+                                                className="world-entity-card"
+                                                style={{ 
+                                                    borderLeft: `4px solid ${displayColor}`,
+                                                    background: isVisible('color') ? 'rgba(255,255,255,0.03)' : '#1a1a1a',
+                                                    padding: 0,
+                                                    position: 'relative',
+                                                    display: 'flex',
+                                                    alignItems: 'stretch',
+                                                    minHeight: '90px',
+                                                    overflow: 'hidden'
+                                                }}
+                                            >
+                                                {isGM && (
+                                                    <div 
+                                                        title={isAllHidden ? "Mostrar Tudo" : "Ocultar Tudo"}
+                                                        onClick={(e) => { e.stopPropagation(); handleToggleAllVisibility?.(entity.id, !isAllHidden); }}
+                                                        style={{ 
+                                                            width: '50px', 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            justifyContent: 'center', 
+                                                            background: isAllHidden ? 'rgba(255,68,68,0.08)' : 'rgba(197, 160, 89, 0.08)', 
+                                                            borderRight: '1px solid rgba(255,255,255,0.05)',
+                                                            cursor: 'pointer',
+                                                            flexShrink: 0
+                                                        }}
+                                                    >
+                                                        {isAllHidden ? <EyeOff size={24} style={{ opacity: 0.3 }} /> : <Eye size={24} style={{ color: '#C5A059', opacity: 0.8 }} />}
+                                                    </div>
+                                                )}
+
+                                                <div 
+                                                    className="entity-main-content-area"
+                                                    style={{ 
+                                                        flex: 1, 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        padding: '12px 15px',
+                                                        paddingRight: '110px', 
+                                                        gap: '15px'
+                                                    }}
+                                                >
+                                                    {isVisible('image') ? (
+                                                        entity.imageUrl ? (
+                                                            <div className="entity-card-thumb clickable" style={{ border: `1px solid ${displayColor}`, flexShrink: 0 }} onClick={() => setViewingEntityId(entity.id)}>
+                                                                <img src={entity.imageUrl} alt={isGM || isVisible('name') ? entity.name : '????'} />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="entity-card-thumb" style={{ opacity: 0.2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444', border: '1px dashed #333', flexShrink: 0 }} onClick={() => setViewingEntityId(entity.id)}>
+                                                                {entity.type === "PERSONAGEM" ? <User size={24} /> : 
+                                                                 entity.type === "LOCALIZACAO" ? <MapPin size={24} /> : 
+                                                                 entity.type === "FAMILIA" ? <Home size={24} /> : 
+                                                                 entity.type === "FACAO" ? <Shield size={24} /> : 
+                                                                 <Layers size={24} />}
+                                                            </div>
+                                                        )
+                                                    ) : (
+                                                        <div className="entity-card-thumb" style={{ opacity: 0.2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444', flexShrink: 0 }}><EyeOff size={24} /></div>
+                                                    )}
+
+                                                    <div className="entity-info-box clickable" style={{ flex: 1, minWidth: 0 }} onClick={() => setViewingEntityId(entity.id)}>
+                                                        <div className="entity-card-header">
+                                                            <span className="entity-name" style={{ color: displayColor, fontWeight: 'bold', fontSize: '0.95rem' }}>
+                                                                {isVisible('name') ? entity.name.toUpperCase() : "????"}
+                                                                {isGM && (
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); handleUpdateFieldVisibility?.(entity.id, 'name', !fieldVisibility['name']); }}
+                                                                        style={{ background: 'none', border: 'none', color: fieldVisibility['name'] ? '#C5A059' : '#555', cursor: 'pointer', marginLeft: '8px' }}
+                                                                    >
+                                                                        {fieldVisibility['name'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                    </button>
+                                                                )}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="entity-meta-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px', opacity: 0.7 }}>
+                                                            {entity.type === "PERSONAGEM" && (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <MapPin size={10} />
+                                                                    <span style={{ fontSize: '0.65rem' }}>{isVisible('currentLocation') ? (entity.currentLocationId ? state.worldEntities?.[entity.currentLocationId as string]?.name.toUpperCase() : "NENHUM") : "????"}</span>
+                                                                </div>
+                                                            )}
+                                                            {isVisible('family') && (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <Home size={10} />
+                                                                    <span style={{ fontSize: '0.65rem' }}>{entity.familyId ? state.worldEntities?.[entity.familyId as string]?.name.toUpperCase() : "NENHUMA"}</span>
+                                                                </div>
+                                                            )}
+                                                            {isVisible('race') && (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <Dna size={10} />
+                                                                    <span style={{ fontSize: '0.65rem' }}>{entity.raceId ? state.worldEntities?.[entity.raceId as string]?.name.toUpperCase() : "NENHUMA"}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <p className="entity-description-text" style={{ marginTop: '8px', fontSize: '0.82rem', color: '#bbb', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: '1.4' }} dangerouslySetInnerHTML={{ __html: isVisible('description') ? (entity.description ? renderMentions(entity.description) : "Sem descrição.") : "????" }} />
+                                                    </div>
+                                                </div>
+
+                                                <div 
+                                                    className="entity-absolute-actions"
+                                                    style={{ 
+                                                        position: 'absolute',
+                                                        right: 0,
+                                                        top: 0,
+                                                        bottom: 0,
+                                                        width: '100px',
+                                                        background: 'rgba(0,0,0,0.2)',
+                                                        borderLeft: '1px solid rgba(255,255,255,0.05)',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '10px',
+                                                        zIndex: 9999
+                                                    }}
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                                        {isGM && (
+                                                            <button
+                                                                onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    setViewingEntityId(entity.id); 
+                                                                }}
+                                                                title="Adicionar Bloco"
+                                                                style={{ color: '#C5A059', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
+                                                            >
+                                                                <Plus size={20} />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                setViewingEntityId(entity.id); 
+                                                            }}
+                                                            title="Notas"
+                                                            style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
+                                                        >
+                                                            <MessageSquare size={20} style={{ color: '#C5A059' }} />
+                                                            {entity.linkedNotes && entity.linkedNotes.filter((n: any) => !(n.isPrivate || n.is_private) || n.authorId === userId).length > 0 && (
+                                                                <span style={{ position: 'absolute', top: '0', right: '0', background: '#C5A059', color: '#000', fontSize: '0.6rem', fontWeight: 'bold', minWidth: '15px', height: '15px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                                                    {entity.linkedNotes.filter((n: any) => !(n.isPrivate || n.is_private) || n.authorId === userId).length}
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                    {isGM && (
+                                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                                            <button
+                                                                onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    handleStartEditWorldEntity(entity.id); 
+                                                                }}
+                                                                title="Editar"
+                                                                style={{ background: 'none', border: 'none', color: '#777', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
+                                                            >
+                                                                <Edit2 size={18} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    handleDeleteWorldEntity(entity.id); 
+                                                                }}
+                                                                title="Excluir"
+                                                                style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.7, cursor: 'pointer', padding: '8px', zIndex: 10000 }}
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="empty-state">
+                                NENHUM REGISTRO DE {subTabMundo.toUpperCase()} ENCONTRADO.
+                                <br />
+                                CLIQUE NO BOTÃO "+" PARA ADICIONAR.
+                            </div>
+                        )}
+                    </div>
+            </div>
+        </div>
+    );
+}
+
+const styles = `
+    .note-badge-count {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: #c5a059;
+        color: #000;
+        font-size: 0.8rem;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        border: 1px solid #000;
+    }
+
+    .bestiary-note-badge {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        padding-left: 10px;
+        opacity: 0.8;
+    }
+
+    .bestiary-note-badge span {
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+`;
+
+if (typeof document !== 'undefined') {
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = styles;
+    document.head.appendChild(styleSheet);
+}

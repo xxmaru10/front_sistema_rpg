@@ -1,0 +1,39 @@
+---
+title: Arquitetura do Sistema
+description: Visão geral das decisões de design, padrões e estrutura baseada em Event Sourcing.
+tags: [arquitetura, decisões, padrões, eventsourcing]
+repo: frontend
+related:
+  - /knowledge/stack.md
+  - /knowledge/shared/api-contract.md
+last_updated: 2026-03-30
+status: estável
+---
+
+# Arquitetura
+
+## Visão Geral
+O Fate Companion utiliza uma arquitetura de **Event Sourcing**. Isso significa que as ações mecânicas (movimentação, dano, rolagem de dados) não modificam o banco de dados diretamente; em vez disso, são anexadas a um log cronológico de eventos (timeline).
+
+## O Ciclo do Evento
+1. **Ativação**: O usuário trigga uma ação na UI (ex: "Causar Dano").
+2. **Dispatch**: O componente React chama `eventStore.append()`.
+3. **Network**: O `eventStore` envia o evento para o backend (NestJS/Supabase).
+4. **Relay**: O backend carimba o evento e rebate para todos os outros clientes na sala via WebSocket.
+5. **Reatividade**: Todos os clientes recebem o evento e a lógica de **projeções** reconstrói o estado atual (`projections.ts`).
+
+## Decisões de Design
+| Decisão | Justificativa | Data |
+|---|---|---|
+| Event Sourcing | Permite replay de sessões, auditoria e sincronia em tempo real sem conflitos de mutação paralela. | 2026-02-15 |
+| Projeções no Cliente | Reduz carga no backend e permite UI instantânea através de otimismo local. | 2026-02-15 |
+| WebRTC nativo | Suporte a áudio e vídeo sem latência sem depender de serviços externos caros. | 2026-03-01 |
+
+## Padrões Adotados
+- **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
+- **Hook-to-Component**: Lógica de negócio é isolada em hooks customizados (ex: `useCombatCard`).
+- **Global Event Store**: Um store centralizado que gerencia a fila de eventos e persistência.
+
+## O que evitar
+- Não coloque lógica de cálculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.
+- Evite mutar o estado local sem despachar um evento se a ação for visível para outros jogadores.
