@@ -30,8 +30,8 @@ interface NotesTabProps {
     handleCancelEdit: () => void;
     mentionEntities: any[];
     state?: any;
-    handleAddEntityNote?: (type: string, entityId: string, content: string, isPrivate?: boolean) => void;
-    handleDeleteEntityNote?: (type: string, entityId: string, noteId: string) => void;
+    handleAddEntityNote?: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, content: string, isPrivate?: boolean) => void;
+    handleDeleteEntityNote?: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, noteId: string) => void;
 }
 
 export function NotesTab({
