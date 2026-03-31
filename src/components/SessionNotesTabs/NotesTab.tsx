@@ -173,7 +173,11 @@ export function NotesTab({
                                                         {note.isPrivate && <span style={{ opacity: 0.5, marginLeft: '5px', fontSize: '0.6rem' }}>(PRIVADO)</span>}
                                                     </span>
                                                     <div className="note-status-icons">
-                                                        {isPending && <Clock size={12} className="status-pending" title="Enviando..." />}
+                                                        {isPending && (
+                                                            <span title="Enviando...">
+                                                                <Clock size={12} className="status-pending" />
+                                                            </span>
+                                                        )}
                                                         {isFailed && (
                                                             <button className="retry-btn" onClick={() => handleRetry?.(note.id)} title="Falha ao enviar. Clique para tentar novamente.">
                                                                 <RefreshCw size={12} />
