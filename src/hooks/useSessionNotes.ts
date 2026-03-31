@@ -1257,8 +1257,36 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
 
 
 
+    const [connectionStatus, setConnectionStatus] = useState(globalEventStore.getConnectionStatus());
+    const [failedEventIds, setFailedEventIds] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        const unsubscribeStatus = globalEventStore.subscribeStatus(setConnectionStatus);
+        const unsubscribeEvents = globalEventStore.subscribe(() => {
+            setFailedEventIds(globalEventStore.getFailedIds());
+        }, () => {
+            setFailedEventIds(globalEventStore.getFailedIds());
+        });
+
+        return () => {
+            unsubscribeStatus();
+            unsubscribeEvents();
+        };
+    }, []);
+
+    const handleRetry = (noteId: string) => {
+        // Encontrar o ActionEvent original no store
+        const events = globalEventStore.getEvents();
+        const event = events.find(e => e.id === noteId || (e.type === 'NOTE_ADDED' && e.payload.id === noteId));
+        if (event) {
+            globalEventStore.retryEvent(event.id);
+        }
+    };
+
     return {
         // State
+        connectionStatus,
+        failedEventIds,
         editorContent, setEditorContent,
         filterAuthor, setFilterAuthor,
         activeTab, setActiveTab,
@@ -1303,7 +1331,6 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         newMissionMonth, setNewMissionMonth,
         newMissionYear, setNewMissionYear,
 
-
         // Timeline State
         showAddTimelineEvent, setShowAddTimelineEvent,
         editingTimelineEventId, setEditingTimelineEventId,
@@ -1331,9 +1358,6 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
         editingItemId, setEditingItemId,
-
-
-
 
         // Derived state
         notes,
@@ -1367,6 +1391,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         handleStartEditWorldEntity,
         handleCancelWorldEntityEdit,
         getAuthorColor,
+        handleRetry,
 
         // Mission Handlers
         handleCreateMission,
@@ -1396,8 +1421,6 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         handleUpdateDescriptionBlock,
         handleDeleteDescriptionBlock,
         handleToggleAllVisibility,
-
-
 
         // Constants
         COLOR_PRESETS,

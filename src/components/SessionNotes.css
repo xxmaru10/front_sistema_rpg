@@ -2224,3 +2224,83 @@
     gap: 8px;
 }
 
+/* ==========================================================================
+   Connection & Sync Feedback Styles
+   ========================================================================== */
+
+.connection-warning-bar {
+    background: rgba(197, 160, 89, 0.15); /* Muted gold/amber */
+    color: var(--accent-color);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-family: var(--font-header);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+    z-index: 10;
+    backdrop-filter: blur(5px);
+}
+
+.note-entry.pending {
+    opacity: 0.6;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.note-entry.failed {
+    background: rgba(255, 68, 68, 0.03);
+    border-left-color: #ff4444 !important;
+}
+
+.note-status-icons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.status-pending {
+    color: var(--accent-color);
+    opacity: 0.5;
+    animation: pulse 2s infinite;
+}
+
+.retry-btn {
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    color: #ff6666;
+    padding: 2px 6px;
+    border-radius: 2px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.retry-btn:hover {
+    background: rgba(255, 68, 68, 0.2);
+    border-color: #ff4444;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.2);
+}
+
+.animate-slide-down {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse {
+    0% { opacity: 0.2; }
+    50% { opacity: 0.6; }
+    100% { opacity: 0.2; }
+}
+
+

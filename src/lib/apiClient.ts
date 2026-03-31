@@ -58,7 +58,9 @@ export async function appendEvent(
 }
 
 export async function fetchGlobalBestiary(): Promise<ActionEvent[]> {
-    const res = await fetch(`${API_BASE}/api/bestiary`);
+    const res = await fetch(`${API_BASE}/api/bestiary`, {
+        signal: AbortSignal.timeout(12000)
+    });
     if (!res.ok) throw new Error(`[apiClient] fetchGlobalBestiary falhou: ${res.status}`);
     const data = await res.json();
     return data.events as ActionEvent[];
@@ -67,6 +69,7 @@ export async function fetchGlobalBestiary(): Promise<ActionEvent[]> {
 export async function clearSessionEvents(sessionId: string): Promise<void> {
     const res = await fetch(`${API_BASE}/api/events/${sessionId}`, {
         method: 'DELETE',
+        signal: AbortSignal.timeout(8000)
     });
     if (!res.ok && res.status !== 204) {
         throw new Error(`[apiClient] clearSession falhou: ${res.status}`);
@@ -75,7 +78,7 @@ export async function clearSessionEvents(sessionId: string): Promise<void> {
 
 export async function fetchSessions(): Promise<SessionData[]> {
     const res = await fetch(`${API_BASE}/api/sessions`, {
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(10000)
     });
     if (!res.ok) throw new Error(`[apiClient] fetchSessions falhou: ${res.status}`);
     return await res.json();
@@ -86,6 +89,7 @@ export async function createSession(session: SessionData): Promise<void> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(session),
+        signal: AbortSignal.timeout(8000)
     });
     if (!res.ok && res.status !== 201) {
         throw new Error(`[apiClient] createSession falhou: ${res.status}`);
@@ -94,7 +98,7 @@ export async function createSession(session: SessionData): Promise<void> {
 
 export async function fetchSessionJoinInfo(sessionId: string): Promise<SessionJoinInfo> {
     const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/join-info`, {
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(10000)
     });
     if (!res.ok) throw new Error(`[apiClient] fetchSessionJoinInfo falhou: ${res.status}`);
     return await res.json();
@@ -105,6 +109,7 @@ export async function updateSnapshot(sessionId: string, upToSeq: number, state: 
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ upToSeq, state }),
+        signal: AbortSignal.timeout(15000) // Snapshots can be slow/large
     });
     if (!res.ok && res.status !== 204) {
         throw new Error(`[apiClient] updateSnapshot falhou: ${res.status}`);

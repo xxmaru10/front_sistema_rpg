@@ -1,4 +1,4 @@
-import { Bold, Italic, Underline, Trash2, Send, Users, ShieldAlert, Pencil, X, Check, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
+import { Bold, Italic, Underline, Trash2, Send, Users, ShieldAlert, Pencil, X, Check, ChevronDown, ChevronUp, BookOpen, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { MentionEditor } from "../MentionEditor";
 import { renderMentions } from "@/lib/mentionUtils";
@@ -32,6 +32,9 @@ interface NotesTabProps {
     state?: any;
     handleAddEntityNote?: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, content: string, isPrivate?: boolean) => void;
     handleDeleteEntityNote?: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, noteId: string) => void;
+    connectionStatus?: string;
+    failedEventIds?: Set<string>;
+    handleRetry?: (noteId: string) => void;
 }
 
 export function NotesTab({
@@ -60,15 +63,28 @@ export function NotesTab({
     mentionEntities,
     state,
     handleAddEntityNote,
-    handleDeleteEntityNote
+    handleDeleteEntityNote,
+    connectionStatus = 'SUBSCRIBED',
+    failedEventIds = new Set(),
+    handleRetry
 }: NotesTabProps) {
     const playerChars = Object.values((state?.characters) || {}).filter((c: any) => !c.isNPC && c.source !== 'bestiary') as any[];
     const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
     const toggleCard = (id: string) => setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
     const [sessionFilter, setSessionFilter] = useState<number | null>(null);
 
+    const isOffline = connectionStatus !== 'SUBSCRIBED';
+
     return (
         <div className="tab-content-area">
+            {isOffline && (
+                <div className="connection-warning-bar animate-slide-down">
+                    <AlertTriangle size={14} />
+                    <span>CONEXÃO INSTÁVEL - TENTANDO RECONECTAR...</span>
+                    <RefreshCw size={12} className="animate-spin" />
+                </div>
+            )}
+
             <div className="sub-menu-bar">
                 {[
                     { id: "Geral", icon: <Users size={16} /> },
@@ -143,20 +159,34 @@ export function NotesTab({
                                         </span>
                                         <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--accent-color))' }} />
                                     </div>
-                                    {grouped[sn].map((note: any) => (
-                                        <div key={note.id} className="note-entry animate-fade-in" style={{ borderLeftColor: getAuthorColor(note.authorId) }}>
-                                            <div className="entry-meta">
-                                                <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                <span className="actor" style={{ color: getAuthorColor(note.authorId) }}>
-                                                    {note.authorName.toUpperCase()}
-                                                    {note.isPrivate && <span style={{ opacity: 0.5, marginLeft: '5px', fontSize: '0.6rem' }}>(PRIVADO)</span>}
-                                                </span>
+                                    {grouped[sn].map((note: any) => {
+                                        const isMyNote = note.authorId === userId;
+                                        const isFailed = failedEventIds.has(note.id);
+                                        const isPending = note.seq === 0 && !isFailed;
+                                        
+                                        return (
+                                            <div key={note.id} className={`note-entry animate-fade-in ${isPending ? 'pending' : ''} ${isFailed ? 'failed' : ''}`} style={{ borderLeftColor: getAuthorColor(note.authorId) }}>
+                                                <div className="entry-meta">
+                                                    <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    <span className="actor" style={{ color: getAuthorColor(note.authorId) }}>
+                                                        {note.authorName.toUpperCase()}
+                                                        {note.isPrivate && <span style={{ opacity: 0.5, marginLeft: '5px', fontSize: '0.6rem' }}>(PRIVADO)</span>}
+                                                    </span>
+                                                    <div className="note-status-icons">
+                                                        {isPending && <Clock size={12} className="status-pending" title="Enviando..." />}
+                                                        {isFailed && (
+                                                            <button className="retry-btn" onClick={() => handleRetry?.(note.id)} title="Falha ao enviar. Clique para tentar novamente.">
+                                                                <RefreshCw size={12} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="entry-content">
+                                                    <div className="note-body" dangerouslySetInnerHTML={{ __html: renderMentions(note.content) }} />
+                                                </div>
                                             </div>
-                                            <div className="entry-content">
-                                                <div className="note-body" dangerouslySetInnerHTML={{ __html: renderMentions(note.content) }} />
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ))}
                         </div>
@@ -268,13 +298,21 @@ export function NotesTab({
                     const canDelete = isMyNote || (isGM && !note.isPrivate);
                     
                     const authorColor = getAuthorColor(note.authorId, note.authorId === "GM" ? "GM" : undefined);
+                    const isFailed = isMyNote && failedEventIds.has(note.id);
+                    const isPending = isMyNote && note.seq === 0 && !isFailed;
 
                     return (
-                        <div key={note.id} className={`note-entry animate-fade-in ${editingNoteId === note.id ? 'editing' : ''}`} style={{ borderLeftColor: authorColor }}>
+                        <div key={note.id} className={`note-entry animate-fade-in ${editingNoteId === note.id ? 'editing' : ''} ${isPending ? 'pending' : ''} ${isFailed ? 'failed' : ''}`} style={{ borderLeftColor: authorColor }}>
                             <div className="entry-meta">
                                 <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 <span className="actor" style={{ color: authorColor }}>{note.authorName.toUpperCase()}</span>
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    {isPending && <Clock size={12} className="status-pending" title="Enviando..." />}
+                                    {isFailed && (
+                                        <button className="retry-btn" onClick={() => handleRetry?.(note.id)} title="Falha ao enviar. Clique para tentar novamente.">
+                                            <RefreshCw size={12} />
+                                        </button>
+                                    )}
                                     {canEdit && (
                                         <button onClick={() => handleStartEdit(note.id)} className="edit-mini-btn" title="Editar nota">
                                             <Pencil size={12} />
@@ -325,7 +363,7 @@ export function NotesTab({
                     <button 
                         onClick={handleSend} 
                         className={`send-btn ${editingNoteId ? 'save-mode' : ''}`} 
-                        disabled={!editorContent.trim()} 
+                        disabled={!editorContent.trim() || isOffline} 
                         title={editingNoteId ? "Salvar Alterações" : "Enviar Nota"}
                     >
                         {editingNoteId ? <Check size={16} /> : <Send size={16} />}

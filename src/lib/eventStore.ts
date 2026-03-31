@@ -10,14 +10,38 @@ import { supabase } from "./supabaseClient";
 import { computeState } from "./projections";
 import * as apiClient from "./apiClient";
 
+export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
+
 export class EventStore {
     private events: ActionEvent[] = [];
     private listeners: ((event: ActionEvent) => void)[] = [];
     private bulkListeners: ((events: ActionEvent[]) => void)[] = [];
+    private statusListeners: ((status: ConnectionStatus) => void)[] = [];
     private currentSessionId: string | null = null;
     private channel: any = null;
     private snapshotState: SessionState | null = null;
     private snapshotUpToSeq: number = -1;
+    private connectionStatus: ConnectionStatus = 'CLOSED';
+    private failedEventIds: Set<string> = new Set();
+
+    private _sort() {
+        this.events.sort((a, b) => {
+            // seq 0 represents "optimistic/not yet confirmed"
+            const seqA = a.seq || 0;
+            const seqB = b.seq || 0;
+            
+            if (seqA !== seqB) {
+                if (seqA === 0) return 1;
+                if (seqB === 0) return -1;
+                return seqA - seqB;
+            }
+            
+            // If both have same seq or both are 0, sort by createdAt
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            return timeA - timeB;
+        });
+    }
 
     async initSession(sessionId: string) {
         if (typeof window !== 'undefined') {
@@ -35,13 +59,13 @@ export class EventStore {
         this.events = [];
         this.snapshotState = null;
         this.snapshotUpToSeq = -1;
+        this.failedEventIds.clear();
+        this._setStatus('CONNECTING');
 
         // --- Subscribe to realtime BEFORE fetching history ---
-        // Buffer events that arrive during the fetch to avoid race condition
         const bufferedRealtimeEvents: ActionEvent[] = [];
         let historicalLoadComplete = false;
 
-        // 1. Subscribe to real-time updates FIRST (buffer until fetch completes)
         this.channel = supabase
             .channel(`session-${sessionId}`)
             .on(
@@ -66,25 +90,26 @@ export class EventStore {
                     };
 
                     if (!historicalLoadComplete) {
-                        // Buffer durante o fetch histórico
                         bufferedRealtimeEvents.push(formattedEvent);
                         return;
                     }
 
-                    // Normal processing after history is loaded
                     const idx = this.events.findIndex(e => e.id === newEvent.id);
                     if (idx === -1) {
                         this.events.push(formattedEvent);
+                        this._sort();
                         this.listeners.forEach(l => l(formattedEvent));
                         this.bulkListeners.forEach(l => l([...this.events]));
                     } else {
-                        // Confirmation of our own optimistic event
+                        // Confirmação do evento (limpa falha se houver)
+                        this.failedEventIds.delete(newEvent.id);
                         const updatedEvent = {
                             ...this.events[idx],
                             seq: newEvent.seq,
                             createdAt: newEvent.created_at
                         };
                         this.events[idx] = updatedEvent;
+                        this._sort();
                         this.listeners.forEach(l => l(updatedEvent));
                         this.bulkListeners.forEach(l => l([...this.events]));
                     }
@@ -92,8 +117,9 @@ export class EventStore {
             )
             .subscribe((status: string) => {
                 console.log(`[EventStore] Realtime channel status: ${status}`);
+                this._setStatus(status as ConnectionStatus);
+                
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                    // Reconexão automática do canal realtime
                     console.warn('[EventStore] Canal realtime desconectado, tentando reconectar...');
                     setTimeout(() => {
                         if (this.currentSessionId === sessionId) {
@@ -105,7 +131,7 @@ export class EventStore {
                 }
             });
 
-        // 2. Load historical events + snapshot via NestJS (replaces direct Supabase fetch)
+        // 2. Load historical events
         let fetchSuccess = false;
         try {
             const result = await apiClient.loadSessionEvents(sessionId);
@@ -123,14 +149,12 @@ export class EventStore {
             console.error('[EventStore] Falha crítica no fetch via NestJS:', err);
         }
 
-        // If snapshot exists and no delta events at all, still mark success
         if (!fetchSuccess && this.snapshotState !== null) {
             fetchSuccess = true;
         }
 
-        // 3. Merge buffered realtime events that arrived during fetch
+        // 3. Merge buffered updates
         historicalLoadComplete = true;
-
         const existingIds = new Set(this.events.map(e => e.id));
         for (const buffered of bufferedRealtimeEvents) {
             if (!existingIds.has(buffered.id)) {
@@ -139,55 +163,80 @@ export class EventStore {
             }
         }
 
-        // Trigger bulk listeners with the complete merged dataset
+        this._sort();
         this.bulkListeners.forEach(l => l([...this.events]));
-
-        // Auto-save snapshot in background so next load only fetches delta events
         this._updateSnapshot().catch(() => {});
+    }
+
+    private _setStatus(status: ConnectionStatus) {
+        this.connectionStatus = status;
+        this.statusListeners.forEach(l => l(status));
     }
 
     private appendQueue: Promise<void> = Promise.resolve();
 
     async append(event: ActionEvent, retryCount = 0) {
         if (retryCount === 0) {
-            // 0. Update in-memory state immediately for UI responsiveness
             const optimisticEvent = { ...event };
             optimisticEvent.seq = 0;
             if (!this.events.some(e => e.id === event.id)) {
                 this.events.push(optimisticEvent);
-                // Notify both single-event and bulk listeners for immediate UI update
+                this._sort();
                 this.listeners.forEach(l => l(optimisticEvent));
                 this.bulkListeners.forEach(l => l([...this.events]));
             }
         }
 
-        // 1. Queue the database persistence via NestJS
         this.appendQueue = this.appendQueue.then(async () => {
             try {
+                this.failedEventIds.delete(event.id);
                 const result = await apiClient.appendEvent(event.sessionId, event);
-                // Update the optimistic event with the confirmed seq
                 const idx = this.events.findIndex(e => e.id === event.id);
                 if (idx !== -1 && result.seq) {
                     this.events[idx].seq = result.seq;
+                    this._sort();
+                    this.bulkListeners.forEach(l => l([...this.events]));
                 }
             } catch (err) {
-                console.error("[EventStore] Erro crítico no append via NestJS:", err);
-                // Removido alert para evitar travamento da thread principal em caso de erro de rede.
+                console.error("[EventStore] Erro no append via NestJS:", err);
+                this.failedEventIds.add(event.id);
+                this.bulkListeners.forEach(l => l([...this.events]));
+                
+                // Exponential backoff retry para notas (limitado a 3 tentativas)
+                if (event.type === 'NOTE_ADDED' && retryCount < 3) {
+                    const delay = Math.pow(2, retryCount) * 1000;
+                    setTimeout(() => this.append(event, retryCount + 1), delay);
+                }
             }
         });
 
         return this.appendQueue;
     }
 
+    async retryEvent(eventId: string) {
+        const event = this.events.find(e => e.id === eventId);
+        if (event && this.failedEventIds.has(eventId)) {
+            this.failedEventIds.delete(eventId);
+            return this.append(event, 0);
+        }
+    }
+
     getEvents() {
         return [...this.events];
+    }
+
+    getFailedIds() {
+        return new Set(this.failedEventIds);
+    }
+
+    getConnectionStatus() {
+        return this.connectionStatus;
     }
 
     subscribe(listener: (event: ActionEvent) => void, onBulk?: (events: ActionEvent[]) => void) {
         this.listeners.push(listener);
         if (onBulk) this.bulkListeners.push(onBulk);
 
-        // Return existing events immediately to the new bulk listener if provided
         if (onBulk && this.events.length > 0) {
             onBulk([...this.events]);
         }
@@ -198,6 +247,14 @@ export class EventStore {
         };
     }
 
+    subscribeStatus(listener: (status: ConnectionStatus) => void) {
+        this.statusListeners.push(listener);
+        listener(this.connectionStatus);
+        return () => {
+            this.statusListeners = this.statusListeners.filter(l => l !== listener);
+        };
+    }
+
     getSnapshotState(): SessionState | null {
         return this.snapshotState;
     }
@@ -205,14 +262,13 @@ export class EventStore {
     private async _updateSnapshot(): Promise<void> {
         if (!this.currentSessionId) return;
         const maxSeq = this.events.reduce((max, e) => Math.max(max, e.seq || 0), 0);
-        if (maxSeq <= this.snapshotUpToSeq) return; // Nothing new since last snapshot
+        if (maxSeq <= this.snapshotUpToSeq) return; 
 
         const fullState = computeState(this.events, this.snapshotState ?? undefined);
         try {
             const snapshotStr = JSON.stringify(fullState);
-            // Safety check: skip if snapshot is > 1MB to avoid 413 errors
             if (snapshotStr.length > 1024 * 1024) {
-                console.warn('[EventStore] Snapshot muito grande (>1MB), pulando salvamento para evitar 413.');
+                console.warn('[EventStore] Snapshot muito grande (>1MB), pulando salvamento.');
                 return;
             }
 
@@ -226,31 +282,24 @@ export class EventStore {
     }
 
     async fetchGlobalBestiary(): Promise<ActionEvent[]> {
-        // Cache em sessionStorage para evitar re-fetch no F5
         const CACHE_KEY = 'bestiary_cache_v1';
-        const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+        const CACHE_TTL = 5 * 60 * 1000;
         if (typeof window !== 'undefined') {
             try {
                 const cached = sessionStorage.getItem(CACHE_KEY);
                 if (cached) {
                     const { data, timestamp } = JSON.parse(cached);
-                    if (Date.now() - timestamp < CACHE_TTL) {
-                        return data;
-                    }
+                    if (Date.now() - timestamp < CACHE_TTL) return data;
                 }
-            } catch { /* ignore parse errors */ }
+            } catch { }
         }
 
         const events = await apiClient.fetchGlobalBestiary();
 
-        // Salvar no cache para próximo carregamento
         if (typeof window !== 'undefined') {
             try {
-                sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-                    data: events,
-                    timestamp: Date.now()
-                }));
-            } catch { /* ignore quota errors */ }
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: events, timestamp: Date.now() }));
+            } catch { }
         }
 
         return events;
@@ -258,7 +307,6 @@ export class EventStore {
 
     async clear() {
         if (!this.currentSessionId) return;
-
         try {
             await apiClient.clearSessionEvents(this.currentSessionId);
             this.events = [];

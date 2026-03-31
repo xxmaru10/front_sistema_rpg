@@ -157,6 +157,10 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         handleDeleteDescriptionBlock,
         handleToggleAllVisibility,
 
+        failedEventIds,
+        connectionStatus,
+        handleRetry,
+
         // Constants
         COLOR_PRESETS,
         TYPE_LABELS,
@@ -372,6 +376,9 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                     handleStartEdit={handleStartEdit}
                     handleCancelEdit={handleCancelEdit}
                     mentionEntities={mentionEntities}
+                    connectionStatus={connectionStatus}
+                    failedEventIds={failedEventIds}
+                    handleRetry={handleRetry}
                 />
             ) : activeTab === "Mundo" ? (
                 <WorldTab 
