@@ -51,14 +51,18 @@ export class VoiceChatManager {
     private peerVolumes: Map<string, number> = new Map();
     private peerMuted: Map<string, boolean> = new Map();
     private peerAudioElements: Map<string, HTMLAudioElement> = new Map();
-    private peerGainNodes: Map<string, GainNode> = new Map();
-    private peerAudioContexts: Map<string, AudioContext> = new Map();
-    private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
     private processedSignalIds: Set<string> = new Set();
     private onPeerUpdate: PeerUpdateCallback;
     private onPresenceUpdate: PresenceUpdateCallback;
     private _micMuted: boolean = false;
     private _isConnected: boolean = false;
+
+    // Singleton AudioContext para evitar limites do navegador e melhorar performance
+    private static globalAudioContext: AudioContext | null = null;
+    private audioNodes: Map<string, { source: MediaStreamAudioSourceNode; gain: GainNode; analyser: AnalyserNode; destination: MediaStreamAudioDestinationNode }> = new Map();
+    private dummyAudioElements: Map<string, HTMLAudioElement> = new Map();
+    private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
+
     private speakingAnalysers: Map<string, { analyser: AnalyserNode; interval: ReturnType<typeof setInterval> }> = new Map();
     private localSpeakingInterval: ReturnType<typeof setInterval> | null = null;
     private _localSpeaking: boolean = false;
@@ -66,7 +70,6 @@ export class VoiceChatManager {
     private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
     private _micVolume: number = 1; // 0-1 volume do microfone local
     private localGainNode: GainNode | null = null;
-    private localAudioContext: AudioContext | null = null;
     private _sessionParticipants: SessionParticipant[] = [];
     private voicePeerIds: Set<string> = new Set();
 
@@ -120,6 +123,19 @@ export class VoiceChatManager {
     get localAudioLevel() { return this._localAudioLevel; }
     get micVolume() { return this._micVolume; }
     get sessionParticipants() { return this._sessionParticipants; }
+    get audioContextState() { return VoiceChatManager.globalAudioContext?.state || 'closed'; }
+
+    // ─── Helpers de Áudio ──────────────────────────────────────
+
+    private getAudioContext(): AudioContext {
+        if (typeof window === 'undefined') {
+            return {} as AudioContext; // Stub para SSR
+        }
+        if (!VoiceChatManager.globalAudioContext) {
+            VoiceChatManager.globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        return VoiceChatManager.globalAudioContext!;
+    }
 
     // ─── Inicialização ──────────────────────────────────────────
 
@@ -277,6 +293,11 @@ export class VoiceChatManager {
                 }
             });
 
+            const audioCtx = this.getAudioContext();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume().catch(console.warn);
+            }
+
             this._isConnected = true;
             this._micMuted = false;
             this.voicePeerIds.add(this.userId);
@@ -334,12 +355,6 @@ export class VoiceChatManager {
         // Atualizar presença
         this.updatePresenceVoiceState(false);
 
-        if (this.localAudioContext) {
-            this.localAudioContext.close().catch(() => { });
-            this.localAudioContext = null;
-            this.localGainNode = null;
-        }
-
         this.cleanupAllPeers();
         this.notifyPeerUpdate();
     }
@@ -359,7 +374,7 @@ export class VoiceChatManager {
     public setMicVolume(volume: number) {
         this._micVolume = Math.max(0, Math.min(2, volume));
         if (this.localGainNode) {
-            this.localGainNode.gain.value = this._micVolume;
+            this.localGainNode.gain.setTargetAtTime(this._micVolume, this.getAudioContext().currentTime, 0.01);
         }
         this.notifyPeerUpdate();
     }
@@ -368,16 +383,16 @@ export class VoiceChatManager {
         const clampedVol = Math.max(0, Math.min(2, volume));
         this.peerVolumes.set(peerId, clampedVol);
 
-        const gainNode = this.peerGainNodes.get(peerId);
+        const gainNode = this.audioNodes.get(peerId)?.gain;
         if (gainNode) {
-            gainNode.gain.value = clampedVol;
+            gainNode.gain.setTargetAtTime(clampedVol, this.getAudioContext().currentTime, 0.1);
         }
 
         const audioEl = this.peerAudioElements.get(peerId);
         if (audioEl) {
             // Se temos GainNode, o volume real é controlado por ele.
-            // O elemento HTML Audio é limitado a 1.0, então mantemos em 1.0 caso haja boost.
-            audioEl.volume = Math.min(1, clampedVol);
+            // O elemento HTML Audio é mantido em 1.0 para não aplicar o volume duas vezes.
+            audioEl.volume = 1;
         }
         this.notifyPeerUpdate();
     }
@@ -437,9 +452,18 @@ export class VoiceChatManager {
         });
         this.peerAudioElements.clear();
 
-        this.peerGainNodes.clear();
-        this.peerAudioContexts.forEach(ctx => ctx.close().catch(() => { }));
-        this.peerAudioContexts.clear();
+        this.dummyAudioElements.forEach(el => {
+            el.pause();
+            el.srcObject = null;
+        });
+        this.dummyAudioElements.clear();
+
+        this.audioNodes.forEach(nodes => {
+            nodes.source.disconnect();
+            nodes.gain.disconnect();
+            nodes.analyser.disconnect();
+        });
+        this.audioNodes.clear();
 
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
@@ -500,11 +524,19 @@ export class VoiceChatManager {
             this.peerAudioElements.delete(peerId);
         }
 
-        this.peerGainNodes.delete(peerId);
-        const peerCtx = this.peerAudioContexts.get(peerId);
-        if (peerCtx) {
-            peerCtx.close().catch(() => { });
-            this.peerAudioContexts.delete(peerId);
+        const dummyEl = this.dummyAudioElements.get(peerId);
+        if (dummyEl) {
+            dummyEl.pause();
+            dummyEl.srcObject = null;
+            this.dummyAudioElements.delete(peerId);
+        }
+
+        const nodes = this.audioNodes.get(peerId);
+        if (nodes) {
+            nodes.source.disconnect();
+            nodes.gain.disconnect();
+            nodes.analyser.disconnect();
+            this.audioNodes.delete(peerId);
         }
 
         const pc = this.peerConnections.get(peerId);
@@ -528,23 +560,18 @@ export class VoiceChatManager {
     private startLocalSpeakingDetection() {
         if (!this.localStream) return;
         try {
-            const audioCtx = new AudioContext();
-            this.localAudioContext = audioCtx;
+            const audioCtx = this.getAudioContext();
             const source = audioCtx.createMediaStreamSource(this.localStream);
 
             // Gain node para controlar volume do microfone
             const gainNode = audioCtx.createGain();
-            gainNode.gain.value = this._micVolume;
+            gainNode.gain.setTargetAtTime(this._micVolume, audioCtx.currentTime, 0.01);
             this.localGainNode = gainNode;
             source.connect(gainNode);
 
             const analyser = audioCtx.createAnalyser();
             analyser.fftSize = 512;
             gainNode.connect(analyser);
-
-            // Conectar o gain ao destino para que o volume do mic afete o que vai para peers
-            // (Na verdade, o WebRTC captura direto do stream, não do AudioContext.
-            //  Mas a detecção de nível passa pelo gain.)
 
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
             this.localSpeakingInterval = setInterval(() => {
@@ -564,14 +591,19 @@ export class VoiceChatManager {
 
     private startPeerSpeakingDetection(peerId: string, stream: MediaStream) {
         try {
-            const audioCtx = new AudioContext();
-            this.peerAudioContexts.set(peerId, audioCtx);
+            const audioCtx = this.getAudioContext();
+            
+            // Resume Audio Context caso o navegador o tenha criado suspendido
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(e => console.warn('[VoiceChat] Auto-resume AudioContext failed:', e));
+            }
+
             const source = audioCtx.createMediaStreamSource(stream);
 
             // Gain node para permitir boost de volume (> 100%)
             const gainNode = audioCtx.createGain();
-            gainNode.gain.value = this.peerVolumes.get(peerId) ?? 1;
-            this.peerGainNodes.set(peerId, gainNode);
+            const currentVolume = this.peerVolumes.get(peerId) ?? 1;
+            gainNode.gain.setTargetAtTime(currentVolume, audioCtx.currentTime, 0.01);
 
             const analyser = audioCtx.createAnalyser();
             analyser.fftSize = 512;
@@ -583,10 +615,22 @@ export class VoiceChatManager {
             const dst = audioCtx.createMediaStreamDestination();
             analyser.connect(dst);
 
+            // Armazenar nós para cleanup
+            this.audioNodes.set(peerId, { source, gain: gainNode, analyser, destination: dst });
+
             // Redirecionar o elemento de áudio para o stream processado
             const audioEl = this.peerAudioElements.get(peerId);
             if (audioEl) {
+                // Bug fix para Chrome: O stream original do WebRTC não decodifica áudio a menos que esteja atrelado
+                // a um elemento HTMLAudio ativo. Criamos um elemento dummy e deixamos mudo.
+                const dummyAudio = new Audio();
+                dummyAudio.srcObject = stream;
+                dummyAudio.muted = true;
+                dummyAudio.play().catch(() => {});
+                this.dummyAudioElements.set(peerId, dummyAudio);
+
                 audioEl.srcObject = dst.stream;
+                audioEl.play().catch(e => console.warn('[VoiceChat] Audio destination play failed:', e));
             }
 
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -720,7 +764,7 @@ export class VoiceChatManager {
             }
             audioEl.srcObject = stream;
             audioEl.muted = this.peerMuted.get(peerId) ?? false;
-            audioEl.volume = Math.min(1, this.peerVolumes.get(peerId) ?? 1);
+            audioEl.volume = 1; // GainNode controla o volume
 
             audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
 

@@ -24,6 +24,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [localAudioLevel, setLocalAudioLevel] = useState(0);
     const [isJoining, setIsJoining] = useState(false);
     const [isManagerReady, setIsManagerReady] = useState(false);
+    const [audioStatus, setAudioStatus] = useState<AudioContextState>('closed');
     const hasAttemptedAutoJoin = useRef(false);
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -173,6 +174,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 if (mgr) {
                     setLocalSpeaking(mgr.localSpeaking);
                     setLocalAudioLevel(mgr.localAudioLevel);
+                    setAudioStatus(mgr.audioContextState);
                     setPeers(prev => prev.map(p => ({
                         ...p,
                         speaking: mgr.isPeerSpeaking(p.peerId),
@@ -452,6 +454,36 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
                     {/* Botão de conectar/desconectar */}
                     <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(var(--accent-rgb), 0.1)' }}>
+                        {audioStatus === 'suspended' && (
+                            <button
+                                onClick={async () => {
+                                    const mgr = managerRef.current;
+                                    if (mgr) await handleJoin(); // Chama join que já tem o resume
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    marginBottom: '10px',
+                                    background: 'rgba(255, 165, 0, 0.15)',
+                                    border: '1px solid rgba(255, 165, 0, 0.4)',
+                                    color: '#ffa500',
+                                    cursor: 'pointer',
+                                    fontFamily: 'var(--font-header)',
+                                    fontSize: '0.7rem',
+                                    letterSpacing: '0.15em',
+                                    textTransform: 'uppercase',
+                                    textAlign: 'center',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    animation: 'pulse 1.5s infinite',
+                                }}
+                            >
+                                ⚠️ ATIVAR ÁUDIO DO NAVEGADOR
+                            </button>
+                        )}
+                        
                         <button
                             onClick={isConnected ? handleLeave : handleJoin}
                             disabled={isJoining}
