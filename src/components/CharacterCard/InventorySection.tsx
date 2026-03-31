@@ -12,9 +12,10 @@ interface InventorySectionProps {
     actorUserId: string;
     canEdit: boolean;
     isGM: boolean;
+    isFloating?: boolean;
 }
 
-export function InventorySection({ character, sessionId, actorUserId, canEdit, isGM }: InventorySectionProps) {
+export function InventorySection({ character, sessionId, actorUserId, canEdit, isGM, isFloating = true }: InventorySectionProps) {
     const [inventoryModal, setInventoryModal] = useState<{ index: number; item: Item; containerId: string | null } | null>(null);
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | string | null>(null);
@@ -220,12 +221,12 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         <>
         <div 
             ref={containerRef}
-            className={`inventory-floating ${isDragging ? 'dragging' : ''}`}
-            style={{ 
+            className={`inventory-container ${isFloating ? 'inventory-floating' : 'inventory-static'} ${isDragging ? 'dragging' : ''}`}
+            style={isFloating ? { 
                 left: `${dragPos.x}px`, 
                 top: `${dragPos.y}px`,
                 cursor: isDragging ? 'grabbing' : 'auto'
-            }}
+            } : {}}
         >
                 <div 
                     className="readout-header mobile-col compact-header drag-handle"

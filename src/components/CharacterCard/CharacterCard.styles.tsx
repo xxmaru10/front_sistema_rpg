@@ -12,7 +12,6 @@ export const CharacterCardStyles = () => (
     min-width: 320px;
     width: 98% !important;
     max-width: 1800px !important;
-    width: 100%;
     margin: 0 auto;
     position: relative;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
@@ -41,6 +40,8 @@ export const CharacterCardStyles = () => (
     display: flex;
     flex-direction: column;
     gap: 40px;
+    width: 100%;
+    box-sizing: border-box;
     background: radial-gradient(circle at 50% 0%, rgba(var(--accent-rgb), 0.05) 0%, transparent 70%);
 }
 
@@ -56,8 +57,10 @@ export const CharacterCardStyles = () => (
 
 .top-layout-grid { 
     display: grid; 
-    grid-template-columns: 400px 1fr; 
-    gap: 48px; 
+    grid-template-columns: minmax(300px, 400px) 1fr; 
+    gap: 64px; 
+    width: 100%;
+    align-items: start;
 }
 
 @media (max-width: 1024px) {
@@ -1609,6 +1612,78 @@ export const CharacterCardStyles = () => (
 
 .qty-btn:hover {
     opacity: 1;
+}
+/* Power Tabs (Stunts, Inventory, Spells) */
+.power-tabs-container {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 8px;
+    margin-top: 32px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s;
+}
+
+.power-tabs-header {
+    display: flex;
+    background: rgba(var(--accent-rgb), 0.05);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+}
+
+.power-tab-btn {
+    flex: 1;
+    padding: 16px;
+    background: none;
+    border: none;
+    font-family: var(--font-header);
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s;
+    border-bottom: 2px solid transparent;
+    opacity: 0.7;
+}
+
+.power-tab-btn:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+    opacity: 1;
+}
+
+.power-tab-btn.active {
+    color: var(--accent-color);
+    background: rgba(var(--accent-rgb), 0.15);
+    border-bottom-color: var(--accent-color);
+    text-shadow: 0 0 15px var(--accent-glow);
+    opacity: 1;
+}
+
+.power-tab-content {
+    padding: 24px;
+    min-height: 200px;
+    transition: all 0.5s ease;
+}
+
+/* Compact Lists inside Tabs */
+.stunts-list-compact, .spells-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.inventory-static {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    width: 100% !important;
+}
+
+.inventory-static .readout-header {
+    display: none; /* Hide drag handle in static mode */
+}
+
+.inventory-static .inventory-list {
+    padding: 0;
 }
     `}</style>
 );

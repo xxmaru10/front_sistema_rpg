@@ -4,13 +4,13 @@ import { Character } from "@/types/domain";
 import { LinkedNotes } from "@/components/SessionNotesTabs/LinkedNotes";
 import { CharacterCardStyles } from "./CharacterCard.styles";
 import { InventorySection } from "./InventorySection";
-import { StuntsSpellsSection } from "./StuntsSpellsSection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { CharacterLore } from "./CharacterLore";
 import { CharacterVitality } from "./CharacterVitality";
 import { CharacterConsequences } from "./CharacterConsequences";
+import { PowerTabsSection } from "./PowerTabsSection";
 
 interface CharacterCardProps {
     character: Character;
@@ -111,16 +111,6 @@ export function CharacterCard({
                     onRefreshChange={hook.handleRefreshChange}
                 />
 
-                {!hideInventory && (
-                    <InventorySection
-                        character={character}
-                        sessionId={sessionId}
-                        actorUserId={actorUserId}
-                        canEdit={canEdit}
-                        isGM={isGM}
-                    />
-                )}
-
                 <div className="lower-content-grid">
                     <div className="lower-col-left">
                         <CharacterConsequences
@@ -137,12 +127,14 @@ export function CharacterCard({
                             onCloseAddModal={() => hook.setShowAddConsequenceModal(false)}
                         />
 
-                        <StuntsSpellsSection
+                        <PowerTabsSection
                             character={character}
                             sessionId={sessionId}
                             actorUserId={actorUserId}
                             canEdit={canEdit}
+                            isGM={isGM}
                         />
+
                         <SkillsSection
                             character={character}
                             sessionId={sessionId}
