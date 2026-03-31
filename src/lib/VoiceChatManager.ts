@@ -480,6 +480,7 @@ export class VoiceChatManager {
         this.peerVolumes.clear();
         this.peerMuted.clear();
         this.pendingCandidates.clear();
+        this.voicePeerIds.clear();
     }
 
     // ─── Bitrate Adaptativo ────────────────────────────────────

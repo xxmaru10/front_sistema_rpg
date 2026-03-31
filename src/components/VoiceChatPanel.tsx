@@ -25,6 +25,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [isJoining, setIsJoining] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isManagerReady, setIsManagerReady] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
     const [audioStatus, setAudioStatus] = useState<AudioContextState>('closed');
     const hasAttemptedAutoJoin = useRef(false);
     const managerRef = useRef<VoiceChatManager | null>(null);
@@ -162,10 +163,11 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 const mgr = managerRef.current;
                 managerRef.current = null;
                 setIsManagerReady(false);
-                setTimeout(() => mgr.disconnect(), 200);
+                // Cleanup síncrono para garantir que nenhum canal fique aberto antes do próximo useEffect
+                mgr.disconnect();
             }
         };
-    }, [sessionId, userId]);
+    }, [sessionId, userId, refreshKey]);
 
     // Poll speaking state para feedback visual
     useEffect(() => {
@@ -249,27 +251,30 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         localStorage.removeItem(`voice_autojoin_${sessionId}`);
     }, [sessionId]);
 
-    // Refresh silencioso do chat de voz
+    // Refresh NUCLEAR (Equivalente ao F5 — recria o sistema do zero)
     const handleRefresh = useCallback(async () => {
-        if (isRefreshing || !managerRef.current) return;
+        if (isRefreshing) return;
         setIsRefreshing(true);
         try {
-            const mgr = managerRef.current;
             const wasConnected = isConnected;
 
-            // Desconectar tudo
-            mgr.leaveVoice();
+            // Limpar estados locais
+            setIsConnected(false);
             setPeers([]);
+            setParticipants([]);
             setLocalSpeaking(false);
             setLocalAudioLevel(0);
 
-            // Aguardar curto período para limpeza de rede/DB
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // Trigger para recriar o manager via refreshKey (useEffect cleanup será chamado)
+            setRefreshKey((prev: number) => prev + 1);
 
-            // Re-entrar automaticamente se estava conectado
-            if (wasConnected) {
-                const ok = await mgr.joinVoice();
-                if (ok) setIsConnected(true);
+            // Aguardar inicialização do novo manager
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Auto-reconnect após o "F5" do chat
+            if (wasConnected && managerRef.current) {
+                await managerRef.current.joinVoice();
+                setIsConnected(true);
             }
         } finally {
             setIsRefreshing(false);
@@ -489,8 +494,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     borderRadius: '4px',
                                     transition: 'all 0.2s',
                                 }}
-                                onMouseEnter={e => !isRefreshing && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-                                onMouseLeave={e => !isRefreshing && (e.currentTarget.style.backgroundColor = 'transparent')}
+                                onMouseEnter={(e: React.MouseEvent) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                                onMouseLeave={(e: React.MouseEvent) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'transparent')}
                             >
                                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} style={{
                                     animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
@@ -507,8 +512,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     padding: '2px 6px',
                                     transition: 'color 0.2s',
                                 }}
-                                onMouseEnter={e => (e.currentTarget.style.color = '#ff4d4d')}
-                                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+                                onMouseEnter={(e: React.MouseEvent) => (e.currentTarget.style.color = '#ff4d4d')}
+                                onMouseLeave={(e: React.MouseEvent) => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
                             >
                                 ✕
                             </button>
@@ -584,8 +589,44 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                     <div style={{
                         overflowY: 'auto',
                         flex: 1,
+                        position: 'relative' as const, // Para o overlay de refresh
                     }}>
-                        {allUsers.length === 0 && (
+                        {/* Overlay de carregamento durante o refresh */}
+                        {isRefreshing && (
+                            <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: 'rgba(15, 15, 15, 0.85)',
+                                backdropFilter: 'blur(4px)',
+                                zIndex: 100,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '15px',
+                                transition: 'all 0.3s ease',
+                            }}>
+                                <div style={{
+                                    width: '30px',
+                                    height: '30px',
+                                    border: '2px solid rgba(var(--accent-rgb), 0.1)',
+                                    borderTop: '2px solid var(--accent-color)',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite',
+                                }} />
+                                <span style={{
+                                    fontFamily: 'var(--font-header)',
+                                    fontSize: '0.6rem',
+                                    letterSpacing: '0.2em',
+                                    color: 'var(--accent-color)',
+                                    textTransform: 'uppercase',
+                                }}>
+                                    Reiniciando Malha de Voz...
+                                </span>
+                            </div>
+                        )}
+
+                        {allUsers.length === 0 && !isRefreshing && (
                             <div style={{
                                 padding: '20px 16px',
                                 textAlign: 'center',

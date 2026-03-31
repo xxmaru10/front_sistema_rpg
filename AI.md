@@ -35,9 +35,8 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Infraestrutura e deploy | `/knowledge/infra/environments.md` |
 
 ## Épicos ativos
-| Épico | Status | Arquivo |
-|---|---|---|
 | Refatoração de Componentes | em andamento | `/epics/epic-01-refatoracao-modular.md` |
+| Sincronização Voz WebRTC | em andamento | `/stories/story-05.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`
