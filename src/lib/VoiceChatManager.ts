@@ -476,38 +476,15 @@ export class VoiceChatManager {
     // ─── Bitrate Adaptativo ────────────────────────────────────
 
     private getAdaptiveBitrate(peerCount: number): number {
-        // Escala de bitrate baseada no número de peers:
-        // 1-2 peers: 96kbps (qualidade alta)
-        // 3-4 peers: 64kbps (qualidade boa)
-        // 5-6 peers: 48kbps (qualidade média)
-        // 7+  peers: 32kbps (economia de banda)
-        if (peerCount <= 2) return 96000;
-        if (peerCount <= 4) return 64000;
-        if (peerCount <= 6) return 48000;
-        return 32000;
+        // Áudio consome pouca banda, limitar agressivamente causa cortes. 
+        // 128kbps é padrão Opis de alta qualidade.
+        return 128000;
     }
 
     private async updateAllPeersBitrate() {
-        const peerCount = this.peerConnections.size;
-        const bitrate = this.getAdaptiveBitrate(peerCount);
-
-        for (const [peerId, pc] of this.peerConnections) {
-            try {
-                const senders = pc.getSenders();
-                for (const sender of senders) {
-                    if (sender.track?.kind === 'audio') {
-                        const params = sender.getParameters();
-                        if (params.encodings && params.encodings.length > 0) {
-                            params.encodings[0].maxBitrate = bitrate;
-                            await sender.setParameters(params);
-                        }
-                    }
-                }
-            } catch (e) {
-                // Ignora peers em estado inválido
-            }
-        }
-        console.log(`[VoiceChat] Bitrate recalculado para todos: ${bitrate / 1000}kbps (${peerCount} peers)`);
+        // Desativado: setParameters frequentes na API do WebRTC causam 'choppy audio' / áudio robótico
+        // Deixamos a gestão de limite de banda nativa e a inicial tratarem disso.
+        return;
     }
 
     private removePeer(peerId: string) {
@@ -591,6 +568,26 @@ export class VoiceChatManager {
 
     private startPeerSpeakingDetection(peerId: string, stream: MediaStream) {
         try {
+            // Cleanup prévio se já existirem nós (ex: re-negociação)
+            const existingNodes = this.audioNodes.get(peerId);
+            if (existingNodes) {
+                existingNodes.source.disconnect();
+                existingNodes.gain.disconnect();
+                existingNodes.analyser.disconnect();
+                this.audioNodes.delete(peerId);
+            }
+            const existingAnalyser = this.speakingAnalysers.get(peerId);
+            if (existingAnalyser) {
+                clearInterval(existingAnalyser.interval);
+                this.speakingAnalysers.delete(peerId);
+            }
+            const existingDummy = this.dummyAudioElements.get(peerId);
+            if (existingDummy) {
+                existingDummy.pause();
+                existingDummy.srcObject = null;
+                this.dummyAudioElements.delete(peerId);
+            }
+
             const audioCtx = this.getAudioContext();
             
             // Resume Audio Context caso o navegador o tenha criado suspendido
@@ -603,7 +600,7 @@ export class VoiceChatManager {
             // Gain node para permitir boost de volume (> 100%)
             const gainNode = audioCtx.createGain();
             const currentVolume = this.peerVolumes.get(peerId) ?? 1;
-            gainNode.gain.setTargetAtTime(currentVolume, audioCtx.currentTime, 0.01);
+            gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
 
             const analyser = audioCtx.createAnalyser();
             analyser.fftSize = 512;
@@ -626,6 +623,7 @@ export class VoiceChatManager {
                 const dummyAudio = new Audio();
                 dummyAudio.srcObject = stream;
                 dummyAudio.muted = true;
+                dummyAudio.autoplay = true;
                 dummyAudio.play().catch(() => {});
                 this.dummyAudioElements.set(peerId, dummyAudio);
 
@@ -752,23 +750,22 @@ export class VoiceChatManager {
 
         pc.ontrack = (event) => {
             console.log(`[VoiceChat - ${this.userId}] Received audio track from:`, peerId);
+            if (event.track.kind !== 'audio') return;
+            
             const stream = event.streams?.[0] || new MediaStream([event.track]);
             this.peerStreams.set(peerId, stream);
 
-            // Criar elemento de áudio para reprodução com GainNode para boost de volume
+            // Criar elemento de áudio principal para reprodução (volume e áudio processado)
             let audioEl = this.peerAudioElements.get(peerId);
             if (!audioEl) {
                 audioEl = new Audio();
                 audioEl.autoplay = true;
                 this.peerAudioElements.set(peerId, audioEl);
             }
-            audioEl.srcObject = stream;
             audioEl.muted = this.peerMuted.get(peerId) ?? false;
-            audioEl.volume = 1; // GainNode controla o volume
+            audioEl.volume = 1; // GainNode controlará o volume real
 
-            audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
-
-            // Iniciar detecção de fala para este peer
+            // Iniciar detecção de fala para este peer (encarrega-se de play e srcObject)
             this.startPeerSpeakingDetection(peerId, stream);
 
             this.notifyPeerUpdate();
