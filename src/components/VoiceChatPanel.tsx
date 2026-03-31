@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, MouseEvent as ReactMouseEvent } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { VoiceChatManager, VoicePeer, SessionParticipant } from "@/lib/VoiceChatManager";
 import { globalEventStore } from "@/lib/eventStore";
 import { computeState } from "@/lib/projections";
@@ -218,9 +218,9 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         };
 
         if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('mousedown', handleClickOutside as any);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside as any);
     }, [isOpen]);
 
     const handleJoin = useCallback(async () => {
@@ -494,8 +494,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     borderRadius: '4px',
                                     transition: 'all 0.2s',
                                 }}
-                                onMouseEnter={(e: ReactMouseEvent<HTMLButtonElement>) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-                                onMouseLeave={(e: ReactMouseEvent<HTMLButtonElement>) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'transparent')}
+                                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'transparent')}
                             >
                                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} style={{
                                     animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
@@ -512,8 +512,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     padding: '2px 6px',
                                     transition: 'color 0.2s',
                                 }}
-                                onMouseEnter={(e: ReactMouseEvent<HTMLButtonElement>) => (e.currentTarget.style.color = '#ff4d4d')}
-                                onMouseLeave={(e: ReactMouseEvent<HTMLButtonElement>) => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+                                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.color = '#ff4d4d')}
+                                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
                             >
                                 ✕
                             </button>
