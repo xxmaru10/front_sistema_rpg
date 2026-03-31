@@ -374,12 +374,26 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         </div>
     );
 
+    const handleTrackEnded = useCallback(() => {
+        if (isLooping) {
+            // Loop de faixa individual: comportamento local controlado por cada cliente
+            if (audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => console.warn("[MusicPlayer] Retry play (Loop):", e));
+            }
+        } else if (userRole === "GM") {
+            // Avanço de playlist: gerenciado pelo Mestre para manter Event Sourcing íntegro
+            console.log(`[MusicPlayer - ${userId}] Track ended. Orchestrating next track for session: ${sessionId}`);
+            playNext();
+        }
+    }, [isLooping, userRole, playNext, userId, sessionId]);
+
     return (
         <div
             className="music-player-container"
             style={unifiedMode ? { display: 'contents' } : { position: 'relative' }}
         >
-            <audio ref={audioRef} loop={isLooping} />
+            <audio ref={audioRef} onEnded={handleTrackEnded} />
 
             {/* Non-unified: toggle button */}
             {!unifiedMode && (
