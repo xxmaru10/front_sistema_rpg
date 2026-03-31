@@ -17,10 +17,10 @@
 
   --danger-color: #5d0000;
 
-  /* Tipografia — driven by theme */
-  --font-header: 'Cinzel Decorative', 'Cinzel', serif;
-  --font-narrative: 'Cormorant Garamond', serif;
-  --font-main: 'Crimson Text', serif;
+  /* Tipografia — driven by theme or Next.js layout */
+  /* --font-header: 'Cinzel Decorative', 'Cinzel', serif; */
+  /* --font-narrative: 'Cormorant Garamond', serif; */
+  /* --font-main: 'Crimson Text', serif; */
 
   /* Sombras e Efeitos */
   --shadow-arcane: 0 10px 40px rgba(0, 0, 0, 0.9);

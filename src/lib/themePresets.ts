@@ -14,6 +14,8 @@ import type { ThemePreset } from "./themePresets.shared";
  */
 export function generateThemeCSS(theme: ThemePreset): string {
     return `
+        @import url('${theme.googleFontsUrl}');
+
         :root {
             /* ─── Theme: ${theme.label} ─── */
             --theme-name: ${theme.id};

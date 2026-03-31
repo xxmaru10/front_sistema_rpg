@@ -25,6 +25,8 @@ interface SessionHeaderProps {
     videoStream?: MediaStream | null;
     onStartScreenShare?: () => void;
     onStopScreenShare?: () => void;
+    connectionStatus?: string;
+    title?: string;
 }
 
 export function SessionHeader({
@@ -44,7 +46,8 @@ export function SessionHeader({
     currentAtmosphericEffect = "none",
     videoStream,
     onStartScreenShare,
-    onStopScreenShare
+    onStopScreenShare,
+    connectionStatus
 }: SessionHeaderProps) {
     const [showLibrary, setShowLibrary] = useState(false);
     const [showSummonMenu, setShowSummonMenu] = useState(false);
@@ -472,6 +475,32 @@ export function SessionHeader({
                     <div style={{ pointerEvents: 'auto' }}>
                         {children}
                     </div>
+                </div>
+            )}
+
+            {connectionStatus && connectionStatus !== 'SUBSCRIBED' && (
+                <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 200,
+                    background: 'rgba(200, 50, 50, 0.9)',
+                    color: '#fff',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.6rem',
+                    fontFamily: 'var(--font-header)',
+                    letterSpacing: '0.1em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 0 15px rgba(200, 50, 50, 0.4)',
+                    backdropFilter: 'blur(4px)',
+                    animation: 'pulse 2s infinite'
+                }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff', animation: 'blink 1s infinite' }} />
+                    {connectionStatus === 'CONNECTING' ? 'CONECTANDO...' : 'CONEXÃO INSTÁVEL'}
                 </div>
             )}
         </div>

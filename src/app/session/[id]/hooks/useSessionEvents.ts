@@ -1,21 +1,25 @@
 import { useState, useEffect } from "react";
-import { globalEventStore } from "@/lib/eventStore";
+import { globalEventStore, ConnectionStatus } from "@/lib/eventStore";
 import { ActionEvent, Character } from "@/types/domain";
 
 export function useSessionEvents(sessionId: string, actorUserId: string) {
     const [events, setEvents] = useState<ActionEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [globalBestiaryChars, setGlobalBestiaryChars] = useState<Character[]>([]);
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(globalEventStore.getConnectionStatus());
+    const [failedEventIds, setFailedEventIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         setIsLoading(true);
-        const loadingTimeout = setTimeout(() => setIsLoading(false), 60000);
+        const loadingTimeout = setTimeout(() => setIsLoading(false), 20000); // Reduced to 20s for better UX
         globalEventStore.initSession(sessionId);
 
         globalEventStore.fetchGlobalBestiary().then(fetched => {
             const chars: Character[] = fetched.map(e => e.payload as unknown as Character);
             setGlobalBestiaryChars(chars);
         });
+
+        const unsubscribeStatus = globalEventStore.subscribeStatus(setConnectionStatus);
 
         const unsubscribe = globalEventStore.subscribe(
             (event) => {
@@ -33,19 +37,30 @@ export function useSessionEvents(sessionId: string, actorUserId: string) {
                         return [...prev, event];
                     });
                 }
+                setFailedEventIds(globalEventStore.getFailedIds());
             },
             (bulkEvents) => {
                 setEvents(bulkEvents);
                 setIsLoading(false);
                 clearTimeout(loadingTimeout);
+                setFailedEventIds(globalEventStore.getFailedIds());
             }
         );
 
         return () => {
             clearTimeout(loadingTimeout);
             unsubscribe();
+            unsubscribeStatus();
         };
     }, [sessionId, actorUserId]);
 
-    return { events, setEvents, isLoading, globalBestiaryChars, setGlobalBestiaryChars };
+    return { 
+        events, 
+        setEvents, 
+        isLoading, 
+        globalBestiaryChars, 
+        setGlobalBestiaryChars,
+        connectionStatus,
+        failedEventIds
+    };
 }

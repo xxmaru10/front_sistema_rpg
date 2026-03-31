@@ -98,7 +98,7 @@ export default function SessionPage() {
 
     // ─── EVENTS ───────────────────────────────────────────────────────────────
 
-    const { events, isLoading, globalBestiaryChars, setGlobalBestiaryChars } =
+    const { events, isLoading, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds } =
         useSessionEvents(sessionId as string, actorUserId);
 
     // ─── EARLY PROJECTION (feeds useVictoryDefeat before full derivations) ────
@@ -432,6 +432,7 @@ export default function SessionPage() {
             />
 
             <SessionHeader
+                title={state.title}
                 imageUrl={headerImageUrl}
                 onUpdate={handleHeaderUpdate}
                 isGM={userRole === "GM"}
@@ -485,6 +486,7 @@ export default function SessionPage() {
                 videoStream={videoStream}
                 onStartScreenShare={handleStartScreenShare}
                 onStopScreenShare={handleStopScreenShare}
+                connectionStatus={connectionStatus}
             >
                 {activeTab === "combat" && !challengeMode && (
                     <TurnOrderTracker
