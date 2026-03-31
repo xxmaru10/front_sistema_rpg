@@ -27,6 +27,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [isManagerReady, setIsManagerReady] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [audioStatus, setAudioStatus] = useState<AudioContextState>('closed');
+    const [presenceFailed, setPresenceFailed] = useState(false);
     const hasAttemptedAutoJoin = useRef(false);
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -188,6 +189,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                     setLocalSpeaking(mgr.localSpeaking);
                     setLocalAudioLevel(mgr.localAudioLevel);
                     setAudioStatus(mgr.audioContextState);
+                    setPresenceFailed(mgr.presenceTrackFailed);
 
                     setPeers(prev => {
                         let changed = false;
@@ -485,7 +487,20 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         }}>
                             🎤 VOICE CHAT
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {presenceFailed && (
+                                <div 
+                                    title="Presença instável - usuários podem não aparecer na lista, mas o áudio deve funcionar."
+                                    style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#f97316',
+                                        boxShadow: '0 0 8px #f97316',
+                                        animation: 'pulse 2s infinite'
+                                    }}
+                                />
+                            )}
                             <button
                                 onClick={handleRefresh}
                                 disabled={isRefreshing}

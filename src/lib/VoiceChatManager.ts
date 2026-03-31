@@ -72,6 +72,7 @@ export class VoiceChatManager {
     private localGainNode: GainNode | null = null;
     private _sessionParticipants: SessionParticipant[] = [];
     private voicePeerIds: Set<string> = new Set();
+    private _presenceTrackFailed: boolean = false;
 
     // Tentativas de reconexão por peer (max 3)
     private reconnectAttempts: Map<string, number> = new Map();
@@ -123,6 +124,7 @@ export class VoiceChatManager {
     get localAudioLevel() { return this._localAudioLevel; }
     get micVolume() { return this._micVolume; }
     get sessionParticipants() { return this._sessionParticipants; }
+    get presenceTrackFailed() { return this._presenceTrackFailed; }
     get audioContextState() { return VoiceChatManager.globalAudioContext?.state || 'closed'; }
 
     // ─── Helpers de Áudio ──────────────────────────────────────
@@ -193,15 +195,54 @@ export class VoiceChatManager {
             })
             .subscribe(async (status: string) => {
                 if (status === 'SUBSCRIBED') {
-                    const trackStatus = await this.presenceChannel?.track({
-                        userId: this.userId,
-                        characterId: this.characterId,
-                        inVoice: this._isConnected,
-                        online_at: new Date().toISOString(),
-                    });
-                    console.log(`[VoiceChat - ${this.userId}] Initial Presence Track Status:`, trackStatus);
+                    // Mudança 1: Delay inicial de 500ms para estabilizar canal antes do track
+                    setTimeout(async () => {
+                        await this.retryTrack(this._isConnected);
+                    }, 500);
                 }
             });
+    }
+
+    private async retryTrack(inVoice: boolean, attempt: number = 1): Promise<void> {
+        if (!this.presenceChannel) return;
+
+        console.log(`[VoiceChat - ${this.userId}] Presence Track Attempt ${attempt}...`);
+        
+        try {
+            const status = await this.presenceChannel.track({
+                userId: this.userId,
+                characterId: this.characterId,
+                inVoice,
+                online_at: new Date().toISOString(),
+            });
+
+            if (status === 'ok') {
+                console.log(`[VoiceChat - ${this.userId}] Presence Track SUCCESS at attempt ${attempt}`);
+                this._presenceTrackFailed = false;
+                return;
+            }
+
+            console.warn(`[VoiceChat - ${this.userId}] Presence Track FAILED (${status}) at attempt ${attempt}`);
+            
+            if (attempt < 4) {
+                const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+                console.log(`[VoiceChat - ${this.userId}] Retrying presence track in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this.retryTrack(inVoice, attempt + 1);
+            } else {
+                console.error(`[VoiceChat - ${this.userId}] Presence Track CRITICAL FAILURE after all 4 attempts.`);
+                this._presenceTrackFailed = true;
+            }
+        } catch (e) {
+            console.error(`[VoiceChat - ${this.userId}] Error during presence track attempt ${attempt}:`, e);
+            if (attempt < 4) {
+                const delay = Math.pow(2, attempt - 1) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this.retryTrack(inVoice, attempt + 1);
+            } else {
+                this._presenceTrackFailed = true;
+            }
+        }
     }
 
     private syncPresence() {
@@ -256,15 +297,8 @@ export class VoiceChatManager {
     }
 
     private async updatePresenceVoiceState(inVoice: boolean) {
-        if (this.presenceChannel) {
-            const status = await this.presenceChannel.track({
-                userId: this.userId,
-                characterId: this.characterId,
-                inVoice,
-                online_at: new Date().toISOString(),
-            });
-            console.log(`[VoiceChat - ${this.userId}] Presence Track Update Status:`, status);
-        }
+        // Mudança 2: Usar o sistema de retry para atualizações de estado também
+        await this.retryTrack(inVoice);
     }
 
     // ─── Envio de sinais ────────────────────────────────────────
