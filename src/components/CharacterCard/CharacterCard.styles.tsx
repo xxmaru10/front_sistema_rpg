@@ -11,7 +11,7 @@ export const CharacterCardStyles = () => (
     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
     min-width: 320px;
     width: 98% !important;
-    max-width: 1800px !important;
+    max-width: 2500px !important;
     margin: 0 auto;
     position: relative;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
@@ -57,7 +57,7 @@ export const CharacterCardStyles = () => (
 
 .top-layout-grid { 
     display: grid; 
-    grid-template-columns: minmax(300px, 400px) 1fr; 
+    grid-template-columns: 400px 1fr; 
     gap: 64px; 
     width: 100%;
     align-items: start;
