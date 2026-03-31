@@ -31,6 +31,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const speakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const wasConnectedBeforeRefresh = useRef(false);
 
     const [events, setEvents] = useState<ActionEvent[]>([]);
 
@@ -251,12 +252,11 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         localStorage.removeItem(`voice_autojoin_${sessionId}`);
     }, [sessionId]);
 
-    // Refresh NUCLEAR (Equivalente ao F5 — recria o sistema do zero)
     const handleRefresh = useCallback(async () => {
         if (isRefreshing) return;
         setIsRefreshing(true);
         try {
-            const wasConnected = isConnected;
+            wasConnectedBeforeRefresh.current = isConnected;
 
             // Limpar estados locais
             setIsConnected(false);
@@ -267,26 +267,23 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
             // Trigger para recriar o manager via refreshKey (useEffect cleanup será chamado)
             setRefreshKey((prev: number) => prev + 1);
-
-            // Aguardar inicialização do novo manager
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Auto-reconnect após o "F5" do chat
-            if (wasConnected && managerRef.current) {
-                await managerRef.current.joinVoice();
-                setIsConnected(true);
-            }
+            
+            // Note: O auto-reconnect agora é tratado pelo useEffect de auto-join, 
+            // que aguarda isManagerReady ser true.
         } finally {
             setIsRefreshing(false);
         }
     }, [isRefreshing, isConnected]);
 
-    // Auto-join effect
+    // Auto-join effect (trata F5 da página e Nuclear Refresh)
     useEffect(() => {
         const autoJoin = localStorage.getItem(`voice_autojoin_${sessionId}`);
-        if (autoJoin === "true" && !isConnected && !isJoining && isManagerReady && managerRef.current && !hasAttemptedAutoJoin.current) {
+        const shouldJoin = (autoJoin === "true" && !hasAttemptedAutoJoin.current) || wasConnectedBeforeRefresh.current;
+
+        if (shouldJoin && !isConnected && !isJoining && isManagerReady && managerRef.current) {
             const timeout = setTimeout(() => {
                 hasAttemptedAutoJoin.current = true;
+                wasConnectedBeforeRefresh.current = false;
                 handleJoin();
             }, 800);
             return () => clearTimeout(timeout);

@@ -206,6 +206,10 @@ export class VoiceChatManager {
     private syncPresence() {
         if (!this.presenceChannel) return;
         const state = this.presenceChannel.presenceState();
+        
+        // Bug #5: Log para diagnosticar visibilidade de jogadores
+        console.log(`[VoiceChat - ${this.userId}] Presence Sync - Bruto:`, state);
+
         const participants: SessionParticipant[] = [];
 
         // Agregar status inVoice verdadeiro caso haja múltiplos registros (ex: após refresh)
@@ -441,6 +445,13 @@ export class VoiceChatManager {
 
     public disconnect() {
         this.leaveVoice();
+        
+        // Bug #4: Reset do AudioContext Singleton se estiver em estado inválido
+        if (VoiceChatManager.globalAudioContext?.state === 'closed') {
+            console.log('[VoiceChat] AudioContext was closed, resetting singleton.');
+            VoiceChatManager.globalAudioContext = null;
+        }
+
         if (this.channel) {
             supabase.removeChannel(this.channel);
             this.channel = null;
@@ -686,14 +697,19 @@ export class VoiceChatManager {
                 console.log(`[VoiceChat - ${this.userId}] Peer joined (I am offerer), creating offer for:`, from);
                 await this.createPeerConnection(from, true);
             } else {
-                console.log(`[VoiceChat - ${this.userId}] Peer joined (they are offerer), pinging back:`, from);
-                await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
+                console.log(`[VoiceChat - ${this.userId}] Peer joined (they are offerer), pinging back to correctly initiate negotiation with:`, from);
+                // Bug #2: Adicionar destinatário (to) para evitar flood e loops de negociação
+                await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
             }
             return;
         }
 
         if (type === 'voice-offer' && signal.offer) {
-            if (!this._isConnected || !this.localStream) return;
+            // Bug #3: Log para diagnóstico de ofertas descartadas
+            if (!this._isConnected || !this.localStream) {
+                console.warn(`[VoiceChat - ${this.userId}] Offer from ${from} dropped — not connected/no stream (Local: ${this._isConnected}, Stream: ${!!this.localStream})`);
+                return;
+            }
             await this.handleOffer(signal);
             return;
         }
