@@ -6,7 +6,7 @@ repo: shared
 related:
   - /AI.md
   - /knowledge/conventions.md
-last_updated: 2026-03-30
+last_updated: 2026-03-31
 status: estável
 ---
 

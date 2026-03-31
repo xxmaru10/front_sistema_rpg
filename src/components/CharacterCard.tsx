@@ -20,6 +20,7 @@ interface CharacterCardProps {
     isCompact?: boolean;
     isLinkedCharacter?: boolean;
     mentionEntities?: any[];
+    hideInventory?: boolean;
 }
 
 export function CharacterCard({
@@ -30,6 +31,7 @@ export function CharacterCard({
     isCompact = false,
     isLinkedCharacter = false,
     mentionEntities = [],
+    hideInventory = false,
 }: CharacterCardProps) {
     const isOwner =
         (actorUserId &&
@@ -114,13 +116,15 @@ export function CharacterCard({
                 />
                 {/* [CLAUDE_CUT_END:Vitality] */}
 
-                <InventorySection
-                    character={character}
-                    sessionId={sessionId}
-                    actorUserId={actorUserId}
-                    canEdit={canEdit}
-                    isGM={isGM}
-                />
+                {!hideInventory && (
+                    <InventorySection
+                        character={character}
+                        sessionId={sessionId}
+                        actorUserId={actorUserId}
+                        canEdit={canEdit}
+                        isGM={isGM}
+                    />
+                )}
 
                 <div className="lower-content-grid">
                     <div className="lower-col-left">

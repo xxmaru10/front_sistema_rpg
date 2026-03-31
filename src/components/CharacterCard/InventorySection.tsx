@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Character, Item } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
@@ -19,6 +19,57 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | string | null>(null);
     const [showVISelector, setShowVISelector] = useState(false);
+
+    // Draggable Logic
+    const [dragPos, setDragPos] = useState({ x: -270, y: 20 });
+    const [isDragging, setIsDragging] = useState(false);
+    const posRef = useRef({ x: -270, y: 20 });
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Load persisted position
+    useEffect(() => {
+        const saved = localStorage.getItem(`inv_pos_${character.id}`);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setDragPos(parsed);
+                posRef.current = parsed;
+            } catch (e) { console.warn("Failed to load inventory position", e); }
+        }
+    }, [character.id]);
+
+    const onMouseDownHeader = (e: any) => {
+        // Don't drag if clicking buttons inside header
+        if ((e.target as HTMLElement).closest('button')) return;
+
+        e.preventDefault();
+        const startX = e.clientX - dragPos.x;
+        const startY = e.clientY - dragPos.y;
+        setIsDragging(true);
+
+        const onMouseMove = (ev: MouseEvent) => {
+            const newX = ev.clientX - startX;
+            const newY = ev.clientY - startY;
+            
+            if (containerRef.current) {
+                containerRef.current.style.left = `${newX}px`;
+                containerRef.current.style.top = `${newY}px`;
+            }
+            posRef.current = { x: newX, y: newY };
+        };
+
+        const onMouseUp = () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            setIsDragging(false);
+            setDragPos(posRef.current);
+            localStorage.setItem(`inv_pos_${character.id}`, JSON.stringify(posRef.current));
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    };
+
 
     const handleInventoryChange = (index: number, containerId: string | null = null) => {
         let currentItem: Item;
@@ -167,13 +218,25 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
 
     return (
         <>
-            <div className="inventory-floating">
-                    <div className="readout-header mobile-col compact-header">
-                        <div className="header-group">
-                            <span className="symbol">🜏</span>
-                            <span>INVENTÁRIO & ARSENAL</span>
-                        </div>
+        <div 
+            ref={containerRef}
+            className={`inventory-floating ${isDragging ? 'dragging' : ''}`}
+            style={{ 
+                left: `${dragPos.x}px`, 
+                top: `${dragPos.y}px`,
+                cursor: isDragging ? 'grabbing' : 'auto'
+            }}
+        >
+                <div 
+                    className="readout-header mobile-col compact-header drag-handle"
+                    onMouseDown={onMouseDownHeader}
+                    style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                >
+                    <div className="header-group">
+                        <span className="symbol">🜏</span>
+                        <span>INVENTÁRIO & ARSENAL</span>
                     </div>
+                </div>
                     <div className="inventory-list compact-list">
                         {Array.from({ length: 5 }).map((_, i) => {
                             const item = character.inventory?.[i];

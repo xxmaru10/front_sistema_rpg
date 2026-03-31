@@ -153,6 +153,7 @@ export function BestiaryTab({
                             sessionId={sessionId}
                             actorUserId={actorUserId}
                             isGM={userRole === "GM"}
+                            hideInventory={true}
                         />
                         {userRole === "GM" && (
                             <div className="scope-toggle-container">
