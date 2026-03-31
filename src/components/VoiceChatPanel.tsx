@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, MouseEvent } from "react";
 import { VoiceChatManager, VoicePeer, SessionParticipant } from "@/lib/VoiceChatManager";
 import { globalEventStore } from "@/lib/eventStore";
 import { computeState } from "@/lib/projections";
@@ -494,8 +494,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     borderRadius: '4px',
                                     transition: 'all 0.2s',
                                 }}
-                                onMouseEnter={(e: React.MouseEvent) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-                                onMouseLeave={(e: React.MouseEvent) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'transparent')}
+                                onMouseEnter={(e: MouseEvent<HTMLButtonElement>) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                                onMouseLeave={(e: MouseEvent<HTMLButtonElement>) => !isRefreshing && (e.currentTarget.style.backgroundColor = 'transparent')}
                             >
                                 <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} style={{
                                     animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
@@ -512,8 +512,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     padding: '2px 6px',
                                     transition: 'color 0.2s',
                                 }}
-                                onMouseEnter={(e: React.MouseEvent) => (e.currentTarget.style.color = '#ff4d4d')}
-                                onMouseLeave={(e: React.MouseEvent) => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+                                onMouseEnter={(e: MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.color = '#ff4d4d')}
+                                onMouseLeave={(e: MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
                             >
                                 ✕
                             </button>

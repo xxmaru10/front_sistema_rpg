@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-03-30
+last_updated: 2026-03-31
 ---
 
 # Fate Companion — Frontend 
