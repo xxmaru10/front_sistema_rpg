@@ -193,12 +193,13 @@ export class VoiceChatManager {
             })
             .subscribe(async (status: string) => {
                 if (status === 'SUBSCRIBED') {
-                    await this.presenceChannel.track({
+                    const trackStatus = await this.presenceChannel?.track({
                         userId: this.userId,
                         characterId: this.characterId,
                         inVoice: this._isConnected,
                         online_at: new Date().toISOString(),
                     });
+                    console.log(`[VoiceChat - ${this.userId}] Initial Presence Track Status:`, trackStatus);
                 }
             });
     }
@@ -207,7 +208,7 @@ export class VoiceChatManager {
         if (!this.presenceChannel) return;
         const state = this.presenceChannel.presenceState();
         
-        // Bug #5: Log para diagnosticar visibilidade de jogadores
+        // Diagnóstico Etapa 1: Log de presença bruto
         console.log(`[VoiceChat - ${this.userId}] Presence Sync - Bruto:`, state);
 
         const participants: SessionParticipant[] = [];
@@ -256,12 +257,13 @@ export class VoiceChatManager {
 
     private async updatePresenceVoiceState(inVoice: boolean) {
         if (this.presenceChannel) {
-            await this.presenceChannel.track({
+            const status = await this.presenceChannel.track({
                 userId: this.userId,
                 characterId: this.characterId,
                 inVoice,
                 online_at: new Date().toISOString(),
             });
+            console.log(`[VoiceChat - ${this.userId}] Presence Track Update Status:`, status);
         }
     }
 

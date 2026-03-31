@@ -35,6 +35,15 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
     const [events, setEvents] = useState<ActionEvent[]>([]);
 
+    // Diagnóstico Etapa 1: Sanitização de IDs
+    useEffect(() => {
+        console.log('[VoiceChatPanel] Mount Props Sync Check:', {
+            sessionId: JSON.stringify(sessionId),
+            userId: JSON.stringify(userId),
+            characterId: JSON.stringify(characterId)
+        });
+    }, [sessionId, userId, characterId]);
+
     useEffect(() => {
         setEvents(globalEventStore.getEvents());
         const unsubscribe = globalEventStore.subscribe(
