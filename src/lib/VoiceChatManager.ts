@@ -781,7 +781,12 @@ export class VoiceChatManager {
                     console.log(`[VoiceChat] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
                     setTimeout(() => {
                         if (this._isConnected && this.localStream) {
-                            this.createPeerConnection(peerId, true);
+                            // Respeitar deterministic offerer na reconexão!
+                            if (this.userId < peerId) {
+                                this.createPeerConnection(peerId, true);
+                            } else {
+                                this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
+                            }
                         }
                     }, 3000 * (attempts + 1)); // Backoff progressivo
                 } else {
@@ -793,30 +798,7 @@ export class VoiceChatManager {
             }
         };
 
-        // Bitrate adaptativo baseado no número de peers conectados
-        const peerCount = this.peerConnections.size;
-        const adaptiveBitrate = this.getAdaptiveBitrate(peerCount);
-        if (this.localStream) {
-            try {
-                const senders = pc.getSenders();
-                for (const sender of senders) {
-                    if (sender.track?.kind === 'audio') {
-                        const params = sender.getParameters();
-                        if (!params.encodings || params.encodings.length === 0) {
-                            params.encodings = [{}];
-                        }
-                        params.encodings[0].maxBitrate = adaptiveBitrate;
-                        await sender.setParameters(params);
-                    }
-                }
-                console.log(`[VoiceChat] Bitrate adaptativo: ${adaptiveBitrate / 1000}kbps (${peerCount} peers)`);
-            } catch (e) {
-                console.warn('[VoiceChat] Could not set audio encoding params:', e);
-            }
-
-            // Recalcular bitrate para TODOS os peers existentes (novo peer mudou a contagem)
-            this.updateAllPeersBitrate();
-        }
+        // Sem manipulação forçada de bitrate (WebRTC fallback natural ativado)
 
         if (createOffer) {
             try {
