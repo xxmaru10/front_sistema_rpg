@@ -7,9 +7,27 @@ export const CharacterCardStyles = () => (
 .char-artifact {
     background: #080808;
     border: 1px solid var(--border-color);
-    padding: 4px;
+    padding: 1px;
     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
     min-width: 340px;
+    min-height: 600px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.operative-arcano {
+    --accent-color: #C9A84C;
+    --accent-glow: rgba(197, 160, 89, 0.3);
+    --accent-rgb: 197, 160, 89;
+}
+
+.threat-arcano {
+    --accent-color: #ff4444;
+    --accent-glow: rgba(255, 68, 68, 0.3);
+    --accent-rgb: 255, 68, 68;
 }
 
 .char-artifact.compact {
@@ -17,11 +35,12 @@ export const CharacterCardStyles = () => (
 }
 
 .tarot-inner {
-    border: 1px solid rgba(197, 160, 89, 0.1);
-    padding: 48px 40px;
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    padding: 40px;
     display: flex;
     flex-direction: column;
-    gap: 48px;
+    gap: 40px;
+    background: radial-gradient(circle at 50% 0%, rgba(var(--accent-rgb), 0.05) 0%, transparent 70%);
 }
 
 .compact .tarot-inner {
@@ -734,13 +753,47 @@ export const CharacterCardStyles = () => (
 .aspect-display { font-family: var(--font-header); font-size: 0.8rem; color: #ddd; text-transform: uppercase; word-break: break-word; }
 
 .artifact-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(197, 160, 89, 0.1); padding-bottom: 16px; }
-.char-name { font-family: var(--font-header); font-size: 2.2rem; line-height: 1.2; color: var(--accent-color); margin-bottom: 20px; text-shadow: 0 0 20px rgba(197, 160, 89, 0.2); }
+.char-name { 
+    font-family: var(--font-header); 
+    font-size: 2.2rem; 
+    line-height: 1.2; 
+    color: var(--accent-color); 
+    margin-bottom: 20px; 
+    text-shadow: 0 0 20px var(--accent-glow), 0 0 10px rgba(0,0,0,0.5); 
+}
 .compact .char-name { font-size: 1.2rem; }
 
-.fate-reserve { text-align: right; background: rgba(197, 160, 89, 0.03); padding: 12px 20px; border-left: 1px solid var(--accent-color); }
+.fate-reserve { 
+    text-align: right; 
+    background: rgba(var(--accent-rgb), 0.1); 
+    padding: 12px 20px; 
+    border-left: 2px solid var(--accent-color); 
+    box-shadow: inset 5px 0 15px rgba(0,0,0,0.3);
+}
 .reserve-value { display: flex; align-items: center; gap: 16px; font-family: var(--font-header); font-size: 1.6rem; color: var(--accent-color); }
 
-.char-artifact { background: #111; border: 1px solid #333; border-radius: 2px; padding: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: visible; position: relative; transition: all 0.3s ease; }
+.section-title {
+    font-family: var(--font-header);
+    font-size: 0.9rem;
+    letter-spacing: 0.3em;
+    color: var(--accent-color);
+    text-align: center;
+    margin: 24px 0 16px 0;
+    opacity: 0.9;
+    text-shadow: 0 0 10px var(--accent-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.section-title::before, .section-title::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(to right, transparent, var(--accent-color), transparent);
+    opacity: 0.3;
+}
 
 .integrity-matrix { display: flex; flex-direction: column; gap: 32px; }
 .track-header { display: flex; align-items: center; gap: 12px; font-family: var(--font-header); font-size: 0.75rem; letter-spacing: 0.15em; color: var(--accent-color); margin-bottom: 16px; }
