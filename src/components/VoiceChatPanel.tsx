@@ -5,7 +5,7 @@ import { VoiceChatManager, VoicePeer, SessionParticipant } from "@/lib/VoiceChat
 import { globalEventStore } from "@/lib/eventStore";
 import { computeState } from "@/lib/projections";
 import { ActionEvent } from "@/types/domain";
-import { Mic, MicOff } from "lucide-react";
+import { Mic, MicOff, RefreshCw } from "lucide-react";
 
 interface VoiceChatPanelProps {
     sessionId: string;
@@ -23,6 +23,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [localSpeaking, setLocalSpeaking] = useState(false);
     const [localAudioLevel, setLocalAudioLevel] = useState(0);
     const [isJoining, setIsJoining] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [isManagerReady, setIsManagerReady] = useState(false);
     const [audioStatus, setAudioStatus] = useState<AudioContextState>('closed');
     const hasAttemptedAutoJoin = useRef(false);
@@ -175,13 +176,23 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                     setLocalSpeaking(mgr.localSpeaking);
                     setLocalAudioLevel(mgr.localAudioLevel);
                     setAudioStatus(mgr.audioContextState);
-                    setPeers(prev => prev.map(p => ({
-                        ...p,
-                        speaking: mgr.isPeerSpeaking(p.peerId),
-                        audioLevel: mgr.getPeerAudioLevel(p.peerId)
-                    })));
+
+                    setPeers(prev => {
+                        let changed = false;
+                        const next = prev.map(p => {
+                            const isSpeaking = mgr.isPeerSpeaking(p.peerId);
+                            const audioLevel = mgr.getPeerAudioLevel(p.peerId);
+                            // Só marcar como alterado se a mudança for significativa (>5% no nível ou mudança no boolean)
+                            if (p.speaking !== isSpeaking || Math.abs(p.audioLevel - audioLevel) > 0.05) {
+                                changed = true;
+                                return { ...p, speaking: isSpeaking, audioLevel: audioLevel };
+                            }
+                            return p;
+                        });
+                        return changed ? next : prev;
+                    });
                 }
-            }, 200);
+            }, 300);
         } else {
             if (speakingPollRef.current) {
                 clearInterval(speakingPollRef.current);
@@ -238,6 +249,33 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         localStorage.removeItem(`voice_autojoin_${sessionId}`);
     }, [sessionId]);
 
+    // Refresh silencioso do chat de voz
+    const handleRefresh = useCallback(async () => {
+        if (isRefreshing || !managerRef.current) return;
+        setIsRefreshing(true);
+        try {
+            const mgr = managerRef.current;
+            const wasConnected = isConnected;
+
+            // Desconectar tudo
+            mgr.leaveVoice();
+            setPeers([]);
+            setLocalSpeaking(false);
+            setLocalAudioLevel(0);
+
+            // Aguardar curto período para limpeza de rede/DB
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            // Re-entrar automaticamente se estava conectado
+            if (wasConnected) {
+                const ok = await mgr.joinVoice();
+                if (ok) setIsConnected(true);
+            }
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [isRefreshing, isConnected]);
+
     // Auto-join effect
     useEffect(() => {
         const autoJoin = localStorage.getItem(`voice_autojoin_${sessionId}`);
@@ -284,43 +322,45 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     }, [peers]);
 
     // Juntar participantes e peers: todos aparecem, com status de voice
-    const allUsers = participants.map(p => {
-        const peer = peers.find(vp => vp.peerId === p.userId);
-        const isMe = p.userId === userId;
-        return {
-            id: p.userId,
-            characterId: isMe ? characterId : p.characterId,
-            isMe,
-            inVoice: isMe ? isConnected : (peer?.inVoice || p.inVoice),
-            speaking: isMe ? localSpeaking : (peer?.speaking || false),
-            audioLevel: isMe ? localAudioLevel : (peer?.audioLevel || 0),
-            volume: isMe ? micVolume : (peer ? Math.round(peer.volume * 100) : 100),
-            muted: isMe ? micMuted : (peer?.muted || false),
-            hasPeer: !!peer,
-        };
-    });
-
-    // Garantir que o usuário local está sempre na lista
-    if (!allUsers.find(u => u.isMe)) {
-        allUsers.unshift({
-            id: userId,
-            characterId,
-            isMe: true,
-            inVoice: isConnected,
-            speaking: localSpeaking,
-            audioLevel: localAudioLevel,
-            volume: micVolume,
-            muted: micMuted,
-            hasPeer: false,
+    const allUsers = useMemo(() => {
+        const users = participants.map(p => {
+            const peer = peers.find(vp => vp.peerId === p.userId);
+            const isMe = p.userId === userId;
+            return {
+                id: p.userId,
+                characterId: isMe ? characterId : p.characterId,
+                isMe,
+                inVoice: isMe ? isConnected : (peer?.inVoice || p.inVoice),
+                speaking: isMe ? localSpeaking : (peer?.speaking || false),
+                audioLevel: isMe ? localAudioLevel : (peer?.audioLevel || 0),
+                volume: isMe ? micVolume : (peer ? Math.round(peer.volume * 100) : 100),
+                muted: isMe ? micMuted : (peer?.muted || false),
+                hasPeer: !!peer,
+            };
         });
-    }
 
-    // Mover "eu" para o topo
-    allUsers.sort((a, b) => {
-        if (a.isMe) return -1;
-        if (b.isMe) return 1;
-        return 0;
-    });
+        // Garantir que o usuário local está sempre na lista
+        if (!users.find(u => u.isMe)) {
+            users.unshift({
+                id: userId,
+                characterId,
+                isMe: true,
+                inVoice: isConnected,
+                speaking: localSpeaking,
+                audioLevel: localAudioLevel,
+                volume: micVolume,
+                muted: micMuted,
+                hasPeer: false,
+            });
+        }
+
+        // Mover "eu" para o topo
+        return users.sort((a, b) => {
+            if (a.isMe) return -1;
+            if (b.isMe) return 1;
+            return 0;
+        });
+    }, [participants, peers, userId, characterId, isConnected, localSpeaking, localAudioLevel, micVolume, micMuted]);
 
     const voiceCount = allUsers.filter(u => u.inVoice).length;
 
@@ -434,22 +474,45 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         }}>
                             🎤 VOICE CHAT
                         </span>
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'rgba(255,255,255,0.4)',
-                                cursor: 'pointer',
-                                fontSize: '1rem',
-                                padding: '2px 6px',
-                                transition: 'color 0.2s',
-                            }}
-                            onMouseEnter={e => (e.target as HTMLElement).style.color = '#ff4d4d'}
-                            onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.4)'}
-                        >
-                            ✕
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                title="Reiniciar Conexão de Voz"
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: isRefreshing ? 'var(--accent-color)' : 'rgba(255,255,255,0.4)',
+                                    cursor: isRefreshing ? 'wait' : 'pointer',
+                                    display: 'flex',
+                                    padding: '4px',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={e => !isRefreshing && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                                onMouseLeave={e => !isRefreshing && (e.currentTarget.style.backgroundColor = 'transparent')}
+                            >
+                                <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} style={{
+                                    animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+                                }} />
+                            </button>
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'rgba(255,255,255,0.4)',
+                                    cursor: 'pointer',
+                                    fontSize: '1rem',
+                                    padding: '2px 6px',
+                                    transition: 'color 0.2s',
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.color = '#ff4d4d')}
+                                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+                            >
+                                ✕
+                            </button>
+                        </div>
                     </div>
 
                     {/* Botão de conectar/desconectar */}

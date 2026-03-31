@@ -419,8 +419,17 @@ h3 {
   }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .animate-fade {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 /* Estilos Compartilhados para Inputs Místicos (DiceRoller & CombatSelector) */

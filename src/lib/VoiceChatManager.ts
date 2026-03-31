@@ -229,6 +229,15 @@ export class VoiceChatManager {
             }
         });
 
+        // Limpar voicePeerIds de usuários que não estão mais na presença (zombies)
+        const currentPresenceUsers = new Set(userIds);
+        this.voicePeerIds.forEach(id => {
+            if (id !== this.userId && !currentPresenceUsers.has(id)) {
+                this.voicePeerIds.delete(id);
+                this.removePeer(id);
+            }
+        });
+
         userIds.forEach(userId => {
             participants.push({
                 userId: userId,
@@ -311,12 +320,12 @@ export class VoiceChatManager {
             // Anunciar presença para outros peers
             await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
 
-            // Heartbeat a cada 15s para peers que entrarem depois
+            // Heartbeat a cada 30s para evitar sobrecarga em celulares, mas garantindo que novos saibam que estou aqui
             this.heartbeatInterval = setInterval(() => {
                 if (this._isConnected) {
                     this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
                 }
-            }, 15000);
+            }, 30000);
 
             this.notifyPeerUpdate();
             return true;
@@ -556,11 +565,11 @@ export class VoiceChatManager {
                 const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
                 this._localAudioLevel = Math.min(1, avg / 80);
                 const wasSpeaking = this._localSpeaking;
-                this._localSpeaking = avg > 11; // Limiar de fala reduzido para aumentar a sensibilidade em ~25%
+                this._localSpeaking = avg > 11;
                 if (wasSpeaking !== this._localSpeaking) {
                     this.notifyPeerUpdate();
                 }
-            }, 150);
+            }, 250);
         } catch (e) {
             console.warn('[VoiceChat] Could not start speaking detection:', e);
         }
@@ -640,7 +649,7 @@ export class VoiceChatManager {
                     (peerData as any).speaking = avg > 11;
                     (peerData as any).audioLevel = Math.min(1, avg / 80);
                 }
-            }, 150);
+            }, 250);
 
             this.speakingAnalysers.set(peerId, { analyser, interval, speaking: false, audioLevel: 0 } as any);
         } catch (e) {
@@ -663,25 +672,19 @@ export class VoiceChatManager {
 
         if (type === 'voice-join') {
             if (from === this.userId) return; // Nunca conectar consigo mesmo
+
+            // SEMPRE limpar conexão anterior se houver sinal de join (refresh/reinício do peer)
+            this.removePeer(from);
             this.voicePeerIds.add(from);
-            this.syncPresence(); // atualizar lista de presença
+            this.syncPresence();
 
             if (!this._isConnected || !this.localStream) return;
 
-            // Se já temos conexão ativa, ignorar
-            const existingPc = this.peerConnections.get(from);
-            if (existingPc && existingPc.connectionState !== 'failed' && existingPc.connectionState !== 'closed') {
-                return;
-            }
-
             // Deterministic offerer: smaller userId always initiates the offer.
-            // This prevents both sides from creating offers simultaneously (glare condition).
             if (this.userId < from) {
-                // I am the offerer — create offer for them
                 console.log(`[VoiceChat - ${this.userId}] Peer joined (I am offerer), creating offer for:`, from);
                 await this.createPeerConnection(from, true);
             } else {
-                // They are the offerer — ping back so they know to create an offer for me
                 console.log(`[VoiceChat - ${this.userId}] Peer joined (they are offerer), pinging back:`, from);
                 await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
             }
