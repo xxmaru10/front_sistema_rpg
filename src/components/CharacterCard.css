@@ -109,9 +109,9 @@
 
 .inventory-floating {
     position: absolute;
-    top: 650px;
-    right: -260px; /* Adjusted for narrower width */
-    width: 240px; /* Reduced width by 40% (400px -> 240px) */
+    top: 40px;
+    left: -260px; /* Alinhado à esquerda conforme solicitado */
+    width: 240px;
     background: rgba(8, 8, 8, 0.98);
     border: 1px solid rgba(197, 160, 89, 0.4);
     padding: 10px;
@@ -238,6 +238,7 @@
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
 }
 
@@ -1308,7 +1309,7 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible; /* Mudado para visible para permitir inventário flutuante lateral */
     position: relative; /* Ensure absolute children are relative to this */
     transition: all 0.3s ease;
 }
