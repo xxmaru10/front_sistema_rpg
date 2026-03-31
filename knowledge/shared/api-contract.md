@@ -59,6 +59,13 @@ export type SessionData = {
   name: string;
   gmUserId: string;
 };
+
+export type SessionState = {
+  id: string;
+  name?: string;
+  sessionNumber?: number;
+  currentTurnUserId?: string;
+};
 ```
 
 ## Códigos de Erro

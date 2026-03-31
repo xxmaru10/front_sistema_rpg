@@ -9,9 +9,9 @@ export const CharacterCardStyles = () => (
     border: 1px solid var(--border-color);
     padding: 1px;
     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-    min-width: 340px;
-    min-height: 600px;
-    max-width: 900px;
+    min-width: 320px;
+    width: 98% !important;
+    max-width: 1400px !important;
     width: 100%;
     margin: 0 auto;
     position: relative;
@@ -113,24 +113,48 @@ export const CharacterCardStyles = () => (
     gap: 4px;
 }
 
-.compact-consequences .consequence-slot.small-slot {
-    padding: 4px 8px;
-    font-size: 0.7rem;
+.compact-consequences .consequence-slot.small-slot { 
+    display: grid;
+    grid-template-columns: 40px 1fr 30px;
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 8px;
+    background: rgba(0,0,0,0.2);
+    padding: 8px 12px;
+    border-left: 2px solid var(--accent-color);
+    border-radius: 0 4px 4px 0;
 }
 
-.compact-consequences .consequence-slot.small-slot .slot-label {
-    font-size: 0.6rem;
+.compact-consequences .consequence-slot.small-slot .slot-label { 
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.85rem; 
+    color: var(--accent-color);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
-.compact-consequences .consequence-slot.small-slot .penalty-badge {
-    font-size: 1.1rem;
-    font-weight: bold;
-    padding: 2px 6px;
+.compact-consequences .consequence-slot.small-slot .penalty-badge { 
+    background: rgba(var(--accent-rgb), 0.2);
+    border: 1px solid var(--accent-color);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-family: var(--font-header);
+    font-size: 0.9rem;
+    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.3);
 }
 
 .compact-consequences .consequence-slot.small-slot .active-consequence,
-.compact-consequences .consequence-slot.small-slot .placeholder-text {
-    font-size: 0.65rem;
+.compact-consequences .consequence-slot.small-slot .placeholder-text { 
+    font-family: var(--font-narrative);
+    font-size: 1rem;
+    color: #ccc;
+    font-style: italic;
+    opacity: 0.7;
 }
 
 .inventory-floating {
@@ -996,6 +1020,46 @@ export const CharacterCardStyles = () => (
 
 .anomaly-item { font-family: var(--font-narrative); font-style: italic; font-size: 1rem; margin-bottom: 12px; padding: 16px 20px; background: rgba(197, 160, 89, 0.02); border: 1px solid rgba(197, 160, 89, 0.05); color: var(--text-primary); line-height: 1.5; }
 
+.skills-auto-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+    gap: 16px; 
+    margin-top: 16px;
+}
+
+.skill-slot {
+    background: rgba(197, 160, 89, 0.05);
+    border: 1px solid rgba(197, 160, 89, 0.15);
+    border-radius: 4px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+
+.skill-slot:hover {
+    background: rgba(197, 160, 89, 0.08);
+    border-color: rgba(197, 160, 89, 0.4);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    transform: scale(1.02);
+}
+
+.skill-name {
+    font-family: var(--font-header);
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    color: var(--accent-color);
+}
+
+.skill-value {
+    font-family: var(--font-header);
+    font-size: 1.1rem;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+}
+
 .skills-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1057,6 +1121,328 @@ export const CharacterCardStyles = () => (
 .gm-delete-btn:hover {
     opacity: 1;
     background: rgba(100, 0, 0, 0.2);
+}
+
+/* Stunts & Spells Styling */
+.stunt-slot, .spell-slot {
+    background: rgba(197, 160, 89, 0.05);
+    border: 1px solid rgba(197, 160, 89, 0.15);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stunt-slot:hover, .spell-slot:hover {
+    background: rgba(197, 160, 89, 0.08);
+    border-color: rgba(197, 160, 89, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(197, 160, 89, 0.05);
+    transform: translateY(-2px);
+}
+
+.stunt-btn-wrapper, .spell-btn-wrapper {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 8px;
+    position: relative;
+}
+
+.stunt-name, .spell-name {
+    font-family: var(--font-header);
+    color: var(--accent-color);
+    font-size: 1.1rem;
+    letter-spacing: 0.1rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.stunt-cost, .spell-cost {
+    font-family: var(--font-header);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    letter-spacing: 0.15em;
+    margin-top: -4px;
+}
+
+.stunt-effect-col, .spell-effect-col {
+    font-family: var(--font-narrative);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    opacity: 0.9;
+    white-space: pre-wrap;
+    margin-top: 12px;
+}
+
+.add-stunt-btn, .add-spell-btn {
+    background: rgba(197, 160, 89, 0.03);
+    border: 1px dashed rgba(197, 160, 89, 0.3);
+    color: var(--accent-color);
+    padding: 12px;
+    width: 100%;
+    font-family: var(--font-header);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.add-stunt-btn:hover, .add-spell-btn:hover {
+    background: rgba(197, 160, 89, 0.1);
+    border-style: solid;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px rgba(197, 160, 89, 0.2);
+}
+
+.edit-stunt-trigger, .edit-spell-trigger {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    opacity: 0.2;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.stunt-slot:hover .edit-stunt-trigger, .spell-slot:hover .edit-spell-trigger {
+    opacity: 0.8;
+}
+
+/* Forms */
+.stunt-editable-wrapper, .spell-editable-wrapper {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(0,0,0,0.3);
+}
+
+.stunt-name-input, .spell-name-input {
+    background: rgba(197, 160, 89, 0.05);
+    border: 1px solid rgba(197, 160, 89, 0.2);
+    color: #fff;
+    padding: 8px 12px;
+    font-family: var(--font-header);
+    font-size: 1.1rem;
+    width: 100%;
+    outline: none;
+}
+
+.stunt-effect-textarea, .spell-effect-textarea {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(197, 160, 89, 0.1);
+    color: #ccc;
+    padding: 12px;
+    font-family: var(--font-narrative);
+    font-size: 1rem;
+    min-height: 100px;
+    resize: vertical;
+    outline: none;
+}
+
+.stunt-action-btn, .spell-action-btn {
+    padding: 6px 16px;
+    font-family: var(--font-header);
+    font-size: 0.7rem;
+    letter-spacing: 0.1rem;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.2s;
+}
+
+.stunt-action-btn.save, .spell-action-btn.save {
+    background: rgba(197, 160, 89, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.stunt-action-btn.cancel, .spell-action-btn.cancel {
+    background: transparent;
+    border-color: #666;
+    color: #999;
+}
+
+.stunt-action-btn.delete, .spell-action-btn.delete {
+    background: rgba(255,0,0,0.05);
+    border-color: #550000;
+    color: #cc4444;
+}
+
+.stunt-action-btn:hover {
+    transform: scale(1.05);
+}
+
+/* Fate Reserve Scaling */
+.reserve-value .symbol { font-size: 2rem; color: var(--accent-color); text-shadow: 0 0 15px var(--accent-glow); margin-right: 8px; }
+.reserve-value { font-weight: 700; }
+
+/* Fate Reserve & Stress Tracks Styling */
+.fate-reserve {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    padding: 24px;
+    border-radius: 8px;
+    margin-top: 32px;
+    box-shadow: inset 0 0 20px rgba(var(--accent-rgb), 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.reserve-label {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.25em;
+    color: var(--accent-color);
+    text-align: center;
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+    padding-bottom: 8px;
+    width: 100%;
+}
+
+.reserve-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    font-family: var(--font-header);
+    font-size: 3rem !important;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(var(--accent-rgb), 0.6);
+}
+
+.reserve-value .symbol {
+    font-size: 2.2rem;
+    color: var(--accent-color);
+    filter: drop-shadow(0 0 10px rgba(var(--accent-rgb), 0.5));
+}
+
+.refresh-value {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    margin-top: 12px;
+}
+
+.reserve-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 24px;
+}
+
+.reserve-btn {
+    background: rgba(var(--accent-rgb), 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
+    color: var(--accent-color);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.reserve-btn:hover {
+    background: rgba(var(--accent-rgb), 0.2);
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+
+.refresh-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.reserve-btn.refresh {
+    height: 15px;
+    font-size: 0.6rem;
+    padding: 0;
+}
+
+/* Stress Grid */
+.logic-readout.stress-matrix {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(197, 160, 89, 0.1);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.stress-row {
+    margin-bottom: 24px;
+}
+
+.stress-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.stress-header .symbol {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    opacity: 0.7;
+}
+
+.stress-header span:not(.symbol) {
+    font-family: var(--font-header);
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    color: var(--accent-color);
+}
+
+.stress-boxes {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.stress-btn {
+    width: 44px;
+    height: 44px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(197, 160, 89, 0.3);
+    color: var(--accent-color);
+    font-family: var(--font-header);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: 4px;
+}
+
+.stress-btn:hover {
+    background: rgba(197, 160, 89, 0.1);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px rgba(197, 160, 89, 0.2);
+}
+
+.stress-btn.filled {
+    background: var(--accent-color);
+    color: #000;
+    box-shadow: 0 0 20px rgba(197, 160, 89, 0.4);
+    border-color: #fff;
+}
+
+.stress-btn.empty {
+    opacity: 0.8;
 }
     `}</style>
 );
