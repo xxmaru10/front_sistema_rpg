@@ -38,3 +38,7 @@ Siga o padrão Conventional Commits:
 - Não realizar chamadas de API diretamente em componentes. Use `apiClient.ts`.
 - Nunca modificar o arquivo `domain.ts` sem atualizar o `api-contract.md` correspondente.
 - Jamais commitar arquivos `.env` ou segredos sensíveis.
+- **Proibido usar `alert()`** em fluxos de rede ou lógica core; substitua por `console.error` ou toasts não-bloqueantes.
+- **Requisições `fetch` sem timeout**: Sempre use `AbortSignal.timeout()` ou AbortController para evitar requisições pendentes infinitas.
+- **Estado de UI stuck**: Toda ação de carregamento/estado bloqueado (ex: `isRolling`) deve ter um safety timeout para auto-destravamento.
+
