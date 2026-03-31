@@ -57,8 +57,8 @@ export class VoiceChatManager {
     private _micMuted: boolean = false;
     private _isConnected: boolean = false;
 
-    // Singleton AudioContext para evitar limites do navegador e melhorar performance
-    private static globalAudioContext: AudioContext | null = null;
+    private localAudioContext: AudioContext | null = null;
+    private peerAudioContexts: Map<string, AudioContext> = new Map();
     private audioNodes: Map<string, { source: MediaStreamAudioSourceNode; gain: GainNode; analyser: AnalyserNode; destination: MediaStreamAudioDestinationNode }> = new Map();
     private dummyAudioElements: Map<string, HTMLAudioElement> = new Map();
     private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
@@ -72,7 +72,6 @@ export class VoiceChatManager {
     private localGainNode: GainNode | null = null;
     private _sessionParticipants: SessionParticipant[] = [];
     private voicePeerIds: Set<string> = new Set();
-    private _presenceTrackFailed: boolean = false;
 
     // Tentativas de reconexão por peer (max 3)
     private reconnectAttempts: Map<string, number> = new Map();
@@ -124,19 +123,27 @@ export class VoiceChatManager {
     get localAudioLevel() { return this._localAudioLevel; }
     get micVolume() { return this._micVolume; }
     get sessionParticipants() { return this._sessionParticipants; }
-    get presenceTrackFailed() { return this._presenceTrackFailed; }
-    get audioContextState() { return VoiceChatManager.globalAudioContext?.state || 'closed'; }
+    get audioContextState() { return this.localAudioContext?.state || 'closed'; }
 
     // ─── Helpers de Áudio ──────────────────────────────────────
 
-    private getAudioContext(): AudioContext {
+    private getLocalAudioContext(): AudioContext {
         if (typeof window === 'undefined') {
             return {} as AudioContext; // Stub para SSR
         }
-        if (!VoiceChatManager.globalAudioContext) {
-            VoiceChatManager.globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (!this.localAudioContext) {
+            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         }
-        return VoiceChatManager.globalAudioContext!;
+        return this.localAudioContext!;
+    }
+
+    private getPeerAudioContext(peerId: string): AudioContext {
+        let ctx = this.peerAudioContexts.get(peerId);
+        if (!ctx) {
+            ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.peerAudioContexts.set(peerId, ctx);
+        }
+        return ctx;
     }
 
     // ─── Inicialização ──────────────────────────────────────────
@@ -195,54 +202,15 @@ export class VoiceChatManager {
             })
             .subscribe(async (status: string) => {
                 if (status === 'SUBSCRIBED') {
-                    // Mudança 1: Delay inicial de 500ms para estabilizar canal antes do track
-                    setTimeout(async () => {
-                        await this.retryTrack(this._isConnected);
-                    }, 500);
+                    const status = await this.presenceChannel?.track({
+                        userId: this.userId,
+                        characterId: this.characterId,
+                        inVoice: this._isConnected,
+                        online_at: new Date().toISOString(),
+                    });
+                    console.log(`[VoiceChat - ${this.userId}] Initial Presence Track Status:`, status);
                 }
             });
-    }
-
-    private async retryTrack(inVoice: boolean, attempt: number = 1): Promise<void> {
-        if (!this.presenceChannel) return;
-
-        console.log(`[VoiceChat - ${this.userId}] Presence Track Attempt ${attempt}...`);
-        
-        try {
-            const status = await this.presenceChannel.track({
-                userId: this.userId,
-                characterId: this.characterId,
-                inVoice,
-                online_at: new Date().toISOString(),
-            });
-
-            if (status === 'ok') {
-                console.log(`[VoiceChat - ${this.userId}] Presence Track SUCCESS at attempt ${attempt}`);
-                this._presenceTrackFailed = false;
-                return;
-            }
-
-            console.warn(`[VoiceChat - ${this.userId}] Presence Track FAILED (${status}) at attempt ${attempt}`);
-            
-            if (attempt < 4) {
-                const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
-                console.log(`[VoiceChat - ${this.userId}] Retrying presence track in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return this.retryTrack(inVoice, attempt + 1);
-            } else {
-                console.error(`[VoiceChat - ${this.userId}] Presence Track CRITICAL FAILURE after all 4 attempts.`);
-                this._presenceTrackFailed = true;
-            }
-        } catch (e) {
-            console.error(`[VoiceChat - ${this.userId}] Error during presence track attempt ${attempt}:`, e);
-            if (attempt < 4) {
-                const delay = Math.pow(2, attempt - 1) * 1000;
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return this.retryTrack(inVoice, attempt + 1);
-            } else {
-                this._presenceTrackFailed = true;
-            }
-        }
     }
 
     private syncPresence() {
@@ -292,13 +260,31 @@ export class VoiceChatManager {
             });
         });
 
+        // Mudança 1: Garantir que voicePeerIds popula a UI mesmo com Presence vazio
+        this.voicePeerIds.forEach(id => {
+            if (!participants.find(p => p.userId === id)) {
+                participants.push({
+                    userId: id,
+                    inVoice: true,
+                    characterId: undefined, // Infelizmente sem presença não temos o characterId
+                });
+            }
+        });
+
         this._sessionParticipants = participants;
         this.onPresenceUpdate(participants);
     }
 
     private async updatePresenceVoiceState(inVoice: boolean) {
-        // Mudança 2: Usar o sistema de retry para atualizações de estado também
-        await this.retryTrack(inVoice);
+        if (this.presenceChannel) {
+            const status = await this.presenceChannel.track({
+                userId: this.userId,
+                characterId: this.characterId,
+                inVoice,
+                online_at: new Date().toISOString(),
+            });
+            console.log(`[VoiceChat - ${this.userId}] Presence Track Update Status:`, status);
+        }
     }
 
     // ─── Envio de sinais ────────────────────────────────────────
@@ -342,7 +328,7 @@ export class VoiceChatManager {
                 }
             });
 
-            const audioCtx = this.getAudioContext();
+            const audioCtx = this.getLocalAudioContext();
             if (audioCtx.state === 'suspended') {
                 await audioCtx.resume().catch(console.warn);
             }
@@ -360,12 +346,12 @@ export class VoiceChatManager {
             // Anunciar presença para outros peers
             await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
 
-            // Heartbeat a cada 30s para evitar sobrecarga em celulares, mas garantindo que novos saibam que estou aqui
+            // Heartbeat a cada 15s para garantir que novos participantes nos vejam rapidamente (padrão original)
             this.heartbeatInterval = setInterval(() => {
                 if (this._isConnected) {
                     this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
                 }
-            }, 30000);
+            }, 15000);
 
             this.notifyPeerUpdate();
             return true;
@@ -391,6 +377,11 @@ export class VoiceChatManager {
         if (this.localStream) {
             this.localStream.getTracks().forEach(t => t.stop());
             this.localStream = null;
+        }
+
+        if (this.localAudioContext) {
+            this.localAudioContext.close().catch(() => {});
+            this.localAudioContext = null;
         }
 
         this.sendSignal({ type: 'voice-leave', from: this.userId, peerId: this.userId });
@@ -423,7 +414,8 @@ export class VoiceChatManager {
     public setMicVolume(volume: number) {
         this._micVolume = Math.max(0, Math.min(2, volume));
         if (this.localGainNode) {
-            this.localGainNode.gain.setTargetAtTime(this._micVolume, this.getAudioContext().currentTime, 0.01);
+            const ctx = this.getLocalAudioContext();
+            this.localGainNode.gain.setTargetAtTime(this._micVolume, ctx.currentTime, 0.01);
         }
         this.notifyPeerUpdate();
     }
@@ -434,7 +426,8 @@ export class VoiceChatManager {
 
         const gainNode = this.audioNodes.get(peerId)?.gain;
         if (gainNode) {
-            gainNode.gain.setTargetAtTime(clampedVol, this.getAudioContext().currentTime, 0.1);
+            const ctx = this.getPeerAudioContext(peerId);
+            gainNode.gain.setTargetAtTime(clampedVol, ctx.currentTime, 0.1);
         }
 
         const audioEl = this.peerAudioElements.get(peerId);
@@ -482,12 +475,6 @@ export class VoiceChatManager {
     public disconnect() {
         this.leaveVoice();
         
-        // Bug #4: Reset do AudioContext Singleton se estiver em estado inválido
-        if (VoiceChatManager.globalAudioContext?.state === 'closed') {
-            console.log('[VoiceChat] AudioContext was closed, resetting singleton.');
-            VoiceChatManager.globalAudioContext = null;
-        }
-
         if (this.channel) {
             supabase.removeChannel(this.channel);
             this.channel = null;
@@ -520,6 +507,10 @@ export class VoiceChatManager {
             nodes.analyser.disconnect();
         });
         this.audioNodes.clear();
+
+        // Mudança 4: Close all peer contexts
+        this.peerAudioContexts.forEach(ctx => ctx.close().catch(() => {}));
+        this.peerAudioContexts.clear();
 
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
@@ -579,6 +570,13 @@ export class VoiceChatManager {
             this.peerConnections.delete(peerId);
         }
 
+        // Mudança 4: Close and remove peer context
+        const ctx = this.peerAudioContexts.get(peerId);
+        if (ctx) {
+            ctx.close().catch(() => {});
+            this.peerAudioContexts.delete(peerId);
+        }
+
         this.peerStreams.delete(peerId);
         this.peerVolumes.delete(peerId);
         this.peerMuted.delete(peerId);
@@ -594,7 +592,7 @@ export class VoiceChatManager {
     private startLocalSpeakingDetection() {
         if (!this.localStream) return;
         try {
-            const audioCtx = this.getAudioContext();
+            const audioCtx = this.getLocalAudioContext();
             const source = audioCtx.createMediaStreamSource(this.localStream);
 
             // Gain node para controlar volume do microfone
@@ -645,7 +643,7 @@ export class VoiceChatManager {
                 this.dummyAudioElements.delete(peerId);
             }
 
-            const audioCtx = this.getAudioContext();
+            const audioCtx = this.getPeerAudioContext(peerId);
             
             // Resume Audio Context caso o navegador o tenha criado suspendido
             if (audioCtx.state === 'suspended') {
@@ -721,7 +719,16 @@ export class VoiceChatManager {
         if (type === 'voice-join') {
             if (from === this.userId) return; // Nunca conectar consigo mesmo
 
-            // SEMPRE limpar conexão anterior se houver sinal de join (refresh/reinício do peer)
+            // Mudança 2: Restaurar guarda de conexão existente. 
+            // Só remover se a conexão estiver falha ou fechada.
+            const existingPc = this.peerConnections.get(from);
+            if (existingPc 
+                && existingPc.connectionState !== 'failed' 
+                && existingPc.connectionState !== 'closed') {
+                console.log(`[VoiceChat - ${this.userId}] Signal 'voice-join' from ${from} ignored (already connected/connecting)`);
+                return;
+            }
+
             this.removePeer(from);
             this.voicePeerIds.add(from);
             this.syncPresence();
