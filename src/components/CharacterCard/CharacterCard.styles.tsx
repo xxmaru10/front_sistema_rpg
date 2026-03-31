@@ -739,8 +739,8 @@ export const CharacterCardStyles = () => (
 .consequence-debuff-badge { font-size: 0.65rem; color: #ff6b6b; background: rgba(255, 100, 100, 0.15); border: 1px solid rgba(255, 100, 100, 0.3); padding: 2px 8px; border-radius: 3px; font-weight: bold; letter-spacing: 0.05em; }
 
 .portrait-column { position: relative; display: flex; flex-direction: column; gap: 12px; height: 100%; }
-.char-name-portrait { font-family: var(--font-victorian); font-size: 1.8rem; font-weight: 600; font-style: italic; line-height: 1.2; color: var(--accent-color); text-align: center; text-shadow: 0 0 20px rgba(197, 160, 89, 0.2); margin: 0; }
-.compact .char-name-portrait { font-size: 1.4rem; }
+.char-name-portrait { font-family: var(--font-victorian); font-size: 1.3rem; font-weight: 600; font-style: italic; line-height: 1.2; color: var(--accent-color); text-align: center; text-shadow: 0 0 20px rgba(197, 160, 89, 0.2); margin: 0; }
+.compact .char-name-portrait { font-size: 1.1rem; }
 
 .character-portrait {
     width: 100%; flex: 1; background-color: rgba(0, 0, 0, 0.3); background-image: url('/fundo_retrato.png');
