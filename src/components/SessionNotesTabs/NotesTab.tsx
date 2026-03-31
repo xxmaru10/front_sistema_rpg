@@ -311,7 +311,11 @@ export function NotesTab({
                                 <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 <span className="actor" style={{ color: authorColor }}>{note.authorName.toUpperCase()}</span>
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    {isPending && <Clock size={12} className="status-pending" title="Enviando..." />}
+                                    {isPending && (
+                                        <span title="Enviando...">
+                                            <Clock size={12} className="status-pending" />
+                                        </span>
+                                    )}
                                     {isFailed && (
                                         <button className="retry-btn" onClick={() => handleRetry?.(note.id)} title="Falha ao enviar. Clique para tentar novamente.">
                                             <RefreshCw size={12} />
