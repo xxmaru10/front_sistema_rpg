@@ -45,7 +45,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
 
     switch (type) {
         case "SESSION_CREATED":
-            return { ...state, id: payload.sessionId };
+            return { ...state, id: payload.sessionId, name: payload.name };
 
         case "TURN_GRANTED":
             return { ...state, currentTurnUserId: payload.userId };

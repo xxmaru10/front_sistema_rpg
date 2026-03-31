@@ -47,7 +47,8 @@ export function SessionHeader({
     videoStream,
     onStartScreenShare,
     onStopScreenShare,
-    connectionStatus
+    connectionStatus,
+    title
 }: SessionHeaderProps) {
     const [showLibrary, setShowLibrary] = useState(false);
     const [showSummonMenu, setShowSummonMenu] = useState(false);
@@ -103,6 +104,43 @@ export function SessionHeader({
                     {isGM && <span style={{ color: 'rgba(255,255,255,0.2)' }}>Adicionar Capa</span>}
                 </div>
             ) : null}
+
+            {/* Title & Centered Breadcrumb */}
+            <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center',
+                pointerEvents: 'none',
+                zIndex: 105,
+                width: '100%'
+            }}>
+                <div style={{
+                    fontFamily: 'var(--font-header)',
+                    fontSize: '0.8rem',
+                    letterSpacing: '0.5em',
+                    color: 'var(--accent-color)',
+                    opacity: 0.6,
+                    marginBottom: '8px',
+                    textTransform: 'uppercase'
+                }}>
+                    {tabName}
+                </div>
+                {title && (
+                    <h1 style={{
+                        fontFamily: 'var(--font-header)',
+                        fontSize: '2.5rem',
+                        letterSpacing: '0.2em',
+                        color: '#fff',
+                        margin: 0,
+                        textTransform: 'uppercase',
+                        textShadow: '0 0 30px rgba(var(--accent-rgb), 0.5), 2px 2px 4px #000'
+                    }}>
+                        {title}
+                    </h1>
+                )}
+            </div>
 
             <style jsx>{`
                 @media (max-width: 768px) {

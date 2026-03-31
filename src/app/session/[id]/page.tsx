@@ -432,7 +432,7 @@ export default function SessionPage() {
             />
 
             <SessionHeader
-                title={state.title}
+                title={state.name || `Sessão: ${state.sessionNumber}`}
                 imageUrl={headerImageUrl}
                 onUpdate={handleHeaderUpdate}
                 isGM={userRole === "GM"}

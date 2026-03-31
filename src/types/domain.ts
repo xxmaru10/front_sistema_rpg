@@ -235,6 +235,7 @@ export type SessionState = {
     lastTurnChangeTimestamp?: string;
     sessionNumber?: number;
     battlemap?: BattlemapState;
+    name?: string;
 };
 
 export type Stroke = {
