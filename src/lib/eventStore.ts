@@ -52,7 +52,7 @@ export class EventStore {
                     table: 'events',
                     filter: `session_id=eq.${sessionId}`
                 },
-                (payload) => {
+                (payload: any) => {
                     const newEvent = payload.new as any;
                     const formattedEvent: ActionEvent = {
                         id: newEvent.id,
@@ -172,9 +172,7 @@ export class EventStore {
                 }
             } catch (err) {
                 console.error("[EventStore] Erro crítico no append via NestJS:", err);
-                if (typeof window !== 'undefined') {
-                    alert(`ERRO AO SALVAR: ${err}`);
-                }
+                // Removido alert para evitar travamento da thread principal em caso de erro de rede.
             }
         });
 

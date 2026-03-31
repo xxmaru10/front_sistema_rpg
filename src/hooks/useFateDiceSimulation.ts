@@ -113,10 +113,38 @@ export function useFateDiceSimulation({
             const H = container.clientHeight;
 
             // ── Renderer ──────────────────────────────────────────────────────
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            let renderer: THREE.WebGLRenderer;
+            try {
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: false, // Otimizado para low-end (removido MSAA) 
+                    alpha: true,
+                    powerPreference: "low-power" // Sugere que use menos GPU se possível
+                });
+                
+                // Tratar perda de contexto WebGL
+                renderer.domElement.addEventListener("webglcontextlost", (event: Event) => {
+                    event.preventDefault();
+                    console.warn("WebGL Context Lost! Fallback para rolagem instantânea.");
+                    bailOutAndRollInstantly();
+                }, false);
+
+            } catch (e) {
+                console.warn("Falha crítica ao iniciar WebGL. Usando fallback 2D.", e);
+                bailOutAndRollInstantly();
+                return;
+            }
+
+            function bailOutAndRollInstantly() {
+                const fbResults = Array.from({length: 4}, () => [1, 0, -1][Math.floor(Math.random() * 3)]);
+                setUiPhase("done");
+                setUiResults(fbResults);
+                onPreResultRef.current?.(fbResults);
+                onSettledRef.current(fbResults);
+            }
+
             renderer.setSize(W, H);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true;
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limita a escala para evitar excesso de pixels
+            renderer.shadowMap.enabled = false; // Sombras desativadas para performance no mobile
             container.appendChild(renderer.domElement);
 
             // ── Cena e câmera ─────────────────────────────────────────────────
@@ -127,13 +155,13 @@ export function useFateDiceSimulation({
             camera.lookAt(cameraXOffset, 0, 0);
 
             // ── Iluminação ────────────────────────────────────────────────────
-            scene.add(new THREE.AmbientLight(0xffffff, 0.45));
-            const dirLight = new THREE.DirectionalLight(0xffdda0, 1.2);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffdda0, 1.0);
             dirLight.position.set(4, 14, 7);
             scene.add(dirLight);
             
             const accentNum = parseInt(themeAccent.replace('#', ''), 16) || 0xa0c0ff;
-            const fillLight = new THREE.DirectionalLight(accentNum, 0.28);
+            const fillLight = new THREE.DirectionalLight(accentNum, 0.4);
             fillLight.position.set(-6, 4, -4);
             scene.add(fillLight);
 
@@ -184,7 +212,9 @@ export function useFateDiceSimulation({
             const startX = -((N_DICE - 1) * SPACING) / 2;
 
             const dice: PhysicsDie[] = [];
-            const dieLights: THREE.PointLight[] = [];
+            // Removemos as dieLights (PointLights) individuais por dado para aliviar severamente a GPU no mobile.
+            // A iluminação fica a cargo da Ambient + 2 Directionals.
+
             for (let i = 0; i < N_DICE; i++) {
                 const geo = new THREE.BoxGeometry(1, 1, 1);
                 const mats = makeMats();
@@ -197,11 +227,6 @@ export function useFateDiceSimulation({
                     Math.random() * Math.PI * 2,
                 );
                 scene.add(mesh);
-                
-                const pl = new THREE.PointLight(accentNum, 14.0, 14.0);
-                pl.position.set(px, IDLE_Y, 0);
-                scene.add(pl);
-                dieLights.push(pl);
                 
                 dice.push({
                     mesh,
@@ -219,7 +244,7 @@ export function useFateDiceSimulation({
             camera.updateMatrixWorld();
 
             const state: SceneState = {
-                renderer, scene, camera, dice, dieLights,
+                renderer, scene, camera, dice, dieLights: [],
                 animFrameId: 0,
                 phase: "idle",
                 settledFrames: 0,
@@ -326,9 +351,7 @@ export function useFateDiceSimulation({
                     }
                 }
 
-                state.dice.forEach((die, i) => {
-                    state.dieLights[i].position.set(die.pos.x, die.pos.y + 0.3, die.pos.z);
-                });
+                // (Removido o rastreamento das point lights pois foram retiradas para performance)
 
                 renderer.render(scene, camera);
             }
@@ -465,7 +488,7 @@ export function useFateDiceSimulation({
         if (randBufRef.current.length < 10) {
             fetchRandomOrg(80).then(nums => { randBufRef.current = [...randBufRef.current, ...nums]; });
         }
-        state.dice.forEach(die => {
+        state.dice.forEach((die: PhysicsDie) => {
             const ang = consumeRand() * Math.PI * 2;
             const spd = 0.13 + consumeRand() * 0.10;
             die.vel.x = Math.cos(ang) * spd;

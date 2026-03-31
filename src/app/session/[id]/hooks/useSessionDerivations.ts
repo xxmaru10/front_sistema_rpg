@@ -17,10 +17,10 @@ import { useMemo } from "react";
 import { computeState } from "@/lib/projections";
 import { globalEventStore } from "@/lib/eventStore";
 import { isCharacterEliminated } from "@/lib/gameLogic";
-import { Character } from "@/types/domain";
+import { Character, ActionEvent } from "@/types/domain";
 
 interface UseSessionDerivationsParams {
-    events: any[];
+    events: ActionEvent[];
     globalBestiaryChars: Character[];
     actorUserId: string;
     fixedCharacterId: string | undefined;
@@ -55,9 +55,17 @@ export function useSessionDerivations({
         const sorted = [...events].sort((a, b) => {
             const seqA = a.seq || 0;
             const seqB = b.seq || 0;
-            if (seqA !== 0 && seqB !== 0 && seqA !== seqB) return seqA - seqB;
-            if (seqA === 0 && seqB !== 0) return 1;
-            if (seqA !== 0 && seqB === 0) return -1;
+
+            // 1. Se ambos têm seq, usa seq (prioritário)
+            if (seqA > 0 && seqB > 0) {
+                if (seqA !== seqB) return seqA - seqB;
+            }
+            // 2. Se apenas um tem seq, o confirmado vem primeiro se as datas forem próximas
+            // Mas para evitar saltos visuais, se um é seq=0 (otimista), ele tende a vir depois.
+            if (seqA > 0 && seqB === 0) return -1;
+            if (seqA === 0 && seqB > 0) return 1;
+
+            // 3. Fallback para data
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
         return computeState(sorted, globalEventStore.getSnapshotState() ?? undefined);
@@ -139,7 +147,7 @@ export function useSessionDerivations({
     }, [activePlayers]);
 
     const activeEnemyCount = useMemo(() =>
-        Object.values(state.characters).filter(c =>
+        Object.values(state.characters).filter((c: any) =>
             c.isNPC && c.arenaSide !== "HERO" && c.activeInArena && !isCharacterEliminated(c)
         ).length,
         [state.characters]
@@ -244,7 +252,9 @@ export function useSessionDerivations({
     const eventSessionMap = useMemo(() => {
         const sorted = [...events].sort((a, b) => {
             const sa = a.seq || 0, sb = b.seq || 0;
-            if (sa && sb && sa !== sb) return sa - sb;
+            if (sa > 0 && sb > 0 && sa !== sb) return sa - sb;
+            if (sa > 0 && sb === 0) return -1;
+            if (sa === 0 && sb > 0) return 1;
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
         const map: Record<string, number> = {};

@@ -282,6 +282,18 @@ export function useDiceRoller({
         });
 
         pendingCharIdRef.current = charId;
+
+        // Safety timeout: se em 15 segundos os dados não assentarem (erro no Three.js ou context lost),
+        // resetamos o estado para o jogador poder tentar novamente.
+        setTimeout(() => {
+            setIsRolling((prev: boolean) => {
+                if (prev) {
+                    console.warn("Dice roll safety timeout reached. Forcing roll reset.");
+                    return false;
+                }
+                return prev;
+            });
+        }, 15000);
     };
 
     return {

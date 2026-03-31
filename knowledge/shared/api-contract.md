@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-03-30
+last_updated: 2026-03-31
 status: estável
 ---
 
