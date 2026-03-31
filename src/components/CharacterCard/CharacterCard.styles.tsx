@@ -11,7 +11,7 @@ export const CharacterCardStyles = () => (
     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
     min-width: 320px;
     width: 98% !important;
-    max-width: 1400px !important;
+    max-width: 1800px !important;
     width: 100%;
     margin: 0 auto;
     position: relative;
@@ -54,11 +54,10 @@ export const CharacterCardStyles = () => (
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 30px var(--accent-glow);
 }
 
-.top-layout-grid {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 16px;
-    margin-bottom: -15px;
+.top-layout-grid { 
+    display: grid; 
+    grid-template-columns: 400px 1fr; 
+    gap: 48px; 
 }
 
 @media (max-width: 1024px) {
@@ -1443,6 +1442,173 @@ export const CharacterCardStyles = () => (
 
 .stress-btn.empty {
     opacity: 0.8;
+}
+
+/* Floating Inventory Aesthetics */
+.inventory-floating {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(var(--accent-rgb), 0.1);
+    width: 300px;
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.inventory-floating:hover {
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-rgb), 0.5);
+}
+
+.inventory-floating .readout-header {
+    background: rgba(var(--accent-rgb), 0.1);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+    padding: 12px 16px;
+    cursor: grab;
+    user-select: none;
+}
+
+.inventory-floating .readout-header .header-group span:not(.symbol) {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    color: var(--accent-color);
+    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.3);
+}
+
+.inventory-list.compact-list {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inventory-slot.compact-slot {
+    background: rgba(197, 160, 89, 0.05);
+    border: 1px solid rgba(197, 160, 89, 0.1);
+    border-radius: 4px;
+    transition: all 0.2s;
+    overflow: hidden;
+}
+
+.inventory-slot.compact-slot:hover {
+    background: rgba(197, 160, 89, 0.1);
+    border-color: rgba(197, 160, 89, 0.3);
+    transform: translateX(4px);
+}
+
+.inventory-btn-wrapper {
+    width: 100%;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: flex-start;
+    padding: 8px;
+    gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+}
+
+.inv-slot-number {
+    font-family: var(--font-header);
+    font-size: 0.75rem;
+    background: rgba(var(--accent-rgb), 0.2);
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
+    color: var(--accent-color);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.inv-main-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-name-row {
+    font-family: var(--font-header);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inv-name-col .placeholder {
+    opacity: 0.3;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+}
+
+.bonus-badge {
+    background: rgba(var(--accent-rgb), 0.8);
+    color: #000;
+    font-size: 0.65rem;
+    font-weight: bold;
+    padding: 1px 4px;
+    border-radius: 2px;
+    box-shadow: 0 0 5px rgba(var(--accent-rgb), 0.5);
+}
+
+.inv-description-row {
+    font-family: var(--font-narrative);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.inv-size-indicator {
+    font-family: var(--font-header);
+    font-size: 0.6rem;
+    color: var(--accent-color);
+    opacity: 0.5;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    padding: 0 4px;
+    border-radius: 2px;
+    margin-top: 4px;
+}
+
+/* Quantity Displays */
+.inv-quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    margin: 4px 8px 8px 40px;
+}
+
+.qty-display {
+    font-family: var(--font-header);
+    font-size: 0.7rem;
+    color: var(--accent-color);
+}
+
+.qty-btn {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    font-size: 0.6rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.qty-btn:hover {
+    opacity: 1;
 }
     `}</style>
 );
