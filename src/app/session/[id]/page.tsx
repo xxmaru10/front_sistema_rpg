@@ -98,7 +98,7 @@ export default function SessionPage() {
 
     // ─── EVENTS ───────────────────────────────────────────────────────────────
 
-    const { events, isLoading, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds } =
+    const { events, isLoading, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
         useSessionEvents(sessionId as string, actorUserId);
 
     // ─── EARLY PROJECTION (feeds useVictoryDefeat before full derivations) ────
@@ -589,6 +589,7 @@ export default function SessionPage() {
                                             state={state}
                                             globalBestiaryChars={globalBestiaryChars}
                                             onRegisterThreat={() => { setCreatorSource("bestiary"); setShowCreator(true); }}
+                                            onRefresh={refresh}
                                         />
                                     </div>
                                 )}
@@ -642,6 +643,7 @@ export default function SessionPage() {
                                         handlePreviousTurn={handlePreviousTurn}
                                         handleChallengeUpdate={handleChallengeUpdate}
                                         characterList={characterList}
+                                        onRefresh={refresh}
                                     />
                                 )}
 
@@ -656,6 +658,7 @@ export default function SessionPage() {
                                         eventSessionMap={eventSessionMap}
                                         state={state}
                                         events={events}
+                                        onRefresh={refresh}
                                     />
                                 )}
 

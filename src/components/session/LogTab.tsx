@@ -3,6 +3,7 @@
 import { ActionEvent } from "@/types/domain";
 import { CombatLog } from "@/components/CombatLog";
 import { SessionState } from "@/types/domain";
+import { RotateCw } from "lucide-react";
 
 interface LogTabProps {
     filteredEvents: ActionEvent[];
@@ -14,13 +15,38 @@ interface LogTabProps {
     eventSessionMap: Record<string, number>;
     state: SessionState;
     events: ActionEvent[];
+    onRefresh?: () => void;
 }
 
-export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilter, setLogSessionFilter, logSessionNumbers, eventSessionMap, state, events }: LogTabProps) {
+export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilter, setLogSessionFilter, logSessionNumbers, eventSessionMap, state, events, onRefresh }: LogTabProps) {
     return (
         <div className="log-display animate-reveal">
-            <div className="display-header">
-                <h2 className="display-title">LOGS</h2>
+            <div className="display-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h2 className="display-title" style={{ margin: 0 }}>LOGS</h2>
+                    {onRefresh && (
+                        <button 
+                            onClick={onRefresh}
+                            className="refresh-btn"
+                            title="Atualizar Logs"
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--accent-color)',
+                                cursor: 'pointer',
+                                opacity: 0.6,
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '4px'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                        >
+                            <RotateCw size={14} />
+                        </button>
+                    )}
+                </div>
                 <div className="log-filters" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     {[["ALL", "TUDO"], ["ROLLS", "ROLAGENS"], ["CHARS", "COMBATENTES"], ["ASPECTS", "INVOCAÇÕES"]].map(([f, label]) => (
                         <button

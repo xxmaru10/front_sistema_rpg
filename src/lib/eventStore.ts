@@ -43,12 +43,12 @@ export class EventStore {
         });
     }
 
-    async initSession(sessionId: string) {
+    async initSession(sessionId: string, force = false) {
         if (typeof window !== 'undefined') {
             // console.log(`%c[EventStore] Inicializando Sessão: ${sessionId}`, 'color: #bada55; font-weight: bold');
         }
 
-        if (this.currentSessionId === sessionId) return;
+        if (this.currentSessionId === sessionId && !force) return;
 
         // Cleanup previous subscription
         if (this.channel) {

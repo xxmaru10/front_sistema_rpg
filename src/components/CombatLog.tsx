@@ -6,9 +6,12 @@ interface CombatLogProps {
     events: ActionEvent[];
     characters: Record<string, Character>;
     sessionNumber?: number;
+    onRefresh?: () => void;
 }
 
-export function CombatLog({ events, characters, sessionNumber }: CombatLogProps) {
+import { RotateCw } from "lucide-react";
+
+export function CombatLog({ events, characters, sessionNumber, onRefresh }: CombatLogProps) {
     // Determine the start of the current session: all events after the most recent SESSION_NUMBER_UPDATED
     const sessionBoundarySeq = (() => {
         const updates = events.filter(e => e.type === "SESSION_NUMBER_UPDATED");
@@ -42,9 +45,30 @@ export function CombatLog({ events, characters, sessionNumber }: CombatLogProps)
 
     return (
         <div className="combat-log-container solid ornate-border">
-            <div className="log-header">
+            <div className="log-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {sessionNumber !== undefined && (
                     <span className="resonance-indicator">SESSÃO {sessionNumber}</span>
+                )}
+                {onRefresh && (
+                    <button 
+                        onClick={onRefresh}
+                        className="refresh-btn"
+                        title="Atualizar Logs"
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--accent-color)',
+                            cursor: 'pointer',
+                            opacity: 0.6,
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                    >
+                        <RotateCw size={14} />
+                    </button>
                 )}
             </div>
             <div className="log-entries-scroll">

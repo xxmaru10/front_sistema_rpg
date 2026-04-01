@@ -33,6 +33,7 @@ interface CombatTabProps {
     handlePreviousTurn: () => void;
     handleChallengeUpdate: (patch: Partial<{ isActive: boolean; text: string; difficulty: number; aspects?: string[] }>) => void;
     characterList: Character[];
+    onRefresh?: () => void;
 }
 
 export function CombatTab({
@@ -58,6 +59,7 @@ export function CombatTab({
     handlePreviousTurn,
     handleChallengeUpdate,
     characterList,
+    onRefresh
 }: CombatTabProps) {
     return (
         <div className="combat-display animate-reveal">
@@ -398,7 +400,7 @@ export function CombatTab({
 
                     {showDiceRoller && (
                         <div className="combat-log-wrapper">
-                            <CombatLog events={events} characters={state.characters} sessionNumber={state.sessionNumber} />
+                            <CombatLog events={events} characters={state.characters} sessionNumber={state.sessionNumber} onRefresh={onRefresh} />
                         </div>
                     )}
                 </div>

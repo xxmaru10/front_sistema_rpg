@@ -54,6 +54,10 @@ export function useSessionEvents(sessionId: string, actorUserId: string) {
         };
     }, [sessionId, actorUserId]);
 
+    const refresh = () => {
+        globalEventStore.initSession(sessionId, true);
+    };
+
     return { 
         events, 
         setEvents, 
@@ -61,6 +65,7 @@ export function useSessionEvents(sessionId: string, actorUserId: string) {
         globalBestiaryChars, 
         setGlobalBestiaryChars,
         connectionStatus,
-        failedEventIds
+        failedEventIds,
+        refresh
     };
 }

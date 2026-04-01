@@ -18,9 +18,10 @@ interface SessionNotesProps {
     state: SessionState;
     globalBestiaryChars?: Character[];
     onRegisterThreat?: () => void;
+    onRefresh?: () => void;
 }
 
-export function SessionNotes({ sessionId, userId, userRole, state, globalBestiaryChars = [], onRegisterThreat }: SessionNotesProps) {
+export function SessionNotes({ sessionId, userId, userRole, state, globalBestiaryChars = [], onRegisterThreat, onRefresh }: SessionNotesProps) {
     const {
         // State
         editorContent, setEditorContent,
