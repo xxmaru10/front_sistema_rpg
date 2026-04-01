@@ -16,9 +16,13 @@ export function CharacterSelection({
                 {availableCharacters.map(char => (
                     <button key={char.id} className="char-select-card" onClick={() => onSelectCharacter(char)}>
                         <div className="char-avatar-ring">
-                            <div className="char-avatar-glyph">
-                                {char.name.charAt(0).toUpperCase()}
-                            </div>
+                            {char.imageUrl ? (
+                                <img src={char.imageUrl} alt={char.name} className="char-avatar-img" />
+                            ) : (
+                                <div className="char-avatar-glyph">
+                                    {char.name.charAt(0).toUpperCase()}
+                                </div>
+                            )}
                         </div>
                         <div className="char-name-label">{char.name}</div>
                         <div className="char-card-glow"></div>

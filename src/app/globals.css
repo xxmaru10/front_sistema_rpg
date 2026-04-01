@@ -1155,3 +1155,31 @@ h3 {
         font-size: 1.6rem;
     }
 }
+
+
+.char-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    transition: all 0.5s;
+}
+
+.char-select-card:hover .char-avatar-img {
+    border-color: var(--accent-color);
+    transform: scale(1.1) rotate(-180deg);
+    filter: drop-shadow(0 0 10px var(--accent-glow));
+}
+
+.char-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    transition: all 0.5s;
+}
+
+.char-select-card:hover .char-avatar-img {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px var(--accent-glow));
+}
