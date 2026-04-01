@@ -481,15 +481,15 @@ export function SessionHeader({
                 </div>
             )}
 
-            {connectionStatus && connectionStatus !== 'SUBSCRIBED' && (
+            {(connectionStatus === 'TIMED_OUT' || connectionStatus === 'CHANNEL_ERROR' || connectionStatus === 'CONNECTING') && (
                 <div style={{
                     position: 'absolute',
                     top: '8px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     zIndex: 200,
-                    background: 'rgba(200, 50, 50, 0.9)',
-                    color: '#fff',
+                    background: connectionStatus === 'CONNECTING' ? 'rgba(var(--accent-rgb), 0.9)' : 'rgba(200, 50, 50, 0.9)',
+                    color: connectionStatus === 'CONNECTING' ? '#000' : '#fff',
                     padding: '4px 12px',
                     borderRadius: '20px',
                     fontSize: '0.6rem',
@@ -498,12 +498,18 @@ export function SessionHeader({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    boxShadow: '0 0 15px rgba(200, 50, 50, 0.4)',
+                    boxShadow: connectionStatus === 'CONNECTING' ? '0 0 15px rgba(var(--accent-rgb), 0.4)' : '0 0 15px rgba(200, 50, 50, 0.4)',
                     backdropFilter: 'blur(4px)',
                     animation: 'pulse 2s infinite'
                 }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff', animation: 'blink 1s infinite' }} />
-                    {connectionStatus === 'CONNECTING' ? 'CONECTANDO...' : 'CONEXÃO INSTÁVEL'}
+                    <span style={{ 
+                        width: '6px', 
+                        height: '6px', 
+                        borderRadius: '50%', 
+                        background: '#fff', 
+                        animation: 'blink 1s infinite' 
+                    }} />
+                    {connectionStatus === 'CONNECTING' ? 'SINCRONIZANDO...' : 'CONEXÃO INSTÁVEL'}
                 </div>
             )}
         </div>

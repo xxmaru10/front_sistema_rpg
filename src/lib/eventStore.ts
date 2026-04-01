@@ -23,6 +23,7 @@ export class EventStore {
     private snapshotUpToSeq: number = -1;
     private connectionStatus: ConnectionStatus = 'CLOSED';
     private failedEventIds: Set<string> = new Set();
+    private reconnectTimeout: any = null;
 
     private _sort() {
         this.events.sort((a, b) => {
@@ -50,9 +51,14 @@ export class EventStore {
 
         if (this.currentSessionId === sessionId && !force) return;
 
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
         // Cleanup previous subscription
         if (this.channel) {
-            supabase.removeChannel(this.channel);
+            await supabase.removeChannel(this.channel);
         }
 
         this.currentSessionId = sessionId;
@@ -61,6 +67,7 @@ export class EventStore {
         this.snapshotUpToSeq = -1;
         this.failedEventIds.clear();
         this._setStatus('CONNECTING');
+        console.info(`[EventStore] Inicializando sessão: ${sessionId} (forçado: ${force})`);
 
         // --- Subscribe to realtime BEFORE fetching history ---
         const bufferedRealtimeEvents: ActionEvent[] = [];
@@ -121,7 +128,9 @@ export class EventStore {
                 
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                     console.warn('[EventStore] Canal realtime desconectado, tentando reconectar...');
-                    setTimeout(() => {
+                    if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+                    
+                    this.reconnectTimeout = setTimeout(() => {
                         if (this.currentSessionId === sessionId) {
                             this.channel = null;
                             this.currentSessionId = null;
