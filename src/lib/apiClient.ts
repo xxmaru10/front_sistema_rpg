@@ -27,7 +27,7 @@ export interface SessionJoinInfo {
 
 export async function loadSessionEvents(sessionId: string): Promise<SessionLoadResult> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000); // 12s timeout for history
+    const timer = setTimeout(() => controller.abort(), 50000); // 12s timeout for history
     try {
         const res = await fetch(`${API_BASE}/api/events/${sessionId}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`[apiClient] loadSessionEvents falhou: ${res.status}`);
