@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-03-31
+last_updated: 2026-04-01
 status: estável
 ---
 
@@ -43,6 +43,8 @@ O Fate Companion utiliza uma arquitetura de **Event Sourcing**. Isso significa q
 | Consolidação PowerTabs | Unificação de Façanhas, Inventário e Magias em um único container de abas estático para otimizar espaço e fluxo. | 2026-03-31 |
 | Expansão de Viewport (+40%) | Aumento do `max-width` da ficha para 2500px, priorizando espaço para Lore/Aspectos e mantendo fidelidade de retrato. | 2026-03-31 |
 | Minimalismo de Headers | Remoção de títulos redundantes do `SessionHeader` para reduzir ruído visual e priorizar arte de capa. | 2026-03-31 |
+| Projeção Light no Join-Info | Otimização do backend para filtrar personagens deletados e prover metadados atualizados na tela de entrada. | 2026-04-01 |
+| Estética Premium na Seleção | Reformulação visual da escolha de personagens com Grid de Tarot e animações de selo para maior imersão. | 2026-04-01 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

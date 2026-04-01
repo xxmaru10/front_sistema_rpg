@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-03-31
+last_updated: 2026-04-01
 status: estável
 ---
 
@@ -60,11 +60,16 @@ export type SessionData = {
   gmUserId: string;
 };
 
-export type SessionState = {
-  id: string;
-  name?: string;
-  sessionNumber?: number;
-  currentTurnUserId?: string;
+export type SessionJoinInfo = {
+  gmCode: string;
+  playerCode: string;
+  characters: Array<{
+    id: string;
+    name: string;
+    ownerUserId: string;
+    imageUrl?: string;
+    isNPC?: boolean;
+  }>;
 };
 ```
 
