@@ -1,4 +1,4 @@
-import { Book, Globe, Clock, Swords, Search, X, Filter, ChevronDown } from "lucide-react";
+import { Book, Globe, Clock, Swords, Search, X, Filter, ChevronDown, RotateCw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Character, SessionState } from "@/types/domain";
 import { useSessionNotes } from "@/hooks/useSessionNotes";
@@ -277,59 +277,92 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                     )}
                 </div>
 
-                {activeTab === "Mundo" && (
-                    <div className="world-filter-wrap" style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {onRefresh && (
                         <button 
-                            className={`filter-toggle-btn ${showWorldFilters ? 'active' : ''}`}
-                            onClick={() => setShowWorldFilters(!showWorldFilters)}
-                            title="Filtros de Mundo"
+                            onClick={onRefresh}
+                            className="system-refresh-btn"
+                            title="Sincronizar Dados"
+                            style={{
+                                background: 'rgba(var(--accent-rgb), 0.1)',
+                                border: '1px solid rgba(var(--accent-rgb), 0.2)',
+                                color: 'var(--accent-color)',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: '0.3s ease'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(var(--accent-rgb), 0.2)';
+                                e.currentTarget.style.borderColor = 'var(--accent-color)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = 'rgba(var(--accent-rgb), 0.1)';
+                                e.currentTarget.style.borderColor = 'rgba(var(--accent-rgb), 0.2)';
+                            }}
                         >
-                            <Filter size={14} />
-                            <span>FILTROS</span>
-                            <ChevronDown size={12} style={{ opacity: 0.5, transform: showWorldFilters ? 'rotate(180deg)' : 'none', transition: '0.3s' }} />
+                            <RotateCw size={14} />
                         </button>
+                    )}
 
-                        {showWorldFilters && (
-                            <div className="world-filters-dropdown global-dropdown scrollbar-arcane animate-fade-in" style={{ width: '280px', padding: '15px' }}>
-                                <div className="filter-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-                                    <h5 style={{ fontSize: '0.7rem', color: 'var(--accent-color)' }}>FILTRAR {subTabMundo.toUpperCase()}</h5>
-                                    <button onClick={() => setShowWorldFilters(false)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><X size={14} /></button>
+                    {activeTab === "Mundo" && (
+                        <div className="world-filter-wrap" style={{ position: 'relative' }}>
+                            <button 
+                                className={`filter-toggle-btn ${showWorldFilters ? 'active' : ''}`}
+                                onClick={() => setShowWorldFilters(!showWorldFilters)}
+                                title="Filtros de Mundo"
+                            >
+                                <Filter size={14} />
+                                <span>FILTROS</span>
+                                <ChevronDown size={12} style={{ opacity: 0.5, transform: showWorldFilters ? 'rotate(180deg)' : 'none', transition: '0.3s' }} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {showWorldFilters && (
+                <div className="world-filters-dropdown global-dropdown scrollbar-arcane animate-fade-in" style={{ width: '280px', padding: '15px' }}>
+                    <div className="filter-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                        <h5 style={{ fontSize: '0.7rem', color: 'var(--accent-color)' }}>FILTRAR {subTabMundo.toUpperCase()}</h5>
+                        <button onClick={() => setShowWorldFilters(false)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><X size={14} /></button>
+                    </div>
+                    <div className="filters-list-content scrollbar-arcane" style={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', paddingRight: '5px' }}>
+                        {worldFilterAvailableOptions.length === 0 ? (
+                            <p style={{ fontSize: '0.7rem', color: '#888', textAlign: 'center' }}>Nenhum filtro disponível para esta aba.</p>
+                        ) : (
+                            worldFilterAvailableOptions.map((group: any) => (
+                                <div key={group.field} className="filter-group" style={{ marginBottom: '12px' }}>
+                                    <label style={{ fontSize: '0.6rem', color: '#888', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>{group.label}</label>
+                                    <div className="filter-options-grid" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        {group.options.length === 0 ? (
+                                            <span style={{ fontSize: '0.65rem', color: '#555', fontStyle: 'italic' }}>Nada para filtrar...</span>
+                                        ) : (
+                                            group.options.map((opt: any) => (
+                                                <label key={opt.id} className="filter-checkbox-item" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={(worldFilters[group.field] || []).includes(opt.id)}
+                                                        onChange={() => toggleWorldFilter(group.field, opt.id)}
+                                                        style={{ accentColor: 'var(--accent-color)' }}
+                                                    />
+                                                    <span style={{ fontSize: '0.7rem', color: (worldFilters[group.field] || []).includes(opt.id) ? '#fff' : '#aaa' }}>
+                                                        {opt.name.toUpperCase()}
+                                                    </span>
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="filters-list-content scrollbar-arcane" style={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', paddingRight: '5px' }}>
-                                    {worldFilterAvailableOptions.length === 0 ? (
-                                        <p style={{ fontSize: '0.7rem', color: '#888', textAlign: 'center' }}>Nenhum filtro disponível para esta aba.</p>
-                                    ) : (
-                                        worldFilterAvailableOptions.map((group: any) => (
-                                            <div key={group.field} className="filter-group" style={{ marginBottom: '12px' }}>
-                                                <label style={{ fontSize: '0.6rem', color: '#888', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>{group.label}</label>
-                                                <div className="filter-options-grid" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    {group.options.length === 0 ? (
-                                                        <span style={{ fontSize: '0.65rem', color: '#555', fontStyle: 'italic' }}>Nada para filtrar...</span>
-                                                    ) : (
-                                                        group.options.map((opt: any) => (
-                                                            <label key={opt.id} className="filter-checkbox-item" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: '0.2s' }}>
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    checked={(worldFilters[group.field] || []).includes(opt.id)}
-                                                                    onChange={() => toggleWorldFilter(group.field, opt.id)}
-                                                                    style={{ accentColor: 'var(--accent-color)' }}
-                                                                />
-                                                                <span style={{ fontSize: '0.7rem', color: (worldFilters[group.field] || []).includes(opt.id) ? '#fff' : '#aaa' }}>
-                                                                    {opt.name.toUpperCase()}
-                                                                </span>
-                                                            </label>
-                                                        ))
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
+                            ))
                         )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             <div className="notes-tabs-main" onClick={() => setShowSuggestions(false)}>
                 {[
