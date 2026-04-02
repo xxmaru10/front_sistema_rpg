@@ -725,6 +725,7 @@ export default function SessionPage() {
                     actorUserId={actorUserId}
                     onClose={() => setShowCreator(false)}
                     source={creatorSource}
+                    religionsList={Object.values(state.worldEntities || {}).filter((e: any) => e.type === "RELIGIAO")}
                 />
             )}
 

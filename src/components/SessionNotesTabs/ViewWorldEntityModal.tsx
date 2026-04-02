@@ -278,21 +278,42 @@ export function ViewWorldEntityModal({
                                     </button>
                                 )}
                             </div>
+                            <div className="rel-item" style={{ position: 'relative' }}>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÃO</label>
+                                <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
+                                    {isFieldVisible('religion') ? (viewingEntity.religionId ? state.worldEntities?.[viewingEntity.religionId]?.name.toUpperCase() : "NENHUMA") : "????"}
+                                </span>
+                                {isGM && (
+                                    <button onClick={() => toggleVisibility('religion')} className="visibility-toggle-btn field-toggle" title={fieldVisibility['religion'] ? "Mostrar Religião" : "Ocultar Religião"}>
+                                        {fieldVisibility['religion'] ? <EyeOff size={12} /> : <Eye size={12} />}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
-
-                    {["FACAO", "FAMILIA", "BESTIARIO"].includes(viewingEntity.type) && (
+                    {["FACAO", "FAMILIA", "BESTIARIO", "LOCALIZACAO"].includes(viewingEntity.type) && (
                         <div className="relationships-box" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid #333', padding: '20px', borderRadius: '4px', marginBottom: '20px', position: 'relative' }}>
                             {isGM && (
                                 <button onClick={() => toggleVisibility('location')} className="visibility-toggle-btn" style={{ position: 'absolute', top: '10px', right: '10px' }} title={fieldVisibility['location'] ? "Mostrar Localização" : "Ocultar Localização"}>
                                     {fieldVisibility['location'] ? <EyeOff size={14} /> : <Eye size={14} />}
                                 </button>
                             )}
-                            <div className="rel-item">
+                            <div className="rel-item" style={{ position: 'relative' }}>
                                 <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>LOCALIZAÇÃO / BASE</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('location') ? (viewingEntity.currentLocationId ? state.worldEntities?.[viewingEntity.currentLocationId]?.name.toUpperCase() : "DESCONHECIDA") : "????"}
                                 </span>
+                            </div>
+                            <div className="rel-item" style={{ position: 'relative', marginTop: '10px' }}>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÃO</label>
+                                <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
+                                    {isFieldVisible('religion') ? (viewingEntity.religionId ? state.worldEntities?.[viewingEntity.religionId]?.name.toUpperCase() : "NENHUMA") : "????"}
+                                </span>
+                                {isGM && (
+                                    <button onClick={() => toggleVisibility('religion')} className="visibility-toggle-btn field-toggle" title={fieldVisibility['religion'] ? "Mostrar Religião" : "Ocultar Religião"}>
+                                        {fieldVisibility['religion'] ? <EyeOff size={12} /> : <Eye size={12} />}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}

@@ -809,6 +809,16 @@ export const CharacterCardStyles = () => (
 .lore-accordion-header { padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(197, 160, 89, 0.05); }
 .lore-title { font-family: var(--font-header); font-size: 1.0rem; letter-spacing: 0.2em; color: var(--accent-color); }
 .lore-accordion-content { padding: 12px; border-top: 1px solid rgba(197, 160, 89, 0.1); font-family: var(--font-narrative); font-size: 0.8rem; color: #ccc; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; }
+.religion-banner { 
+    font-size: 0.65rem; 
+    color: var(--accent-color); 
+    letter-spacing: 0.2em; 
+    text-align: center; 
+    margin-bottom: 15px; 
+    border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+    padding-bottom: 10px;
+    font-family: var(--font-header);
+}
 
 .lore-textarea-stack { width: 100%; min-height: 80px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent-color); color: white; padding: 8px; font-family: inherit; font-size: 0.8rem; margin-bottom: 8px; resize: vertical; }
 

@@ -54,6 +54,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         newEntityLinkedLocation, setNewEntityLinkedLocation,
         locSearch, setLocSearch,
         newEntityImageUrl, setNewEntityImageUrl,
+        newEntityReligion, setNewEntityReligion,
         viewingEntityId, setViewingEntityId,
         importBestiaryId, setImportBestiaryId,
         
@@ -102,6 +103,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         bestiaryList,
         familiesList,
         racesList,
+        religionsList,
         locationsList,
         worldEntitiesForCurrentTab,
         worldSearchSuggestions,
@@ -179,6 +181,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                 'LOCALIZACAO': 'Localizações',
                 'MAPA': 'Mapas',
                 'FACAO': 'Facções',
+                'RELIGIAO': 'Religiões',
                 'FAMILIA': 'Famílias',
                 'BESTIARIO': 'Criaturas',
                 'RACA': 'Raças',
@@ -575,6 +578,9 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                     editingWorldEntityId={editingWorldEntityId}
                     handleCancelWorldEntityEdit={handleCancelWorldEntityEdit}
                     mentionEntities={mentionEntities}
+                    religionsList={religionsList}
+                    newEntityReligion={newEntityReligion}
+                    setNewEntityReligion={setNewEntityReligion}
                 />
             )}
 

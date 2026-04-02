@@ -20,7 +20,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
     const [activeTab, setActiveTab] = useState<"Notas" | "Mundo" | "Tempo" | "Jogo">("Notas");
 
     // Sub-tabs states
-    const [subTabMundo, setSubTabMundo] = useState<"Personagens" | "Localizações" | "Mapas" | "Facções" | "Famílias" | "Criaturas" | "Raças" | "Outros">("Personagens");
+    const [subTabMundo, setSubTabMundo] = useState<"Personagens" | "Localizações" | "Mapas" | "Facções" | "Religiões" | "Famílias" | "Criaturas" | "Raças" | "Outros">("Personagens");
     const [subTabTempo, setSubTabTempo] = useState<"Missões" | "Linha do Tempo">("Missões");
     const [subTabJogo, setSubTabJogo] = useState<"Habilidades" | "Itens" | "Jogadores">("Habilidades");
     const [notesSubTab, setNotesSubTab] = useState<"Geral" | "Privado" | "Jogadores" | "Sessão">("Geral");
@@ -49,6 +49,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
     const [newEntityRace, setNewEntityRace] = useState("");
     const [newEntityOrigin, setNewEntityOrigin] = useState("");
     const [newEntityCurrentLoc, setNewEntityCurrentLoc] = useState("");
+    const [newEntityReligion, setNewEntityReligion] = useState("");
 
     // New location fields for Localização
     const [newEntityLocationType, setNewEntityLocationType] = useState("");
@@ -146,6 +147,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         "LOCALIZACAO": "LOCALIZAÇÃO",
         "MAPA": "MAPA",
         "FACAO": "FACÇÃO",
+        "RELIGIAO": "RELIGIÃO",
         "FAMILIA": "FAMÍLIA",
         "BESTIARIO": "CRIATURA",
         "RACA": "RAÇA",
@@ -179,6 +181,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
     const worldEntitiesList = Object.values(state.worldEntities || {});
     const familiesList = worldEntitiesList.filter(e => e.type === "FAMILIA");
     const racesList = worldEntitiesList.filter(e => e.type === "RACA");
+    const religionsList = worldEntitiesList.filter(e => e.type === "RELIGIAO");
     const locationsList = worldEntitiesList.filter(e => e.type === "LOCALIZACAO");
 
     const worldEntitiesForCurrentTab = useMemo(() => {
@@ -187,6 +190,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
             "Localizações": "LOCALIZACAO",
             "Mapas": "MAPA",
             "Facções": "FACAO",
+            "Religiões": "RELIGIAO",
             "Famílias": "FAMILIA",
             "Criaturas": "BESTIARIO",
             "Raças": "RACA",
@@ -252,6 +256,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
                 { field: "profession", label: "PROFISSÃO", options: getUsedTextValues("PERSONAGEM", "profession") },
                 { field: "familyId", label: "FAMÍLIA", options: getUsedIds("PERSONAGEM", "familyId") },
                 { field: "originId", label: "ORIGEM", options: getUsedIds("PERSONAGEM", "originId") },
+                { field: "religionId", label: "RELIGIÃO", options: getUsedIds("PERSONAGEM", "religionId") },
                 { field: "currentLocationId", label: "LOCAL ATUAL", options: getUsedIds("PERSONAGEM", "currentLocationId") },
                 { field: "tags", label: "TAGS", options: getTagsForType("PERSONAGEM") }
             ];
@@ -267,6 +272,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
             const tabToType: Record<string, WorldEntityType> = {
                 "Mapas": "MAPA",
                 "Facções": "FACAO",
+                "Religiões": "RELIGIAO",
                 "Famílias": "FAMILIA",
                 "Raças": "RACA",
                 "Outros": "OUTROS"
@@ -639,12 +645,13 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
             createdAt: new Date().toISOString(),
             familyId: newEntityType === "PERSONAGEM" ? (newEntityFamily || undefined) : undefined,
             raceId: newEntityType === "PERSONAGEM" ? (newEntityRace || undefined) : undefined,
+            religionId: ["PERSONAGEM", "FACAO", "FAMILIA", "BESTIARIO", "LOCALIZACAO"].includes(newEntityType) ? (newEntityReligion || undefined) : undefined,
             originId: newEntityType === "PERSONAGEM" ? (newEntityOrigin || undefined) : undefined,
             profession: newEntityType === "PERSONAGEM" ? (newEntityProfession || undefined) : undefined,
             currentLocationId: ["PERSONAGEM", "FACAO", "FAMILIA", "BESTIARIO", "OUTROS"].includes(newEntityType) ? (newEntityCurrentLoc || undefined) : undefined,
             locationType: newEntityType === "LOCALIZACAO" ? (newEntityLocationType || undefined) : undefined,
             linkedLocationId: (newEntityType === "LOCALIZACAO" || newEntityType === "MAPA") ? (newEntityLinkedLocation || undefined) : undefined,
-            imageUrl: ["MAPA", "FACAO", "FAMILIA", "RACA", "PERSONAGEM", "BESTIARIO", "OUTROS"].includes(newEntityType) ? (newEntityImageUrl || undefined) : undefined,
+            imageUrl: ["MAPA", "FACAO", "FAMILIA", "RACA", "PERSONAGEM", "BESTIARIO", "RELIGIAO", "OUTROS"].includes(newEntityType) ? (newEntityImageUrl || undefined) : undefined,
             fieldVisibility: !editingWorldEntityId ? {
                 name: true,
                 type: true,
@@ -655,6 +662,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
                 family: true,
                 race: true,
                 origin: true,
+                religion: true,
                 currentLocation: true,
                 location: true,
                 location_info: true
@@ -662,6 +670,31 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         };
 
         if (editingWorldEntityId) {
+            const currentEntity = state.worldEntities?.[editingWorldEntityId];
+            const patch: Partial<WorldEntity> = {};
+            
+            if (currentEntity) {
+                if (newEntityName !== currentEntity.name) patch.name = newEntityName;
+                if (newEntityType !== currentEntity.type) patch.type = newEntityType;
+                if (newEntityColor !== currentEntity.color) patch.color = newEntityColor;
+                if (JSON.stringify(newEntityTags) !== JSON.stringify(currentEntity.tags)) patch.tags = newEntityTags;
+                if (newEntityDescription !== currentEntity.description) patch.description = newEntityDescription;
+                if (newEntityFamily !== currentEntity.familyId) patch.familyId = newEntityFamily || undefined;
+                if (newEntityRace !== currentEntity.raceId) patch.raceId = newEntityRace || undefined;
+                if (newEntityReligion !== currentEntity.religionId) patch.religionId = newEntityReligion || undefined;
+                if (newEntityOrigin !== currentEntity.originId) patch.originId = newEntityOrigin || undefined;
+                if (newEntityProfession !== currentEntity.profession) patch.profession = newEntityProfession || undefined;
+                if (newEntityCurrentLoc !== currentEntity.currentLocationId) patch.currentLocationId = newEntityCurrentLoc || undefined;
+                if (newEntityLocationType !== currentEntity.locationType) patch.locationType = newEntityLocationType || undefined;
+                if (newEntityLinkedLocation !== currentEntity.linkedLocationId) patch.linkedLocationId = newEntityLinkedLocation || undefined;
+                if (newEntityImageUrl !== currentEntity.imageUrl) patch.imageUrl = newEntityImageUrl || undefined;
+            }
+
+            if (Object.keys(patch).length === 0) {
+                handleCancelWorldEntityEdit();
+                return;
+            }
+
             globalEventStore.append({
                 id: uuidv4(),
                 sessionId,
@@ -670,7 +703,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
                 actorUserId: userId,
                 createdAt: new Date().toISOString(),
                 visibility: "PUBLIC",
-                payload: { entityId: editingWorldEntityId, patch: newEntity }
+                payload: { entityId: editingWorldEntityId, patch }
             } as any);
         } else {
             globalEventStore.append({
@@ -703,6 +736,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         setNewEntityRace(entity.raceId || "");
         setNewEntityOrigin(entity.originId || "");
         setNewEntityProfession(entity.profession || "");
+        setNewEntityReligion(entity.religionId || "");
         setNewEntityCurrentLoc(entity.currentLocationId || "");
         setNewEntityLocationType(entity.locationType || "");
         setNewEntityLinkedLocation(entity.linkedLocationId || "");
@@ -727,6 +761,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         setNewEntityLinkedLocation("");
         setLocSearch("");
         setNewEntityImageUrl("");
+        setNewEntityReligion("");
         setImportBestiaryId("");
     };
 
@@ -842,7 +877,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         const entity = state.worldEntities?.[entityId];
         if (!entity) return;
 
-        const fields = ['name', 'type', 'description', 'tags', 'image', 'color', 'family', 'race', 'origin', 'currentLocation', 'location', 'location_info'];
+        const fields = ['name', 'type', 'description', 'tags', 'image', 'color', 'family', 'race', 'religion', 'origin', 'currentLocation', 'location', 'location_info'];
         const fieldVisibility: Record<string, boolean> = {};
         fields.forEach(f => fieldVisibility[f] = hideAll);
 
@@ -1310,6 +1345,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         newEntityRace, setNewEntityRace,
         newEntityOrigin, setNewEntityOrigin,
         newEntityCurrentLoc, setNewEntityCurrentLoc,
+        newEntityReligion, setNewEntityReligion,
         newEntityLocationType, setNewEntityLocationType,
         newEntityLinkedLocation, setNewEntityLinkedLocation,
         locSearch, setLocSearch,
@@ -1365,6 +1401,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         bestiaryList,
         familiesList,
         racesList,
+        religionsList,
         locationsList,
         worldEntitiesForCurrentTab,
         worldSearchSuggestions,

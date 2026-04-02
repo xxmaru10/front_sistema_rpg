@@ -129,6 +129,7 @@ export type Character = {
   isHazard?: boolean; // If true, it's a Challenge/Hazard card (Purple)
   difficulty?: number; // Used for Hazards
   linkedNotes?: EntityNote[];
+  religionId?: string;
 };
 
 // Aspect State
@@ -355,6 +356,7 @@ export type WorldEntityType =
     | "MAPA" 
     | "FACAO" 
     | "FAMILIA" 
+    | "RELIGIAO"
     | "BESTIARIO" 
     | "RACA"
     | "OUTROS";
@@ -376,6 +378,7 @@ export type WorldEntity = {
     familyId?: string;
     raceId?: string;
     originId?: string;
+    religionId?: string;
     currentLocationId?: string;
     locationType?: string;
     linkedLocationId?: string;

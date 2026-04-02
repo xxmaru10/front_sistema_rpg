@@ -76,6 +76,7 @@ export function CharacterCard({
                     <CharacterLore
                         biography={character.biography || ""}
                         sheetAspects={character.sheetAspects}
+                        religionName={mentionEntities?.find(e => e.id === character.religionId)?.name}
                         canEdit={canEdit}
                         showLore={hook.showLore}
                         onToggleLore={() => hook.setShowLore(!hook.showLore)}

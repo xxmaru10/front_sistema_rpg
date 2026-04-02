@@ -1,4 +1,4 @@
-import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2 } from "lucide-react";
+import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2, Church } from "lucide-react";
 import { useState } from "react";
 import { renderMentions } from "@/lib/mentionUtils";
 
@@ -82,6 +82,7 @@ export function WorldTab({
                         { id: "Localizações", icon: <MapPin size={16} /> },
                         { id: "Mapas", icon: <MapIcon size={16} /> },
                         { id: "Facções", icon: <Shield size={16} /> },
+                        { id: "Religiões", icon: <Church size={16} /> },
                     ].map(sub => (
                         <button key={sub.id} className={`sub-tab-btn ${subTabMundo === sub.id ? "active" : ""}`} onClick={() => setSubTabMundo(sub.id as any)}>
                             {sub.icon}
@@ -111,6 +112,7 @@ export function WorldTab({
                                         "Localizações": "LOCALIZACAO",
                                         "Mapas": "MAPA",
                                         "Facções": "FACAO",
+                                        "Religiões": "RELIGIAO",
                                         "Famílias": "FAMILIA",
                                         "Criaturas": "BESTIARIO",
                                         "Raças": "RACA",
@@ -299,6 +301,7 @@ export function WorldTab({
                                                                  entity.type === "LOCALIZACAO" ? <MapPin size={24} /> : 
                                                                  entity.type === "FAMILIA" ? <Home size={24} /> : 
                                                                  entity.type === "FACAO" ? <Shield size={24} /> : 
+                                                                 entity.type === "RELIGIAO" ? <Church size={24} /> : 
                                                                  <Layers size={24} />}
                                                             </div>
                                                         )

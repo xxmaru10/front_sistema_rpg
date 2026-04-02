@@ -69,7 +69,16 @@ export type SessionJoinInfo = {
     ownerUserId: string;
     imageUrl?: string;
     isNPC?: boolean;
+    religionId?: string;
   }>;
+};
+
+export type WorldEntity = {
+  id: string;
+  name: string;
+  type: "PERSONAGEM" | "FACCAO" | "FAMILIA" | "CRIATURA" | "LOCALIZACAO" | "RELIGIAO" | "OUTROS";
+  description?: string;
+  religionId?: string;
 };
 ```
 
