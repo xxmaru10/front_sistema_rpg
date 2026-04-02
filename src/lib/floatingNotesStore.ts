@@ -1,21 +1,13 @@
-export interface StickyNote {
-    id: string;
-    text: string;
-    title: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color: string;
-    minimized: boolean;
-    zIndex: number;
-}
+import { StickyNote } from "@/types/domain";
+import { globalEventStore } from "./eventStore";
+import { v4 as uuidv4 } from "uuid";
 
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
-let notes: StickyNote[] = [];
-let isArenaActive = false;
+let currentNotes: StickyNote[] = [];
+let currentSessionId = "";
+let currentUserId = "";
 let maxZ = 10000;
 let initialized = false;
 
@@ -23,44 +15,21 @@ function notify() {
     listeners.forEach(fn => fn());
 }
 
-function saveNotes() {
-    if (typeof window !== 'undefined') {
-        try {
-            localStorage.setItem('floating-notes-v1', JSON.stringify(notes));
-        } catch {}
-    }
-}
-
-function loadNotes(): StickyNote[] {
-    if (typeof window === 'undefined') return [];
-    try {
-        const saved = localStorage.getItem('floating-notes-v1');
-        if (!saved) return [];
-        const parsed: StickyNote[] = JSON.parse(saved);
-        const maxSaved = parsed.reduce((m, n) => Math.max(m, n.zIndex || 10000), 10000);
-        maxZ = maxSaved + 1;
-        return parsed;
-    } catch {
-        return [];
-    }
-}
-
 export const floatingNotesStore = {
-    init() {
-        if (initialized) return;
+    init(sessionId: string, userId: string) {
+        currentSessionId = sessionId;
+        currentUserId = userId;
         initialized = true;
-        notes = loadNotes();
     },
 
-    getNotes: () => notes,
-    isArena: () => isArenaActive,
-
-    setArena(active: boolean) {
-        if (isArenaActive !== active) {
-            isArenaActive = active;
-            notify();
-        }
+    setNotes(notes: StickyNote[]) {
+        currentNotes = notes;
+        const maxSaved = notes.reduce((m, n) => Math.max(m, n.zIndex || 10000), 10000);
+        maxZ = Math.max(maxZ, maxSaved + 1);
+        notify();
     },
+
+    getNotes: () => currentNotes,
 
     subscribe(fn: Listener) {
         listeners.add(fn);
@@ -68,12 +37,13 @@ export const floatingNotesStore = {
     },
 
     createNote() {
+        if (!initialized) return;
         maxZ++;
-        const offset = notes.length * 24;
-        const note: StickyNote = {
-            id: crypto.randomUUID(),
+        const offset = currentNotes.length * 24;
+        const newNote: StickyNote = {
+            id: uuidv4(),
             text: '',
-            title: 'Nota',
+            title: 'Nova Nota',
             x: 120 + (offset % 240),
             y: 120 + (offset % 200),
             width: 220,
@@ -81,39 +51,59 @@ export const floatingNotesStore = {
             color: '#fef08a',
             minimized: false,
             zIndex: maxZ,
+            ownerId: currentUserId,
         };
-        notes = [...notes, note];
-        saveNotes();
-        notify();
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId: currentSessionId,
+            seq: 0,
+            type: "STICKY_NOTE_CREATED",
+            actorUserId: currentUserId,
+            createdAt: new Date().toISOString(),
+            visibility: { kind: "PLAYER_ONLY", userId: currentUserId },
+            payload: newNote
+        } as any);
     },
 
-    updateNote(id: string, updates: Partial<StickyNote>) {
-        notes = notes.map(n => n.id === id ? { ...n, ...updates } : n);
-        saveNotes();
-        notify();
+    updateNote(id: string, patch: Partial<StickyNote>) {
+        if (!initialized) return;
+        
+        // Optimistic update for fluid UI (specifically for drag/resize)
+        if (patch.x !== undefined || patch.y !== undefined || patch.width !== undefined || patch.height !== undefined || patch.zIndex !== undefined) {
+             currentNotes = currentNotes.map(n => n.id === id ? { ...n, ...patch } : n);
+             notify();
+        }
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId: currentSessionId,
+            seq: 0,
+            type: "STICKY_NOTE_UPDATED",
+            actorUserId: currentUserId,
+            createdAt: new Date().toISOString(),
+            visibility: { kind: "PLAYER_ONLY", userId: currentUserId },
+            payload: { id, patch }
+        } as any);
     },
 
     deleteNote(id: string) {
-        notes = notes.filter(n => n.id !== id);
-        saveNotes();
-        notify();
-    },
+        if (!initialized) return;
 
-    hideAll() {
-        notes = notes.map(n => ({ ...n, minimized: true }));
-        saveNotes();
-        notify();
-    },
-
-    showAll() {
-        notes = notes.map(n => ({ ...n, minimized: false }));
-        saveNotes();
-        notify();
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId: currentSessionId,
+            seq: 0,
+            type: "STICKY_NOTE_DELETED",
+            actorUserId: currentUserId,
+            createdAt: new Date().toISOString(),
+            visibility: { kind: "PLAYER_ONLY", userId: currentUserId },
+            payload: { id }
+        } as any);
     },
 
     bringToFront(id: string) {
         maxZ++;
-        notes = notes.map(n => n.id === id ? { ...n, zIndex: maxZ } : n);
-        notify();
+        this.updateNote(id, { zIndex: maxZ });
     },
 };

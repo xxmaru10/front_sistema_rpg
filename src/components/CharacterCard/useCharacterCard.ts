@@ -108,8 +108,8 @@ export function useCharacterCard({
                 const canvas = document.createElement("canvas");
                 let width = img.width;
                 let height = img.height;
-                const MAX_WIDTH = 800;
-                const MAX_HEIGHT = 800;
+                const MAX_WIDTH = 600;
+                const MAX_HEIGHT = 600;
                 if (width > height) {
                     if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
                 } else {
@@ -120,7 +120,7 @@ export function useCharacterCard({
                 const ctx = canvas.getContext("2d");
                 if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height);
-                    const compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
+                    const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
                     globalEventStore.append({
                         id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId,
                         createdAt: new Date().toISOString(), visibility: "PUBLIC",

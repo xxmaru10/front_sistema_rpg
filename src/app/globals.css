@@ -420,8 +420,13 @@ h3 {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-fade {
@@ -815,371 +820,398 @@ h3 {
   background: rgba(var(--accent-rgb), 0.4);
 }
 
-/* ─── Theme Transition: smooth switching ─── */
-*:not(script):not(style) {
-  transition-property: color, background-color, border-color, box-shadow, text-shadow;
+/* ─── Theme Transition: escopo reduzido aos containers de alto nível ─── */
+/* REMOVIDO: *:not(script):not(style) { transition } — causava flash visual
+   a cada clique em botões (state update → re-render → transition from grey) */
+html,
+body,
+.session-container,
+.char-artifact,
+.tarot-inner,
+.combat-card,
+.session-nav,
+.nav-item,
+.main-header {
+  transition-property: color, background-color, border-color, box-shadow;
   transition-duration: 0.4s;
   transition-timing-function: ease;
 }
 
 /* Tarot Card System - Global */
 .actions-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 40px;
-    z-index: 2;
-    max-width: 900px;
-    width: 90%;
-    margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 40px;
+  z-index: 2;
+  max-width: 900px;
+  width: 90%;
+  margin-top: 20px;
 }
 
 .tarot-card {
-    background: #080808;
-    border: 1px solid var(--border-color);
-    padding: 10px;
-    transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-    position: relative;
-    height: auto;
-    min-height: 520px;
-    display: flex;
-    flex-direction: column;
+  background: #080808;
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  position: relative;
+  height: auto;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
 }
 
 .tarot-inner {
-    border: 1px solid rgba(var(--accent-rgb), 0.15);
-    padding: 4px;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
+  border: 1px solid rgba(var(--accent-rgb), 0.15);
+  padding: 4px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(var(--accent-rgb), 0.1);
-    margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.1);
+  margin-bottom: 24px;
 }
 
-.arcana-number, .arcana-name {
-    font-family: var(--font-header);
-    font-size: 0.65rem;
-    color: var(--accent-color);
-    opacity: 0.5;
-    letter-spacing: 0.2em;
+.arcana-number,
+.arcana-name {
+  font-family: var(--font-header);
+  font-size: 0.65rem;
+  color: var(--accent-color);
+  opacity: 0.5;
+  letter-spacing: 0.2em;
 }
 
 .tarot-body {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0 40px 40px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 40px 40px;
 }
 
 .icon-wrapper {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    border: 1px solid var(--accent-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 30px;
-    color: var(--accent-color);
-    box-shadow: 0 0 25px rgba(var(--accent-rgb), 0.1);
-    background: rgba(var(--accent-rgb), 0.02);
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+  color: var(--accent-color);
+  box-shadow: 0 0 25px rgba(var(--accent-rgb), 0.1);
+  background: rgba(var(--accent-rgb), 0.02);
 }
 
 .tarot-body h3.victorian-title {
-    font-family: var(--font-header);
-    font-size: 2.2rem;
-    font-weight: 400;
-    text-align: center;
-    letter-spacing: 0.15em;
-    margin-bottom: 40px;
-    color: var(--accent-color);
-    text-shadow: 0 0 15px var(--accent-glow);
+  font-family: var(--font-header);
+  font-size: 2.2rem;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: 0.15em;
+  margin-bottom: 40px;
+  color: var(--accent-color);
+  text-shadow: 0 0 15px var(--accent-glow);
 }
 
-.input-group, .selection-area {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-    margin-bottom: 24px;
+.input-group,
+.selection-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 24px;
 }
 
 .mystic-input {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(var(--accent-rgb), 0.25);
-    padding: 14px 20px;
-    color: var(--text-primary);
-    font-family: var(--font-main);
-    text-align: center;
-    font-size: 0.85rem;
-    transition: all 0.3s;
-    width: 100%;
-    outline: none;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  padding: 14px 20px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  text-align: center;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+  width: 100%;
+  outline: none;
 }
 
 .mystic-input:focus {
-    border-color: var(--accent-color);
-    background: rgba(var(--accent-rgb), 0.05);
-    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.1);
+  border-color: var(--accent-color);
+  background: rgba(var(--accent-rgb), 0.05);
+  box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.1);
 }
 
 .mystic-btn {
-    background: transparent;
-    border: 1px solid var(--accent-color);
-    color: var(--accent-color);
-    padding: 14px 20px;
-    font-family: var(--font-header);
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.4s;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    width: 100%;
+  background: transparent;
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+  padding: 14px 20px;
+  font-family: var(--font-header);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.4s;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  width: 100%;
 }
 
 .mystic-btn:hover:not(:disabled) {
-    background: var(--accent-color);
-    color: #000;
-    box-shadow: 0 0 30px var(--accent-glow);
+  background: var(--accent-color);
+  color: #000;
+  box-shadow: 0 0 30px var(--accent-glow);
 }
 
 .mystic-btn:disabled {
-    opacity: 0.2;
-    cursor: not-allowed;
-    border-color: rgba(var(--accent-rgb), 0.2);
+  opacity: 0.2;
+  cursor: not-allowed;
+  border-color: rgba(var(--accent-rgb), 0.2);
 }
 
 /* Role Selector & Selects */
 .role-selector {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .role-option {
-    flex: 1;
-    cursor: pointer;
+  flex: 1;
+  cursor: pointer;
 }
 
-.role-option input { display: none; }
+.role-option input {
+  display: none;
+}
 
 .role-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px;
-    border: 1px solid rgba(var(--accent-rgb), 0.2);
-    background: rgba(var(--accent-rgb), 0.02);
-    font-family: var(--font-header);
-    font-size: 0.65rem;
-    color: var(--text-secondary);
-    transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  background: rgba(var(--accent-rgb), 0.02);
+  font-family: var(--font-header);
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  transition: all 0.3s;
 }
 
-.role-option input:checked + .role-box {
-    border-color: var(--accent-color);
-    background: rgba(var(--accent-rgb), 0.1);
-    color: var(--accent-color);
-    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.1);
+.role-option input:checked+.role-box {
+  border-color: var(--accent-color);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent-color);
+  box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.1);
 }
 
 .mystic-select {
-    width: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(var(--accent-rgb), 0.3);
-    color: var(--accent-color);
-    padding: 14px;
-    font-family: var(--font-header);
-    font-size: 0.8rem;
-    outline: none;
-    cursor: pointer;
-    text-align-last: center;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  color: var(--accent-color);
+  padding: 14px;
+  font-family: var(--font-header);
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+  text-align-last: center;
 }
 
 @media (max-width: 768px) {
-    .actions-grid {
-        grid-template-columns: 1fr;
-        gap: 30px;
-    }
-    .tarot-card {
-        min-height: auto;
-    }
-    .tarot-body {
-        padding: 0 20px 30px;
-    }
+  .actions-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .tarot-card {
+    min-height: auto;
+  }
+
+  .tarot-body {
+    padding: 0 20px 30px;
+  }
 }
 
 /* Character Selection Screen Styles - Story 12 */
 .character-selection {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 30px;
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  z-index: 10;
 }
 
 .selection-title {
-    font-size: 2.8rem;
-    margin-bottom: 20px;
-    text-shadow: 0 0 20px var(--accent-glow);
+  font-size: 2.8rem;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px var(--accent-glow);
 }
 
 .character-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 24px;
-    width: 100%;
-    padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  width: 100%;
+  padding: 20px;
 }
 
 .char-select-card {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(var(--accent-rgb), 0.15);
-    padding: 30px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    cursor: pointer;
-    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-    position: relative;
-    overflow: hidden;
-    min-height: 240px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(var(--accent-rgb), 0.15);
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+  position: relative;
+  overflow: hidden;
+  min-height: 240px;
 }
 
 .char-select-card:hover {
-    background: rgba(var(--accent-rgb), 0.05);
-    border-color: var(--accent-color);
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(var(--accent-rgb), 0.1);
+  background: rgba(var(--accent-rgb), 0.05);
+  border-color: var(--accent-color);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(var(--accent-rgb), 0.1);
 }
 
 .char-avatar-ring {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: 1px solid rgba(var(--accent-rgb), 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    transition: all 0.5s;
-    background: rgba(0, 0, 0, 0.2);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.5s;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .char-select-card:hover .char-avatar-ring {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 25px var(--accent-glow);
-    transform: rotate(180deg);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 25px var(--accent-glow);
+  transform: rotate(180deg);
 }
 
 .char-avatar-glyph {
-    font-family: var(--font-header);
-    font-size: 2.2rem;
-    color: var(--accent-color);
-    transition: all 0.5s;
+  font-family: var(--font-header);
+  font-size: 2.2rem;
+  color: var(--accent-color);
+  transition: all 0.5s;
 }
 
 .char-select-card:hover .char-avatar-glyph {
-    transform: rotate(-180deg) scale(1.1);
-    text-shadow: 0 0 10px var(--accent-color);
+  transform: rotate(-180deg) scale(1.1);
+  text-shadow: 0 0 10px var(--accent-color);
 }
 
 .char-name-label {
-    font-family: var(--font-header);
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    text-align: center;
-    letter-spacing: 0.1em;
-    z-index: 2;
+  font-family: var(--font-header);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  text-align: center;
+  letter-spacing: 0.1em;
+  z-index: 2;
 }
 
 .char-card-glow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle, rgba(var(--accent-rgb), 0.1) 0%, transparent 70%);
-    opacity: 0;
-    transform: translate(-50%, -50%);
-    transition: opacity 0.5s;
-    pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.5s;
+  pointer-events: none;
 }
 
 .char-select-card:hover .char-card-glow {
-    opacity: 1;
+  opacity: 1;
 }
 
 .selection-actions {
-    margin-top: 40px;
-    width: 240px;
+  margin-top: 40px;
+  width: 240px;
 }
 
 .animate-reveal {
-    animation: revealUp 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  animation: revealUp 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
 }
 
 @keyframes revealUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
-    .selection-title {
-        font-size: 1.8rem;
-    }
-    .character-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-    .char-select-card {
-        padding: 20px 10px;
-        min-height: 180px;
-    }
-    .char-avatar-ring {
-        width: 60px;
-        height: 60px;
-    }
-    .char-avatar-glyph {
-        font-size: 1.6rem;
-    }
+  .selection-title {
+    font-size: 1.8rem;
+  }
+
+  .character-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .char-select-card {
+    padding: 20px 10px;
+    min-height: 180px;
+  }
+
+  .char-avatar-ring {
+    width: 60px;
+    height: 60px;
+  }
+
+  .char-avatar-glyph {
+    font-size: 1.6rem;
+  }
 }
 
 
 .char-avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-    transition: all 0.5s;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: all 0.5s;
 }
 
 .char-select-card:hover .char-avatar-img {
-    border-color: var(--accent-color);
-    transform: scale(1.1) rotate(-180deg);
-    filter: drop-shadow(0 0 10px var(--accent-glow));
+  border-color: var(--accent-color);
+  transform: scale(1.1) rotate(-180deg);
+  filter: drop-shadow(0 0 10px var(--accent-glow));
 }
 
 .char-avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-    transition: all 0.5s;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: all 0.5s;
 }
 
 .char-select-card:hover .char-avatar-img {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 10px var(--accent-glow));
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px var(--accent-glow));
 }

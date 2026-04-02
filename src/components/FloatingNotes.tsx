@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
-import { floatingNotesStore, StickyNote } from "@/lib/floatingNotesStore";
+import { usePathname, useParams, useSearchParams } from "next/navigation";
+import { floatingNotesStore } from "@/lib/floatingNotesStore";
+import { StickyNote } from "@/types/domain";
+import { globalEventStore } from "@/lib/eventStore";
+import { computeState } from "@/lib/projections";
 
 const NOTE_COLORS = [
     { value: '#fef08a', label: 'Amarelo' },
@@ -323,23 +326,49 @@ function StickyNoteCard({ note }: { note: StickyNote }) {
 export function FloatingNotes() {
     const [notes, setNotes] = useState<StickyNote[]>([]);
     const [mounted, setMounted] = useState(false);
-    const pathname = usePathname();
+    
+    // Get context from URL
+    const pathname = usePathname() || "";
+    const params = useParams();
+    const sessionId = params?.id as string;
+    const searchParams = useSearchParams();
+    const userId = searchParams?.get("u") || "";
 
-    // Só mostra notas em páginas de sessão (não no login)
-    const isSessionPage = pathname?.startsWith('/session/') ?? false;
+    const isSessionPage = pathname.startsWith('/session/');
 
     useEffect(() => {
-        floatingNotesStore.init();
-        setNotes([...floatingNotesStore.getNotes()]);
         setMounted(true);
+        if (!isSessionPage || !sessionId || !userId) {
+            setNotes([]);
+            return;
+        }
 
-        const unsub = floatingNotesStore.subscribe(() => {
+        // Initialize store with context
+        floatingNotesStore.init(sessionId, userId);
+
+        // Subscribe to global event store to get projected notes
+        const unsubStore = globalEventStore.subscribe(() => {}, (bulkEvents) => {
+            // Re-project state from events to find current user's sticky notes
+            const state = computeState(bulkEvents, globalEventStore.getSnapshotState() ?? undefined);
+            const userNotes = (state.stickyNotes || []).filter(n => n.ownerId === userId);
+            
+            // Only update if they actually changed (or just set them, React will handle diff)
+            floatingNotesStore.setNotes(userNotes);
+            setNotes([...userNotes]);
+        });
+
+        // Also subscribe to the floatingNotesStore for local optimistic updates
+        const unsubLocal = floatingNotesStore.subscribe(() => {
             setNotes([...floatingNotesStore.getNotes()]);
         });
-        return () => { unsub(); };
-    }, []);
 
-    if (!mounted || !isSessionPage || typeof document === 'undefined') return null;
+        return () => { 
+            unsubStore();
+            unsubLocal();
+        };
+    }, [isSessionPage, sessionId, userId]);
+
+    if (!mounted || !isSessionPage || !sessionId || !userId || typeof document === 'undefined') return null;
 
     return createPortal(
         <>

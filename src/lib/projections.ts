@@ -24,6 +24,7 @@ export const initialState: SessionState = {
     skills: [],
     items: [],
     sessionNumber: 1,
+    stickyNotes: [],
 
     soundSettings: {
 
@@ -1006,6 +1007,26 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...i,
                     linkedNotes: (i.linkedNotes || []).filter(n => n.id !== payload.noteId)
                 } : i)
+            };
+        }
+
+        case "STICKY_NOTE_CREATED":
+            return {
+                ...state,
+                stickyNotes: [...(state.stickyNotes || []), { ...payload, ownerId: event.actorUserId }]
+            };
+
+        case "STICKY_NOTE_UPDATED": {
+            return {
+                ...state,
+                stickyNotes: (state.stickyNotes || []).map(n => n.id === payload.id ? { ...n, ...payload.patch } : n)
+            };
+        }
+
+        case "STICKY_NOTE_DELETED": {
+            return {
+                ...state,
+                stickyNotes: (state.stickyNotes || []).filter(n => n.id !== payload.id)
             };
         }
 

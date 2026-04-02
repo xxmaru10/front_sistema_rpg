@@ -48,6 +48,9 @@ interface CreateWorldEntityModalProps {
     editingWorldEntityId: string | null;
     handleCancelWorldEntityEdit: () => void;
     mentionEntities: any[];
+    religionsList: any[];
+    newEntityReligion: string;
+    setNewEntityReligion: (id: string) => void;
 }
 
 export function CreateWorldEntityModal({
@@ -95,7 +98,10 @@ export function CreateWorldEntityModal({
     handleCreateWorldEntity,
     editingWorldEntityId,
     handleCancelWorldEntityEdit,
-    mentionEntities
+    mentionEntities,
+    religionsList,
+    newEntityReligion,
+    setNewEntityReligion
 }: CreateWorldEntityModalProps) {
     const modalContent = (
         <div className="modal-overlay" onClick={() => setShowAddWorldEntity(false)}>
@@ -209,7 +215,29 @@ export function CreateWorldEntityModal({
                                             if (file) {
                                                 const reader = new FileReader();
                                                 reader.onloadend = () => {
-                                                    setNewEntityImageUrl(reader.result as string);
+                                                    const img = new Image();
+                                                    img.onload = () => {
+                                                        const canvas = document.createElement('canvas');
+                                                        let width = img.width;
+                                                        let height = img.height;
+                                                        const MAX_WIDTH = 1200; // Mapas podem ser um pouco maiores
+                                                        const MAX_HEIGHT = 1200;
+                                                        if (width > height) {
+                                                            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                                                        } else {
+                                                            if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
+                                                        }
+                                                        canvas.width = width;
+                                                        canvas.height = height;
+                                                        const ctx = canvas.getContext('2d');
+                                                        if (ctx) {
+                                                            ctx.drawImage(img, 0, 0, width, height);
+                                                            setNewEntityImageUrl(canvas.toDataURL('image/jpeg', 0.7));
+                                                        } else {
+                                                            setNewEntityImageUrl(reader.result as string);
+                                                        }
+                                                    };
+                                                    img.src = reader.result as string;
                                                 };
                                                 reader.readAsDataURL(file);
                                             }
@@ -232,7 +260,7 @@ export function CreateWorldEntityModal({
                         </div>
                     )}
 
-                    {["PERSONAGEM", "LOCALIZACAO", "RACA", "FAMILIA", "FACAO", "BESTIARIO", "OUTROS"].includes(newEntityType) && (
+                    {["PERSONAGEM", "LOCALIZACAO", "RACA", "FAMILIA", "FACAO", "RELIGIAO", "BESTIARIO", "OUTROS"].includes(newEntityType) && (
                         <div className="input-group" style={{ marginTop: '15px' }}>
                             <label>IMAGEM (PNG ou JPEG)</label>
                             <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
@@ -252,9 +280,9 @@ export function CreateWorldEntityModal({
                                                 let width = img.width;
                                                 let height = img.height;
                                                 
-                                                // Max dimensions
-                                                const MAX_WIDTH = 800;
-                                                const MAX_HEIGHT = 800;
+                                                // Max dimensions reduced for better performance and to avoid 413 errors
+                                                const MAX_WIDTH = 600;
+                                                const MAX_HEIGHT = 600;
                                                 
                                                 if (width > height) {
                                                     if (width > MAX_WIDTH) {
@@ -273,7 +301,7 @@ export function CreateWorldEntityModal({
                                                 const ctx = canvas.getContext('2d');
                                                 if (ctx) {
                                                     ctx.drawImage(img, 0, 0, width, height);
-                                                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                                                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
                                                     setNewEntityImageUrl(compressedBase64);
                                                 } else {
                                                     setNewEntityImageUrl(reader.result as string);
@@ -374,6 +402,15 @@ export function CreateWorldEntityModal({
                                         <select value={newEntityCurrentLoc} onChange={e => setNewEntityCurrentLoc(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
                                             <option value="">NENHUMA (DESCONHECIDA)</option>
                                             {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                {["PERSONAGEM", "FACAO", "FAMILIA", "BESTIARIO", "LOCALIZACAO"].includes(newEntityType) && (
+                                    <div className="input-group flex-1">
+                                        <label>RELIGIÃO</label>
+                                        <select value={newEntityReligion} onChange={e => setNewEntityReligion(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
+                                            <option value="">NENHUMA</option>
+                                            {religionsList.map(r => <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>)}
                                         </select>
                                     </div>
                                 )}

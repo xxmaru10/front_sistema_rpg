@@ -5,8 +5,8 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-01
-status: estável
+last_updated: 2026-04-02
+status: ativo
 ---
 
 # Convenções
@@ -41,4 +41,7 @@ Siga o padrão Conventional Commits:
 - **Proibido usar `alert()`** em fluxos de rede ou lógica core; substitua por `console.error` ou toasts não-bloqueantes.
 - **Requisições `fetch` sem timeout**: Sempre use `AbortSignal.timeout()` ou AbortController para evitar requisições pendentes infinitas.
 - **Estado de UI stuck**: Toda ação de carregamento/estado bloqueado (ex: `isRolling`) deve ter um safety timeout para auto-destravamento.
+
+## UI Patterns
+- **Luxury Portal Selection**: Para menus suspensos complexos (dropdowns), utilizar Portais (React Portal) fugindo do contexto de empilhamento local para garantir que menus flutuem acima de chats/logs sem recortes. O estilo deve seguir o padrão vitoriano: fundo sólido (obsidiana #0a0a0a para legibilidade), bordas douradas e animações de fade/slide.
 

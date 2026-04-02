@@ -1,4 +1,4 @@
-import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2 } from "lucide-react";
+import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2, Church } from "lucide-react";
 import { useState } from "react";
 import { renderMentions } from "@/lib/mentionUtils";
 
@@ -75,57 +75,35 @@ export function WorldTab({
 }: WorldTabProps) {
     return (
         <div className="tab-content-combined">
-            <div className="sub-menu-bar multi-row">
-                <div className="sub-menu-row">
-                    {[
-                        { id: "Personagens", icon: <User size={16} /> },
-                        { id: "Localizações", icon: <MapPin size={16} /> },
-                        { id: "Mapas", icon: <MapIcon size={16} /> },
-                        { id: "Facções", icon: <Shield size={16} /> },
-                    ].map(sub => (
-                        <button key={sub.id} className={`sub-tab-btn ${subTabMundo === sub.id ? "active" : ""}`} onClick={() => setSubTabMundo(sub.id as any)}>
-                            {sub.icon}
-                            <span>{sub.id.toUpperCase()}</span>
-                        </button>
-                    ))}
-                </div>
-                <div className="sub-menu-row">
-                    {[
-                        { id: "Famílias", icon: <Home size={16} /> },
-                        { id: "Criaturas", icon: <Skull size={16} /> },
-                        { id: "Raças", icon: <Dna size={16} /> },
-                        { id: "Outros", icon: <Layers size={16} /> }
-                    ].map(sub => (
-                        <button key={sub.id} className={`sub-tab-btn ${subTabMundo === sub.id ? "active" : ""}`} onClick={() => setSubTabMundo(sub.id as any)}>
-                            {sub.icon}
-                            <span>{sub.id.toUpperCase()}</span>
-                        </button>
-                    ))}
-                    {userRole === "GM" && (
-                        <button
-                            className="add-world-entity-btn-mini"
-                            onClick={() => {
-                                if (setNewEntityType) {
-                                    const tabToType: Record<string, string> = {
-                                        "Personagens": "PERSONAGEM",
-                                        "Localizações": "LOCALIZACAO",
-                                        "Mapas": "MAPA",
-                                        "Facções": "FACAO",
-                                        "Famílias": "FAMILIA",
-                                        "Criaturas": "BESTIARIO",
-                                        "Raças": "RACA",
-                                        "Outros": "OUTROS"
-                                    };
-                                    setNewEntityType(tabToType[subTabMundo] || "PERSONAGEM");
-                                }
-                                setShowAddWorldEntity(true);
-                            }}
-                            title="Adicionar Novo Elemento de Mundo"
-                        >
-                            <Plus size={16} />
-                        </button>
-                    )}
-                </div>
+            <div className="navigator-controls">
+                <span className="navigator-label">MUNDO: {subTabMundo.toUpperCase()}</span>
+
+                {userRole === "GM" && (
+                    <button
+                        className="add-world-entity-btn-mini"
+                        style={{ marginLeft: 'auto', width: '36px', height: '36px', flexShrink: 0 }}
+                        onClick={() => {
+                            if (setNewEntityType) {
+                                const tabToType: Record<string, string> = {
+                                    "Personagens": "PERSONAGEM",
+                                    "Localizações": "LOCALIZACAO",
+                                    "Mapas": "MAPA",
+                                    "Facções": "FACAO",
+                                    "Religiões": "RELIGIAO",
+                                    "Famílias": "FAMILIA",
+                                    "Criaturas": "BESTIARIO",
+                                    "Raças": "RACA",
+                                    "Outros": "OUTROS"
+                                };
+                                setNewEntityType(tabToType[subTabMundo] || "PERSONAGEM");
+                            }
+                            setShowAddWorldEntity(true);
+                        }}
+                        title="Adicionar Novo Elemento de Mundo"
+                    >
+                        <Plus size={18} />
+                    </button>
+                )}
             </div>
 
             <div className="sub-content-area scrollbar-arcane">
@@ -299,6 +277,7 @@ export function WorldTab({
                                                                  entity.type === "LOCALIZACAO" ? <MapPin size={24} /> : 
                                                                  entity.type === "FAMILIA" ? <Home size={24} /> : 
                                                                  entity.type === "FACAO" ? <Shield size={24} /> : 
+                                                                 entity.type === "RELIGIAO" ? <Church size={24} /> : 
                                                                  <Layers size={24} />}
                                                             </div>
                                                         )

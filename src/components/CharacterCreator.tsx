@@ -12,11 +12,12 @@ interface CharacterCreatorProps {
     actorUserId: string;
     onClose: () => void;
     source?: "active" | "bestiary";
+    religionsList?: any[];
 }
 
 type NpcTypeOption = "capanga" | "batedor" | "ameaca" | "boss" | "vilao";
 
-export function CharacterCreator({ sessionId, actorUserId, onClose, source = "active" }: CharacterCreatorProps) {
+export function CharacterCreator({ sessionId, actorUserId, onClose, source = "active", religionsList = [] }: CharacterCreatorProps) {
     const [name, setName] = useState("");
     const [owner, setOwner] = useState(actorUserId);
     const [isNPC, setIsNPC] = useState(source === "bestiary");
@@ -25,6 +26,7 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
     const [mentStress, setMentStress] = useState(2);
     const [mounted, setMounted] = useState(false);
     const [npcType, setNpcType] = useState<"capanga" | "batedor" | "ameaca" | "boss" | "vilao" | "">(source === "bestiary" ? "capanga" : "");
+    const [religionId, setReligionId] = useState("");
 
     // Stress values by NPC type
     const getStressForType = (type: string) => {
@@ -80,6 +82,7 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                 name: name.trim(),
                 ownerUserId: isNPC ? "AMBIENTE" : owner.trim(),
                 isNPC,
+                religionId: religionId || undefined,
                 npcType: isNPC ? npcType : undefined,
                 // If NPC, always add to bestiary (even from active tab)
                 source: (isNPC && source === "bestiary") ? "bestiary" : source,
@@ -335,6 +338,20 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                             />
                         </div>
                     )}
+                    
+                    <div className="input-field">
+                        <label>RELIGIÃO</label>
+                        <select
+                            className="occult-input"
+                            value={religionId}
+                            onChange={e => setReligionId(e.target.value)}
+                        >
+                            <option value="">Nenhuma / Desconhecida</option>
+                            {religionsList.map(r => (
+                                <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>
+                            ))}
+                        </select>
+                    </div>
 
                     <div className="dual-inputs">
                         <div className="input-field">

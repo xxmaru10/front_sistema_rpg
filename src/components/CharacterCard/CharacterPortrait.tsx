@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 interface CharacterPortraitProps {
     name: string;
     imageUrl?: string;
@@ -27,6 +29,14 @@ export function CharacterPortrait({
     onCancelEditName,
     onImageUpload,
 }: CharacterPortraitProps) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handlePortraitClick = () => {
+        if (isGM) {
+            fileInputRef.current?.click();
+        }
+    };
+
     return (
         <div className="portrait-column">
             {isEditingName ? (
@@ -57,23 +67,41 @@ export function CharacterPortrait({
                 </div>
             )}
 
-            <div className={`character-portrait ${isGM ? "editable" : ""}`}>
-                {isGM && (
-                    <input
-                        type="file"
-                        accept="image/*"
-                        onChange={onImageUpload}
-                        className="hidden-file-input"
-                        title="Upload Portrait"
-                    />
-                )}
+            {/* Input de arquivo sempre oculto — acionado via ref */}
+            {isGM && (
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={onImageUpload}
+                    style={{ display: "none" }}
+                />
+            )}
+
+            <div
+                className={`character-portrait ${isGM ? "editable" : ""}`}
+                onClick={handlePortraitClick}
+                title={isGM ? "Clique para alterar a imagem" : undefined}
+                style={{ cursor: isGM ? "pointer" : "default" }}
+            >
                 {imageUrl ? (
+                    /* Tem imagem: mostra o retrato. Clique já aciona o picker via handlePortraitClick */
                     <div
                         className="portrait-image"
                         style={{ backgroundImage: `url(${imageUrl})` }}
                     />
                 ) : (
-                    <div className="portrait-placeholder">{isGM ? "+" : ""}</div>
+                    /* Sem imagem: mostra overlay de upload */
+                    <div className="portrait-upload-overlay">
+                        {isGM ? (
+                            <>
+                                <span className="upload-icon">🖼</span>
+                                <span className="upload-label">CLIQUE PARA ADICIONAR RETRATO</span>
+                            </>
+                        ) : (
+                            <div className="portrait-placeholder" />
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -130,6 +158,42 @@ export function CharacterPortrait({
 
                 .edit-name-btn:hover {
                     opacity: 1;
+                }
+
+                .portrait-upload-overlay {
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                    background: rgba(0, 0, 0, 0.3);
+                    transition: background 0.2s;
+                }
+
+                .character-portrait.editable:hover .portrait-upload-overlay {
+                    background: rgba(var(--accent-rgb), 0.08);
+                }
+
+                .upload-icon {
+                    font-size: 2.5rem;
+                    opacity: 0.5;
+                }
+
+                .upload-label {
+                    font-family: var(--font-header);
+                    font-size: 0.6rem;
+                    letter-spacing: 0.15em;
+                    color: var(--accent-color);
+                    opacity: 0.5;
+                    text-align: center;
+                    padding: 0 12px;
+                }
+
+                .character-portrait.editable:hover .upload-icon,
+                .character-portrait.editable:hover .upload-label {
+                    opacity: 0.9;
                 }
             `}</style>
         </div>

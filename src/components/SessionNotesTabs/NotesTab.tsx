@@ -85,25 +85,8 @@ export function NotesTab({
                 </div>
             )}
 
-            <div className="sub-menu-bar">
-                {[
-                    { id: "Geral", icon: <Users size={16} /> },
-                    { id: "Privado", icon: <ShieldAlert size={16} /> },
-                    ...(userRole === "GM" ? [{ id: "Jogadores", icon: <Users size={16} /> }] : []),
-                    { id: "Sessão", icon: <BookOpen size={16} /> }
-                ].map(sub => (
-                    <button
-                        key={sub.id}
-                        className={`sub-tab-btn ${notesSubTab === sub.id ? "active" : ""}`}
-                        onClick={() => {
-                            if (editingNoteId) handleCancelEdit();
-                            setNotesSubTab(sub.id as any);
-                        }}
-                    >
-                        {sub.icon}
-                        <span>{sub.id.toUpperCase()}</span>
-                    </button>
-                ))}
+            <div className="navigator-controls">
+                <span className="navigator-label">CATEGORIA: {notesSubTab.toUpperCase()}</span>
             </div>
 
             {notesSubTab === "Sessão" && (() => {

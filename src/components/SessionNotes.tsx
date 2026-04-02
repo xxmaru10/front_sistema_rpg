@@ -1,4 +1,4 @@
-import { Book, Globe, Clock, Swords, Search, X, Filter, ChevronDown, RotateCw } from "lucide-react";
+import { Book, Globe, Clock, Swords, Search, X, Filter, ChevronDown, RotateCw, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Character, SessionState } from "@/types/domain";
 import { useSessionNotes } from "@/hooks/useSessionNotes";
@@ -10,6 +10,81 @@ import { ViewWorldEntityModal } from "./SessionNotesTabs/ViewWorldEntityModal";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import "./SessionNotes.css";
+
+import { createPortal } from "react-dom";
+
+// Sub-componente para menu customizado de luxo com Portal para evitar problemas de z-index
+function CustomMainTab({ id, label, icon, active, currentSub, onSelect, options }: any) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [rect, setRect] = useState<DOMRect | null>(null);
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            // Se clicar fora de AMBOS (trigger e menu portal), aí sim fechamos
+            const isOutsideTrigger = triggerRef.current && !triggerRef.current.contains(event.target as Node);
+            const isOutsideMenu = menuRef.current && !menuRef.current.contains(event.target as Node);
+            
+            if (isOutsideTrigger && isOutsideMenu) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const toggleMenu = () => {
+        if (triggerRef.current) {
+            setRect(triggerRef.current.getBoundingClientRect());
+        }
+        setIsOpen(!isOpen);
+    };
+
+    return (
+        <div className={`main-tab-group ${active ? 'active' : ''}`} ref={triggerRef}>
+            <div className="main-tab-trigger" onClick={toggleMenu}>
+                {icon}
+                <span className="main-tab-label">{label}</span>
+                <ChevronDown size={14} className={`dropdown-chevron ${isOpen ? 'open' : ''}`} />
+            </div>
+
+            {isOpen && rect && createPortal(
+                <div 
+                    className="victorian-dropdown-menu animate-fade-in-up portal-menu" 
+                    ref={menuRef}
+                    style={{
+                        position: 'fixed',
+                        top: `${rect.bottom + 5}px`,
+                        left: `${rect.left + rect.width / 2}px`,
+                        transform: 'translateX(-50%)',
+                        display: 'block'
+                    }}
+                >
+                    <div className="menu-pointer"></div>
+                    <ul className="menu-options-list scrollbar-arcane">
+                        {options.map((opt: any) => (
+                            <li 
+                                key={opt.value} 
+                                className={`menu-option-item ${currentSub === opt.value ? 'selected' : ''}`}
+                                onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    onSelect(opt.value);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                {currentSub === opt.value && <Check size={12} className="check-icon-gold" />}
+                                <span>{opt.label}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
 
 interface SessionNotesProps {
     sessionId: string;
@@ -54,6 +129,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         newEntityLinkedLocation, setNewEntityLinkedLocation,
         locSearch, setLocSearch,
         newEntityImageUrl, setNewEntityImageUrl,
+        newEntityReligion, setNewEntityReligion,
         viewingEntityId, setViewingEntityId,
         importBestiaryId, setImportBestiaryId,
         
@@ -102,6 +178,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         bestiaryList,
         familiesList,
         racesList,
+        religionsList,
         locationsList,
         worldEntitiesForCurrentTab,
         worldSearchSuggestions,
@@ -179,6 +256,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                 'LOCALIZACAO': 'Localizações',
                 'MAPA': 'Mapas',
                 'FACAO': 'Facções',
+                'RELIGIAO': 'Religiões',
                 'FAMILIA': 'Famílias',
                 'BESTIARIO': 'Criaturas',
                 'RACA': 'Raças',
@@ -194,7 +272,6 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
             setActiveTab('Tempo');
             if (entity.displayType === 'MISSÃO') {
                 setSubTabTempo('Missões');
-                // Could highlight or scroll to if needed
             } else if (entity.displayType === 'HISTÓRIA') {
                 setSubTabTempo('Linha do Tempo');
             }
@@ -365,21 +442,82 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
             )}
 
             <div className="notes-tabs-main" onClick={() => setShowSuggestions(false)}>
-                {[
-                    { id: "Notas", icon: <Book size={18} /> },
-                    { id: "Mundo", icon: <Globe size={18} /> },
-                    { id: "Tempo", icon: <Clock size={16} /> },
-                    { id: "Jogo", icon: <Swords size={18} /> }
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        className={`main-tab-btn ${activeTab === tab.id ? "active" : ""}`}
-                        onClick={() => setActiveTab(tab.id as any)}
-                    >
-                        {tab.icon}
-                        <span>{tab.id.toUpperCase()}</span>
-                    </button>
-                ))}
+                {/* Notas */}
+                <CustomMainTab 
+                    id="Notas" 
+                    label="NOTAS" 
+                    icon={<Book size={18} />} 
+                    active={activeTab === 'Notas'} 
+                    currentSub={notesSubTab}
+                    onSelect={(val: string) => {
+                        setActiveTab('Notas');
+                        setNotesSubTab(val as any);
+                    }}
+                    options={[
+                        { value: 'Geral', label: 'DIÁRIO GERAL' },
+                        { value: 'Privado', label: 'NOTAS PRIVADAS' },
+                        ...(userRole === "GM" ? [{ value: 'Jogadores', label: 'VISÃO DE JOGADORES' }] : []),
+                        { value: 'Sessão', label: 'HISTÓRICO SESSÕES' }
+                    ]}
+                />
+
+                {/* Mundo */}
+                <CustomMainTab 
+                    id="Mundo" 
+                    label="MUNDO" 
+                    icon={<Globe size={18} />} 
+                    active={activeTab === 'Mundo'} 
+                    currentSub={subTabMundo}
+                    onSelect={(val: string) => {
+                        setActiveTab('Mundo');
+                        setSubTabMundo(val as any);
+                    }}
+                    options={[
+                        { value: 'Personagens', label: 'PERSONAGENS' },
+                        { value: 'Localizações', label: 'LOCALIZAÇÕES' },
+                        { value: 'Mapas', label: 'MAPAS' },
+                        { value: 'Facções', label: 'FACÇÕES' },
+                        { value: 'Religiões', label: 'RELIGIÕES' },
+                        { value: 'Famílias', label: 'FAMÍLIAS' },
+                        { value: 'Criaturas', label: 'CRIATURAS' },
+                        { value: 'Raças', label: 'RAÇAS' },
+                        { value: 'Outros', label: 'OUTROS' }
+                    ]}
+                />
+
+                {/* Tempo */}
+                <CustomMainTab 
+                    id="Tempo" 
+                    label="TEMPO" 
+                    icon={<Clock size={16} />} 
+                    active={activeTab === 'Tempo'} 
+                    currentSub={subTabTempo}
+                    onSelect={(val: string) => {
+                        setActiveTab('Tempo');
+                        setSubTabTempo(val as any);
+                    }}
+                    options={[
+                        { value: 'Missões', label: 'MISSÕES' },
+                        { value: 'Linha do Tempo', label: 'HISTÓRIA' }
+                    ]}
+                />
+
+                {/* Jogo */}
+                <CustomMainTab 
+                    id="Jogo" 
+                    label="JOGO" 
+                    icon={<Swords size={18} />} 
+                    active={activeTab === 'Jogo'} 
+                    currentSub={subTabJogo}
+                    onSelect={(val: string) => {
+                        setActiveTab('Jogo');
+                        setSubTabJogo(val as any);
+                    }}
+                    options={[
+                        { value: 'Habilidades', label: 'HABILIDADES' },
+                        { value: 'Itens', label: 'ITENS' }
+                    ]}
+                />
             </div>
 
             {activeTab === "Notas" ? (
@@ -575,6 +713,9 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                     editingWorldEntityId={editingWorldEntityId}
                     handleCancelWorldEntityEdit={handleCancelWorldEntityEdit}
                     mentionEntities={mentionEntities}
+                    religionsList={religionsList}
+                    newEntityReligion={newEntityReligion}
+                    setNewEntityReligion={setNewEntityReligion}
                 />
             )}
 

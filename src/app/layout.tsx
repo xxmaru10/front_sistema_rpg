@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cinzel, Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
+import "@/components/CharacterCard/CharacterCard.css";
 import "@/styles/Battlemap.css";
 import "@/styles/BattlemapToolbar.css";
 import { HeaderWrapper } from "@/components/HeaderWrapper";

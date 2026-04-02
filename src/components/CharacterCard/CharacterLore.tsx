@@ -18,6 +18,7 @@ interface CharacterLoreProps {
     onStartEditingAspect: (index: number, currentVal: string) => void;
     onSaveAspect: (index: number) => void;
     onCancelAspect: () => void;
+    religionName?: string;
 }
 
 export function CharacterLore({
@@ -38,6 +39,7 @@ export function CharacterLore({
     onStartEditingAspect,
     onSaveAspect,
     onCancelAspect,
+    religionName,
 }: CharacterLoreProps) {
     return (
         <div className="info-tower-column">
@@ -50,6 +52,11 @@ export function CharacterLore({
 
                 {showLore && (
                     <div className="lore-accordion-content animate-reveal">
+                        {religionName && (
+                            <div className="religion-banner">
+                                ✧ {religionName.toUpperCase()} ✧
+                            </div>
+                        )}
                         <div className="lore-controls-mini">
                             {canEdit && !isEditingBio && (
                                 <button
