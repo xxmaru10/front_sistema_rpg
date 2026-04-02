@@ -5,8 +5,8 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-01
-status: estável
+last_updated: 2026-04-02
+status: ativo
 ---
 
 # Contrato de API
@@ -79,6 +79,7 @@ export type WorldEntity = {
   type: "PERSONAGEM" | "FACCAO" | "FAMILIA" | "CRIATURA" | "LOCALIZACAO" | "RELIGIAO" | "OUTROS";
   description?: string;
   religionId?: string;
+  imageUrl?: string;
 };
 ```
 

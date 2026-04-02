@@ -89,29 +89,19 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
 
     return (
         <div className="tab-content-combined">
-            <div className="sub-menu-bar">
-                <div className="tabs-and-actions">
-                    <div className="tab-group">
-                        {[
-                            { id: "Missões", icon: <Target size={16} /> },
-                            { id: "Linha do Tempo", icon: <History size={16} /> }
-                        ].map(sub => (
-                            <button key={sub.id} className={`sub-tab-btn ${subTabTempo === sub.id ? "active" : ""}`} onClick={() => setSubTabTempo(sub.id as any)}>
-                                {sub.icon}
-                                <span>{sub.id.toUpperCase()}</span>
-                            </button>
-                        ))}
-                    </div>
-                    {(subTabTempo === "Missões" || (subTabTempo === "Linha do Tempo" && userRole === "GM")) && (
-                        <button 
-                            className="action-btn-mini plus-btn" 
-                            title={`Adicionar ${subTabTempo === "Missões" ? "Missão" : "Evento"}`}
-                            onClick={() => subTabTempo === "Missões" ? setShowAddMission(true) : setShowAddTimelineEvent(true)}
-                        >
-                            <Plus size={16} />
-                        </button>
-                    )}
-                </div>
+            <div className="navigator-controls">
+                <span className="navigator-label">CRONOLOGIA: {subTabTempo.toUpperCase()}</span>
+                <div style={{ flex: 1 }} />
+                {(subTabTempo === "Missões" || (subTabTempo === "Linha do Tempo" && userRole === "GM")) && (
+                    <button 
+                        className="add-world-entity-btn-mini" 
+                        style={{ width: '36px', height: '36px', flexShrink: 0 }}
+                        title={`Adicionar ${subTabTempo === "Missões" ? "Missão" : "Evento"}`}
+                        onClick={() => subTabTempo === "Missões" ? setShowAddMission(true) : setShowAddTimelineEvent(true)}
+                    >
+                        <Plus size={18} />
+                    </button>
+                )}
             </div>
             
             <div className="sub-content-area scrollbar-arcane">
@@ -493,29 +483,27 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
 
     return (
         <div className="tab-content-combined">
-            <div className="sub-menu-bar">
-                <div className="tabs-and-actions">
-                    <div className="tab-group">
-                        {[
-                            { id: "Habilidades", icon: <Zap size={16} /> },
-                            { id: "Itens", icon: <Package size={16} /> }
-                        ].map(sub => (
-                            <button key={sub.id} className={`sub-tab-btn ${subTabJogo === sub.id ? "active" : ""}`} onClick={() => setSubTabJogo(sub.id as any)}>
-                                {sub.icon}
-                                <span>{sub.id.toUpperCase()}</span>
-                            </button>
-                        ))}
-                    </div>
-                    {userRole === 'GM' && subTabJogo !== 'Jogadores' && (
-                        <button 
-                            className="action-btn-mini plus-btn" 
-                            title={`Adicionar ${subTabJogo === "Habilidades" ? "Habilidade" : "Item"}`}
-                            onClick={() => subTabJogo === "Habilidades" ? setShowAddSkill(true) : setShowAddItem(true)}
-                        >
-                            <Plus size={16} />
-                        </button>
-                    )}
-                </div>
+            <div className="navigator-controls">
+                <span className="navigator-label">SISTEMA:</span>
+                <select 
+                    className="victorian-select"
+                    value={subTabJogo}
+                    onChange={(e) => setSubTabJogo(e.target.value as any)}
+                >
+                    <option value="Habilidades">HABILIDADES</option>
+                    <option value="Itens">ITENS E EQUIPAMENTOS</option>
+                </select>
+
+                {userRole === 'GM' && subTabJogo !== 'Jogadores' && (
+                    <button 
+                        className="add-world-entity-btn-mini" 
+                        style={{ marginLeft: 'auto', width: '36px', height: '36px', flexShrink: 0 }}
+                        title={`Adicionar ${subTabJogo === "Habilidades" ? "Habilidade" : "Item"}`}
+                        onClick={() => subTabJogo === "Habilidades" ? setShowAddSkill(true) : setShowAddItem(true)}
+                    >
+                        <Plus size={18} />
+                    </button>
+                )}
             </div>
 
             <div className="sub-content-area scrollbar-arcane">
@@ -617,6 +605,8 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                         </div>
                     </div>
                 )}
+
+            {/* Jogadores removidos conforme solicitado */}
 
             </div>
 
