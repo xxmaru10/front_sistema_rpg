@@ -40,8 +40,10 @@ export function HeaderWrapper() {
     } = useHeaderLogic(sessionId, searchParams);
 
     useEffect(() => {
-        floatingNotesStore.init();
-    }, []);
+        if (sessionId && userId) {
+            floatingNotesStore.init(sessionId, userId);
+        }
+    }, [sessionId, userId]);
 
     if (pathname === "/") {
         return null;

@@ -243,9 +243,6 @@ export default function SessionPage() {
 
     // ─── REMAINING EFFECTS ────────────────────────────────────────────────────
 
-    useEffect(() => {
-        floatingNotesStore.setArena(activeTab === "combat");
-    }, [activeTab]);
 
     // Controla o background do body no modo combate com header image.
     // Substitui o <style jsx global> que era re-injetado a cada render (causa do flash).

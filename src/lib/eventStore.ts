@@ -212,7 +212,8 @@ export class EventStore {
                 this.bulkListeners.forEach(l => l([...this.events]));
                 
                 // Exponential backoff retry para notas (limitado a 3 tentativas)
-                if (event.type === 'NOTE_ADDED' && retryCount < 3) {
+                const isNoteEvent = ['NOTE_ADDED', 'STICKY_NOTE_CREATED', 'STICKY_NOTE_UPDATED', 'STICKY_NOTE_DELETED'].includes(event.type);
+                if (isNoteEvent && retryCount < 3) {
                     const delay = Math.pow(2, retryCount) * 1000;
                     setTimeout(() => this.append(event, retryCount + 1), delay);
                 }

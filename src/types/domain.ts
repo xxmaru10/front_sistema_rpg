@@ -21,6 +21,20 @@ export type EventEnvelope<TType extends string, TPayload> = {
   payload: TPayload;
 };
 
+export interface StickyNote {
+    id: string;
+    text: string;
+    title: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color: string;
+    minimized: boolean;
+    zIndex: number;
+    ownerId: string;
+}
+
 export type Note = {
   id: string;
   authorId: string;
@@ -237,6 +251,7 @@ export type SessionState = {
     sessionNumber?: number;
     battlemap?: BattlemapState;
     name?: string;
+    stickyNotes?: StickyNote[];
 };
 
 export type Stroke = {
@@ -495,9 +510,7 @@ export type ActionEvent =
   | EventEnvelope<"CHARACTER_NOTE_ADDED", { characterId: string; note: EntityNote }>
   | EventEnvelope<"CHARACTER_NOTE_DELETED", { characterId: string; noteId: string }>
   | EventEnvelope<"SESSION_NUMBER_UPDATED", { number: number }>
-  | EventEnvelope<"BATTLEMAP_UPDATED", Partial<BattlemapState>>;
-
-
-
-
-
+  | EventEnvelope<"BATTLEMAP_UPDATED", Partial<BattlemapState>>
+  | EventEnvelope<"STICKY_NOTE_CREATED", StickyNote>
+  | EventEnvelope<"STICKY_NOTE_UPDATED", { id: string; patch: Partial<StickyNote> }>
+  | EventEnvelope<"STICKY_NOTE_DELETED", { id: string }>;

@@ -50,6 +50,7 @@ O Fate Companion utiliza uma arquitetura de **Event Sourcing**. Isso significa q
 | Otimização de Asset Imaging | Redução de resolução (600px) e compressão agressiva (0.7 quality) via Canvas API para todos os uploads de imagens (Entidades, Mapas e Personagens). | 2026-04-02 |
 | Sistema de Religiões | Integração de Religião como entidade de primeira classe com suporte a iconografia dedicada (`Church`) e vinculação em Personagens/NPCs. | 2026-04-02 |
 | Navegação via Portal | Uso de React Portals para menus de sub-navegação em SessionNotes para evitar conflitos de z-index e clipping de overflow. | 2026-04-02 |
+| Post-its Sincronizados | Migração completa de localStorage para Event Sourcing; visibilidade PLAYER_ONLY garante privacidade entre sessões e usuários. | 2026-04-02 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
