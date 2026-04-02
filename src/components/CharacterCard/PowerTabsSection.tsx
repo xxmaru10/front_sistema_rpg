@@ -14,7 +14,7 @@ export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, i
     const hook = usePowerTabs({ character, sessionId, actorUserId });
 
     return (
-        <div className="power-tabs-container animate-reveal">
+        <div className="power-tabs-container">
             <div className="power-tabs-header">
                 <button 
                     className={`power-tab-btn ${hook.activeTab === 'stunts' ? 'active' : ''}`}

@@ -247,6 +247,105 @@ export default function SessionPage() {
         floatingNotesStore.setArena(activeTab === "combat");
     }, [activeTab]);
 
+    // Controla o background do body no modo combate com header image.
+    // Substitui o <style jsx global> que era re-injetado a cada render (causa do flash).
+    useEffect(() => {
+        const showBg = activeTab === "combat"
+            && !!headerImageUrl
+            && !videoStream
+            && !state.battlemap?.isActive;
+
+        if (showBg) {
+            document.body.style.backgroundImage =
+                `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
+            document.body.style.backgroundSize = "cover";
+            document.body.style.backgroundPosition = "center";
+            document.body.style.backgroundAttachment = "fixed";
+            document.body.style.backgroundRepeat = "no-repeat";
+        } else {
+            document.body.style.backgroundImage = "";
+            document.body.style.backgroundSize = "";
+            document.body.style.backgroundPosition = "";
+            document.body.style.backgroundAttachment = "";
+            document.body.style.backgroundRepeat = "";
+        }
+    }, [activeTab, headerImageUrl, videoStream, state.battlemap?.isActive]);
+
+    // ─── Gerencia Google Fonts + theme-preset-css via efeito ───────────────────
+    // Antes era um IIFE no JSX: executava a cada render → re-fazia download do .woff2
+    // Agora só executa quando state.themePreset muda de fato.
+    useEffect(() => {
+        const activeTheme = getThemePreset(state.themePreset);
+
+        // Atualiza o <link> do Google Fonts somente se a URL mudou
+        let linkEl = document.getElementById("theme-google-fonts") as HTMLLinkElement | null;
+        if (!linkEl) {
+            linkEl = document.createElement("link");
+            linkEl.id = "theme-google-fonts";
+            linkEl.rel = "stylesheet";
+            document.head.appendChild(linkEl);
+        }
+        if (linkEl.href !== activeTheme.googleFontsUrl) {
+            linkEl.href = activeTheme.googleFontsUrl;
+        }
+
+        // Atualiza o <style> do tema somente se o CSS mudou
+        let styleEl = document.getElementById("theme-preset-css") as HTMLStyleElement | null;
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "theme-preset-css";
+            document.head.appendChild(styleEl);
+        }
+        const newCSS = generateThemeCSS(activeTheme);
+        if (styleEl.textContent !== newCSS) {
+            styleEl.textContent = newCSS;
+        }
+    }, [state.themePreset]);
+
+    // ─── Gerencia o override de cor personalizada via efeito ───────────────────
+    // Antes era um IIFE no JSX com dangerouslySetInnerHTML: re-montava a cada render
+    // Agora só executa quando state.themeColor muda.
+    useEffect(() => {
+        const hex = state.themeColor;
+        let styleEl = document.getElementById("theme-custom-color-override") as HTMLStyleElement | null;
+
+        if (!hex) {
+            if (styleEl) styleEl.remove();
+            return;
+        }
+
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!result) return;
+
+        const r = parseInt(result[1], 16);
+        const g = parseInt(result[2], 16);
+        const b = parseInt(result[3], 16);
+
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "theme-custom-color-override";
+            document.head.appendChild(styleEl);
+        }
+
+        const newCSS = `
+            :root {
+                --accent-color: ${hex};
+                --accent-rgb: ${r}, ${g}, ${b};
+                --accent-glow: ${hex}4D;
+                --border-color: rgba(${r}, ${g}, ${b}, 0.2);
+                --ornament-glow: 0 0 15px rgba(${r}, ${g}, ${b}, 0.15);
+                --theme-modal-border: ${hex};
+                --theme-scrollbar-thumb: rgba(${r}, ${g}, ${b}, 0.2);
+                --theme-header-shadow: 0 0 30px rgba(${r}, ${g}, ${b}, 0.25);
+                --theme-input-bg: rgba(${r}, ${g}, ${b}, 0.03);
+                --gold-gradient: linear-gradient(135deg, ${hex} 0%, rgba(${Math.min(255, r + 60)}, ${Math.min(255, g + 60)}, ${Math.min(255, b + 60)}, 1) 50%, ${hex} 100%);
+            }
+        `;
+        if (styleEl.textContent !== newCSS) {
+            styleEl.textContent = newCSS;
+        }
+    }, [state.themeColor]);
+
     // Initial active chars for combat duel selection
     useEffect(() => {
         if (!combatActivePcId && !combatActiveNpcId) {
@@ -343,72 +442,6 @@ export default function SessionPage() {
             )}
 
 
-
-            <style jsx global>{`
-                body {
-                    ${activeTab === "combat" && headerImageUrl && !videoStream && !state.battlemap?.isActive ? `
-                        background-image: radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl}) !important;
-                        background-size: cover !important;
-                        background-position: center !important;
-                        background-attachment: fixed !important;
-                        background-repeat: no-repeat !important;
-                    ` : ""}
-                    transition: background-image 0.5s ease-in-out;
-                }
-                .session-container {
-                    ${activeTab === "combat" ? "padding: 0 40px 120px 40px !important; min-height: 100vh;" : ""}
-                }
-                .combat-control-bar {
-                    margin-bottom: ${activeTab === "combat" ? "10px" : "20px"};
-                }
-            `}</style>
-
-            {/* Dynamic Theme Style Injection */}
-            {(() => {
-                const activeTheme = getThemePreset(state.themePreset);
-                if (typeof document !== "undefined") {
-                    let linkEl = document.getElementById("theme-google-fonts") as HTMLLinkElement | null;
-                    if (!linkEl) {
-                        linkEl = document.createElement("link");
-                        linkEl.id = "theme-google-fonts";
-                        linkEl.rel = "stylesheet";
-                        document.head.appendChild(linkEl);
-                    }
-                    linkEl.href = activeTheme.googleFontsUrl;
-                }
-                return (
-                    <style id="theme-preset-css"
-                        dangerouslySetInnerHTML={{ __html: generateThemeCSS(activeTheme) }}
-                    />
-                );
-            })()}
-
-            {/* Custom Accent Color Override */}
-            {state.themeColor && (() => {
-                const hex = state.themeColor;
-                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
-                if (!result) return null;
-                const r = parseInt(result[1], 16);
-                const g = parseInt(result[2], 16);
-                const b = parseInt(result[3], 16);
-                return (
-                    <style id="theme-custom-color-override" dangerouslySetInnerHTML={{
-                        __html: `
-                        :root {
-                            --accent-color: ${hex};
-                            --accent-rgb: ${r}, ${g}, ${b};
-                            --accent-glow: ${hex}4D;
-                            --border-color: rgba(${r}, ${g}, ${b}, 0.2);
-                            --ornament-glow: 0 0 15px rgba(${r}, ${g}, ${b}, 0.15);
-                            --theme-modal-border: ${hex};
-                            --theme-scrollbar-thumb: rgba(${r}, ${g}, ${b}, 0.2);
-                            --theme-header-shadow: 0 0 30px rgba(${r}, ${g}, ${b}, 0.25);
-                            --theme-input-bg: rgba(${r}, ${g}, ${b}, 0.03);
-                            --gold-gradient: linear-gradient(135deg, ${hex} 0%, rgba(${Math.min(255, r + 60)}, ${Math.min(255, g + 60)}, ${Math.min(255, b + 60)}, 1) 50%, ${hex} 100%);
-                        }
-                    `}} />
-                );
-            })()}
 
             {activeTab === "combat" && (
                 <AtmosphericEffects type={state.atmosphericEffect || "none"} />
@@ -519,7 +552,7 @@ export default function SessionPage() {
             )}
 
             {!isTheaterMode && (
-                <div className="session-container animate-reveal">
+                <div className={`session-container animate-reveal${activeTab === "combat" ? " in-combat" : ""}`}>
                     <div className="main-command-layout" style={{ position: "relative", zIndex: 1 }}>
                         <nav className="tactical-nav">
                             <button

@@ -815,9 +815,19 @@ h3 {
   background: rgba(var(--accent-rgb), 0.4);
 }
 
-/* ─── Theme Transition: smooth switching ─── */
-*:not(script):not(style) {
-  transition-property: color, background-color, border-color, box-shadow, text-shadow;
+/* ─── Theme Transition: escopo reduzido aos containers de alto nível ─── */
+/* REMOVIDO: *:not(script):not(style) { transition } — causava flash visual
+   a cada clique em botões (state update → re-render → transition from grey) */
+html,
+body,
+.session-container,
+.char-artifact,
+.tarot-inner,
+.combat-card,
+.session-nav,
+.nav-item,
+.main-header {
+  transition-property: color, background-color, border-color, box-shadow;
   transition-duration: 0.4s;
   transition-timing-function: ease;
 }

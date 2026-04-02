@@ -36,6 +36,22 @@
     margin-bottom: 20px;
 }
 
+/* ─── Combat mode: substitui <style jsx global> dinâmico de page.tsx ─── */
+/* Aplicado via className="session-container in-combat" quando activeTab === "combat" */
+.session-container.in-combat {
+    padding: 0 40px 120px 40px !important;
+    min-height: 100vh;
+}
+
+.session-container.in-combat .combat-control-bar {
+    margin-bottom: 10px;
+}
+
+/* Body background transition — era inline no <style jsx global>, agora é estático */
+body {
+    transition: background-image 0.5s ease-in-out;
+}
+
 .round-counter {
     display: flex;
     flex-direction: column;

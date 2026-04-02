@@ -2,7 +2,6 @@
 
 import { Character } from "@/types/domain";
 import { LinkedNotes } from "@/components/SessionNotesTabs/LinkedNotes";
-import { CharacterCardStyles } from "./CharacterCard.styles";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
@@ -53,11 +52,11 @@ export function CharacterCard({
 
     return (
         <div
-            className={`char-artifact tarot-card animate-reveal ${
+            className={`char-artifact tarot-card ${
                 character.isNPC ? "threat-arcano" : "operative-arcano"
             } ${isCompact ? "compact" : ""}`}
         >
-            <CharacterCardStyles />
+
             <div className="tarot-inner">
                 <div className="top-layout-grid">
                     <CharacterPortrait
