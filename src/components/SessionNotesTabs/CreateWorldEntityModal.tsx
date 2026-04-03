@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { X, Map as MapIcon } from "lucide-react";
 import { MentionEditor } from "../MentionEditor";
 import { createPortal } from "react-dom";
@@ -51,6 +52,7 @@ interface CreateWorldEntityModalProps {
     religionsList: any[];
     newEntityReligion: string;
     setNewEntityReligion: (id: string) => void;
+    uniqueTags?: string[];
 }
 
 export function CreateWorldEntityModal({
@@ -101,8 +103,15 @@ export function CreateWorldEntityModal({
     mentionEntities,
     religionsList,
     newEntityReligion,
-    setNewEntityReligion
+    setNewEntityReligion,
+    uniqueTags = []
 }: CreateWorldEntityModalProps) {
+    const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+    const tagSuggestions = uniqueTags.filter(t => 
+        t.toLowerCase().includes(tagInput.toLowerCase()) && 
+        !newEntityTags.includes(t)
+    ).slice(0, 5);
+
     const modalContent = (
         <div className="modal-overlay" onClick={() => setShowAddWorldEntity(false)}>
             <div className="modal-content world-entity-modal" onClick={e => e.stopPropagation()}>
@@ -437,8 +446,8 @@ export function CreateWorldEntityModal({
                         </>
                     )}
 
-                    <div className="input-group">
-                        <label>TAGS (Enter para adicionar)</label>
+                    <div className="input-group" style={{ position: 'relative' }}>
+                        <label>TAGS (Enter ou vírgula para adicionar)</label>
                         <div className="tags-container">
                             {newEntityTags.map((tag, i) => (
                                 <div key={i} className="tag-pill" style={{ borderColor: newEntityColor, color: newEntityColor }}>
@@ -449,12 +458,42 @@ export function CreateWorldEntityModal({
                             <input
                                 type="text"
                                 value={tagInput}
-                                onChange={e => setTagInput(e.target.value)}
+                                onChange={e => {
+                                    setTagInput(e.target.value);
+                                    setShowTagSuggestions(true);
+                                }}
                                 onKeyDown={handleAddTag}
+                                onBlur={() => {
+                                    // Pequeno delay para permitir clicar na sugestão
+                                    setTimeout(() => {
+                                        if (tagInput.trim()) handleAddTag(tagInput);
+                                        setShowTagSuggestions(false);
+                                    }, 200);
+                                }}
+                                onFocus={() => setShowTagSuggestions(true)}
                                 placeholder={newEntityTags.length === 0 ? "Ex: Importante, Aliado..." : ""}
                                 className="tag-input-field"
+                                autoComplete="off"
                             />
                         </div>
+
+                        {showTagSuggestions && tagSuggestions.length > 0 && (
+                            <div className="tag-suggestions-dropdown animate-fade-in">
+                                {tagSuggestions.map(tag => (
+                                    <div 
+                                        key={tag} 
+                                        className="suggestion-item" 
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleAddTag(tag);
+                                            setShowTagSuggestions(false);
+                                        }}
+                                    >
+                                        {tag.toUpperCase()}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="input-group">
