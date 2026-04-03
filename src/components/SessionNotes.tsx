@@ -447,35 +447,23 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                         <button onClick={() => setShowWorldFilters(false)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><X size={14} /></button>
                     </div>
 
-                    <div className="filter-search-input-wrap" style={{ marginBottom: '15px' }}>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <Search size={12} style={{ position: 'absolute', left: '10px', opacity: 0.4 }} />
-                            <input 
-                                type="text"
-                                placeholder="Buscar filtro..."
-                                value={filterSearch}
-                                onChange={(e) => setFilterSearch(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '4px',
-                                    padding: '6px 10px 6px 30px',
-                                    fontSize: '0.65rem',
-                                    color: '#fff',
-                                    outline: 'none',
-                                    fontFamily: 'var(--font-main)'
-                                }}
-                            />
-                            {filterSearch && (
-                                <button 
-                                    onClick={() => setFilterSearch("")}
-                                    style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex' }}
-                                >
-                                    <X size={10} />
-                                </button>
-                            )}
-                        </div>
+                    <div className="filter-search-input-wrap">
+                        <Search size={12} className="filter-search-icon" />
+                        <input 
+                            type="text"
+                            placeholder="Buscar filtro..."
+                            value={filterSearch}
+                            onChange={(e) => setFilterSearch(e.target.value)}
+                            className="filter-search-input"
+                        />
+                        {filterSearch && (
+                            <button 
+                                onClick={() => setFilterSearch("")}
+                                className="filter-search-clear"
+                            >
+                                <X size={10} />
+                            </button>
+                        )}
                     </div>
 
                     <div className="filters-list-content scrollbar-arcane" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: '5px' }}>

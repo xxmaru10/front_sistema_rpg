@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-02
+last_updated: 2026-04-03
 status: ativo
 ---
 
@@ -51,6 +51,9 @@ O Fate Companion utiliza uma arquitetura de **Event Sourcing**. Isso significa q
 | Sistema de Religiões | Integração de Religião como entidade de primeira classe com suporte a iconografia dedicada (`Church`) e vinculação em Personagens/NPCs. | 2026-04-02 |
 | Navegação via Portal | Uso de React Portals para menus de sub-navegação em SessionNotes para evitar conflitos de z-index e clipping de overflow. | 2026-04-02 |
 | Post-its Sincronizados | Migração completa de localStorage para Event Sourcing; visibilidade PLAYER_ONLY garante privacidade entre sessões e usuários. | 2026-04-02 |
+| Filtros Universais (Searchable) | Expansão do sistema de filtros para todas as abas (Notas, Tempo, Jogo) com busca interna e renderização via Portal para conformidade vitoriana. | 2026-04-03 |
+| Sugestões de Tags (Autocomplete) | Implementação de dropdown de sugestão em World Entities baseado na projeção de tags existentes, otimizando a criação de entidades. | 2026-04-03 |
+| Robustez de Tagging Mobile | Correção de salto de foco via `preventDefault` e suporte a `onBlur` + multiplicadores (,, ;) para entrada de tags estável em dispositivos móveis. | 2026-04-03 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
