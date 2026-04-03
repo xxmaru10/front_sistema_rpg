@@ -64,7 +64,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
     // Reset filters on tab change
     useEffect(() => {
         setWorldFilters({});
-    }, [subTabMundo]);
+    }, [subTabMundo, activeTab]);
 
     const toggleWorldFilter = (field: string, value: string) => {
         setWorldFilters(prev => {
@@ -250,6 +250,32 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
             return Array.from(tags).sort().map(t => ({ id: t, name: t }));
         };
 
+        // Contextual filters based on activeTab
+        if (activeTab === "Notas") {
+            const authorOptions = authors.map(a => ({ id: a.id, name: a.name.toUpperCase() }));
+            return [
+                { field: "authorId", label: "AUTOR", options: authorOptions }
+            ];
+        }
+
+        if (activeTab === "Tempo") {
+            return [
+                { field: "displayType", label: "TIPO", options: [
+                    { id: "MISSÃO", name: "MISSÕES" },
+                    { id: "HISTÓRIA", name: "LINHA DO TEMPO" }
+                ]}
+            ];
+        }
+
+        if (activeTab === "Jogo") {
+            return [
+                { field: "displayType", label: "TIPO", options: [
+                    { id: "HABILIDADE", name: "HABILIDADES" },
+                    { id: "ITEM", name: "ITENS" }
+                ]}
+            ];
+        }
+
         if (subTabMundo === "Personagens") {
             return [
                 { field: "raceId", label: "RAÇA", options: getUsedIds("PERSONAGEM", "raceId") },
@@ -282,7 +308,13 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
                 { field: "tags", label: "TAGS", options: getTagsForType(type) }
             ];
         }
-    }, [state.worldEntities, subTabMundo]);
+    }, [state.worldEntities, subTabMundo, activeTab, authors]);
+
+    const uniqueTags = useMemo(() => {
+        const tags = new Set<string>();
+        Object.values(state.worldEntities || {}).forEach(e => (e.tags || []).forEach(t => tags.add(t)));
+        return Array.from(tags).sort();
+    }, [state.worldEntities]);
 
     const mentionEntities = useMemo(() => {
         const results: any[] = [];
@@ -415,7 +447,48 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         }
     }, [notes, notesSubTab, userId, locallyHiddenNoteIds]);
 
-    const filteredNotes = filterAuthor === "all" ? filteredNotesByTab : filteredNotesByTab.filter(n => n.authorId === filterAuthor);
+    const filteredNotes = useMemo(() => {
+        let list = filteredNotesByTab;
+        if (filterAuthor !== "all") {
+            list = list.filter(n => n.authorId === filterAuthor);
+        }
+        if (worldFilters.authorId && worldFilters.authorId.length > 0) {
+            list = list.filter(n => worldFilters.authorId.includes(n.authorId));
+        }
+        return list;
+    }, [filteredNotesByTab, filterAuthor, worldFilters.authorId]);
+
+    const filteredMissions = useMemo(() => {
+        const list = state.missions || [];
+        if (worldFilters.displayType && worldFilters.displayType.length > 0) {
+            if (!worldFilters.displayType.includes("MISSÃO")) return [];
+        }
+        return list;
+    }, [state.missions, worldFilters.displayType]);
+
+    const filteredTimeline = useMemo(() => {
+        const list = state.timeline || [];
+        if (worldFilters.displayType && worldFilters.displayType.length > 0) {
+            if (!worldFilters.displayType.includes("HISTÓRIA")) return [];
+        }
+        return list;
+    }, [state.timeline, worldFilters.displayType]);
+
+    const filteredSkills = useMemo(() => {
+        const list = state.skills || [];
+        if (worldFilters.displayType && worldFilters.displayType.length > 0) {
+            if (!worldFilters.displayType.includes("HABILIDADE")) return [];
+        }
+        return list;
+    }, [state.skills, worldFilters.displayType]);
+
+    const filteredItems = useMemo(() => {
+        const list = state.items || [];
+        if (worldFilters.displayType && worldFilters.displayType.length > 0) {
+            if (!worldFilters.displayType.includes("ITEM")) return [];
+        }
+        return list;
+    }, [state.items, worldFilters.displayType]);
 
     useEffect(() => {
         if (activeTab === "Notas" && editorRef.current) {
@@ -765,13 +838,32 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         setImportBestiaryId("");
     };
 
-    const handleAddTag = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && tagInput.trim()) {
-            e.preventDefault();
-            if (!newEntityTags.includes(tagInput.trim())) {
-                setNewEntityTags([...newEntityTags, tagInput.trim()]);
+    const handleAddTag = (e?: React.KeyboardEvent | string) => {
+        // If string is passed, it's a direct insertion (blur or suggestion click)
+        if (typeof e === 'string') {
+            const val = e.trim();
+            if (val && !newEntityTags.includes(val)) {
+                setNewEntityTags([...newEntityTags, val]);
             }
             setTagInput("");
+            return;
+        }
+
+        // If keyboard event, handle Enter or comma/space
+        if (e) {
+            const isEnter = e.key === 'Enter';
+            const isDelimiter = e.key === ',' || e.key === ';';
+            
+            if ((isEnter || isDelimiter) && tagInput.trim()) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const val = tagInput.trim().replace(/[,;]$/g, '');
+                if (val && !newEntityTags.includes(val)) {
+                    setNewEntityTags([...newEntityTags, val]);
+                }
+                setTagInput("");
+            }
         }
     };
 
@@ -1407,6 +1499,10 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         worldSearchSuggestions,
         mentionEntities,
         filteredNotes,
+        filteredMissions,
+        filteredTimeline,
+        filteredSkills,
+        filteredItems,
         viewingEntity,
 
         // Refs
@@ -1458,6 +1554,8 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         handleUpdateDescriptionBlock,
         handleDeleteDescriptionBlock,
         handleToggleAllVisibility,
+
+        uniqueTags,
 
         // Constants
         COLOR_PRESETS,
