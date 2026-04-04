@@ -62,7 +62,7 @@ export function HeaderWrapper() {
         <header className={`main-header ${isTheaterMode ? "theater-mode" : ""}`}>
             <div className="container header-content">
                 <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    <h1>{sessionId ? `Sessão: ${sessionNumber}` : "Project GM"}</h1>
+                    <h1>{sessionId ? `Sessão: ${sessionNumber}` : "Cronos Vtt"}</h1>
                     {sessionId && userRole === "GM" && (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <div

@@ -92,7 +92,7 @@ export function CharacterVitality({
             {/* Fate Reserve — hidden from players for NPCs */}
             {!(isNPC && !isGM) && (
                 <div className="fate-reserve">
-                    <div className="reserve-label">{isCompact ? "DESTINO" : "RESERVA DESTINO"}</div>
+                    <div className="reserve-label">{isCompact ? "DESTINO" : "PONTOS DE DESTINO"}</div>
                     <div className="reserve-value">
                         <span className="symbol">🜂</span>
                         <span>{fatePoints}</span>

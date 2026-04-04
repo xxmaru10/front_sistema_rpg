@@ -24,6 +24,8 @@ export function useCharacterCard({
     canEdit,
     canEditStressOrFP,
 }: UseCharacterCardOptions) {
+    const normalizedUserId = actorUserId.trim().toLowerCase();
+
     // ── Bio / Lore State ──────────────────────────────────────────────────────
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
@@ -51,7 +53,7 @@ export function useCharacterCard({
         if (!canEditStressOrFP) return;
         const type = current ? "STRESS_CLEARED" : "STRESS_MARKED";
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type, actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type, actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, track, boxIndex: index }
         } as any);
@@ -60,7 +62,7 @@ export function useCharacterCard({
     const handleAddStressBox = (track: "PHYSICAL" | "MENTAL") => {
         if (!isGM) return;
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_EXPANDED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_EXPANDED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, track }
         } as any);
@@ -69,7 +71,7 @@ export function useCharacterCard({
     const handleRemoveStressBox = (track: "PHYSICAL" | "MENTAL") => {
         if (!isGM) return;
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_REDUCED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_REDUCED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, track }
         } as any);
@@ -80,7 +82,7 @@ export function useCharacterCard({
         if (!canEditStressOrFP) return;
         const type = amount > 0 ? "FP_GAINED" : "FP_SPENT";
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type, actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type, actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, amount: Math.abs(amount), reason: "MANUAL" }
         } as any);
@@ -91,7 +93,7 @@ export function useCharacterCard({
         const currentRefresh = character.refresh ?? 3;
         const newRefresh = Math.max(1, currentRefresh + delta);
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_REFRESH_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_REFRESH_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, refresh: newRefresh }
         } as any);
@@ -122,7 +124,7 @@ export function useCharacterCard({
                     ctx.drawImage(img, 0, 0, width, height);
                     const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
                     globalEventStore.append({
-                        id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId,
+                        id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
                         createdAt: new Date().toISOString(), visibility: "PUBLIC",
                         payload: { characterId: character.id, imageUrl: compressedBase64 }
                     } as any);
@@ -141,7 +143,7 @@ export function useCharacterCard({
 
     const handleSaveBio = () => {
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_BIO_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_BIO_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, biography: tempBio }
         } as any);
@@ -156,7 +158,7 @@ export function useCharacterCard({
 
     const handleSaveAspect = (index: number) => {
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_SHEET_ASPECT_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_SHEET_ASPECT_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, index, value: tempAspect.toUpperCase() }
         } as any);
@@ -173,7 +175,7 @@ export function useCharacterCard({
         if (!tempName.trim()) return;
         globalEventStore.append({
             type: "CHARACTER_NAME_UPDATED",
-            id: uuidv4(), sessionId, seq: 0, actorUserId, visibility: "PUBLIC",
+            id: uuidv4(), sessionId, seq: 0, actorUserId: normalizedUserId, visibility: "PUBLIC",
             createdAt: new Date().toISOString(),
             payload: { characterId: character.id, name: tempName.trim() }
         } as any);
@@ -195,7 +197,7 @@ export function useCharacterCard({
         }
         const debuffPayload = debuff?.skill ? debuff : undefined;
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, slot, value, debuff: debuffPayload }
         } as any);
@@ -217,9 +219,9 @@ export function useCharacterCard({
     const handleDeleteConsequence = (slot: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isGM) return;
-        if (confirm("Tem certeza que deseja remover esta consequência extra?")) {
+        if (isGM) {
             globalEventStore.append({
-                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_DELETED", actorUserId,
+                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_DELETED", actorUserId: normalizedUserId,
                 createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: { characterId: character.id, slot }
             } as any);
@@ -230,21 +232,21 @@ export function useCharacterCard({
     const handleAddNote = (content: string, isPrivate: boolean = false) => {
         if (!content.trim()) return;
         const note = {
-            id: uuidv4(), authorId: actorUserId,
+            id: uuidv4(), authorId: normalizedUserId,
             authorName: isGM ? "MESTRE" : (character.name || actorUserId),
             content, createdAt: new Date().toISOString(), isPrivate
         };
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_ADDED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_ADDED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
-            visibility: isPrivate ? { kind: "PLAYER_ONLY", userId: actorUserId } : "PUBLIC",
+            visibility: isPrivate ? { kind: "PLAYER_ONLY", userId: normalizedUserId } : "PUBLIC",
             payload: { characterId: character.id, note }
         } as any);
     };
 
     const handleDeleteNote = (noteId: string) => {
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_DELETED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_DELETED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, noteId }
         } as any);
@@ -252,10 +254,9 @@ export function useCharacterCard({
 
     // ── Delete Character ──────────────────────────────────────────────────────
     const handleDeleteCharacter = () => {
-        if (!confirm(`Tem certeza que deseja DELETAR a ficha de ${character.name}? Essa ação não pode ser desfeita.`)) return;
         globalEventStore.append({
             type: "CHARACTER_DELETED",
-            id: uuidv4(), sessionId, seq: 0, actorUserId, visibility: "PUBLIC",
+            id: uuidv4(), sessionId, seq: 0, actorUserId: normalizedUserId, visibility: "PUBLIC",
             createdAt: new Date().toISOString(),
             payload: { characterId: character.id }
         } as any);

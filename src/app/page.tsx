@@ -163,14 +163,14 @@ export default function Home() {
         <div className="banner-container">
           <NextImage
             src="/banners/header-banner.png"
-            alt="Project GM Banner"
+            alt="Cronos Vtt Banner"
             width={1200}
             height={300}
             className="header-banner"
             priority
           />
         </div>
-        <h1 className="main-title glitch-text" data-text="PROJECT GM">PROJECT GM</h1>
+        <h1 className="main-title glitch-text" data-text="CRONOS VTT">CRONOS VTT</h1>
       </div>
 
       {step === 'HOME' && (

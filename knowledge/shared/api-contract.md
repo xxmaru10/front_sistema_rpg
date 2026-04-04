@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-02
+last_updated: 2026-04-04 (story-21/image-fix)
 status: ativo
 ---
 
@@ -76,10 +76,11 @@ export type SessionJoinInfo = {
 export type WorldEntity = {
   id: string;
   name: string;
-  type: "PERSONAGEM" | "FACCAO" | "FAMILIA" | "CRIATURA" | "LOCALIZACAO" | "RELIGIAO" | "OUTROS";
+  type: "PERSONAGEM" | "FACAO" | "FAMILIA" | "BESTIARIO" | "LOCALIZACAO" | "RELIGIAO" | "MAPA" | "RACA" | "OUTROS";
   description?: string;
   religionId?: string;
   imageUrl?: string;
+  fieldVisibility?: Record<string, boolean>;
 };
 ```
 

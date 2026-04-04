@@ -1,6 +1,7 @@
 import { Character } from "@/types/domain";
 import { InventorySection } from "./InventorySection";
 import { usePowerTabs } from "./use-power-tabs";
+import { Zap, Briefcase, Wand2 } from "lucide-react";
 
 interface PowerTabsSectionProps {
     character: Character;
@@ -16,23 +17,26 @@ export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, i
     return (
         <div className="power-tabs-container">
             <div className="power-tabs-header">
-                <button 
+                <button
                     className={`power-tab-btn ${hook.activeTab === 'stunts' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('stunts')}
+                    title="FAÇANHAS"
                 >
-                    ✦ FAÇANHAS
+                    <Zap size={18} />
                 </button>
-                <button 
+                <button
                     className={`power-tab-btn ${hook.activeTab === 'inventory' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('inventory')}
+                    title="INVENTÁRIO"
                 >
-                    🎒 INVENTÁRIO
+                    <Briefcase size={18} />
                 </button>
-                <button 
+                <button
                     className={`power-tab-btn ${hook.activeTab === 'spells' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('spells')}
+                    title="MAGIAS"
                 >
-                    🔮 MAGIAS
+                    <Wand2 size={18} />
                 </button>
             </div>
 

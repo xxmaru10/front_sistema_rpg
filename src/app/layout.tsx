@@ -31,7 +31,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Fate Companion | Project GM",
+  title: "Cronos Vtt",
   description: "Plataforma avançada para narração e automação de mesas de RPG (Fate Core)",
 };
 

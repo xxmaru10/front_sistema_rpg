@@ -12,7 +12,9 @@ interface UsePowerTabsProps {
 }
 
 export function usePowerTabs({ character, sessionId, actorUserId }: UsePowerTabsProps) {
+    const normalizedUserId = actorUserId.trim().toLowerCase();
     const [activeTab, setActiveTab] = useState<'stunts' | 'inventory' | 'spells'>('stunts');
+
     
     // Stunt State
     const [editingStuntId, setEditingStuntId] = useState<string | null>(null);
@@ -39,8 +41,9 @@ export function usePowerTabs({ character, sessionId, actorUserId }: UsePowerTabs
             sessionId,
             seq: 0,
             type: "CHARACTER_STUNT_UPDATED",
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
+
             visibility: "PUBLIC",
             payload: { characterId: character.id, stunt: tempStunt }
         } as ActionEvent);
@@ -54,8 +57,9 @@ export function usePowerTabs({ character, sessionId, actorUserId }: UsePowerTabs
             sessionId,
             seq: 0,
             type: "CHARACTER_STUNT_DELETED",
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
+
             visibility: "PUBLIC",
             payload: { characterId: character.id, stuntId }
         } as ActionEvent);
@@ -78,8 +82,9 @@ export function usePowerTabs({ character, sessionId, actorUserId }: UsePowerTabs
             sessionId,
             seq: 0,
             type: "CHARACTER_SPELL_UPDATED",
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
+
             visibility: "PUBLIC",
             payload: { characterId: character.id, spell: tempSpell }
         } as ActionEvent);
@@ -93,8 +98,9 @@ export function usePowerTabs({ character, sessionId, actorUserId }: UsePowerTabs
             sessionId,
             seq: 0,
             type: "CHARACTER_SPELL_DELETED",
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
+
             visibility: "PUBLIC",
             payload: { characterId: character.id, spellId }
         } as ActionEvent);

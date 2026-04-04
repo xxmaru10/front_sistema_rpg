@@ -4,7 +4,7 @@ language: pt-BR
 last_updated: 2026-04-04
 ---
 
-# Fate Companion — Frontend 
+# Cronos Vtt — Frontend 
 
 > Sistema de Virtual Tabletop (VTT) focado em gerenciamento de sessões de RPG de mesa, inspirado em sistemas de rolagens narrativas, zonas, aspectos de cena, estresse e consequências (Fate Core/Accel). Utiliza uma arquitetura de Event Sourcing para manter a sincronia entre jogadores e mestre.
 
