@@ -198,7 +198,7 @@ export default function SessionPage() {
     // ─── SCREEN SHARE / AUDIO LIFECYCLE ──────────────────────────────────────
     // Must come before useSessionActions so screenShareManagerRef is available.
 
-    const { screenVideoRef, screenShareManagerRef, reconnectStream, videoNoSignal } = useSessionScreenControl({
+    const { screenVideoRef, screenShareManagerRef, videoNoSignal } = useSessionScreenControl({
         sessionId: sessionId as string,
         actorUserId,
         videoStream,
@@ -409,24 +409,11 @@ export default function SessionPage() {
                 />
             )}
 
-            {/* Botão de refresh da transmissão — aparece no topo da Arena quando stream ativa.
-                Permite ao jogador re-iniciar o handshake WebRTC sem F5 na página toda. */}
-            {videoStream && activeTab === "combat" && (
-                <button
-                    onClick={reconnectStream}
-                    title="Reconectar transmissão"
-                    className="screenshare-refresh-btn"
-                >
-                    <RefreshCw size={14} /> <span>Reconectar transmissão</span>
-                </button>
-            )}
-
-            {/* Badge "Sem sinal" — exibido quando stream está ativa mas vídeo não avança.
-                Instrui o jogador a usar o botão de refresh em vez de tela preta silenciosa. */}
+            {/* Badge "Sem sinal" — exibido quando stream está ativa mas vídeo não avança. */}
             {videoStream && activeTab === "combat" && videoNoSignal && (
                 <div className="screenshare-nosignal">
                     <span className="screenshare-nosignal-icon">📡</span>
-                    <span>Sem sinal — clique em <strong><RefreshCw size={12} style={{ verticalAlign: "middle" }} /> Reconectar transmissão</strong></span>
+                    <span>Sem sinal — tente reconectar no botão <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
                 </div>
             )}
 

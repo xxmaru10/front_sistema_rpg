@@ -6,8 +6,9 @@ import { usePathname, useParams, useSearchParams } from "next/navigation";
 import { VoiceChatPanel } from "@/components/VoiceChatPanel";
 import { TextChatPanel } from "@/components/TextChatPanel";
 import { useEffect, useState } from "react";
-import { ChevronUp, ChevronDown, Volume2, StickyNote } from "lucide-react";
+import { ChevronUp, ChevronDown, Volume2, StickyNote, RefreshCw } from "lucide-react";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
+import { screenShareStore } from "@/lib/screenShareStore";
 import { useHeaderLogic } from "@/hooks/useHeaderLogic";
 import { ThemeSelector } from "@/components/header/ThemeSelector";
 import { BattlemapToolbar } from "@/components/header/BattlemapToolbar";
@@ -20,6 +21,14 @@ export function HeaderWrapper() {
     const sessionId = params?.id as string;
 
     const [showSoundPanel, setShowSoundPanel] = useState(false);
+    const [hasScreenShare, setHasScreenShare] = useState(false);
+
+    useEffect(() => {
+        const unsub = screenShareStore.subscribe(() => {
+            setHasScreenShare(screenShareStore.hasStream);
+        });
+        return unsub;
+    }, []);
 
     const {
         userRole,
@@ -131,6 +140,16 @@ export function HeaderWrapper() {
                             <StickyNote size={16} />
                         </button>
 
+                        {hasScreenShare && (
+                            <button
+                                className="player-toggle unified-sound-toggle screenshare-reconnect-toggle"
+                                onClick={() => screenShareStore.triggerReconnect()}
+                                title="Reconectar transmissão"
+                            >
+                                <RefreshCw size={16} />
+                            </button>
+                        )}
+
                         {battlemapActive && (
                             <BattlemapToolbar
                                 sessionId={sessionId}
@@ -211,6 +230,17 @@ export function HeaderWrapper() {
                     color: #fef08a;
                     border-color: #fef08a;
                     background: rgba(254, 240, 138, 0.1);
+                }
+
+                .screenshare-reconnect-toggle {
+                    color: #6edc80;
+                    border-color: rgba(110, 220, 128, 0.35);
+                }
+
+                .screenshare-reconnect-toggle:hover {
+                    color: #6edc80;
+                    border-color: #6edc80;
+                    background: rgba(110, 220, 128, 0.1);
                 }
 
                 .theater-mode .container.header-content > *:not(.header-extras) {

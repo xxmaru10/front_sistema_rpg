@@ -20,6 +20,8 @@ interface UseSessionScreenControlParams {
     setTransmissionVolume: (v: number) => void;
 }
 
+import { screenShareStore } from "@/lib/screenShareStore";
+
 export function useSessionScreenControl({
     sessionId,
     actorUserId,
@@ -31,6 +33,7 @@ export function useSessionScreenControl({
     transmissionVolume,
     setTransmissionVolume,
 }: UseSessionScreenControlParams) {
+
     const screenVideoRef = useRef<HTMLVideoElement | null>(null);
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
     const [videoNoSignal, setVideoNoSignal] = useState(false);
@@ -43,7 +46,10 @@ export function useSessionScreenControl({
                 const manager = new ScreenShareManager(
                     sessionId,
                     actorUserId,
-                    (stream) => setVideoStream(stream)
+                    (stream) => {
+                        setVideoStream(stream);
+                        screenShareStore.setHasStream(!!stream);
+                    }
                 );
                 manager.initialize();
                 screenShareManagerRef.current = manager;
@@ -57,7 +63,18 @@ export function useSessionScreenControl({
                 setTimeout(() => mgr.disconnect(), 200);
             }
         };
-    }, [sessionId, actorUserId]);
+    }, [sessionId, actorUserId, setVideoStream]);
+
+    // Listen to global reconnect trigger
+    useEffect(() => {
+        const unsubscribe = screenShareStore.subscribe(() => {
+            if (screenShareStore.reconnectVersion > 0) {
+                console.log("[WebRTC] Reconnect triggered from Header.");
+                screenShareManagerRef.current?.reconnect();
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     // Auto-exit spectator mode when stream ends
     useEffect(() => {
