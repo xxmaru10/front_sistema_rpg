@@ -713,29 +713,26 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                 onChange={e => {
                                     const file = e.target.files?.[0];
                                     if (!file) return;
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        const img = new Image();
-                                        img.onload = () => {
-                                            if (img.width > 800 || img.height > 800) {
-                                                setTempItemCropSrc(reader.result as string);
-                                                setIsCroppingItem(true);
-                                            } else {
-                                                const canvas = document.createElement('canvas');
-                                                canvas.width = img.width;
-                                                canvas.height = img.height;
-                                                const ctx = canvas.getContext('2d');
-                                                if (ctx) {
-                                                    ctx.drawImage(img, 0, 0);
-                                                    setNewItemImageUrl(canvas.toDataURL('image/jpeg', 0.85));
-                                                } else {
-                                                    setNewItemImageUrl(reader.result as string);
-                                                }
+                                    const blobUrl = URL.createObjectURL(file);
+                                    const img = new Image();
+                                    img.onload = () => {
+                                        if (img.width > 800 || img.height > 800) {
+                                            setTempItemCropSrc(blobUrl);
+                                            setIsCroppingItem(true);
+                                        } else {
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = img.width;
+                                            canvas.height = img.height;
+                                            const ctx = canvas.getContext('2d');
+                                            if (ctx) {
+                                                ctx.drawImage(img, 0, 0);
+                                                setNewItemImageUrl(canvas.toDataURL('image/jpeg', 0.85));
                                             }
-                                        };
-                                        img.src = reader.result as string;
+                                            URL.revokeObjectURL(blobUrl);
+                                        }
                                     };
-                                    reader.readAsDataURL(file);
+                                    img.onerror = () => URL.revokeObjectURL(blobUrl);
+                                    img.src = blobUrl;
                                 }}
                                 style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}
                             />
@@ -768,11 +765,13 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                     outputWidth={800}
                     outputHeight={800}
                     onConfirm={base64 => {
+                        if (tempItemCropSrc.startsWith("blob:")) URL.revokeObjectURL(tempItemCropSrc);
                         setNewItemImageUrl(base64);
                         setIsCroppingItem(false);
                         setTempItemCropSrc(null);
                     }}
                     onCancel={() => {
+                        if (tempItemCropSrc.startsWith("blob:")) URL.revokeObjectURL(tempItemCropSrc);
                         setIsCroppingItem(false);
                         setTempItemCropSrc(null);
                     }}

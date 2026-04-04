@@ -64,10 +64,11 @@ export function ImageCropper({
         [frameW, frameH]
     );
 
-    // Load source image — crossOrigin needed for Supabase URLs to allow canvas toDataURL
+    // Load source image — crossOrigin needed for external URLs (Supabase) to allow canvas toDataURL
+    // blob: URLs are same-origin and don't need crossOrigin (would cause unnecessary preflight)
     useEffect(() => {
         const img = new Image();
-        if (!src.startsWith("data:")) {
+        if (!src.startsWith("data:") && !src.startsWith("blob:")) {
             img.crossOrigin = "anonymous";
         }
         img.onload = () => {

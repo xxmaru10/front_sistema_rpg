@@ -134,6 +134,7 @@ export function CreateWorldEntityModal({
     };
 
     const handleCropConfirm = (base64: string) => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setNewEntityImageUrl(base64);
         setIsCropping(false);
         setTempCropSrc(null);
@@ -141,6 +142,7 @@ export function CreateWorldEntityModal({
     };
 
     const handleCropCancel = () => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
         setIsImageProcessing(false);
@@ -155,31 +157,32 @@ export function CreateWorldEntityModal({
         outputHeight: number
     ) => {
         setIsImageProcessing(true);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const img = new Image();
-            img.onload = () => {
-                if (img.width > thresholdW || img.height > thresholdH) {
-                    // Large image — open cropper (keeps isImageProcessing=true until confirm/cancel)
-                    openCropper(reader.result as string, aspectRatio, outputWidth, outputHeight);
-                } else {
-                    // Small image — compress directly
-                    const canvas = document.createElement("canvas");
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext("2d");
-                    if (ctx) {
-                        ctx.drawImage(img, 0, 0);
-                        setNewEntityImageUrl(canvas.toDataURL("image/jpeg", 0.7));
-                    } else {
-                        setNewEntityImageUrl(reader.result as string);
-                    }
-                    setIsImageProcessing(false);
+        // blob URL: instantâneo, sem conversão base64 — evita travamento com imagens grandes
+        const blobUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            if (img.width > thresholdW || img.height > thresholdH) {
+                // Imagem grande — abre cropper (isImageProcessing permanece true até confirm/cancel)
+                openCropper(blobUrl, aspectRatio, outputWidth, outputHeight);
+            } else {
+                // Imagem pequena — comprime diretamente
+                const canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    setNewEntityImageUrl(canvas.toDataURL("image/jpeg", 0.7));
                 }
-            };
-            img.src = reader.result as string;
+                URL.revokeObjectURL(blobUrl);
+                setIsImageProcessing(false);
+            }
         };
-        reader.readAsDataURL(file);
+        img.onerror = () => {
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        };
+        img.src = blobUrl;
     };
 
     const modalContent = (

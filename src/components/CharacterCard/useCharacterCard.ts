@@ -116,36 +116,35 @@ export function useCharacterCard({
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!isGM || !e.target.files?.[0]) return;
         const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const img = new Image();
-            img.onload = () => {
-                if (img.width > 600 || img.height > 600) {
-                    // Image is larger than the portrait target — open cropper
-                    setTempCropSrc(reader.result as string);
-                    setIsCropping(true);
-                } else {
-                    // Small image: compress and dispatch directly
-                    const canvas = document.createElement("canvas");
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext("2d");
-                    if (ctx) {
-                        ctx.drawImage(img, 0, 0);
-                        globalEventStore.append({
-                            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
-                            createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                            payload: { characterId: character.id, imageUrl: canvas.toDataURL("image/jpeg", 0.7) }
-                        } as any);
-                    }
+        // blob URL: instantâneo, sem conversão base64 — evita travamento com imagens grandes
+        const blobUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            if (img.width > 600 || img.height > 600) {
+                setTempCropSrc(blobUrl);
+                setIsCropping(true);
+            } else {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    globalEventStore.append({
+                        id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+                        createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                        payload: { characterId: character.id, imageUrl: canvas.toDataURL("image/jpeg", 0.7) }
+                    } as any);
                 }
-            };
-            img.src = reader.result as string;
+                URL.revokeObjectURL(blobUrl);
+            }
         };
-        reader.readAsDataURL(file);
+        img.onerror = () => URL.revokeObjectURL(blobUrl);
+        img.src = blobUrl;
     };
 
     const handleCropConfirm = (base64: string) => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
         globalEventStore.append({
@@ -156,6 +155,7 @@ export function useCharacterCard({
     };
 
     const handleCropCancel = () => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
     };
