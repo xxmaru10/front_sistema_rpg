@@ -30,13 +30,13 @@ export class EventStore {
             // seq 0 represents "optimistic/not yet confirmed"
             const seqA = a.seq || 0;
             const seqB = b.seq || 0;
-            
+
             if (seqA !== seqB) {
                 if (seqA === 0) return 1;
                 if (seqB === 0) return -1;
                 return seqA - seqB;
             }
-            
+
             // If both have same seq or both are 0, sort by createdAt
             const timeA = new Date(a.createdAt).getTime();
             const timeB = new Date(b.createdAt).getTime();
@@ -125,11 +125,11 @@ export class EventStore {
             .subscribe((status: string) => {
                 console.log(`[EventStore] Realtime channel status: ${status}`);
                 this._setStatus(status as ConnectionStatus);
-                
+
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                     console.warn('[EventStore] Canal realtime desconectado, tentando reconectar...');
                     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
-                    
+
                     this.reconnectTimeout = setTimeout(() => {
                         if (this.currentSessionId === sessionId) {
                             this.channel = null;
@@ -174,7 +174,7 @@ export class EventStore {
 
         this._sort();
         this.bulkListeners.forEach(l => l([...this.events]));
-        this._updateSnapshot().catch(() => {});
+        this._updateSnapshot().catch(() => { });
     }
 
     private _setStatus(status: ConnectionStatus) {
@@ -210,7 +210,7 @@ export class EventStore {
                 console.error("[EventStore] Erro no append via NestJS:", err);
                 this.failedEventIds.add(event.id);
                 this.bulkListeners.forEach(l => l([...this.events]));
-                
+
                 // Exponential backoff retry para notas (limitado a 3 tentativas)
                 const isNoteEvent = ['NOTE_ADDED', 'STICKY_NOTE_CREATED', 'STICKY_NOTE_UPDATED', 'STICKY_NOTE_DELETED'].includes(event.type);
                 if (isNoteEvent && retryCount < 3) {
@@ -271,23 +271,46 @@ export class EventStore {
 
     private async _updateSnapshot(): Promise<void> {
         if (!this.currentSessionId) return;
+
         const maxSeq = this.events.reduce((max, e) => Math.max(max, e.seq || 0), 0);
-        if (maxSeq <= this.snapshotUpToSeq) return; 
+        if (maxSeq <= this.snapshotUpToSeq) return;
 
         const fullState = computeState(this.events, this.snapshotState ?? undefined);
-        try {
-            const snapshotStr = JSON.stringify(fullState);
-            if (snapshotStr.length > 1024 * 1024) {
-                console.warn('[EventStore] Snapshot muito grande (>1MB), pulando salvamento.');
-                return;
-            }
 
+        // Breakdown log
+        const breakdown: Record<string, number> = {};
+        for (const [k, v] of Object.entries(fullState)) {
+            breakdown[k] = Math.round(JSON.stringify(v).length / 1024);
+        }
+        const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+        console.table(sorted.map(([k, v]) => ({ key: k, sizeKB: v })));
+
+        // Character breakdown
+        if (fullState.characters) {
+            for (const [id, char] of Object.entries(fullState.characters as any)) {
+                const charSize = Math.round(JSON.stringify(char).length / 1024);
+                if (charSize > 10) {
+                    console.log(`Character ${(char as any).name || id}: ${charSize}KB`);
+                    const charFields: Record<string, number> = {};
+                    for (const [k, v] of Object.entries(char as any)) {
+                        charFields[k] = Math.round(JSON.stringify(v).length / 1024);
+                    }
+                    console.table(Object.entries(charFields).sort((a, b) => b[1] - a[1]).slice(0, 10));
+                }
+            }
+        }
+
+        const snapshotStr = JSON.stringify(fullState);
+        const sizeKB = Math.round(snapshotStr.length / 1024);
+        console.info(`[EventStore] Total snapshot: ${sizeKB}KB, seq ${maxSeq}`);
+
+        try {
             await apiClient.updateSnapshot(this.currentSessionId, maxSeq, fullState);
             this.snapshotState = fullState;
             this.snapshotUpToSeq = maxSeq;
-            console.info(`[EventStore] Snapshot salvo: seq ${maxSeq}`);
+            console.info(`[EventStore] Snapshot salvo: seq ${maxSeq} (${sizeKB}KB)`);
         } catch (err) {
-            console.warn('[EventStore] Falha ao salvar snapshot:', err);
+            console.error('[EventStore] Falha ao salvar snapshot:', err);
         }
     }
 
