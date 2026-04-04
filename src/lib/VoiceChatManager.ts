@@ -137,10 +137,10 @@ export class VoiceChatManager {
             return {} as AudioContext; // Stub para SSR
         }
         if (!this.localAudioContext) {
-            // 48kHz = taxa nativa do Opus; latencyHint 'interactive' minimiza buffer de processamento
+            // latencyHint 'interactive' minimiza buffer de processamento para voz em tempo real
+            // sampleRate omitido — usar taxa nativa do hardware evita mismatch com o stream do mic
             this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
                 latencyHint: 'interactive',
-                sampleRate: 48000,
             });
         }
         return this.localAudioContext!;
@@ -151,7 +151,6 @@ export class VoiceChatManager {
         if (!ctx) {
             ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
                 latencyHint: 'interactive',
-                sampleRate: 48000,
             });
             this.peerAudioContexts.set(peerId, ctx);
         }
@@ -351,9 +350,8 @@ export class VoiceChatManager {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
-                    // 48kHz é a taxa nativa do Opus — elimina conversão de sample rate interna
-                    sampleRate: 48000,
-                    // Mono: voz não precisa de stereo, reduz carga em 50% por stream
+                    // Mono: voz não precisa de stereo, reduz carga ~50% por stream (bem suportado)
+                    // sampleRate omitido — deixar o browser usar a taxa nativa do hardware
                     channelCount: 1,
                 }
             });
@@ -562,6 +560,40 @@ export class VoiceChatManager {
         if (peerCount <= 6)  return 48000;  // 3-6 peers: 48kbps — alta qualidade
         if (peerCount <= 10) return 40000;  // 7-10 peers: 40kbps — boa qualidade
         return 32000;                        // 11-12 peers: 32kbps — qualidade sólida para voz
+    }
+
+    // Injeta parâmetros Opus no SDP via munging — única forma segura de definir FEC/DTX sem
+    // quebrar setCodecPreferences (Chrome 105+ invalida objetos de codec modificados).
+    private applyOpusParams(sdp: string): string {
+        if (!sdp) return sdp;
+        // Localiza o payload type do Opus (ex: "a=rtpmap:111 opus/48000/2")
+        const opusPtMatch = sdp.match(/a=rtpmap:(\d+) opus\/48000/i);
+        if (!opusPtMatch) return sdp;
+        const pt = opusPtMatch[1];
+        const desired: Record<string, string> = {
+            minptime: '10',
+            useinbandfec: '1',  // recuperação de pacotes perdidos sem retransmissão
+            usedtx: '1',        // para de transmitir durante silêncio (~40% menos banda)
+        };
+        const fmtpPattern = new RegExp(`(a=fmtp:${pt} )([^\\r\\n]*)`);
+        if (fmtpPattern.test(sdp)) {
+            // Linha fmtp já existe — merge para evitar duplicatas
+            return sdp.replace(fmtpPattern, (_, prefix, existing) => {
+                const params = new Map<string, string>(
+                    existing.split(';').filter(Boolean).map((p: string) => {
+                        const [k, v] = p.split('=');
+                        return [k.trim(), v?.trim() ?? '1'] as [string, string];
+                    })
+                );
+                Object.entries(desired).forEach(([k, v]) => params.set(k, v));
+                return `${prefix}${Array.from(params.entries()).map(([k, v]) => `${k}=${v}`).join(';')}`;
+            });
+        }
+        // Sem linha fmtp — inserir após o rtpmap
+        return sdp.replace(
+            new RegExp(`(a=rtpmap:${pt} opus[^\\r\\n]*)`),
+            `$1\r\na=fmtp:${pt} ${Object.entries(desired).map(([k, v]) => `${k}=${v}`).join(';')}`
+        );
     }
 
     // Aplica bitrate apenas uma vez quando a conexão atinge 'connected' — evita choppy audio
@@ -962,30 +994,11 @@ export class VoiceChatManager {
             if (capabilities) {
                 const audioTransceiver = pc.getTransceivers().find(t => t.sender.track?.kind === 'audio');
                 if (audioTransceiver && typeof audioTransceiver.setCodecPreferences === 'function') {
+                    // Apenas reordenar — NUNCA modificar os objetos de codec.
+                    // Chrome 105+ lança InvalidModificationError se sdpFmtpLine difere do original.
+                    // FEC/DTX são aplicados via SDP munging em createOffer/createAnswer.
                     const opusCodecs = capabilities.codecs
-                        .filter(c => c.mimeType.toLowerCase() === 'audio/opus')
-                        .map(codec => {
-                            // Merge de parâmetros via Map para evitar duplicatas (ex: Chrome já inclui minptime e useinbandfec)
-                            // useinbandfec=1: recupera pacotes perdidos sem retransmissão (crucial em links intercontinentais)
-                            // usedtx=1: silêncio não transmite (~40% menos banda em sessões com 12 pessoas)
-                            // minptime=10: pacotes de 10ms — balanço entre latência e overhead
-                            const fmtpParams = new Map<string, string>(
-                                (codec.sdpFmtpLine ?? '')
-                                    .split(';')
-                                    .filter(Boolean)
-                                    .map(p => {
-                                        const [k, v] = p.split('=');
-                                        return [k.trim(), v?.trim() ?? '1'] as [string, string];
-                                    })
-                            );
-                            fmtpParams.set('useinbandfec', '1');
-                            fmtpParams.set('usedtx', '1');
-                            fmtpParams.set('minptime', '10');
-                            return {
-                                ...codec,
-                                sdpFmtpLine: Array.from(fmtpParams.entries()).map(([k, v]) => `${k}=${v}`).join(';'),
-                            };
-                        });
+                        .filter(c => c.mimeType.toLowerCase() === 'audio/opus');
                     const others = capabilities.codecs.filter(c => c.mimeType.toLowerCase() !== 'audio/opus');
                     if (opusCodecs.length > 0) {
                         audioTransceiver.setCodecPreferences([...opusCodecs, ...others]);
@@ -997,17 +1010,20 @@ export class VoiceChatManager {
 
         if (createOffer) {
             try {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
+                const rawOffer = await pc.createOffer();
+                // SDP munging: injeta parâmetros Opus (FEC/DTX) sem modificar objetos de codec
+                const mungedOffer = { ...rawOffer, sdp: this.applyOpusParams(rawOffer.sdp ?? '') };
+                await pc.setLocalDescription(mungedOffer);
+                console.log(`[VoiceChat - ${this.userId}] [offer→] Enviando offer para: ${peerId}`);
                 await this.sendSignal({
                     type: 'voice-offer',
                     from: this.userId,
                     to: peerId,
                     peerId,
-                    offer
+                    offer: mungedOffer,
                 });
             } catch (error) {
-                console.error("[VoiceChat] Error creating offer:", error);
+                console.error(`[VoiceChat - ${this.userId}] Erro ao criar offer para ${peerId}:`, error);
             }
         }
 
@@ -1030,15 +1046,17 @@ export class VoiceChatManager {
                 this.pendingCandidates.delete(peerId);
             }
 
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
+            const rawAnswer = await pc.createAnswer();
+            // SDP munging: injeta parâmetros Opus (FEC/DTX) no answer também
+            const mungedAnswer = { ...rawAnswer, sdp: this.applyOpusParams(rawAnswer.sdp ?? '') };
+            await pc.setLocalDescription(mungedAnswer);
             console.log(`[VoiceChat - ${this.userId}] [answer→] Enviando answer para: ${peerId}`);
             await this.sendSignal({
                 type: 'voice-answer',
                 from: this.userId,
                 to: peerId,
                 peerId: this.userId,
-                answer
+                answer: mungedAnswer,
             });
         } catch (error) {
             console.error("[VoiceChat] Error handling offer:", error);
