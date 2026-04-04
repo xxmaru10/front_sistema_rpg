@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Map as MapIcon } from "lucide-react";
-import { MentionEditor } from "../../components/MentionEditor";
+import { MentionEditor } from "@/components/MentionEditor";
 import { createPortal } from "react-dom";
 import { CreateWorldEntityModalStyles } from "../styles/CreateWorldEntityModal.styles";
 

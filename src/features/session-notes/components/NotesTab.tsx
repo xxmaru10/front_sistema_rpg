@@ -1,6 +1,6 @@
 import { Bold, Italic, Underline, Trash2, Send, Users, ShieldAlert, Pencil, X, Check, ChevronDown, ChevronUp, BookOpen, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { MentionEditor } from "../../components/MentionEditor";
+import { MentionEditor } from "@/components/MentionEditor";
 import { renderMentions } from "@/lib/mentionUtils";
 import { LinkedNotes } from "./LinkedNotes";
 

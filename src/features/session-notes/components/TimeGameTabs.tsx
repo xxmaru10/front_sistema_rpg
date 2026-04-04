@@ -1,6 +1,6 @@
 import { Target, History, Zap, Package, Plus, Check, Trash2, ChevronDown, ChevronUp, Calendar, CheckSquare, Square, CheckCircle, Circle, EyeOff, Eye, X, Users } from "lucide-react";
 import { renderMentions } from "@/lib/mentionUtils";
-import { MentionEditor } from "../../components/MentionEditor";
+import { MentionEditor } from "@/components/MentionEditor";
 import { LinkedNotes } from "./LinkedNotes";
 import { createPortal } from "react-dom";
 import { useState } from "react";
