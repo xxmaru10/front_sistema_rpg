@@ -77,6 +77,11 @@ export class VoiceChatManager {
     private reconnectAttempts: Map<string, number> = new Map();
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
 
+    // H6: Flag de presença subscrita — track() só funciona após SUBSCRIBED
+    private _presenceSubscribed: boolean = false;
+    // H5: Peers com fallback de voice-join agendado (evita múltiplos timeouts para o mesmo peer)
+    private pendingFallbackJoins: Set<string> = new Set();
+
     private rtcConfig: RTCConfiguration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -200,15 +205,20 @@ export class VoiceChatManager {
             .on('presence', { event: 'leave' }, () => {
                 this.syncPresence();
             })
-            .subscribe(async (status: string) => {
-                if (status === 'SUBSCRIBED') {
-                    const status = await this.presenceChannel?.track({
+            .subscribe(async (subStatus: string) => {
+                if (subStatus === 'SUBSCRIBED') {
+                    this._presenceSubscribed = true;
+                    const trackResult = await this.presenceChannel?.track({
                         userId: this.userId,
                         characterId: this.characterId,
                         inVoice: this._isConnected,
                         online_at: new Date().toISOString(),
                     });
-                    console.log(`[VoiceChat - ${this.userId}] Initial Presence Track Status:`, status);
+                    console.log(`[VoiceChat - ${this.userId}] Initial Presence Track Result:`, trackResult);
+                    // H6: Se joinVoice() foi chamado antes do canal ficar pronto, atualizar agora
+                    if (this._isConnected) {
+                        await this.updatePresenceVoiceState(true);
+                    }
                 }
             });
     }
@@ -275,16 +285,25 @@ export class VoiceChatManager {
         this.onPresenceUpdate(participants);
     }
 
-    private async updatePresenceVoiceState(inVoice: boolean) {
-        if (this.presenceChannel) {
-            const status = await this.presenceChannel.track({
-                userId: this.userId,
-                characterId: this.characterId,
-                inVoice,
-                online_at: new Date().toISOString(),
-            });
-            console.log(`[VoiceChat - ${this.userId}] Presence Track Update Status:`, status);
+    private async updatePresenceVoiceState(inVoice: boolean, attempt: number = 0) {
+        if (!this.presenceChannel) return;
+        // H6: Canal ainda não pronto — retry exponencial (max 3 tentativas, delay 2s)
+        if (!this._presenceSubscribed) {
+            if (attempt < 3) {
+                console.warn(`[VoiceChat - ${this.userId}] Presence not SUBSCRIBED yet — retry ${attempt + 1}/3 in 2s`);
+                setTimeout(() => this.updatePresenceVoiceState(inVoice, attempt + 1), 2000);
+            } else {
+                console.error(`[VoiceChat - ${this.userId}] Presence track failed: canal não ficou SUBSCRIBED após 3 tentativas`);
+            }
+            return;
         }
+        const trackResult = await this.presenceChannel.track({
+            userId: this.userId,
+            characterId: this.characterId,
+            inVoice,
+            online_at: new Date().toISOString(),
+        });
+        console.log(`[VoiceChat - ${this.userId}] Presence Track Update:`, { inVoice, trackResult });
     }
 
     // ─── Envio de sinais ────────────────────────────────────────
@@ -483,6 +502,8 @@ export class VoiceChatManager {
             supabase.removeChannel(this.presenceChannel);
             this.presenceChannel = null;
         }
+        this._presenceSubscribed = false;
+        this.pendingFallbackJoins.clear();
     }
 
     private cleanupAllPeers() {
@@ -735,14 +756,37 @@ export class VoiceChatManager {
 
             if (!this._isConnected || !this.localStream) return;
 
-            // Deterministic offerer: smaller userId always initiates the offer.
-            if (this.userId < from) {
-                console.log(`[VoiceChat - ${this.userId}] Peer joined (I am offerer), creating offer for:`, from);
+            // H1/H2: Normalizar userId antes da comparação — evita race por caixa/espaço/UUID vs nome
+            const myIdNorm = this.userId.trim().toLowerCase();
+            const fromIdNorm = from.trim().toLowerCase();
+            console.log(`[VoiceChat - ${this.userId}] Deterministic offerer check: me="${myIdNorm}" from="${fromIdNorm}" → offerer=${myIdNorm < fromIdNorm}`);
+
+            if (myIdNorm < fromIdNorm) {
+                // Eu sou o offerer — envio a offer imediatamente
+                console.log(`[VoiceChat - ${this.userId}] I am offerer → creating offer for:`, from);
                 await this.createPeerConnection(from, true);
+            } else if (myIdNorm > fromIdNorm) {
+                // H5: Não sou o offerer — espera passiva. O offerer enviará a offer.
+                // Fallback único após 5s caso a offer não chegue (ex: race condition de timing).
+                console.log(`[VoiceChat - ${this.userId}] Non-offerer — awaiting offer from ${from} (fallback in 5s if needed)`);
+                if (!this.pendingFallbackJoins.has(from)) {
+                    this.pendingFallbackJoins.add(from);
+                    setTimeout(async () => {
+                        this.pendingFallbackJoins.delete(from);
+                        if (!this._isConnected || !this.localStream) return;
+                        const pc = this.peerConnections.get(from);
+                        const state = pc?.connectionState;
+                        if (!pc || state === 'failed' || state === 'closed' || state === 'new') {
+                            console.log(`[VoiceChat - ${this.userId}] Fallback: offer de ${from} não chegou em 5s — enviando voice-join direcionado`);
+                            await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
+                        } else {
+                            console.log(`[VoiceChat - ${this.userId}] Fallback desnecessário para ${from} — connectionState: ${state}`);
+                        }
+                    }, 5000);
+                }
             } else {
-                console.log(`[VoiceChat - ${this.userId}] Peer joined (they are offerer), pinging back to correctly initiate negotiation with:`, from);
-                // Bug #2: Adicionar destinatário (to) para evitar flood e loops de negociação
-                await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
+                // userId idêntico após normalização — não é possível determinar offerer
+                console.warn(`[VoiceChat - ${this.userId}] userId colide com ${from} após normalização — handshake abortado`);
             }
             return;
         }
@@ -773,6 +817,8 @@ export class VoiceChatManager {
                     }
                     this.pendingCandidates.get(from)!.push(signal.candidate);
                 }
+            } else {
+                console.warn(`[VoiceChat - ${this.userId}] [ice] Candidato de ${from} descartado — sem PeerConnection (queuing not possible)`);
             }
         }
     }
@@ -792,6 +838,15 @@ export class VoiceChatManager {
 
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(peerId, pc);
+
+        // H4: Safety timeout — se em 15s a conexão não sair de 'connecting'/'new', remover e liberar re-negociação
+        const connectingTimeout = setTimeout(() => {
+            const currentState = this.peerConnections.get(peerId)?.connectionState;
+            if (currentState === 'connecting' || currentState === 'new') {
+                console.warn(`[VoiceChat - ${this.userId}] Conexão com ${peerId} travada em '${currentState}' por 15s — removendo peer`);
+                this.removePeer(peerId);
+            }
+        }, 15000);
 
         // Adicionar tracks locais
         if (this.localStream) {
@@ -835,17 +890,21 @@ export class VoiceChatManager {
         };
 
         pc.onconnectionstatechange = () => {
-            console.log(`[VoiceChat] Connection state for ${peerId}:`, pc.connectionState);
+            console.log(`[VoiceChat - ${this.userId}] Connection state for ${peerId}:`, pc.connectionState);
+            // H4: Limpar timeout de 'connecting' ao sair do estado pendente
+            if (pc.connectionState !== 'connecting' && pc.connectionState !== 'new') {
+                clearTimeout(connectingTimeout);
+            }
             if (pc.connectionState === 'failed') {
                 // Reconexão automática com limite de tentativas
                 const attempts = this.reconnectAttempts.get(peerId) || 0;
                 if (attempts < VoiceChatManager.MAX_RECONNECT_ATTEMPTS && this._isConnected && this.localStream) {
                     this.reconnectAttempts.set(peerId, attempts + 1);
-                    console.log(`[VoiceChat] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
+                    console.log(`[VoiceChat - ${this.userId}] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
                     setTimeout(() => {
                         if (this._isConnected && this.localStream) {
-                            // Respeitar deterministic offerer na reconexão!
-                            if (this.userId < peerId) {
+                            // H1/H2: Normalizar userId na reconexão — consistente com handleSignal
+                            if (this.userId.trim().toLowerCase() < peerId.trim().toLowerCase()) {
                                 this.createPeerConnection(peerId, true);
                             } else {
                                 this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
@@ -853,10 +912,11 @@ export class VoiceChatManager {
                         }
                     }, 3000 * (attempts + 1)); // Backoff progressivo
                 } else {
-                    console.warn(`[VoiceChat] Max reconnect attempts reached for ${peerId}`);
+                    console.warn(`[VoiceChat - ${this.userId}] Max reconnect attempts reached for ${peerId}`);
                 }
             } else if (pc.connectionState === 'connected') {
                 // Reset contador de reconexão quando conecta com sucesso
+                console.log(`[VoiceChat - ${this.userId}] Connected to ${peerId}`);
                 this.reconnectAttempts.delete(peerId);
             }
         };
@@ -885,7 +945,7 @@ export class VoiceChatManager {
     private async handleOffer(signal: VoiceSignal) {
         if (!signal.offer) return;
         const peerId = signal.from;
-        console.log(`[VoiceChat - ${this.userId}] Handling offer from:`, peerId);
+        console.log(`[VoiceChat - ${this.userId}] [offer←] Recebida offer de: ${peerId} | localStream: ${!!this.localStream}`);
 
         const pc = await this.createPeerConnection(peerId, false);
         try {
@@ -900,6 +960,7 @@ export class VoiceChatManager {
 
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
+            console.log(`[VoiceChat - ${this.userId}] [answer→] Enviando answer para: ${peerId}`);
             await this.sendSignal({
                 type: 'voice-answer',
                 from: this.userId,
@@ -915,14 +976,18 @@ export class VoiceChatManager {
     private async handleAnswer(signal: VoiceSignal) {
         if (!signal.answer) return;
         const pc = this.peerConnections.get(signal.from);
-        if (!pc) return;
-
-        // Only apply answer when expecting one — prevents "wrong state: stable" from offer glare
-        if (pc.signalingState !== 'have-local-offer') {
-            console.warn(`[VoiceChat] Ignoring stale answer from ${signal.from} (signalingState: ${pc.signalingState})`);
+        if (!pc) {
+            console.warn(`[VoiceChat - ${this.userId}] [answer←] Answer de ${signal.from} descartada — sem PeerConnection`);
             return;
         }
 
+        // Only apply answer when expecting one — prevents "wrong state: stable" from offer glare
+        if (pc.signalingState !== 'have-local-offer') {
+            console.warn(`[VoiceChat - ${this.userId}] [answer←] Answer de ${signal.from} descartada (signalingState: ${pc.signalingState})`);
+            return;
+        }
+
+        console.log(`[VoiceChat - ${this.userId}] [answer←] Aplicando answer de: ${signal.from}`);
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
             const queued = this.pendingCandidates.get(signal.from);
