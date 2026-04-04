@@ -137,7 +137,11 @@ export class VoiceChatManager {
             return {} as AudioContext; // Stub para SSR
         }
         if (!this.localAudioContext) {
-            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            // 48kHz = taxa nativa do Opus; latencyHint 'interactive' minimiza buffer de processamento
+            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+                latencyHint: 'interactive',
+                sampleRate: 48000,
+            });
         }
         return this.localAudioContext!;
     }
@@ -145,7 +149,10 @@ export class VoiceChatManager {
     private getPeerAudioContext(peerId: string): AudioContext {
         let ctx = this.peerAudioContexts.get(peerId);
         if (!ctx) {
-            ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
+                latencyHint: 'interactive',
+                sampleRate: 48000,
+            });
             this.peerAudioContexts.set(peerId, ctx);
         }
         return ctx;
@@ -344,6 +351,10 @@ export class VoiceChatManager {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
+                    // 48kHz é a taxa nativa do Opus — elimina conversão de sample rate interna
+                    sampleRate: 48000,
+                    // Mono: voz não precisa de stereo, reduz carga em 50% por stream
+                    channelCount: 1,
                 }
             });
 
@@ -545,14 +556,36 @@ export class VoiceChatManager {
     // ─── Bitrate Adaptativo ────────────────────────────────────
 
     private getAdaptiveBitrate(peerCount: number): number {
-        // Áudio consome pouca banda, limitar agressivamente causa cortes. 
-        // 128kbps é padrão Opis de alta qualidade.
-        return 128000;
+        // Opus voz: 32kbps já é indistinguível de original para fala humana
+        // Escala inversamente ao número de peers para suportar até 12 (66 conexões mesh)
+        if (peerCount <= 2)  return 64000;  // 1-2 peers: 64kbps — máxima qualidade
+        if (peerCount <= 6)  return 48000;  // 3-6 peers: 48kbps — alta qualidade
+        if (peerCount <= 10) return 40000;  // 7-10 peers: 40kbps — boa qualidade
+        return 32000;                        // 11-12 peers: 32kbps — qualidade sólida para voz
+    }
+
+    // Aplica bitrate apenas uma vez quando a conexão atinge 'connected' — evita choppy audio
+    private async applyBitrateToSender(pc: RTCPeerConnection, peerId: string) {
+        const peerCount = this.peerConnections.size;
+        const targetBitrate = this.getAdaptiveBitrate(peerCount);
+        const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+        if (!sender) return;
+        try {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) {
+                params.encodings = [{}];
+            }
+            params.encodings[0].maxBitrate = targetBitrate;
+            await sender.setParameters(params);
+            console.log(`[VoiceChat - ${this.userId}] Bitrate ${targetBitrate / 1000}kbps aplicado para ${peerId} (${peerCount} peers ativos)`);
+        } catch (e) {
+            console.warn(`[VoiceChat - ${this.userId}] Não foi possível definir bitrate para ${peerId}:`, e);
+        }
     }
 
     private async updateAllPeersBitrate() {
-        // Desativado: setParameters frequentes na API do WebRTC causam 'choppy audio' / áudio robótico
-        // Deixamos a gestão de limite de banda nativa e a inicial tratarem disso.
+        // Manter como no-op: setParameters repetidos causam 'choppy audio'
+        // O bitrate é aplicado uma única vez via applyBitrateToSender em onconnectionstatechange
         return;
     }
 
@@ -918,10 +951,49 @@ export class VoiceChatManager {
                 // Reset contador de reconexão quando conecta com sucesso
                 console.log(`[VoiceChat - ${this.userId}] Connected to ${peerId}`);
                 this.reconnectAttempts.delete(peerId);
+                // Aplicar bitrate adaptativo uma única vez ao conectar (sem setParameters repetidos)
+                void this.applyBitrateToSender(pc, peerId);
             }
         };
 
-        // Sem manipulação forçada de bitrate (WebRTC fallback natural ativado)
+        // Preferência por Opus com FEC e DTX — resiliente a perda de pacotes em links intercontinentais
+        if (typeof RTCRtpSender !== 'undefined' && RTCRtpSender.getCapabilities) {
+            const capabilities = RTCRtpSender.getCapabilities('audio');
+            if (capabilities) {
+                const audioTransceiver = pc.getTransceivers().find(t => t.sender.track?.kind === 'audio');
+                if (audioTransceiver && typeof audioTransceiver.setCodecPreferences === 'function') {
+                    const opusCodecs = capabilities.codecs
+                        .filter(c => c.mimeType.toLowerCase() === 'audio/opus')
+                        .map(codec => {
+                            // Merge de parâmetros via Map para evitar duplicatas (ex: Chrome já inclui minptime e useinbandfec)
+                            // useinbandfec=1: recupera pacotes perdidos sem retransmissão (crucial em links intercontinentais)
+                            // usedtx=1: silêncio não transmite (~40% menos banda em sessões com 12 pessoas)
+                            // minptime=10: pacotes de 10ms — balanço entre latência e overhead
+                            const fmtpParams = new Map<string, string>(
+                                (codec.sdpFmtpLine ?? '')
+                                    .split(';')
+                                    .filter(Boolean)
+                                    .map(p => {
+                                        const [k, v] = p.split('=');
+                                        return [k.trim(), v?.trim() ?? '1'] as [string, string];
+                                    })
+                            );
+                            fmtpParams.set('useinbandfec', '1');
+                            fmtpParams.set('usedtx', '1');
+                            fmtpParams.set('minptime', '10');
+                            return {
+                                ...codec,
+                                sdpFmtpLine: Array.from(fmtpParams.entries()).map(([k, v]) => `${k}=${v}`).join(';'),
+                            };
+                        });
+                    const others = capabilities.codecs.filter(c => c.mimeType.toLowerCase() !== 'audio/opus');
+                    if (opusCodecs.length > 0) {
+                        audioTransceiver.setCodecPreferences([...opusCodecs, ...others]);
+                        console.log(`[VoiceChat - ${this.userId}] Opus+FEC+DTX definido para ${peerId}`);
+                    }
+                }
+            }
+        }
 
         if (createOffer) {
             try {
