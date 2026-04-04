@@ -9,6 +9,7 @@ import { ActionEvent, SessionState } from "@/types/domain";
 import { supabase } from "./supabaseClient";
 import { computeState, sanitizeStateForSnapshot } from "./projections";
 import * as apiClient from "./apiClient";
+import { v4 as uuidv4 } from 'uuid';
 
 export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
 
@@ -175,6 +176,9 @@ export class EventStore {
         this._sort();
         this.bulkListeners.forEach(l => l([...this.events]));
         this._updateSnapshot().catch(() => { });
+        this._migrateBase64Images().catch((err) => {
+            console.error('[EventStore] _migrateBase64Images falhou:', err);
+        });
     }
 
     private _setStatus(status: ConnectionStatus) {
@@ -267,6 +271,46 @@ export class EventStore {
 
     getSnapshotState(): SessionState | null {
         return this.snapshotState;
+    }
+    private async _migrateBase64Images(): Promise<void> {
+        if (!this.currentSessionId) return;
+
+        const state = computeState(this.events, this.snapshotState ?? undefined);
+        const characters = state.characters || {};
+
+        for (const [charId, char] of Object.entries(characters)) {
+            const imageUrl = (char as any).imageUrl;
+            if (!imageUrl?.startsWith('data:')) continue;
+
+            console.info(`[EventStore] Migrando imagem base64 para S3: ${(char as any).name || charId}`);
+
+            try {
+                const res = await fetch(imageUrl);
+                const blob = await res.blob();
+
+                const { uploadUrl, publicUrl } = await apiClient.getPresignedUploadUrl(
+                    `${charId}.jpg`,
+                    'image/jpeg',
+                );
+
+                await apiClient.uploadToS3(uploadUrl, blob, 'image/jpeg');
+
+                await this.append({
+                    id: uuidv4(),
+                    sessionId: this.currentSessionId!,
+                    seq: 0,
+                    type: 'CHARACTER_IMAGE_UPDATED',
+                    actorUserId: 'SYSTEM',
+                    createdAt: new Date().toISOString(),
+                    visibility: 'PUBLIC',
+                    payload: { characterId: charId, imageUrl: publicUrl },
+                } as any);
+
+                console.info(`[EventStore] Imagem migrada: ${publicUrl}`);
+            } catch (err) {
+                console.error(`[EventStore] Falha ao migrar imagem de ${charId}:`, err);
+            }
+        }
     }
 
     private async _updateSnapshot(): Promise<void> {
