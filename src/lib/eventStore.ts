@@ -9,6 +9,8 @@ import { ActionEvent, SessionState } from "@/types/domain";
 import { supabase } from "./supabaseClient";
 import { computeState } from "./projections";
 import * as apiClient from "./apiClient";
+import { v4 as uuidv4 } from 'uuid';
+import { uploadImage } from "./apiClient";
 
 export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
 
@@ -175,6 +177,9 @@ export class EventStore {
         this._sort();
         this.bulkListeners.forEach(l => l([...this.events]));
         this._updateSnapshot().catch(() => { });
+        this._migrateBase64Images().catch((err) => {
+            console.error('[EventStore] _migrateBase64Images falhou:', err);
+        });
     }
 
     private _setStatus(status: ConnectionStatus) {
@@ -268,6 +273,68 @@ export class EventStore {
     getSnapshotState(): SessionState | null {
         return this.snapshotState;
     }
+    private async _migrateBase64Images(): Promise<void> {
+        if (!this.currentSessionId) return;
+
+        const state = computeState(this.events, this.snapshotState ?? undefined);
+
+        // Migrate character images
+        const characters = state.characters || {};
+        for (const [charId, char] of Object.entries(characters)) {
+            const imageUrl = (char as any).imageUrl;
+            if (!imageUrl?.startsWith('data:')) continue;
+
+            console.info(`[EventStore] Migrando imagem de personagem: ${(char as any).name || charId}`);
+            try {
+                const res = await fetch(imageUrl);
+                const blob = await res.blob();
+                const publicUrl = await uploadImage(blob, 'image/jpeg');
+
+                await this.append({
+                    id: uuidv4(),
+                    sessionId: this.currentSessionId!,
+                    seq: 0,
+                    type: 'CHARACTER_IMAGE_UPDATED',
+                    actorUserId: 'SYSTEM',
+                    createdAt: new Date().toISOString(),
+                    visibility: 'PUBLIC',
+                    payload: { characterId: charId, imageUrl: publicUrl },
+                } as any);
+
+                console.info(`[EventStore] Personagem migrado: ${publicUrl}`);
+            } catch (err) {
+                console.error(`[EventStore] Falha ao migrar personagem ${charId}:`, err);
+            }
+        }
+
+        // Migrate header images
+        const headerImages = state.headerImages || {};
+        for (const [tab, imageUrl] of Object.entries(headerImages)) {
+            if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:')) continue;
+
+            console.info(`[EventStore] Migrando header image: tab ${tab}`);
+            try {
+                const res = await fetch(imageUrl);
+                const blob = await res.blob();
+                const publicUrl = await uploadImage(blob, 'image/jpeg');
+
+                await this.append({
+                    id: uuidv4(),
+                    sessionId: this.currentSessionId!,
+                    seq: 0,
+                    type: 'SESSION_HEADER_UPDATED',
+                    actorUserId: 'SYSTEM',
+                    createdAt: new Date().toISOString(),
+                    visibility: 'PUBLIC',
+                    payload: { tab, imageUrl: publicUrl },
+                } as any);
+
+                console.info(`[EventStore] Header migrado: ${publicUrl}`);
+            } catch (err) {
+                console.error(`[EventStore] Falha ao migrar header ${tab}:`, err);
+            }
+        }
+    }
 
     private async _updateSnapshot(): Promise<void> {
         if (!this.currentSessionId) return;
@@ -276,33 +343,10 @@ export class EventStore {
         if (maxSeq <= this.snapshotUpToSeq) return;
 
         const fullState = computeState(this.events, this.snapshotState ?? undefined);
-
-        // Breakdown log
-        const breakdown: Record<string, number> = {};
-        for (const [k, v] of Object.entries(fullState)) {
-            breakdown[k] = Math.round(JSON.stringify(v).length / 1024);
-        }
-        const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
-        console.table(sorted.map(([k, v]) => ({ key: k, sizeKB: v })));
-
-        // Character breakdown
-        if (fullState.characters) {
-            for (const [id, char] of Object.entries(fullState.characters as any)) {
-                const charSize = Math.round(JSON.stringify(char).length / 1024);
-                if (charSize > 10) {
-                    console.log(`Character ${(char as any).name || id}: ${charSize}KB`);
-                    const charFields: Record<string, number> = {};
-                    for (const [k, v] of Object.entries(char as any)) {
-                        charFields[k] = Math.round(JSON.stringify(v).length / 1024);
-                    }
-                    console.table(Object.entries(charFields).sort((a, b) => b[1] - a[1]).slice(0, 10));
-                }
-            }
-        }
-
         const snapshotStr = JSON.stringify(fullState);
         const sizeKB = Math.round(snapshotStr.length / 1024);
-        console.info(`[EventStore] Total snapshot: ${sizeKB}KB, seq ${maxSeq}`);
+
+        console.info(`[EventStore] Salvando snapshot: seq ${maxSeq}, tamanho: ${sizeKB}KB`);
 
         try {
             await apiClient.updateSnapshot(this.currentSessionId, maxSeq, fullState);
@@ -313,7 +357,6 @@ export class EventStore {
             console.error('[EventStore] Falha ao salvar snapshot:', err);
         }
     }
-
     async fetchGlobalBestiary(): Promise<ActionEvent[]> {
         const CACHE_KEY = 'bestiary_cache_v1';
         const CACHE_TTL = 5 * 60 * 1000;
