@@ -1,7 +1,7 @@
 "use client";
 
 import { Character } from "@/types/domain";
-import { LinkedNotes } from "@/components/SessionNotesTabs/LinkedNotes";
+import { LinkedNotes } from "@/features/session-notes/components/LinkedNotes";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
