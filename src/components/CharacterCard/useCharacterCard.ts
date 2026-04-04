@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Character, ConsequenceDebuff } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
+import { getPresignedUploadUrl, uploadToS3 } from '@/lib/apiClient';
 import { v4 as uuidv4 } from "uuid";
 
 interface UseCharacterCardOptions {
@@ -98,39 +99,62 @@ export function useCharacterCard({
     };
 
     // ── Image Upload ──────────────────────────────────────────────────────────
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!isGM || !e.target.files?.[0]) return;
         const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement("canvas");
-                let width = img.width;
-                let height = img.height;
-                const MAX_WIDTH = 600;
-                const MAX_HEIGHT = 600;
-                if (width > height) {
-                    if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                } else {
-                    if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext("2d");
-                if (ctx) {
+
+        // Compress to canvas blob
+        const compressedBlob = await new Promise<Blob>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let { width, height } = img;
+                    const MAX = 600;
+                    if (width > height) {
+                        if (width > MAX) { height = Math.round((height * MAX) / width); width = MAX; }
+                    } else {
+                        if (height > MAX) { width = Math.round((width * MAX) / height); height = MAX; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return reject(new Error('no canvas context'));
                     ctx.drawImage(img, 0, 0, width, height);
-                    const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
-                    globalEventStore.append({
-                        id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId,
-                        createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                        payload: { characterId: character.id, imageUrl: compressedBase64 }
-                    } as any);
-                }
+                    canvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('canvas toBlob failed'));
+                    }, 'image/jpeg', 0.7);
+                };
+                img.onerror = reject;
+                img.src = reader.result as string;
             };
-            img.src = reader.result as string;
-        };
-        reader.readAsDataURL(file);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
+        try {
+            // Get presigned URL from backend
+            const { uploadUrl, publicUrl } = await getPresignedUploadUrl(
+                file.name,
+                'image/jpeg',
+            );
+
+            // Upload directly to S3
+            await uploadToS3(uploadUrl, compressedBlob, 'image/jpeg');
+
+            // Store only the S3 URL in the event — not base64
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0,
+                type: 'CHARACTER_IMAGE_UPDATED', actorUserId,
+                createdAt: new Date().toISOString(), visibility: 'PUBLIC',
+                payload: { characterId: character.id, imageUrl: publicUrl },
+            } as any);
+        } catch (err) {
+            console.error('[handleImageUpload] S3 upload failed:', err);
+            // Optionally show error toast to user
+        }
     };
 
     // ── Bio Handlers ──────────────────────────────────────────────────────────
