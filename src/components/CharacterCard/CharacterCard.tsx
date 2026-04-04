@@ -5,6 +5,7 @@ import { LinkedNotes } from "@/features/session-notes/components/LinkedNotes";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
+import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { CharacterLore } from "./CharacterLore";
 import { CharacterVitality } from "./CharacterVitality";
@@ -159,6 +160,17 @@ export function CharacterCard({
                         />
                     </div>
                 </div>
+
+                {hook.isCropping && hook.tempCropSrc && (
+                    <ImageCropper
+                        src={hook.tempCropSrc}
+                        aspectRatio={1}
+                        outputWidth={600}
+                        outputHeight={600}
+                        onConfirm={hook.handleCropConfirm}
+                        onCancel={hook.handleCropCancel}
+                    />
+                )}
 
                 {isGM && (
                     <div className="gm-delete-control">

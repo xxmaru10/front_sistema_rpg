@@ -109,7 +109,10 @@ export function useCharacterCard({
     };
 
 
-    // ── Image Upload ──────────────────────────────────────────────────────────
+    // ── Image Upload / Crop ───────────────────────────────────────────────────
+    const [isCropping, setIsCropping] = useState(false);
+    const [tempCropSrc, setTempCropSrc] = useState<string | null>(null);
+
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!isGM || !e.target.files?.[0]) return;
         const file = e.target.files[0];
@@ -117,32 +120,44 @@ export function useCharacterCard({
         reader.onloadend = () => {
             const img = new Image();
             img.onload = () => {
-                const canvas = document.createElement("canvas");
-                let width = img.width;
-                let height = img.height;
-                const MAX_WIDTH = 600;
-                const MAX_HEIGHT = 600;
-                if (width > height) {
-                    if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                if (img.width > 600 || img.height > 600) {
+                    // Image is larger than the portrait target — open cropper
+                    setTempCropSrc(reader.result as string);
+                    setIsCropping(true);
                 } else {
-                    if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext("2d");
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0, width, height);
-                    const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
-                    globalEventStore.append({
-                        id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
-                        createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                        payload: { characterId: character.id, imageUrl: compressedBase64 }
-                    } as any);
+                    // Small image: compress and dispatch directly
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        globalEventStore.append({
+                            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+                            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                            payload: { characterId: character.id, imageUrl: canvas.toDataURL("image/jpeg", 0.7) }
+                        } as any);
+                    }
                 }
             };
             img.src = reader.result as string;
         };
         reader.readAsDataURL(file);
+    };
+
+    const handleCropConfirm = (base64: string) => {
+        setIsCropping(false);
+        setTempCropSrc(null);
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, imageUrl: base64 }
+        } as any);
+    };
+
+    const handleCropCancel = () => {
+        setIsCropping(false);
+        setTempCropSrc(null);
     };
 
     // ── Bio Handlers ──────────────────────────────────────────────────────────
@@ -295,5 +310,7 @@ export function useCharacterCard({
         handleAddConsequence, handleDeleteConsequence,
         handleAddNote, handleDeleteNote,
         handleDeleteCharacter,
+        // Cropper
+        isCropping, tempCropSrc, handleCropConfirm, handleCropCancel,
     };
 }

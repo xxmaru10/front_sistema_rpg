@@ -3,6 +3,7 @@ import { X, Map as MapIcon } from "lucide-react";
 import { MentionEditor } from "@/components/MentionEditor";
 import { createPortal } from "react-dom";
 import { CreateWorldEntityModalStyles } from "../styles/CreateWorldEntityModal.styles";
+import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
 
 interface CreateWorldEntityModalProps {
     setShowAddWorldEntity: (show: boolean) => void;
@@ -117,6 +118,70 @@ export function CreateWorldEntityModal({
         !newEntityTags.includes(t)
     ).slice(0, 5);
 
+    // ── Local cropper state ───────────────────────────────────────────────────
+    const [isCropping, setIsCropping] = useState(false);
+    const [tempCropSrc, setTempCropSrc] = useState<string | null>(null);
+    const [cropConfig, setCropConfig] = useState<{
+        aspectRatio: number;
+        outputWidth: number;
+        outputHeight: number;
+    }>({ aspectRatio: 1, outputWidth: 600, outputHeight: 600 });
+
+    const openCropper = (src: string, aspectRatio: number, outputWidth: number, outputHeight: number) => {
+        setCropConfig({ aspectRatio, outputWidth, outputHeight });
+        setTempCropSrc(src);
+        setIsCropping(true);
+    };
+
+    const handleCropConfirm = (base64: string) => {
+        setNewEntityImageUrl(base64);
+        setIsCropping(false);
+        setTempCropSrc(null);
+        setIsImageProcessing(false);
+    };
+
+    const handleCropCancel = () => {
+        setIsCropping(false);
+        setTempCropSrc(null);
+        setIsImageProcessing(false);
+    };
+
+    const processFileUpload = (
+        file: File,
+        thresholdW: number,
+        thresholdH: number,
+        aspectRatio: number,
+        outputWidth: number,
+        outputHeight: number
+    ) => {
+        setIsImageProcessing(true);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const img = new Image();
+            img.onload = () => {
+                if (img.width > thresholdW || img.height > thresholdH) {
+                    // Large image — open cropper (keeps isImageProcessing=true until confirm/cancel)
+                    openCropper(reader.result as string, aspectRatio, outputWidth, outputHeight);
+                } else {
+                    // Small image — compress directly
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        setNewEntityImageUrl(canvas.toDataURL("image/jpeg", 0.7));
+                    } else {
+                        setNewEntityImageUrl(reader.result as string);
+                    }
+                    setIsImageProcessing(false);
+                }
+            };
+            img.src = reader.result as string;
+        };
+        reader.readAsDataURL(file);
+    };
+
     const modalContent = (
         <>
         <CreateWorldEntityModalStyles />
@@ -229,35 +294,8 @@ export function CreateWorldEntityModal({
                                         onChange={e => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                setIsImageProcessing(true);
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => {
-                                                    const img = new Image();
-                                                    img.onload = () => {
-                                                        const canvas = document.createElement('canvas');
-                                                        let width = img.width;
-                                                        let height = img.height;
-                                                        const MAX_WIDTH = 1200;
-                                                        const MAX_HEIGHT = 1200;
-                                                        if (width > height) {
-                                                            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                                                        } else {
-                                                            if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
-                                                        }
-                                                        canvas.width = width;
-                                                        canvas.height = height;
-                                                        const ctx = canvas.getContext('2d');
-                                                        if (ctx) {
-                                                            ctx.drawImage(img, 0, 0, width, height);
-                                                            setNewEntityImageUrl(canvas.toDataURL('image/jpeg', 0.7));
-                                                        } else {
-                                                            setNewEntityImageUrl(reader.result as string);
-                                                        }
-                                                        setIsImageProcessing(false);
-                                                    };
-                                                    img.src = reader.result as string;
-                                                };
-                                                reader.readAsDataURL(file);
+                                                // Mapa: aspect 16:9, saída 1200×720
+                                                processFileUpload(file, 1200, 720, 1200 / 720, 1200, 720);
                                             }
                                         }}
                                         style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}
@@ -290,42 +328,8 @@ export function CreateWorldEntityModal({
                                 onChange={e => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                        setIsImageProcessing(true);
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            const img = new Image();
-                                            img.onload = () => {
-                                                const canvas = document.createElement('canvas');
-                                                let width = img.width;
-                                                let height = img.height;
-                                                const MAX_WIDTH = 600;
-                                                const MAX_HEIGHT = 600;
-                                                if (width > height) {
-                                                    if (width > MAX_WIDTH) {
-                                                        height = Math.round((height * MAX_WIDTH) / width);
-                                                        width = MAX_WIDTH;
-                                                    }
-                                                } else {
-                                                    if (height > MAX_HEIGHT) {
-                                                        width = Math.round((width * MAX_HEIGHT) / height);
-                                                        height = MAX_HEIGHT;
-                                                    }
-                                                }
-                                                canvas.width = width;
-                                                canvas.height = height;
-                                                const ctx = canvas.getContext('2d');
-                                                if (ctx) {
-                                                    ctx.drawImage(img, 0, 0, width, height);
-                                                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                                                    setNewEntityImageUrl(compressedBase64);
-                                                } else {
-                                                    setNewEntityImageUrl(reader.result as string);
-                                                }
-                                                setIsImageProcessing(false);
-                                            };
-                                            img.src = reader.result as string;
-                                        };
-                                        reader.readAsDataURL(file);
+                                        // Retrato/Entidade: aspect 1:1, saída 600×600
+                                        processFileUpload(file, 600, 600, 1, 600, 600);
                                     }
                                 }}
                                 style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}
@@ -548,8 +552,24 @@ export function CreateWorldEntityModal({
         </>
     );
 
+    const fullContent = (
+        <>
+            {modalContent}
+            {isCropping && tempCropSrc && (
+                <ImageCropper
+                    src={tempCropSrc}
+                    aspectRatio={cropConfig.aspectRatio}
+                    outputWidth={cropConfig.outputWidth}
+                    outputHeight={cropConfig.outputHeight}
+                    onConfirm={handleCropConfirm}
+                    onCancel={handleCropCancel}
+                />
+            )}
+        </>
+    );
+
     if (typeof document !== 'undefined') {
-        return createPortal(modalContent, document.body);
+        return createPortal(fullContent, document.body);
     }
-    return modalContent;
+    return fullContent;
 }
