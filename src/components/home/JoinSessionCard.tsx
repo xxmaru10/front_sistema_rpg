@@ -16,6 +16,7 @@ interface JoinSessionCardProps {
     accessCodeInput: string;
     setAccessCodeInput: (c: string) => void;
     onJoin: () => void;
+    isJoining: boolean;
 }
 
 export function JoinSessionCard({
@@ -27,7 +28,8 @@ export function JoinSessionCard({
     setJoinRole,
     accessCodeInput,
     setAccessCodeInput,
-    onJoin
+    onJoin,
+    isJoining
 }: JoinSessionCardProps) {
     return (
         <div className="tarot-card action-card join-table-card">
@@ -108,9 +110,9 @@ export function JoinSessionCard({
                     <button
                         className="mystic-btn secondary-btn"
                         onClick={onJoin}
-                        disabled={!selectedSession || !accessCodeInput}
+                        disabled={!selectedSession || !accessCodeInput || isJoining}
                     >
-                        ENTRAR
+                        {isJoining ? 'ENTRANDO...' : 'ENTRAR'}
                     </button>
                 </div>
             </div>

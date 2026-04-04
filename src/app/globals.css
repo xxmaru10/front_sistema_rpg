@@ -967,9 +967,11 @@ body,
 }
 
 .mystic-btn:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-  border-color: rgba(var(--accent-rgb), 0.2);
+  opacity: 0.6;
+  cursor: wait;
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.05);
+  letter-spacing: 0.1em;
 }
 
 /* Role Selector & Selects */
@@ -1140,6 +1142,26 @@ body,
 
 .char-select-card:hover .char-card-glow {
   opacity: 1;
+}
+
+.char-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-header);
+  font-size: 0.7rem;
+  color: var(--accent-color);
+  z-index: 5;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 }
 
 .selection-actions {
