@@ -137,7 +137,9 @@ export async function uploadToS3(
 ): Promise<void> {
   const res = await fetch(uploadUrl, {
     method: 'PUT',
-    headers: { 'Content-Type': contentType },
+    headers: { 
+      'Content-Type': contentType,
+    },
     body: file,
   });
   if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
