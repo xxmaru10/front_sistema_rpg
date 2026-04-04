@@ -277,16 +277,34 @@ export class EventStore {
 
         const fullState = computeState(this.events, this.snapshotState ?? undefined);
 
-        try {
-            const snapshotStr = JSON.stringify(fullState);
-            const sizeKB = Math.round(snapshotStr.length / 1024);
+        // Breakdown log
+        const breakdown: Record<string, number> = {};
+        for (const [k, v] of Object.entries(fullState)) {
+            breakdown[k] = Math.round(JSON.stringify(v).length / 1024);
+        }
+        const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+        console.table(sorted.map(([k, v]) => ({ key: k, sizeKB: v })));
 
-            console.info(`[EventStore] Salvando snapshot: seq ${maxSeq}, tamanho: ${sizeKB}KB`);
-
-            // Warn but don't skip — backend now accepts up to 10MB
-            if (sizeKB > 5000) {
-                console.warn(`[EventStore] Snapshot muito grande: ${sizeKB}KB — considere otimizar o estado`);
+        // Character breakdown
+        if (fullState.characters) {
+            for (const [id, char] of Object.entries(fullState.characters as any)) {
+                const charSize = Math.round(JSON.stringify(char).length / 1024);
+                if (charSize > 10) {
+                    console.log(`Character ${(char as any).name || id}: ${charSize}KB`);
+                    const charFields: Record<string, number> = {};
+                    for (const [k, v] of Object.entries(char as any)) {
+                        charFields[k] = Math.round(JSON.stringify(v).length / 1024);
+                    }
+                    console.table(Object.entries(charFields).sort((a, b) => b[1] - a[1]).slice(0, 10));
+                }
             }
+        }
+
+        const snapshotStr = JSON.stringify(fullState);
+        const sizeKB = Math.round(snapshotStr.length / 1024);
+        console.info(`[EventStore] Total snapshot: ${sizeKB}KB, seq ${maxSeq}`);
+
+        try {
             await apiClient.updateSnapshot(this.currentSessionId, maxSeq, fullState);
             this.snapshotState = fullState;
             this.snapshotUpToSeq = maxSeq;
