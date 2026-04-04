@@ -1,12 +1,12 @@
 import { Book, Globe, Clock, Swords, Search, X, Filter, ChevronDown, RotateCw, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Character, SessionState } from "@/types/domain";
-import { useSessionNotes } from "@/hooks/useSessionNotes";
-import { NotesTab } from "./SessionNotesTabs/NotesTab";
-import { WorldTab } from "./SessionNotesTabs/WorldTab";
-import { TimeTab, GameTab } from "./SessionNotesTabs/TimeGameTabs";
-import { CreateWorldEntityModal } from "./SessionNotesTabs/CreateWorldEntityModal";
-import { ViewWorldEntityModal } from "./SessionNotesTabs/ViewWorldEntityModal";
+import { useSessionNotes } from "./hooks/useSessionNotes";
+import { NotesTab } from "./components/NotesTab";
+import { WorldTab } from "./components/WorldTab";
+import { TimeTab, GameTab } from "./components/TimeGameTabs";
+import { CreateWorldEntityModal } from "./components/CreateWorldEntityModal";
+import { ViewWorldEntityModal } from "./components/ViewWorldEntityModal";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import "./SessionNotes.css";
@@ -431,15 +431,19 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
             {showWorldFilters && filterBtnRect && createPortal(
                 <div 
                     ref={filterDropdownRef}
-                    className="world-filters-dropdown global-dropdown scrollbar-arcane animate-fade-in portal-menu" 
-                    style={{ 
+                    className="world-filters-dropdown global-dropdown scrollbar-arcane animate-fade-in portal-menu"
+                    style={{
                         position: 'fixed',
                         top: `${filterBtnRect.bottom + 10}px`,
                         left: `${filterBtnRect.right}px`,
                         transform: 'translateX(-100%)',
-                        width: '280px', 
+                        width: '280px',
                         padding: '15px',
-                        zIndex: 10001
+                        zIndex: 10001,
+                        maxHeight: `calc(100vh - ${filterBtnRect.bottom + 20}px)`,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
                     }}
                 >
                     <div className="filter-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
@@ -466,7 +470,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                         )}
                     </div>
 
-                    <div className="filters-list-content scrollbar-arcane" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: '5px' }}>
+                    <div className="filters-list-content scrollbar-arcane" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: '5px' }}>
                         {worldFilterAvailableOptions.length === 0 ? (
                             <p style={{ fontSize: '0.7rem', color: '#888', textAlign: 'center' }}>Nenhum filtro disponível para esta aba.</p>
                         ) : (

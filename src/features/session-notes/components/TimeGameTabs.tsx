@@ -1,12 +1,11 @@
 import { Target, History, Zap, Package, Plus, Check, Trash2, ChevronDown, ChevronUp, Calendar, CheckSquare, Square, CheckCircle, Circle, EyeOff, Eye, X, Users } from "lucide-react";
 import { renderMentions } from "@/lib/mentionUtils";
-import { MentionEditor } from "../MentionEditor";
+import { MentionEditor } from "../../components/MentionEditor";
 import { LinkedNotes } from "./LinkedNotes";
 import { createPortal } from "react-dom";
-
 import { useState } from "react";
-
 import { v4 as uuidv4 } from "uuid";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 interface TimeTabProps {
     subTabTempo: string;
@@ -21,6 +20,7 @@ interface TimeTabProps {
 
 
 export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole, mentionEntities, userId }: TimeTabProps) {
+    const { requestDelete, isPending } = useDeleteConfirm();
 
     const {
         showAddMission, setShowAddMission,
@@ -50,7 +50,6 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
     const missions = state.missions || [];
     const timeline = state.timeline || [];
 
-    // Combine missions and manual events for the timeline
     const allEvents = [
         ...timeline,
         ...missions
@@ -69,7 +68,6 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
 
 
     const sortedEvents = [...allEvents].sort((a, b) => {
-        // Sort by year, then month, then day
         const yearA = a.year ?? 0;
         const yearB = b.year ?? 0;
         if (yearA !== yearB) return timelineSortAsc ? yearA - yearB : yearB - yearA;
@@ -82,8 +80,8 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
         const dayB = b.day ?? 0;
         if (dayA !== dayB) return timelineSortAsc ? dayA - dayB : dayB - dayA;
 
-        return timelineSortAsc ? 
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() : 
+        return timelineSortAsc ?
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() :
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
@@ -93,8 +91,8 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                 <span className="navigator-label">CRONOLOGIA: {subTabTempo.toUpperCase()}</span>
                 <div style={{ flex: 1 }} />
                 {(subTabTempo === "Missões" || (subTabTempo === "Linha do Tempo" && userRole === "GM")) && (
-                    <button 
-                        className="add-world-entity-btn-mini" 
+                    <button
+                        className="add-world-entity-btn-mini"
                         style={{ width: '36px', height: '36px', flexShrink: 0 }}
                         title={`Adicionar ${subTabTempo === "Missões" ? "Missão" : "Evento"}`}
                         onClick={() => subTabTempo === "Missões" ? setShowAddMission(true) : setShowAddTimelineEvent(true)}
@@ -103,7 +101,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                     </button>
                 )}
             </div>
-            
+
             <div className="sub-content-area scrollbar-arcane">
                 {subTabTempo === "Missões" && (
                     <div className="missions-page">
@@ -143,8 +141,8 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                 {subTabTempo === "Linha do Tempo" && (
                     <div className="timeline-page">
                         <div className="timeline-header-actions">
-                            <button 
-                                className="action-btn-mini sort-btn" 
+                            <button
+                                className="action-btn-mini sort-btn"
                                 onClick={() => setTimelineSortAsc(!timelineSortAsc)}
                             >
                                 {timelineSortAsc ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -171,16 +169,16 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                                     {userRole === 'GM' && (
                                                         <>
                                                             {event.type === 'MISSION' ? (
-                                                                <button 
-                                                                    className="hide-timeline-btn" 
+                                                                <button
+                                                                    className="hide-timeline-btn"
                                                                     onClick={() => handleUpdateMission(event.id, { hideFromTimeline: true })}
                                                                     title="Remover da linha do tempo"
                                                                 >
                                                                     <EyeOff size={14} />
                                                                 </button>
                                                             ) : (
-                                                                <button 
-                                                                    className="edit-btn-mini" 
+                                                                <button
+                                                                    className="edit-btn-mini"
                                                                     onClick={() => handleStartEditTimelineEvent(event.id)}
                                                                     title="Editar evento"
                                                                 >
@@ -188,8 +186,13 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                                                 </button>
                                                             )}
 
-                                                            <button className="del-btn" onClick={() => (event.type === 'MISSION' ? handleDeleteMission(event.id) : handleDeleteTimelineEvent(event.id))} title="Excluir">
-                                                                <Trash2 size={20} />
+                                                            <button
+                                                                className="del-btn"
+                                                                onClick={() => requestDelete(event.id, () => event.type === 'MISSION' ? handleDeleteMission(event.id) : handleDeleteTimelineEvent(event.id))}
+                                                                title={isPending(event.id) ? "Clique para confirmar exclusão" : "Excluir"}
+                                                                style={{ color: isPending(event.id) ? '#00cc66' : undefined }}
+                                                            >
+                                                                {isPending(event.id) ? <Check size={20} /> : <Trash2 size={20} />}
                                                             </button>
                                                         </>
                                                     )}
@@ -223,17 +226,17 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
 
                         <div className="form-group">
                             <label>NOME DA MISSÃO</label>
-                            <input 
-                                type="text" 
-                                value={newMissionName} 
+                            <input
+                                type="text"
+                                value={newMissionName}
                                 onChange={(e) => setNewMissionName(e.target.value)}
-                                placeholder="Ex: O Resgate do Ferreiro" 
+                                placeholder="Ex: O Resgate do Ferreiro"
                             />
                         </div>
                         <div className="form-group">
                             <label>DESCRIÇÃO</label>
-                            <MentionEditor 
-                                value={newMissionDescription} 
+                            <MentionEditor
+                                value={newMissionDescription}
                                 onChange={setNewMissionDescription}
                                 placeholder="Detalhes da missão..."
                                 mentionEntities={mentionEntities}
@@ -242,9 +245,9 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                         <div className="form-group">
                             <label>SUB-TAREFAS (CHECKBOXES)</label>
                             <div className="tag-input-wrapper">
-                                <input 
-                                    type="text" 
-                                    value={newSubTaskInput} 
+                                <input
+                                    type="text"
+                                    value={newSubTaskInput}
                                     onChange={(e) => setNewSubTaskInput(e.target.value)}
                                     placeholder="Escreva e aperte Enter..."
                                     onKeyDown={(e) => {
@@ -284,7 +287,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                 <input type="number" value={newMissionYear} onChange={(e) => setNewMissionYear(parseInt(e.target.value))} />
                             </div>
                         </div>
-                        
+
                         <div className="modal-footer">
                             <button className="cancel-btn" onClick={handleCancelMissionEdit}>CANCELAR</button>
                             <button className="confirm-btn" onClick={handleCreateMission}>
@@ -302,17 +305,17 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
 
                         <div className="form-group">
                             <label>NOME DO EVENTO</label>
-                            <input 
-                                type="text" 
-                                value={newTimelineName} 
+                            <input
+                                type="text"
+                                value={newTimelineName}
                                 onChange={(e) => setNewTimelineName(e.target.value)}
-                                placeholder="Ex: O Grande Incêndio" 
+                                placeholder="Ex: O Grande Incêndio"
                             />
                         </div>
                         <div className="form-group">
                             <label>DESCRIÇÃO</label>
-                            <MentionEditor 
-                                value={newTimelineDescription} 
+                            <MentionEditor
+                                value={newTimelineDescription}
                                 onChange={setNewTimelineDescription}
                                 placeholder="O que aconteceu?"
                                 mentionEntities={mentionEntities}
@@ -332,7 +335,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                 <input type="number" value={newTimelineYear} onChange={(e) => setNewTimelineYear(parseInt(e.target.value))} />
                             </div>
                         </div>
-                        
+
                         <div className="modal-footer">
                             <button className="cancel-btn" onClick={handleCancelTimelineEdit}>CANCELAR</button>
                             <button className="confirm-btn" onClick={handleCreateTimelineEvent}>
@@ -347,8 +350,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
 }
 
 function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelete, onEdit, userRole, mentionEntities, onAddNote, onDeleteNote, userId }: { mission: any, onToggleSubTask: any, onAddSubTask: any, onUpdate: any, onDelete: any, onEdit: any, userRole?: string, mentionEntities: any[], onAddNote: any, onDeleteNote?: any, userId?: string }) {
-
-
+    const { requestDelete, isPending } = useDeleteConfirm();
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState(mission.name);
     const [editDesc, setEditDesc] = useState(mission.description);
@@ -373,7 +375,7 @@ function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelet
                             <History size={14} />
                         </button>
                     )}
-                    
+
                     {userRole === 'GM' && (
                         <>
                             <button className="edit-btn" onClick={() => onEdit(mission.id)} title="Editar missão completa">
@@ -387,14 +389,19 @@ function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelet
                     )}
 
                     {userRole === 'GM' && (
-                        <button className="del-btn" onClick={() => onDelete(mission.id)} title="Excluir">
-                            <Trash2 size={20} />
+                        <button
+                            className="del-btn"
+                            onClick={() => requestDelete(mission.id, () => onDelete(mission.id))}
+                            title={isPending(mission.id) ? "Clique para confirmar exclusão" : "Excluir"}
+                            style={{ color: isPending(mission.id) ? '#00cc66' : undefined }}
+                        >
+                            {isPending(mission.id) ? <Check size={20} /> : <Trash2 size={20} />}
                         </button>
                     )}
 
                 </div>
             </div>
-            
+
             <p className="mission-desc" dangerouslySetInnerHTML={{ __html: renderMentions(mission.description) }} />
 
             <div className="mission-tasks">
@@ -409,15 +416,15 @@ function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelet
             {!mission.completed && (
                 <div className="add-task-inline" style={{ marginTop: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <Plus size={14} className="gold-text" />
-                    <input 
-                        type="text" 
-                        placeholder="Nova tarefa..." 
-                        style={{ 
-                            background: 'none', 
-                            border: 'none', 
-                            borderBottom: '1px solid rgba(197, 160, 89, 0.2)', 
-                            color: '#fff', 
-                            fontSize: '0.7rem', 
+                    <input
+                        type="text"
+                        placeholder="Nova tarefa..."
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: '1px solid rgba(197, 160, 89, 0.2)',
+                            color: '#fff',
+                            fontSize: '0.7rem',
                             flex: 1,
                             padding: '2px 0'
                         }}
@@ -455,6 +462,8 @@ interface GameTabProps {
 }
 
 export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, mentionEntities, userId }: GameTabProps) {
+    const { requestDelete, isPending } = useDeleteConfirm();
+
     const {
         showAddSkill, setShowAddSkill,
         newSkillName, setNewSkillName,
@@ -485,7 +494,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
         <div className="tab-content-combined">
             <div className="navigator-controls">
                 <span className="navigator-label">SISTEMA:</span>
-                <select 
+                <select
                     className="victorian-select"
                     value={subTabJogo}
                     onChange={(e) => setSubTabJogo(e.target.value as any)}
@@ -495,8 +504,8 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                 </select>
 
                 {userRole === 'GM' && subTabJogo !== 'Jogadores' && (
-                    <button 
-                        className="add-world-entity-btn-mini" 
+                    <button
+                        className="add-world-entity-btn-mini"
                         style={{ marginLeft: 'auto', width: '36px', height: '36px', flexShrink: 0 }}
                         title={`Adicionar ${subTabJogo === "Habilidades" ? "Habilidade" : "Item"}`}
                         onClick={() => subTabJogo === "Habilidades" ? setShowAddSkill(true) : setShowAddItem(true)}
@@ -522,8 +531,13 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                                     <button className="edit-btn-mini" onClick={() => handleStartEditSkill(skill.id)} title="Editar">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                     </button>
-                                                    <button className="del-btn-mini" onClick={() => handleDeleteSkill(skill.id)} title="Excluir">
-                                                        <Trash2 size={20} />
+                                                    <button
+                                                        className="del-btn-mini"
+                                                        onClick={() => requestDelete(skill.id, () => handleDeleteSkill(skill.id))}
+                                                        title={isPending(skill.id) ? "Clique para confirmar exclusão" : "Excluir"}
+                                                        style={{ color: isPending(skill.id) ? '#00cc66' : undefined }}
+                                                    >
+                                                        {isPending(skill.id) ? <Check size={20} /> : <Trash2 size={20} />}
                                                     </button>
                                                 </div>
                                             )}
@@ -546,6 +560,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                 ))
                             )}
                         </div>
+
                     </div>
                 )}
 
@@ -568,8 +583,13 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                                         <button className="edit-btn-mini" onClick={() => handleStartEditItem(item.id)} title="Editar">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                         </button>
-                                                        <button className="del-btn-mini" onClick={() => handleDeleteItem(item.id)} title="Excluir">
-                                                            <Trash2 size={20} />
+                                                        <button
+                                                            className="del-btn-mini"
+                                                            onClick={() => requestDelete(item.id, () => handleDeleteItem(item.id))}
+                                                            title={isPending(item.id) ? "Clique para confirmar exclusão" : "Excluir"}
+                                                            style={{ color: isPending(item.id) ? '#00cc66' : undefined }}
+                                                        >
+                                                            {isPending(item.id) ? <Check size={20} /> : <Trash2 size={20} />}
                                                         </button>
                                                     </div>
                                                 )}
@@ -631,10 +651,9 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             <label>COR DO CARD</label>
                             <div className="color-presets-row">
                                 {COLOR_PRESETS.map((c: string) => (
-                                    <div 
-                                        key={c} 
-
-                                        className={`color-preset-circle ${newSkillColor === c ? 'active' : ''}`} 
+                                    <div
+                                        key={c}
+                                        className={`color-preset-circle ${newSkillColor === c ? 'active' : ''}`}
                                         style={{ backgroundColor: c }}
                                         onClick={() => setNewSkillColor(c)}
                                     />
@@ -672,7 +691,6 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             <div className="form-group">
                                 <label>PREÇO ($)</label>
                                 <input type="number" value={newItemPrice} onChange={(e) => setNewItemPrice(parseInt(e.target.value))} />
-
                             </div>
                             <div className="form-group">
                                 <label>QUANTIDADE</label>
@@ -684,9 +702,9 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
                                 <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> Resolução recomendada: 800x800 para melhor performance.
                             </p>
-                            <input 
-                                type="file" 
-                                accept=".png, .jpg, .jpeg" 
+                            <input
+                                type="file"
+                                accept=".png, .jpg, .jpeg"
                                 onChange={e => {
                                     const file = e.target.files?.[0];
                                     if (file) {
@@ -697,10 +715,8 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                                 const canvas = document.createElement('canvas');
                                                 let width = img.width;
                                                 let height = img.height;
-                                                
                                                 const MAX_WIDTH = 800;
                                                 const MAX_HEIGHT = 800;
-                                                
                                                 if (width > height) {
                                                     if (width > MAX_WIDTH) {
                                                         height = Math.round((height * MAX_WIDTH) / width);
@@ -712,7 +728,6 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                                         height = MAX_HEIGHT;
                                                     }
                                                 }
-                                                
                                                 canvas.width = width;
                                                 canvas.height = height;
                                                 const ctx = canvas.getContext('2d');
@@ -734,7 +749,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             {newItemImageUrl && (
                                 <div style={{ marginTop: '10px', position: 'relative', width: '200px', height: '120px', border: '1px solid #444', overflow: 'hidden' }}>
                                     <img src={newItemImageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    <button 
+                                    <button
                                         onClick={() => setNewItemImageUrl("")}
                                         style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', border: 'none', color: '#fff', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
@@ -755,6 +770,3 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
         </div>
     );
 }
-
-
-

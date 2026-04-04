@@ -93,9 +93,9 @@ export function ViewWorldEntityModal({
                                 <button onClick={() => toggleVisibility('color')} className="visibility-toggle-btn" title={fieldVisibility['color'] ? "Mostrar Cor" : "Ocultar Cor"}>
                                     {fieldVisibility['color'] ? <EyeOff size={14} style={{ color: '#ff4444' }} /> : <Eye size={14} style={{ color: viewingEntity.color }} />}
                                 </button>
-                                <button 
-                                    onClick={() => handleToggleAllVisibility?.(viewingEntity.id, !Object.values(fieldVisibility).every(v => v))} 
-                                    className="visibility-toggle-btn bulk-toggle" 
+                                <button
+                                    onClick={() => handleToggleAllVisibility?.(viewingEntity.id, !Object.values(fieldVisibility).every(v => v))}
+                                    className="visibility-toggle-btn bulk-toggle"
                                     title="Alternar Tudo (Visível/Oculto)"
                                     style={{ marginLeft: '10px', padding: '2px 8px', background: 'rgba(197, 160, 89, 0.2)', borderRadius: '4px' }}
                                 >
@@ -104,7 +104,7 @@ export function ViewWorldEntityModal({
                             </div>
                         )}
                     </div>
-                    
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <h2 style={{ color: isFieldVisible('color') ? viewingEntity.color : '#666', margin: 0, fontFamily: 'var(--font-header)', fontSize: '2rem' }}>
                             {isFieldVisible('name') ? viewingEntity.name.toUpperCase() : "????"}
@@ -145,7 +145,6 @@ export function ViewWorldEntityModal({
                         )}
                     </div>
 
-                    {/* New Description Blocks */}
                     {(viewingEntity.descriptionBlocks || []).map((block: any) => {
                         const isBlockVisible = isGM || !block.hidden;
                         if (!isBlockVisible) return null;
@@ -171,7 +170,7 @@ export function ViewWorldEntityModal({
                                             <div className="block-actions" style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px' }}>
                                                 <button onClick={() => { setEditingBlockId(block.id); setEditBlockContent(block.content); }} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }} title="Editar Bloco"><Edit2 size={14} /></button>
                                                 <button onClick={() => handleUpdateDescriptionBlock?.(viewingEntity.id, block.id, { hidden: !block.hidden })} style={{ background: 'none', border: 'none', color: block.hidden ? '#c5a059' : '#666', cursor: 'pointer' }} title={block.hidden ? "Mostrar Bloco" : "Ocultar Bloco"}>{block.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
-                                                <button onClick={() => { if (confirm("Excluir este bloco?")) handleDeleteDescriptionBlock?.(viewingEntity.id, block.id); }} style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.6, cursor: 'pointer' }} title="Excluir Bloco"><Trash2 size={14} /></button>
+                                                <button onClick={() => handleDeleteDescriptionBlock?.(viewingEntity.id, block.id)} style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.6, cursor: 'pointer' }} title="Excluir Bloco"><Trash2 size={14} /></button>
                                             </div>
                                         )}
                                     </>
@@ -183,20 +182,20 @@ export function ViewWorldEntityModal({
                     {isGM && !isAddingBlock && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 0' }}>
                             <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(197, 160, 89, 0.2))' }}></div>
-                            <button 
-                                className="add-block-btn" 
-                                onClick={() => setIsAddingBlock(true)} 
-                                title="Adicionar Bloco de Descrição" 
-                                style={{ 
-                                    background: 'rgba(197, 160, 89, 0.05)', 
-                                    border: '1px solid rgba(197, 160, 89, 0.2)', 
-                                    color: '#c5a059', 
-                                    borderRadius: '50%', 
-                                    width: '32px', 
-                                    height: '32px', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
+                            <button
+                                className="add-block-btn"
+                                onClick={() => setIsAddingBlock(true)}
+                                title="Adicionar Bloco de Descrição"
+                                style={{
+                                    background: 'rgba(197, 160, 89, 0.05)',
+                                    border: '1px solid rgba(197, 160, 89, 0.2)',
+                                    color: '#c5a059',
+                                    borderRadius: '50%',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     cursor: 'pointer',
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                                 }}
@@ -380,7 +379,7 @@ export function ViewWorldEntityModal({
                     {isGM && (
                         <button
                             className="delete-btn"
-                            onClick={() => { if (confirm("Apagar este registro permanentemente?")) { handleDeleteWorldEntity(viewingEntity.id); setViewingEntityId(null); } }}
+                            onClick={() => { handleDeleteWorldEntity(viewingEntity.id); setViewingEntityId(null); }}
                             style={{ background: 'rgba(255,0,0,0.1)', border: '1px solid rgba(255,0,0,0.3)', color: '#ff4444', padding: '6px 15px', fontSize: '0.7rem', cursor: 'pointer' }}
                         >
                             APAGAR REGISTRO

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { X, Map as MapIcon } from "lucide-react";
-import { MentionEditor } from "../MentionEditor";
+import { MentionEditor } from "../../components/MentionEditor";
 import { createPortal } from "react-dom";
+import { CreateWorldEntityModalStyles } from "../styles/CreateWorldEntityModal.styles";
 
 interface CreateWorldEntityModalProps {
     setShowAddWorldEntity: (show: boolean) => void;
@@ -107,12 +108,14 @@ export function CreateWorldEntityModal({
     uniqueTags = []
 }: CreateWorldEntityModalProps) {
     const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-    const tagSuggestions = uniqueTags.filter(t => 
-        t.toLowerCase().includes(tagInput.toLowerCase()) && 
+    const tagSuggestions = uniqueTags.filter(t =>
+        t.toLowerCase().includes(tagInput.toLowerCase()) &&
         !newEntityTags.includes(t)
     ).slice(0, 5);
 
     const modalContent = (
+        <>
+        <CreateWorldEntityModalStyles />
         <div className="modal-overlay" onClick={() => setShowAddWorldEntity(false)}>
             <div className="modal-content world-entity-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header-ornate">
@@ -169,7 +172,7 @@ export function CreateWorldEntityModal({
                                             type="text"
                                             placeholder="Pesquisar tipo... (ex: Cidade, Floresta)"
                                             value={locSearch}
-                                            onChange={e => setLocSearch(e.target.value)}
+                                            onChange={e => setLocSearch(e.target.value.trimStart())}
                                             onFocus={() => { if (!locSearch) setLocSearch(" "); }}
                                             style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px', fontSize: '0.8rem' }}
                                         />
@@ -229,7 +232,7 @@ export function CreateWorldEntityModal({
                                                         const canvas = document.createElement('canvas');
                                                         let width = img.width;
                                                         let height = img.height;
-                                                        const MAX_WIDTH = 1200; // Mapas podem ser um pouco maiores
+                                                        const MAX_WIDTH = 1200;
                                                         const MAX_HEIGHT = 1200;
                                                         if (width > height) {
                                                             if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
@@ -288,11 +291,8 @@ export function CreateWorldEntityModal({
                                                 const canvas = document.createElement('canvas');
                                                 let width = img.width;
                                                 let height = img.height;
-                                                
-                                                // Max dimensions reduced for better performance and to avoid 413 errors
                                                 const MAX_WIDTH = 600;
                                                 const MAX_HEIGHT = 600;
-                                                
                                                 if (width > height) {
                                                     if (width > MAX_WIDTH) {
                                                         height = Math.round((height * MAX_WIDTH) / width);
@@ -304,7 +304,6 @@ export function CreateWorldEntityModal({
                                                         height = MAX_HEIGHT;
                                                     }
                                                 }
-                                                
                                                 canvas.width = width;
                                                 canvas.height = height;
                                                 const ctx = canvas.getContext('2d');
@@ -353,8 +352,8 @@ export function CreateWorldEntityModal({
                             {newEntityType === "BESTIARIO" && (
                                 <div className="input-group" style={{ marginBottom: '20px', borderBottom: '1px solid rgba(var(--accent-rgb), 0.1)', paddingBottom: '15px' }}>
                                     <label>IMPORTAR DO BESTIÁRIO DO JOGO</label>
-                                    <select 
-                                        value={importBestiaryId} 
+                                    <select
+                                        value={importBestiaryId}
                                         onChange={e => {
                                             const id = e.target.value;
                                             setImportBestiaryId(id);
@@ -395,17 +394,17 @@ export function CreateWorldEntityModal({
                                         </div>
                                         <div className="input-group flex-1">
                                             <label>PROFISSÃO</label>
-                                            <input 
-                                                type="text" 
-                                                value={newEntityProfession} 
-                                                onChange={e => setNewEntityProfession(e.target.value)} 
+                                            <input
+                                                type="text"
+                                                value={newEntityProfession}
+                                                onChange={e => setNewEntityProfession(e.target.value)}
                                                 placeholder="Ex: Guerreiro, Ladino..."
                                                 style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px', fontSize: '0.8rem' }}
                                             />
                                         </div>
                                     </>
                                 )}
-                                {["FACAO", "FAMILIA", "BESTIARIO", "OUTROS"].includes(newEntityType) && (
+                                {newEntityType === "FACAO" && (
                                     <div className="input-group flex-1">
                                         <label>LOCALIZAÇÃO / BASE</label>
                                         <select value={newEntityCurrentLoc} onChange={e => setNewEntityCurrentLoc(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
@@ -414,7 +413,7 @@ export function CreateWorldEntityModal({
                                         </select>
                                     </div>
                                 )}
-                                {["PERSONAGEM", "FACAO", "FAMILIA", "BESTIARIO", "LOCALIZACAO"].includes(newEntityType) && (
+                                {newEntityType === "PERSONAGEM" && (
                                     <div className="input-group flex-1">
                                         <label>RELIGIÃO</label>
                                         <select value={newEntityReligion} onChange={e => setNewEntityReligion(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
@@ -436,6 +435,24 @@ export function CreateWorldEntityModal({
                                     <div className="input-group flex-1">
                                         <label>LOCAL ATUAL</label>
                                         <select value={newEntityCurrentLoc} onChange={e => setNewEntityCurrentLoc(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
+                                            <option value="">NENHUM</option>
+                                            {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                            {newEntityType === "BESTIARIO" && (
+                                <div className="input-row" style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+                                    <div className="input-group flex-1">
+                                        <label>LOCAL DE ORIGEM</label>
+                                        <select value={newEntityOrigin} onChange={e => setNewEntityOrigin(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
+                                            <option value="">NENHUM</option>
+                                            {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="input-group flex-1">
+                                        <label>LOCAL VINCULADO</label>
+                                        <select value={newEntityLinkedLocation} onChange={e => setNewEntityLinkedLocation(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
                                             <option value="">NENHUM</option>
                                             {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
                                         </select>
@@ -464,7 +481,6 @@ export function CreateWorldEntityModal({
                                 }}
                                 onKeyDown={handleAddTag}
                                 onBlur={() => {
-                                    // Pequeno delay para permitir clicar na sugestão
                                     setTimeout(() => {
                                         if (tagInput.trim()) handleAddTag(tagInput);
                                         setShowTagSuggestions(false);
@@ -480,9 +496,9 @@ export function CreateWorldEntityModal({
                         {showTagSuggestions && tagSuggestions.length > 0 && (
                             <div className="tag-suggestions-dropdown animate-fade-in">
                                 {tagSuggestions.map(tag => (
-                                    <div 
-                                        key={tag} 
-                                        className="suggestion-item" 
+                                    <div
+                                        key={tag}
+                                        className="suggestion-item"
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             handleAddTag(tag);
@@ -516,23 +532,11 @@ export function CreateWorldEntityModal({
                 </div>
             </div>
         </div>
+        </>
     );
 
     if (typeof document !== 'undefined') {
         return createPortal(modalContent, document.body);
     }
     return modalContent;
-}
-
-const styles = `
-    .input-group select option {
-        background-color: #111;
-        color: #fff;
-    }
-`;
-
-if (typeof document !== 'undefined') {
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
 }

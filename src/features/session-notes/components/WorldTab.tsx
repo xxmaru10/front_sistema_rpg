@@ -1,6 +1,8 @@
-import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2, Church } from "lucide-react";
+import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2, Church, Check } from "lucide-react";
 import { useState } from "react";
 import { renderMentions } from "@/lib/mentionUtils";
+import { WorldTabStyles } from "../styles/WorldTab.styles";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 interface WorldTabProps {
     subTabMundo: string;
@@ -73,7 +75,11 @@ export function WorldTab({
     worldFilterAvailableOptions,
     setNewEntityType
 }: WorldTabProps) {
+    const { requestDelete, isPending } = useDeleteConfirm();
+
     return (
+        <>
+        <WorldTabStyles />
         <div className="tab-content-combined">
             <div className="navigator-controls">
                 <span className="navigator-label">MUNDO: {subTabMundo.toUpperCase()}</span>
@@ -117,6 +123,7 @@ export function WorldTab({
                                         const isVisible = (field: string) => isGM || !fieldVisibility[field];
                                         const isAllHidden = Object.values(fieldVisibility).every(v => v);
                                         const displayColor = isVisible('color') ? entity.color : '#444';
+                                        const deleteIsPending = isPending(entity.id);
 
                                         if (entity.type === "MAPA") {
                                             return (
@@ -141,7 +148,7 @@ export function WorldTab({
                                                             <span className="entity-name" style={{ color: displayColor }}>
                                                                 {isVisible('name') ? entity.name.toUpperCase() : "????"}
                                                                 {isGM && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={(e) => { e.stopPropagation(); handleUpdateFieldVisibility?.(entity.id, 'name', !fieldVisibility['name']); }}
                                                                         className="visibility-toggle-btn name-toggle"
                                                                         title={fieldVisibility['name'] ? "Mostrar Nome" : "Ocultar Nome"}
@@ -170,8 +177,8 @@ export function WorldTab({
                                                         <div className="entity-actions" style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', justifyContent: 'center', gap: '12px' }} onClick={e => e.stopPropagation()}>
                                                             {isGM && (
                                                                 <>
-                                                                    <button 
-                                                                        className="entity-visibility-btn" 
+                                                                    <button
+                                                                        className="entity-visibility-btn"
                                                                         onClick={(e) => { e.stopPropagation(); handleToggleAllVisibility?.(entity.id, !isAllHidden); }}
                                                                         title={isAllHidden ? "Mostrar Tudo" : "Ocultar Tudo"}
                                                                         style={{ color: isAllHidden ? '#666' : '#c5a059', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -196,11 +203,11 @@ export function WorldTab({
                                                                     </button>
                                                                     <button
                                                                         className="entity-delete-btn"
-                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteWorldEntity(entity.id); }}
-                                                                        title="Excluir"
-                                                                        style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.6, cursor: 'pointer', padding: 0 }}
+                                                                        onClick={(e) => { e.stopPropagation(); requestDelete(entity.id, () => handleDeleteWorldEntity(entity.id)); }}
+                                                                        title={deleteIsPending ? "Clique para confirmar exclusão" : "Excluir"}
+                                                                        style={{ background: 'none', border: 'none', color: deleteIsPending ? '#00cc66' : '#ff4444', opacity: 0.8, cursor: 'pointer', padding: 0 }}
                                                                     >
-                                                                        <Trash2 size={23} />
+                                                                        {deleteIsPending ? <Check size={23} /> : <Trash2 size={23} />}
                                                                     </button>
                                                                 </>
                                                             )}
@@ -225,7 +232,7 @@ export function WorldTab({
                                             <div
                                                 key={entity.id}
                                                 className="world-entity-card"
-                                                style={{ 
+                                                style={{
                                                     borderLeft: `4px solid ${displayColor}`,
                                                     background: isVisible('color') ? 'rgba(255,255,255,0.03)' : '#1a1a1a',
                                                     padding: 0,
@@ -237,15 +244,15 @@ export function WorldTab({
                                                 }}
                                             >
                                                 {isGM && (
-                                                    <div 
+                                                    <div
                                                         title={isAllHidden ? "Mostrar Tudo" : "Ocultar Tudo"}
                                                         onClick={(e) => { e.stopPropagation(); handleToggleAllVisibility?.(entity.id, !isAllHidden); }}
-                                                        style={{ 
-                                                            width: '50px', 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
-                                                            justifyContent: 'center', 
-                                                            background: isAllHidden ? 'rgba(255,68,68,0.08)' : 'rgba(197, 160, 89, 0.08)', 
+                                                        style={{
+                                                            width: '50px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            background: isAllHidden ? 'rgba(255,68,68,0.08)' : 'rgba(197, 160, 89, 0.08)',
                                                             borderRight: '1px solid rgba(255,255,255,0.05)',
                                                             cursor: 'pointer',
                                                             flexShrink: 0
@@ -255,14 +262,14 @@ export function WorldTab({
                                                     </div>
                                                 )}
 
-                                                <div 
+                                                <div
                                                     className="entity-main-content-area"
-                                                    style={{ 
-                                                        flex: 1, 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
+                                                    style={{
+                                                        flex: 1,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
                                                         padding: '12px 15px',
-                                                        paddingRight: '110px', 
+                                                        paddingRight: '110px',
                                                         gap: '15px'
                                                     }}
                                                 >
@@ -273,11 +280,11 @@ export function WorldTab({
                                                             </div>
                                                         ) : (
                                                             <div className="entity-card-thumb" style={{ opacity: 0.2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444', border: '1px dashed #333', flexShrink: 0 }} onClick={() => setViewingEntityId(entity.id)}>
-                                                                {entity.type === "PERSONAGEM" ? <User size={24} /> : 
-                                                                 entity.type === "LOCALIZACAO" ? <MapPin size={24} /> : 
-                                                                 entity.type === "FAMILIA" ? <Home size={24} /> : 
-                                                                 entity.type === "FACAO" ? <Shield size={24} /> : 
-                                                                 entity.type === "RELIGIAO" ? <Church size={24} /> : 
+                                                                {entity.type === "PERSONAGEM" ? <User size={24} /> :
+                                                                 entity.type === "LOCALIZACAO" ? <MapPin size={24} /> :
+                                                                 entity.type === "FAMILIA" ? <Home size={24} /> :
+                                                                 entity.type === "FACAO" ? <Shield size={24} /> :
+                                                                 entity.type === "RELIGIAO" ? <Church size={24} /> :
                                                                  <Layers size={24} />}
                                                             </div>
                                                         )
@@ -290,7 +297,7 @@ export function WorldTab({
                                                             <span className="entity-name" style={{ color: displayColor, fontWeight: 'bold', fontSize: '0.95rem' }}>
                                                                 {isVisible('name') ? entity.name.toUpperCase() : "????"}
                                                                 {isGM && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={(e) => { e.stopPropagation(); handleUpdateFieldVisibility?.(entity.id, 'name', !fieldVisibility['name']); }}
                                                                         style={{ background: 'none', border: 'none', color: fieldVisibility['name'] ? '#C5A059' : '#555', cursor: 'pointer', marginLeft: '8px' }}
                                                                     >
@@ -300,24 +307,48 @@ export function WorldTab({
                                                             </span>
                                                         </div>
 
-                                                        <div className="entity-meta-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px', opacity: 0.7 }}>
+                                                        <div className="entity-meta-row" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '4px', opacity: 0.65 }}>
                                                             {entity.type === "PERSONAGEM" && (
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    <MapPin size={10} />
-                                                                    <span style={{ fontSize: '0.65rem' }}>{isVisible('currentLocation') ? (entity.currentLocationId ? state.worldEntities?.[entity.currentLocationId as string]?.name.toUpperCase() : "NENHUM") : "????"}</span>
-                                                                </div>
+                                                                <>
+                                                                    <span style={{ fontSize: '0.62rem', color: '#aaa' }}>
+                                                                        {isVisible('currentLocation') ? (entity.currentLocationId ? state.worldEntities?.[entity.currentLocationId as string]?.name.toUpperCase() : "—") : "????"}
+                                                                    </span>
+                                                                    {entity.raceId && isVisible('race') && <span style={{ fontSize: '0.6rem', color: '#666' }}>·</span>}
+                                                                    {entity.raceId && isVisible('race') && (
+                                                                        <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{state.worldEntities?.[entity.raceId as string]?.name.toUpperCase()}</span>
+                                                                    )}
+                                                                    {entity.profession && <span style={{ fontSize: '0.6rem', color: '#666' }}>·</span>}
+                                                                    {entity.profession && (
+                                                                        <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{(entity.profession as string).toUpperCase()}</span>
+                                                                    )}
+                                                                </>
                                                             )}
-                                                            {isVisible('family') && (
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    <Home size={10} />
-                                                                    <span style={{ fontSize: '0.65rem' }}>{entity.familyId ? state.worldEntities?.[entity.familyId as string]?.name.toUpperCase() : "NENHUMA"}</span>
-                                                                </div>
+                                                            {entity.type === "LOCALIZACAO" && (
+                                                                <>
+                                                                    {entity.locationType && (
+                                                                        <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{(entity.locationType as string).toUpperCase()}</span>
+                                                                    )}
+                                                                    {entity.locationType && entity.linkedLocationId && <span style={{ fontSize: '0.6rem', color: '#666' }}>·</span>}
+                                                                    {entity.linkedLocationId && (
+                                                                        <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{state.worldEntities?.[entity.linkedLocationId as string]?.name.toUpperCase()}</span>
+                                                                    )}
+                                                                </>
                                                             )}
-                                                            {isVisible('race') && (
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    <Dna size={10} />
-                                                                    <span style={{ fontSize: '0.65rem' }}>{entity.raceId ? state.worldEntities?.[entity.raceId as string]?.name.toUpperCase() : "NENHUMA"}</span>
-                                                                </div>
+                                                            {entity.type === "FACAO" && entity.currentLocationId && (
+                                                                <span style={{ fontSize: '0.62rem', color: '#aaa' }}>
+                                                                    {state.worldEntities?.[entity.currentLocationId as string]?.name.toUpperCase()}
+                                                                </span>
+                                                            )}
+                                                            {entity.type === "BESTIARIO" && (
+                                                                <>
+                                                                    {entity.originId && (
+                                                                        <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{state.worldEntities?.[entity.originId as string]?.name.toUpperCase()}</span>
+                                                                    )}
+                                                                    {entity.originId && entity.linkedLocationId && <span style={{ fontSize: '0.6rem', color: '#666' }}>·</span>}
+                                                                    {entity.linkedLocationId && (
+                                                                        <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{state.worldEntities?.[entity.linkedLocationId as string]?.name.toUpperCase()}</span>
+                                                                    )}
+                                                                </>
                                                             )}
                                                         </div>
 
@@ -325,9 +356,9 @@ export function WorldTab({
                                                     </div>
                                                 </div>
 
-                                                <div 
+                                                <div
                                                     className="entity-absolute-actions"
-                                                    style={{ 
+                                                    style={{
                                                         position: 'absolute',
                                                         right: 0,
                                                         top: 0,
@@ -349,9 +380,9 @@ export function WorldTab({
                                                     <div style={{ display: 'flex', gap: '12px' }}>
                                                         {isGM && (
                                                             <button
-                                                                onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    setViewingEntityId(entity.id); 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setViewingEntityId(entity.id);
                                                                 }}
                                                                 title="Adicionar Bloco"
                                                                 style={{ color: '#C5A059', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
@@ -360,9 +391,9 @@ export function WorldTab({
                                                             </button>
                                                         )}
                                                         <button
-                                                            onClick={(e) => { 
-                                                                e.stopPropagation(); 
-                                                                setViewingEntityId(entity.id); 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setViewingEntityId(entity.id);
                                                             }}
                                                             title="Notas"
                                                             style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
@@ -378,9 +409,9 @@ export function WorldTab({
                                                     {isGM && (
                                                         <div style={{ display: 'flex', gap: '12px' }}>
                                                             <button
-                                                                onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    handleStartEditWorldEntity(entity.id); 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleStartEditWorldEntity(entity.id);
                                                                 }}
                                                                 title="Editar"
                                                                 style={{ background: 'none', border: 'none', color: '#777', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
@@ -388,14 +419,14 @@ export function WorldTab({
                                                                 <Edit2 size={18} />
                                                             </button>
                                                             <button
-                                                                onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    handleDeleteWorldEntity(entity.id); 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    requestDelete(entity.id, () => handleDeleteWorldEntity(entity.id));
                                                                 }}
-                                                                title="Excluir"
-                                                                style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.7, cursor: 'pointer', padding: '8px', zIndex: 10000 }}
+                                                                title={isPending(entity.id) ? "Clique para confirmar exclusão" : "Excluir"}
+                                                                style={{ background: 'none', border: 'none', color: isPending(entity.id) ? '#00cc66' : '#ff4444', opacity: 0.8, cursor: 'pointer', padding: '8px', zIndex: 10000 }}
                                                             >
-                                                                <Trash2 size={18} />
+                                                                {isPending(entity.id) ? <Check size={18} /> : <Trash2 size={18} />}
                                                             </button>
                                                         </div>
                                                     )}
@@ -415,45 +446,6 @@ export function WorldTab({
                     </div>
             </div>
         </div>
+        </>
     );
-}
-
-const styles = `
-    .note-badge-count {
-        position: absolute;
-        top: -10px;
-        right: -10px;
-        background: #c5a059;
-        color: #000;
-        font-size: 0.8rem;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        border: 1px solid #000;
-    }
-
-    .bestiary-note-badge {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-left: auto;
-        padding-left: 10px;
-        opacity: 0.8;
-    }
-
-    .bestiary-note-badge span {
-        font-size: 0.75rem;
-        font-weight: bold;
-    }
-`;
-
-if (typeof document !== 'undefined') {
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
 }

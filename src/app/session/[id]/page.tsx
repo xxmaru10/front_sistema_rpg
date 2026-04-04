@@ -20,7 +20,7 @@ import { SessionHeader } from "@/components/SessionHeader";
 import { SummonModal } from "@/components/SummonModal";
 import { TurnOrderModal } from "@/components/TurnOrderModal";
 import { TurnOrderTracker } from "@/components/TurnOrderTracker";
-import { SessionNotes } from "@/components/SessionNotes";
+import { SessionNotes } from "@/features/session-notes/SessionNotes";
 import { VIControlPanel } from "@/components/VIControlPanel";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";

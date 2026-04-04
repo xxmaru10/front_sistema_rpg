@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { MessageSquare, Send, User, Trash2, ShieldAlert } from 'lucide-react';
 import { EntityNote } from '@/types/domain';
 import { renderMentions } from '@/lib/mentionUtils';
-import { MentionEditor } from '../MentionEditor';
+import { MentionEditor } from '../../components/MentionEditor';
 
 function MergedNoteInput({ editorRef, value, onChange, mentionEntities, onSubmitPrivate }: {
     editorRef: React.RefObject<HTMLDivElement | null>;
@@ -67,7 +67,7 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
     const sharedNotes = (notes || []).filter(n => !(n.isPrivate || (n as any).is_private));
     const privateNotes = (notes || []).filter(n => {
         if (!(n.isPrivate || (n as any).is_private)) return false;
-        if (!userId) return true; // fallback: show all private notes if userId not provided
+        if (!userId) return true;
         return n.authorId === userId;
     });
 
@@ -78,7 +78,7 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
         onAddNote(content, false);
         setNewNote("");
         if (editorRef.current) editorRef.current.innerHTML = "";
-        setShowNotes(true); // Ensure tab is open to see new note
+        setShowNotes(true);
     };
 
     const handlePrivateSubmit = (e: React.FormEvent) => {
@@ -88,10 +88,9 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
         onAddNote(content, true);
         setNewPrivateNote("");
         if (privateEditorRef.current) privateEditorRef.current.innerHTML = "";
-        setShowPrivateNotes(true); // Ensure tab is open to see new note
+        setShowPrivateNotes(true);
     };
 
-    // Used by MergedNoteInput — reads from the shared editorRef/newNote
     const handleMergedPrivateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const content = editorRef.current?.innerHTML || newNote;
@@ -102,10 +101,10 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
     };
 
     const renderNoteList = (list: EntityNote[], isPrivateList: boolean) => (
-        <div className="notes-container animate-fade-in" style={{ 
-            marginTop: '10px', 
-            display: 'flex', 
-            flexDirection: 'column', 
+        <div className="notes-container animate-fade-in" style={{
+            marginTop: '10px',
+            display: 'flex',
+            flexDirection: 'column',
             gap: '10px',
             flex: 1,
             minWidth: (showNotes && showPrivateNotes) ? '250px' : '100%',
@@ -145,7 +144,7 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
                                     )}
                                 </div>
                             </div>
-                            <div 
+                            <div
                                 style={{ fontSize: '0.8rem', color: '#ccc', whiteSpace: 'pre-wrap' }}
                                 dangerouslySetInnerHTML={{ __html: renderMentions(note.content) }}
                             />
@@ -156,7 +155,7 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
 
             <form onSubmit={isPrivateList ? handlePrivateSubmit : handleSubmit} style={{ display: 'flex', gap: '8px', marginTop: '5px', alignItems: 'flex-end' }}>
                 <div style={{ flex: 1, minHeight: '34px' }}>
-                    <MentionEditor 
+                    <MentionEditor
                         ref={isPrivateList ? privateEditorRef : editorRef}
                         value={isPrivateList ? newPrivateNote : newNote}
                         onChange={isPrivateList ? setNewPrivateNote : setNewNote}
@@ -165,10 +164,10 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
                         className="linked-note-editor"
                     />
                 </div>
-                <button 
+                <button
                     type="submit"
-                    style={{ 
-                        background: 'var(--accent-color)', 
+                    style={{
+                        background: 'var(--accent-color)',
                         border: 'none', borderRadius: '4px', padding: '8px 10px', color: '#000', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', height: '34px'
                     }}
@@ -179,7 +178,6 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
         </div>
     );
 
-    // ── Merged mode (GM Jogadores view) ─────────────────────────────────
     if (mergeAllNotes) {
         const stripGMPrefix = (content: string) => {
             const marker = '[Nota de MESTRE]:';
