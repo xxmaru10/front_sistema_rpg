@@ -275,19 +275,14 @@ export class EventStore {
         const maxSeq = this.events.reduce((max, e) => Math.max(max, e.seq || 0), 0);
         if (maxSeq <= this.snapshotUpToSeq) return;
 
-        // Full state for local use (keeps base64 images for display)
         const fullState = computeState(this.events, this.snapshotState ?? undefined);
-
-        // Sanitized state for saving (strips base64 images)
-        const stateToSave = sanitizeStateForSnapshot(fullState);
-
-        const snapshotStr = JSON.stringify(stateToSave);
+        const snapshotStr = JSON.stringify(fullState);
         const sizeKB = Math.round(snapshotStr.length / 1024);
+
         console.info(`[EventStore] Salvando snapshot: seq ${maxSeq}, tamanho: ${sizeKB}KB`);
 
         try {
-            await apiClient.updateSnapshot(this.currentSessionId, maxSeq, stateToSave);
-            // Keep full state locally (with images) but update seq
+            await apiClient.updateSnapshot(this.currentSessionId, maxSeq, fullState);
             this.snapshotState = fullState;
             this.snapshotUpToSeq = maxSeq;
             console.info(`[EventStore] Snapshot salvo: seq ${maxSeq} (${sizeKB}KB)`);
@@ -295,7 +290,6 @@ export class EventStore {
             console.error('[EventStore] Falha ao salvar snapshot:', err);
         }
     }
-
     async fetchGlobalBestiary(): Promise<ActionEvent[]> {
         const CACHE_KEY = 'bestiary_cache_v1';
         const CACHE_TTL = 5 * 60 * 1000;
