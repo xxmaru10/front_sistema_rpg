@@ -277,18 +277,17 @@ export class EventStore {
         if (!this.currentSessionId) return;
 
         const state = computeState(this.events, this.snapshotState ?? undefined);
-        const characters = state.characters || {};
 
+        // Migrate character images
+        const characters = state.characters || {};
         for (const [charId, char] of Object.entries(characters)) {
             const imageUrl = (char as any).imageUrl;
             if (!imageUrl?.startsWith('data:')) continue;
 
-            console.info(`[EventStore] Migrando imagem base64 para S3: ${(char as any).name || charId}`);
-
+            console.info(`[EventStore] Migrando imagem de personagem: ${(char as any).name || charId}`);
             try {
                 const res = await fetch(imageUrl);
                 const blob = await res.blob();
-
                 const publicUrl = await uploadImage(blob, 'image/jpeg');
 
                 await this.append({
@@ -302,9 +301,37 @@ export class EventStore {
                     payload: { characterId: charId, imageUrl: publicUrl },
                 } as any);
 
-                console.info(`[EventStore] Imagem migrada: ${publicUrl}`);
+                console.info(`[EventStore] Personagem migrado: ${publicUrl}`);
             } catch (err) {
-                console.error(`[EventStore] Falha ao migrar imagem de ${charId}:`, err);
+                console.error(`[EventStore] Falha ao migrar personagem ${charId}:`, err);
+            }
+        }
+
+        // Migrate header images
+        const headerImages = state.headerImages || {};
+        for (const [tab, imageUrl] of Object.entries(headerImages)) {
+            if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:')) continue;
+
+            console.info(`[EventStore] Migrando header image: tab ${tab}`);
+            try {
+                const res = await fetch(imageUrl);
+                const blob = await res.blob();
+                const publicUrl = await uploadImage(blob, 'image/jpeg');
+
+                await this.append({
+                    id: uuidv4(),
+                    sessionId: this.currentSessionId!,
+                    seq: 0,
+                    type: 'SESSION_HEADER_UPDATED',
+                    actorUserId: 'SYSTEM',
+                    createdAt: new Date().toISOString(),
+                    visibility: 'PUBLIC',
+                    payload: { tab, imageUrl: publicUrl },
+                } as any);
+
+                console.info(`[EventStore] Header migrado: ${publicUrl}`);
+            } catch (err) {
+                console.error(`[EventStore] Falha ao migrar header ${tab}:`, err);
             }
         }
     }
