@@ -7,7 +7,7 @@
 // Teste de commit - Conta Kasaxi ✅
 import { ActionEvent, SessionState } from "@/types/domain";
 import { supabase } from "./supabaseClient";
-import { computeState } from "./projections";
+import { computeState, sanitizeStateForSnapshot } from "./projections";
 import * as apiClient from "./apiClient";
 
 export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
@@ -275,37 +275,19 @@ export class EventStore {
         const maxSeq = this.events.reduce((max, e) => Math.max(max, e.seq || 0), 0);
         if (maxSeq <= this.snapshotUpToSeq) return;
 
+        // Full state for local use (keeps base64 images for display)
         const fullState = computeState(this.events, this.snapshotState ?? undefined);
 
-        // Breakdown log
-        const breakdown: Record<string, number> = {};
-        for (const [k, v] of Object.entries(fullState)) {
-            breakdown[k] = Math.round(JSON.stringify(v).length / 1024);
-        }
-        const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
-        console.table(sorted.map(([k, v]) => ({ key: k, sizeKB: v })));
+        // Sanitized state for saving (strips base64 images)
+        const stateToSave = sanitizeStateForSnapshot(fullState);
 
-        // Character breakdown
-        if (fullState.characters) {
-            for (const [id, char] of Object.entries(fullState.characters as any)) {
-                const charSize = Math.round(JSON.stringify(char).length / 1024);
-                if (charSize > 10) {
-                    console.log(`Character ${(char as any).name || id}: ${charSize}KB`);
-                    const charFields: Record<string, number> = {};
-                    for (const [k, v] of Object.entries(char as any)) {
-                        charFields[k] = Math.round(JSON.stringify(v).length / 1024);
-                    }
-                    console.table(Object.entries(charFields).sort((a, b) => b[1] - a[1]).slice(0, 10));
-                }
-            }
-        }
-
-        const snapshotStr = JSON.stringify(fullState);
+        const snapshotStr = JSON.stringify(stateToSave);
         const sizeKB = Math.round(snapshotStr.length / 1024);
-        console.info(`[EventStore] Total snapshot: ${sizeKB}KB, seq ${maxSeq}`);
+        console.info(`[EventStore] Salvando snapshot: seq ${maxSeq}, tamanho: ${sizeKB}KB`);
 
         try {
-            await apiClient.updateSnapshot(this.currentSessionId, maxSeq, fullState);
+            await apiClient.updateSnapshot(this.currentSessionId, maxSeq, stateToSave);
+            // Keep full state locally (with images) but update seq
             this.snapshotState = fullState;
             this.snapshotUpToSeq = maxSeq;
             console.info(`[EventStore] Snapshot salvo: seq ${maxSeq} (${sizeKB}KB)`);
