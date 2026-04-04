@@ -99,6 +99,16 @@ export function useCharacterCard({
         } as any);
     };
 
+    const handleMagicLevelChange = (level: number) => {
+        if (!canEditStressOrFP) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_MAGIC_LEVEL_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, level: Math.max(0, Math.min(3, level)) }
+        } as any);
+    };
+
+
     // ── Image Upload ──────────────────────────────────────────────────────────
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!isGM || !e.target.files?.[0]) return;
@@ -278,7 +288,9 @@ export function useCharacterCard({
         // Handlers
         handleStressToggle, handleAddStressBox, handleRemoveStressBox,
         handleFPChange, handleRefreshChange,
+        handleMagicLevelChange,
         handleImageUpload,
+
         handleConsequenceChange, handleSaveConsequence,
         handleAddConsequence, handleDeleteConsequence,
         handleAddNote, handleDeleteNote,

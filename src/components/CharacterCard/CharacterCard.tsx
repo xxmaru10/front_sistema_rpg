@@ -100,6 +100,7 @@ export function CharacterCard({
                     stressMental={character.stress.mental}
                     fatePoints={character.fatePoints}
                     refresh={character.refresh ?? 3}
+                    magicLevel={character.magicLevel || 0}
                     isNPC={!!character.isNPC}
                     isGM={isGM}
                     isCompact={isCompact}
@@ -109,6 +110,7 @@ export function CharacterCard({
                     onRemoveStressBox={hook.handleRemoveStressBox}
                     onFPChange={hook.handleFPChange}
                     onRefreshChange={hook.handleRefreshChange}
+                    onMagicLevelChange={hook.handleMagicLevelChange}
                 />
 
                 <div className="lower-content-grid">
