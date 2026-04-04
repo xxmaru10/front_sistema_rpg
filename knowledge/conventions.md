@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-04 (story-21/image-fix)
+last_updated: 2026-04-04 (story-22/rebranding-security)
 status: ativo
 ---
 
@@ -39,7 +39,8 @@ Siga o padrão Conventional Commits:
 - Não realizar chamadas de API diretamente em componentes. Use `apiClient.ts`.
 - Nunca modificar o arquivo `domain.ts` sem atualizar o `api-contract.md` correspondente.
 - Jamais commitar arquivos `.env` ou segredos sensíveis.
-- **Proibido usar `alert()`** em fluxos de rede ou lógica core; substitua por `console.error` ou toasts não-bloqueantes.
+- **Proibido usar `alert()` ou `confirm()`** em fluxos de rede ou lógica core; substitua por `console.error` ou UI states/Portals não-bloqueantes.
+- **Normalização de Identidade**: Todo `userId` deve ser normalizado com `.trim().toLowerCase()` antes de ser incluído em eventos ou comparado localmente para evitar dessincronia de permissão.
 - **Requisições `fetch` sem timeout**: Sempre use `AbortSignal.timeout()` ou AbortController para evitar requisições pendentes infinitas.
 - **Estado de UI stuck**: Toda ação de carregamento/estado bloqueado (ex: `isRolling`) deve ter um safety timeout para auto-destravamento.
 

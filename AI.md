@@ -1,7 +1,6 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-04
 ---
 
 # Cronos Vtt — Frontend 

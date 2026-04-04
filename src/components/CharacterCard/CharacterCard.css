@@ -1048,13 +1048,6 @@
 }
 .compact .char-name { font-size: 1.2rem; }
 
-.fate-reserve { 
-    text-align: right; 
-    background: rgba(var(--accent-rgb), 0.1); 
-    padding: 12px 20px; 
-    border-left: 2px solid var(--accent-color); 
-    box-shadow: inset 5px 0 15px rgba(0,0,0,0.3);
-}
 .reserve-value { display: flex; align-items: center; gap: 16px; font-family: var(--font-header); font-size: 1.6rem; color: var(--accent-color); }
 
 .section-title {
@@ -1502,8 +1495,10 @@
     padding: 12px 24px;
     border-radius: 4px;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
     box-shadow: inset 0 0 10px rgba(var(--accent-rgb), 0.03);
     width: 100%;
     box-sizing: border-box;
