@@ -3,7 +3,7 @@
     border: 1px solid var(--border-color);
     padding: 1px;
     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-    min-width: 320px;
+    min-width: 820px;
     width: 98% !important;
     max-width: 2500px !important;
     margin: 0 auto;
