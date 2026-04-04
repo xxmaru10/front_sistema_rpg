@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { MessageSquare, Send, User, Trash2, ShieldAlert } from 'lucide-react';
 import { EntityNote } from '@/types/domain';
 import { renderMentions } from '@/lib/mentionUtils';
-import { MentionEditor } from '../../components/MentionEditor';
+import { MentionEditor } from '@/components/MentionEditor';
 
 function MergedNoteInput({ editorRef, value, onChange, mentionEntities, onSubmitPrivate }: {
     editorRef: React.RefObject<HTMLDivElement | null>;
