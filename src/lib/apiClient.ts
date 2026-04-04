@@ -116,31 +116,17 @@ export async function updateSnapshot(sessionId: string, upToSeq: number, state: 
     }
 }
 
-export async function getPresignedUploadUrl(
-  filename: string,
-  contentType: string,
-): Promise<{ uploadUrl: string; publicUrl: string }> {
-  const res = await fetch(`${API_BASE}/api/storage/presign`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, contentType }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error(`presign failed: ${res.status}`);
-  return res.json();
-}
+export async function uploadImage(blob: Blob, contentType: string): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', blob, 'image.jpg');
 
-export async function uploadToS3(
-  uploadUrl: string,
-  file: Blob,
-  contentType: string,
-): Promise<void> {
-  const res = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 
-      'Content-Type': contentType,
-    },
-    body: file,
+  const res = await fetch(`${API_BASE}/api/storage/upload`, {
+    method: 'POST',
+    body: formData,
+    signal: AbortSignal.timeout(30000),
   });
-  if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
+
+  if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+  const data = await res.json();
+  return data.publicUrl;
 }

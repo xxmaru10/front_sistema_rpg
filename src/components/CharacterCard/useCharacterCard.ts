@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Character, ConsequenceDebuff } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
-import { getPresignedUploadUrl, uploadToS3 } from '@/lib/apiClient';
+import { uploadImage } from '@/lib/apiClient';
 import { v4 as uuidv4 } from "uuid";
 
 interface UseCharacterCardOptions {
@@ -135,16 +135,8 @@ export function useCharacterCard({
         });
 
         try {
-            // Get presigned URL from backend
-            const { uploadUrl, publicUrl } = await getPresignedUploadUrl(
-                file.name,
-                'image/jpeg',
-            );
+            const publicUrl = await uploadImage(compressedBlob, 'image/jpeg');
 
-            // Upload directly to S3
-            await uploadToS3(uploadUrl, compressedBlob, 'image/jpeg');
-
-            // Store only the S3 URL in the event — not base64
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0,
                 type: 'CHARACTER_IMAGE_UPDATED', actorUserId,
@@ -152,8 +144,7 @@ export function useCharacterCard({
                 payload: { characterId: character.id, imageUrl: publicUrl },
             } as any);
         } catch (err) {
-            console.error('[handleImageUpload] S3 upload failed:', err);
-            // Optionally show error toast to user
+            console.error('[handleImageUpload] Upload failed:', err);
         }
     };
 

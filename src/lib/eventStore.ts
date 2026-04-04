@@ -7,9 +7,10 @@
 // Teste de commit - Conta Kasaxi ✅
 import { ActionEvent, SessionState } from "@/types/domain";
 import { supabase } from "./supabaseClient";
-import { computeState, sanitizeStateForSnapshot } from "./projections";
+import { computeState } from "./projections";
 import * as apiClient from "./apiClient";
 import { v4 as uuidv4 } from 'uuid';
+import { uploadImage } from "./apiClient";
 
 export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
 
@@ -288,12 +289,7 @@ export class EventStore {
                 const res = await fetch(imageUrl);
                 const blob = await res.blob();
 
-                const { uploadUrl, publicUrl } = await apiClient.getPresignedUploadUrl(
-                    `${charId}.jpg`,
-                    'image/jpeg',
-                );
-
-                await apiClient.uploadToS3(uploadUrl, blob, 'image/jpeg');
+                const publicUrl = await uploadImage(blob, 'image/jpeg');
 
                 await this.append({
                     id: uuidv4(),
