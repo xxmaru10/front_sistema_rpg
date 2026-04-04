@@ -1,3 +1,67 @@
+/* ===== TRANSMISSÃO DE TELA (Story 19) ===== */
+
+.screenshare-video {
+    position: fixed;
+    left: 0;
+    width: 100vw;
+    object-fit: cover;
+    pointer-events: none;
+    transition: all 0.4s ease;
+}
+
+.screenshare-refresh-btn {
+    position: fixed;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: 4px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(200, 160, 89, 0.45);
+    background: rgba(10, 10, 10, 0.72);
+    color: #C5A059;
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    transition: background 0.2s ease;
+    outline: none;
+}
+
+.screenshare-refresh-btn:hover {
+    background: rgba(30, 20, 5, 0.88);
+}
+
+.screenshare-nosignal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9998;
+    padding: 16px 28px;
+    border-radius: 12px;
+    border: 1px solid rgba(200, 60, 60, 0.5);
+    background: rgba(10, 5, 5, 0.88);
+    backdrop-filter: blur(12px);
+    color: #e07070;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
+
+.screenshare-nosignal-icon {
+    font-size: 24px;
+}
+
 /* ===== MODO ESPECTADOR ===== */
 /* Quando ativo, esconde toda a interface exceto o vídeo e o botão de toggle */
 .spectator-mode-active header,

@@ -68,7 +68,7 @@ export class ScreenShareManager {
         onStreamReceived: (stream: MediaStream | null) => void
     ) {
         this.sessionId = sessionId;
-        this.userId = userId;
+        this.userId = userId.trim().toLowerCase();
         this.onStreamReceived = onStreamReceived;
     }
 
@@ -89,9 +89,9 @@ export class ScreenShareManager {
                 (payload: any) => {
                     const row = payload.new;
                     // Ignorar sinais de si mesmo
-                    if (row.from_user === this.userId) return;
+                    if (row.from_user?.trim().toLowerCase() === this.userId) return;
                     // Ignorar sinais direcionados a outro usuário
-                    if (row.to_user && row.to_user !== this.userId) return;
+                    if (row.to_user && row.to_user.trim().toLowerCase() !== this.userId) return;
                     // Deduplicar
                     if (this.processedSignalIds.has(row.id)) return;
                     this.processedSignalIds.add(row.id);
@@ -234,7 +234,8 @@ export class ScreenShareManager {
     }
 
     private async handleSignal(signal: WebRTCSignal) {
-        const { type, from } = signal;
+        const type = signal.type;
+        const from = signal.from?.trim().toLowerCase() ?? '';
 
         if (type === 'stop-share') {
             if (!this.isBroadcaster) {
@@ -259,16 +260,14 @@ export class ScreenShareManager {
         }
 
         if (type === 'peer-join') {
-            const peerId = signal.peerId || from;
+            const peerId = (signal.peerId || from)?.trim().toLowerCase();
             if (!peerId || peerId === this.userId) return;
 
             if (this.isBroadcaster) {
-                // Se já temos uma conexão ativa com este peer, ignorar
-                const existingPc = this.peerConnections.get(peerId);
-                if (existingPc && existingPc.connectionState !== 'failed' && existingPc.connectionState !== 'closed') {
-                    return;
-                }
-                console.log(`[WebRTC - ${this.userId}] Peer joined (broadcasting): ${peerId}`);
+                // Sempre recria a conexão ao receber peer-join, mesmo que já exista.
+                // Garante que jogadores que deram F5 ou usaram o botão refresh sejam
+                // atendidos sem o mestre precisar fechar e reabrir a transmissão.
+                console.log(`[WebRTC - ${this.userId}] Peer joined (broadcasting): ${peerId} — recriando conexão`);
                 this.createPeerConnection(peerId);
             } else {
                 console.log(`[WebRTC - ${this.userId}] Buffering peer: ${peerId}`);
@@ -313,6 +312,25 @@ export class ScreenShareManager {
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(peerId, pc);
 
+        // Safety timeout: fecha conexões presas em 'new' ou 'connecting' após 15s
+        const safetyTimeout = setTimeout(() => {
+            if (pc.connectionState === 'new' || pc.connectionState === 'connecting') {
+                console.warn(`[WebRTC] Safety timeout (15s): fechando conexão presa para ${peerId} (state: ${pc.connectionState})`);
+                pc.close();
+                this.peerConnections.delete(peerId);
+                const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
+                const attempts = this.reconnectAttempts.get(reconnectKey) || 0;
+                if (attempts < ScreenShareManager.MAX_RECONNECT_ATTEMPTS) {
+                    this.reconnectAttempts.set(reconnectKey, attempts + 1);
+                    if (this.isBroadcaster && this.localStream) {
+                        this.createPeerConnection(peerId);
+                    } else if (!this.isBroadcaster) {
+                        this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+                    }
+                }
+            }
+        }, 15000);
+
         pc.onicecandidate = (event) => {
             if (event.candidate) {
                 this.sendSignal({
@@ -328,6 +346,9 @@ export class ScreenShareManager {
         // Reconexão automática para conexões falhadas
         pc.onconnectionstatechange = () => {
             console.log(`[WebRTC] Connection state for ${peerId}:`, pc.connectionState);
+            if (pc.connectionState !== 'new' && pc.connectionState !== 'connecting') {
+                clearTimeout(safetyTimeout);
+            }
             if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
                 const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
                 const attempts = this.reconnectAttempts.get(reconnectKey) || 0;
@@ -365,8 +386,8 @@ export class ScreenShareManager {
                         if (!params.encodings || params.encodings.length === 0) {
                             params.encodings = [{}];
                         }
-                        // Bitrate alto: 12 Mbps para qualidade HD/2K nítida em Arena
-                        params.encodings[0].maxBitrate = 12_000_000;
+                        // Bitrate adaptativo: reduz conforme mais peers entram na sessão
+                        params.encodings[0].maxBitrate = this.getAdaptiveBitrate();
                         params.encodings[0].priority = 'high';
                         params.encodings[0].networkPriority = 'high';
 
@@ -453,5 +474,35 @@ export class ScreenShareManager {
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
         this.pendingCandidates.clear();
+    }
+
+    /**
+     * Bitrate adaptativo baseado na quantidade de peers conectados.
+     * Mesh de N viewers = broadcaster envia N streams simultâneos.
+     * Valores: ≤2 peers → 4Mbps | ≤5 → 2.5Mbps | ≤8 → 1.5Mbps | 9+ → 1Mbps
+     */
+    private getAdaptiveBitrate(): number {
+        const peerCount = this.peerConnections.size;
+        if (peerCount <= 2) return 4_000_000;
+        if (peerCount <= 5) return 2_500_000;
+        if (peerCount <= 8) return 1_500_000;
+        return 1_000_000;
+    }
+
+    /**
+     * Reconnect manual (viewer only): fecha a RTCPeerConnection local com o broadcaster
+     * e re-envia peer-join para iniciar um novo handshake sem exigir F5 na página.
+     */
+    public async reconnect() {
+        if (this.isBroadcaster) return;
+        console.log(`[WebRTC - ${this.userId}] Reconnect manual solicitado`);
+        const existingPc = this.peerConnections.get('broadcaster');
+        if (existingPc) {
+            existingPc.close();
+            this.peerConnections.delete('broadcaster');
+        }
+        this.pendingCandidates.delete('broadcaster');
+        this.reconnectAttempts.delete('broadcaster');
+        await this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
     }
 }

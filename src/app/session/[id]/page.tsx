@@ -12,7 +12,7 @@ import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
 import { computeState } from "@/lib/projections";
-import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv } from "lucide-react";
+import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
 import { AspectManager } from "@/components/AspectManager";
@@ -198,7 +198,7 @@ export default function SessionPage() {
     // ─── SCREEN SHARE / AUDIO LIFECYCLE ──────────────────────────────────────
     // Must come before useSessionActions so screenShareManagerRef is available.
 
-    const { screenVideoRef, screenShareManagerRef } = useSessionScreenControl({
+    const { screenVideoRef, screenShareManagerRef, reconnectStream, videoNoSignal } = useSessionScreenControl({
         sessionId: sessionId as string,
         actorUserId,
         videoStream,
@@ -386,10 +386,12 @@ export default function SessionPage() {
 
     return (
         <div className={`session-view-wrapper${spectatorMode && videoStream ? " spectator-mode-active" : ""}`}>
-            {/* Screen share video */}
+            {/* Screen share video — mantido montado enquanto stream ativa; oculto via CSS
+                em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
                 <video
                     autoPlay playsInline muted={false}
+                    className="screenshare-video"
                     ref={(el) => {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
@@ -398,18 +400,34 @@ export default function SessionPage() {
                         }
                     }}
                     style={{
-                        position: "fixed",
                         top: spectatorMode ? 0 : "70px",
-                        left: 0,
-                        width: "100vw",
                         height: spectatorMode ? "100vh" : "calc(100vh - 70px)",
-                        objectFit: "cover",
                         zIndex: spectatorMode ? 1 : 0,
-                        pointerEvents: "none",
                         background: spectatorMode ? "#000" : "transparent",
-                        transition: "all 0.4s ease"
+                        display: activeTab === "combat" ? undefined : "none",
                     }}
                 />
+            )}
+
+            {/* Botão de refresh da transmissão — aparece no topo da Arena quando stream ativa.
+                Permite ao jogador re-iniciar o handshake WebRTC sem F5 na página toda. */}
+            {videoStream && activeTab === "combat" && (
+                <button
+                    onClick={reconnectStream}
+                    title="Reconectar transmissão"
+                    className="screenshare-refresh-btn"
+                >
+                    <RefreshCw size={14} /> <span>Reconectar transmissão</span>
+                </button>
+            )}
+
+            {/* Badge "Sem sinal" — exibido quando stream está ativa mas vídeo não avança.
+                Instrui o jogador a usar o botão de refresh em vez de tela preta silenciosa. */}
+            {videoStream && activeTab === "combat" && videoNoSignal && (
+                <div className="screenshare-nosignal">
+                    <span className="screenshare-nosignal-icon">📡</span>
+                    <span>Sem sinal — clique em <strong><RefreshCw size={12} style={{ verticalAlign: "middle" }} /> Reconectar transmissão</strong></span>
+                </div>
             )}
 
             {/* Spectator mode toggle button */}
@@ -424,7 +442,8 @@ export default function SessionPage() {
                         background: spectatorMode ? "rgba(20, 80, 30, 0.85)" : "rgba(10, 10, 10, 0.75)",
                         color: spectatorMode ? "#6edc80" : "#C5A059",
                         backdropFilter: "blur(8px)", cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
+                        display: activeTab === "combat" ? "flex" : "none",
+                        alignItems: "center", justifyContent: "center",
                         fontSize: "22px",
                         boxShadow: spectatorMode
                             ? "0 0 20px rgba(100, 220, 120, 0.4), 0 4px 16px rgba(0,0,0,0.5)"

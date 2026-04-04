@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { globalEventStore } from "@/lib/eventStore";
 import { AtmosphericEffectType } from "@/components/AtmosphericEffects";
 import { Character } from "@/types/domain";
-import { ScreenShareManager } from "@/lib/ScreenShareManager";
+import { ScreenShareManager } from "@/lib/screen-share-manager";
 import { RefObject } from "react";
 
 interface SessionActionsParams {

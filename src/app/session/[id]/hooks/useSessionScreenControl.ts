@@ -5,8 +5,8 @@
  */
 "use client";
 
-import { useEffect, useRef } from "react";
-import { ScreenShareManager } from "@/lib/ScreenShareManager";
+import { useEffect, useRef, useState } from "react";
+import { ScreenShareManager } from "@/lib/screen-share-manager";
 
 interface UseSessionScreenControlParams {
     sessionId: string;
@@ -33,6 +33,7 @@ export function useSessionScreenControl({
 }: UseSessionScreenControlParams) {
     const screenVideoRef = useRef<HTMLVideoElement | null>(null);
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
+    const [videoNoSignal, setVideoNoSignal] = useState(false);
 
     // Screen share manager lifecycle
     useEffect(() => {
@@ -70,10 +71,31 @@ export function useSessionScreenControl({
         if (videoStream) {
             if (videoEl.srcObject !== videoStream) videoEl.srcObject = videoStream;
             videoEl.play().catch(e => console.warn("[ScreenShare] Video play() failed:", e));
+            // Limpa badge "sem sinal" assim que o vídeo conseguir decodificar frames
+            const clearNoSignal = () => setVideoNoSignal(false);
+            videoEl.addEventListener('canplay', clearNoSignal, { once: true });
+            return () => videoEl.removeEventListener('canplay', clearNoSignal);
         } else {
             videoEl.srcObject = null;
         }
     }, [videoStream, activeTab, spectatorMode]);
+
+    // Watchdog: se stream chegou mas vídeo não avança em 10s, exibir badge "sem sinal"
+    useEffect(() => {
+        if (!videoStream) {
+            setVideoNoSignal(false);
+            return;
+        }
+        setVideoNoSignal(false);
+        const timeout = setTimeout(() => {
+            const el = screenVideoRef.current;
+            // readyState < HAVE_FUTURE_DATA (3) = sem frames suficientes para reproduzir
+            if (el && el.readyState < 3) {
+                setVideoNoSignal(true);
+            }
+        }, 10000);
+        return () => clearTimeout(timeout);
+    }, [videoStream]);
 
     // Transmission audio volume sync
     useEffect(() => {
@@ -101,8 +123,15 @@ export function useSessionScreenControl({
         if (screenVideoRef.current) screenVideoRef.current.volume = transmissionVolume;
     }, [transmissionVolume, videoStream]);
 
+    const reconnectStream = async () => {
+        setVideoNoSignal(false);
+        await screenShareManagerRef.current?.reconnect();
+    };
+
     return {
         screenVideoRef,
         screenShareManagerRef,
+        reconnectStream,
+        videoNoSignal,
     };
 }
