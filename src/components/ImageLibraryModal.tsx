@@ -3,11 +3,20 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { Folder, Image as ImageIcon, ArrowLeft, Loader2, X, Upload, Info } from "lucide-react";
+import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
+
+export interface LibraryCropConfig {
+    aspectRatio: number;
+    outputWidth: number;
+    outputHeight: number;
+}
 
 interface ImageLibraryModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (url: string) => void;
+    /** When provided, a selected image opens the ImageCropper before calling onSelect */
+    cropConfig?: LibraryCropConfig | null;
 }
 
 interface FileItem {
@@ -18,11 +27,12 @@ interface FileItem {
     };
 }
 
-export function ImageLibraryModal({ isOpen, onClose, onSelect }: ImageLibraryModalProps) {
+export function ImageLibraryModal({ isOpen, onClose, onSelect, cropConfig }: ImageLibraryModalProps) {
     const [currentPath, setCurrentPath] = useState<string>("");
     const [items, setItems] = useState<FileItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [pendingCropUrl, setPendingCropUrl] = useState<string | null>(null);
 
     const BUCKET_NAME = "campaign-uploads";
 
@@ -109,7 +119,7 @@ export function ImageLibraryModal({ isOpen, onClose, onSelect }: ImageLibraryMod
 
     if (!isOpen || !mounted) return null;
 
-    return createPortal(
+    const libraryPortal = createPortal(
         <div className="library-overlay" onClick={onClose}>
             <div
                 className="library-modal"
@@ -203,8 +213,12 @@ export function ImageLibraryModal({ isOpen, onClose, onSelect }: ImageLibraryMod
                                                 setCurrentPath(currentPath ? `${currentPath}/${item.name}` : item.name);
                                             } else {
                                                 if (url) {
-                                                    onSelect(url);
-                                                    onClose();
+                                                    if (cropConfig) {
+                                                        setPendingCropUrl(url);
+                                                    } else {
+                                                        onSelect(url);
+                                                        onClose();
+                                                    }
                                                 }
                                             }
                                         }}
@@ -495,5 +509,25 @@ export function ImageLibraryModal({ isOpen, onClose, onSelect }: ImageLibraryMod
             `}</style>
         </div>,
         document.body
+    );
+
+    return (
+        <>
+            {libraryPortal}
+            {pendingCropUrl && cropConfig && (
+                <ImageCropper
+                    src={pendingCropUrl}
+                    aspectRatio={cropConfig.aspectRatio}
+                    outputWidth={cropConfig.outputWidth}
+                    outputHeight={cropConfig.outputHeight}
+                    onConfirm={base64 => {
+                        onSelect(base64);
+                        setPendingCropUrl(null);
+                        onClose();
+                    }}
+                    onCancel={() => setPendingCropUrl(null)}
+                />
+            )}
+        </>
     );
 }

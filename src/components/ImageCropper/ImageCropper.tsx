@@ -64,13 +64,26 @@ export function ImageCropper({
         [frameW, frameH]
     );
 
-    // Load source image
+    // Load source image — crossOrigin needed for Supabase URLs to allow canvas toDataURL
     useEffect(() => {
         const img = new Image();
+        if (!src.startsWith("data:")) {
+            img.crossOrigin = "anonymous";
+        }
         img.onload = () => {
             imgRef.current = img;
             setImgLoaded(true);
             initTransform(img);
+        };
+        img.onerror = () => {
+            // If CORS fails, retry without crossOrigin (image will be tainted but visible)
+            const fallback = new Image();
+            fallback.onload = () => {
+                imgRef.current = fallback;
+                setImgLoaded(true);
+                initTransform(fallback);
+            };
+            fallback.src = src;
         };
         img.src = src;
     }, [src, initTransform]);

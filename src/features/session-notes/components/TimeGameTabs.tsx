@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
+import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
 
 interface TimeTabProps {
     subTabTempo: string;
@@ -464,6 +465,10 @@ interface GameTabProps {
 export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, mentionEntities, userId }: GameTabProps) {
     const { requestDelete, isPending } = useDeleteConfirm();
 
+    // ── Item image crop state ─────────────────────────────────────────────────
+    const [isCroppingItem, setIsCroppingItem] = useState(false);
+    const [tempItemCropSrc, setTempItemCropSrc] = useState<string | null>(null);
+
     const {
         showAddSkill, setShowAddSkill,
         newSkillName, setNewSkillName,
@@ -707,42 +712,30 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                 accept=".png, .jpg, .jpeg"
                                 onChange={e => {
                                     const file = e.target.files?.[0];
-                                    if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            const img = new Image();
-                                            img.onload = () => {
+                                    if (!file) return;
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        const img = new Image();
+                                        img.onload = () => {
+                                            if (img.width > 800 || img.height > 800) {
+                                                setTempItemCropSrc(reader.result as string);
+                                                setIsCroppingItem(true);
+                                            } else {
                                                 const canvas = document.createElement('canvas');
-                                                let width = img.width;
-                                                let height = img.height;
-                                                const MAX_WIDTH = 800;
-                                                const MAX_HEIGHT = 800;
-                                                if (width > height) {
-                                                    if (width > MAX_WIDTH) {
-                                                        height = Math.round((height * MAX_WIDTH) / width);
-                                                        width = MAX_WIDTH;
-                                                    }
-                                                } else {
-                                                    if (height > MAX_HEIGHT) {
-                                                        width = Math.round((width * MAX_HEIGHT) / height);
-                                                        height = MAX_HEIGHT;
-                                                    }
-                                                }
-                                                canvas.width = width;
-                                                canvas.height = height;
+                                                canvas.width = img.width;
+                                                canvas.height = img.height;
                                                 const ctx = canvas.getContext('2d');
                                                 if (ctx) {
-                                                    ctx.drawImage(img, 0, 0, width, height);
-                                                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
-                                                    setNewItemImageUrl(compressedBase64);
+                                                    ctx.drawImage(img, 0, 0);
+                                                    setNewItemImageUrl(canvas.toDataURL('image/jpeg', 0.85));
                                                 } else {
                                                     setNewItemImageUrl(reader.result as string);
                                                 }
-                                            };
-                                            img.src = reader.result as string;
+                                            }
                                         };
-                                        reader.readAsDataURL(file);
-                                    }
+                                        img.src = reader.result as string;
+                                    };
+                                    reader.readAsDataURL(file);
                                 }}
                                 style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}
                             />
@@ -767,6 +760,24 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                     </div>
                 </div>, document.body
             ) : null}
+
+            {isCroppingItem && tempItemCropSrc && (
+                <ImageCropper
+                    src={tempItemCropSrc}
+                    aspectRatio={1}
+                    outputWidth={800}
+                    outputHeight={800}
+                    onConfirm={base64 => {
+                        setNewItemImageUrl(base64);
+                        setIsCroppingItem(false);
+                        setTempItemCropSrc(null);
+                    }}
+                    onCancel={() => {
+                        setIsCroppingItem(false);
+                        setTempItemCropSrc(null);
+                    }}
+                />
+            )}
         </div>
     );
 }

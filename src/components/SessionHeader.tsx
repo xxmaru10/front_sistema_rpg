@@ -325,6 +325,7 @@ export function SessionHeader({
                             onUpdate(url);
                             setShowLibrary(false);
                         }}
+                        cropConfig={{ aspectRatio: 16 / 5, outputWidth: 1280, outputHeight: 400 }}
                     />
                 </div>
             )}
