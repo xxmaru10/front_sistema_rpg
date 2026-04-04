@@ -390,13 +390,13 @@ export default function SessionPage() {
                 em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
                 <video
-                    autoPlay playsInline muted={false}
+                    autoPlay playsInline
                     className="screenshare-video"
                     ref={(el) => {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
                             el.srcObject = videoStream;
-                            el.play().catch(e => console.warn("[ScreenShare] Video play() on mount failed:", e));
+                            // play() é gerenciado exclusivamente pelo hook (com muted fallback)
                         }
                     }}
                     style={{

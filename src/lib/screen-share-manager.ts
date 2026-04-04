@@ -474,6 +474,9 @@ export class ScreenShareManager {
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
         this.pendingCandidates.clear();
+        // Zera contadores para que a próxima sessão de conexões comece do zero.
+        // Sem isso, falhas acumuladas de uma transmissão anterior bloqueiam retries da próxima.
+        this.reconnectAttempts.clear();
     }
 
     /**
@@ -487,6 +490,23 @@ export class ScreenShareManager {
         if (peerCount <= 5) return 2_500_000;
         if (peerCount <= 8) return 1_500_000;
         return 1_000_000;
+    }
+
+    /**
+     * Reconecta apenas se não houver conexão ativa (usa `visibilitychange` e focus events).
+     * Diferente de `reconnect()`, não interrompe uma conexão que já está funcionando.
+     */
+    public async checkAndReconnect() {
+        if (this.isBroadcaster) return;
+        const existingPc = this.peerConnections.get('broadcaster');
+        const isHealthy = existingPc &&
+            existingPc.connectionState !== 'failed' &&
+            existingPc.connectionState !== 'closed' &&
+            existingPc.connectionState !== 'disconnected';
+        if (!isHealthy) {
+            console.log(`[WebRTC - ${this.userId}] checkAndReconnect: sem conexão ativa, enviando peer-join`);
+            await this.reconnect();
+        }
     }
 
     /**

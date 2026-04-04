@@ -64,13 +64,27 @@ export function useSessionScreenControl({
         if (!videoStream && spectatorMode) setSpectatorMode(false);
     }, [videoStream, spectatorMode]);
 
-    // Assign video srcObject when stream or tab changes
+    // Assign video srcObject when stream or tab changes.
+    // Autoplay muted fallback: iOS Safari bloqueia play() em vídeo não-silenciado sem
+    // gesto de usuário. Se play() falhar, silencia e retenta — o stream continua, só sem áudio.
     useEffect(() => {
         const videoEl = screenVideoRef.current;
         if (!videoEl) return;
         if (videoStream) {
             if (videoEl.srcObject !== videoStream) videoEl.srcObject = videoStream;
-            videoEl.play().catch(e => console.warn("[ScreenShare] Video play() failed:", e));
+
+            const tryPlay = async () => {
+                try {
+                    await videoEl.play();
+                } catch {
+                    // Autoplay bloqueado (comum em iOS sem interação prévia).
+                    // Silencia e retenta: garante que o vídeo apareça mesmo sem áudio.
+                    videoEl.muted = true;
+                    videoEl.play().catch(e => console.warn("[ScreenShare] Muted play also failed:", e));
+                }
+            };
+            tryPlay();
+
             // Limpa badge "sem sinal" assim que o vídeo conseguir decodificar frames
             const clearNoSignal = () => setVideoNoSignal(false);
             videoEl.addEventListener('canplay', clearNoSignal, { once: true });
@@ -80,7 +94,8 @@ export function useSessionScreenControl({
         }
     }, [videoStream, activeTab, spectatorMode]);
 
-    // Watchdog: se stream chegou mas vídeo não avança em 10s, exibir badge "sem sinal"
+    // Watchdog: se stream chegou mas vídeo não avança em 10s, tenta play() uma última
+    // vez (cobre casos de race entre srcObject e play) antes de exibir o badge.
     useEffect(() => {
         if (!videoStream) {
             setVideoNoSignal(false);
@@ -89,13 +104,30 @@ export function useSessionScreenControl({
         setVideoNoSignal(false);
         const timeout = setTimeout(() => {
             const el = screenVideoRef.current;
-            // readyState < HAVE_FUTURE_DATA (3) = sem frames suficientes para reproduzir
-            if (el && el.readyState < 3) {
-                setVideoNoSignal(true);
-            }
+            if (!el || el.readyState >= 3) return;
+            // Última tentativa com muted antes de mostrar o badge
+            el.muted = true;
+            el.play()
+                .then(() => { /* play ok, canplay vai limpar o badge */ })
+                .catch(() => {
+                    // Mesmo com muted falhou — mostra badge para o usuário usar o botão
+                    setVideoNoSignal(true);
+                });
         }, 10000);
         return () => clearTimeout(timeout);
     }, [videoStream]);
+
+    // Visibilidade: quando o usuário volta à aba (mobile background / lock screen),
+    // verifica se a conexão WebRTC ainda está ativa e reconecta se necessário.
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                screenShareManagerRef.current?.checkAndReconnect();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, []);
 
     // Transmission audio volume sync
     useEffect(() => {
@@ -125,6 +157,15 @@ export function useSessionScreenControl({
 
     const reconnectStream = async () => {
         setVideoNoSignal(false);
+        const videoEl = screenVideoRef.current;
+        if (videoEl) {
+            // Tenta primeiro só com play() — se falhar, silencia e retenta.
+            // Cobre o caso de vídeo já conectado mas pausado por autoplay policy.
+            videoEl.play().catch(() => {
+                videoEl.muted = true;
+                videoEl.play().catch(() => {});
+            });
+        }
         await screenShareManagerRef.current?.reconnect();
     };
 
