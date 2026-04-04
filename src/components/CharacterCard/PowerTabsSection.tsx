@@ -9,9 +9,13 @@ interface PowerTabsSectionProps {
     actorUserId: string;
     canEdit: boolean;
     isGM: boolean;
+    magicLevel: number;
+    onMagicLevelChange: (level: number) => void;
 }
 
-export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, isGM }: PowerTabsSectionProps) {
+
+export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, isGM, magicLevel, onMagicLevelChange }: PowerTabsSectionProps) {
+
     const hook = usePowerTabs({ character, sessionId, actorUserId });
 
     return (
@@ -114,6 +118,23 @@ export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, i
 
                 {hook.activeTab === 'spells' && (
                     <div className="spells-list-compact">
+                        <div className="magic-reserve-inline">
+                            <div className="reserve-label">NÍVEL DE MAGIA</div>
+                            <div className="magic-nodes">
+                                {[1, 2, 3].map((node) => (
+                                    <button
+                                        key={node}
+                                        className={`magic-node ${magicLevel >= node ? "active" : ""}`}
+                                        onClick={() => canEdit && onMagicLevelChange(magicLevel === node ? node - 1 : node)}
+                                        disabled={!canEdit}
+                                    >
+                                        <div className="node-glow" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+
                          {(character.spells || []).map(spell => (
                             <div key={spell.id} className="stunt-slot filled">
                                 {hook.editingSpellId === spell.id ? (

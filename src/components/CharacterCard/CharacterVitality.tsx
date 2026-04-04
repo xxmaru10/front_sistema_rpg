@@ -14,9 +14,8 @@ interface CharacterVitalityProps {
     onRemoveStressBox: (track: "PHYSICAL" | "MENTAL") => void;
     onFPChange: (amount: number) => void;
     onRefreshChange: (delta: number) => void;
-    magicLevel: number;
-    onMagicLevelChange: (level: number) => void;
 }
+
 
 
 export function CharacterVitality({
@@ -33,9 +32,8 @@ export function CharacterVitality({
     onRemoveStressBox,
     onFPChange,
     onRefreshChange,
-    magicLevel,
-    onMagicLevelChange,
 }: CharacterVitalityProps) {
+
 
     return (
         <div className="char-core-info">
@@ -96,7 +94,7 @@ export function CharacterVitality({
             </div>
 
             {!(isNPC && !isGM) && (
-                <div className="vitality-resources-row">
+                <div className="vitality-resources-row single">
                     <div className="fate-reserve">
                         <div className="reserve-label">{isCompact ? "DESTINO" : "PONTOS DE DESTINO"}</div>
                         <div className="reserve-value">
@@ -118,25 +116,10 @@ export function CharacterVitality({
                             )}
                         </div>
                     </div>
-
-                    <div className="magic-reserve">
-                        <div className="reserve-label">MAGIA</div>
-                        <div className="magic-nodes">
-                            {[1, 2, 3].map((node) => (
-                                <button
-                                    key={node}
-                                    className={`magic-node ${magicLevel >= node ? "active" : ""}`}
-                                    onClick={() => canEditStressOrFP && onMagicLevelChange(magicLevel === node ? node - 1 : node)}
-                                    disabled={!canEditStressOrFP}
-                                >
-                                    <div className="node-glow" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
                 </div>
             )}
         </div>
     );
 }
+
 
