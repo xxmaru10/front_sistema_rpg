@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-04 (story-20)
+last_updated: 2026-04-04 (story-21/image-fix)
 status: ativo
 ---
 
@@ -59,6 +59,8 @@ O Fate Companion utiliza uma arquitetura de **Event Sourcing**. Isso significa q
 | Esquema de Campos por Tipo (Story 20) | Mapa estrito de campos por WorldEntityType: `religionId` apenas para PERSONAGEM; `originId` para PERSONAGEM e BESTIARIO; `currentLocationId` para PERSONAGEM e FACAO; `linkedLocationId` para LOCALIZACAO, MAPA e BESTIARIO. Modal condicionalizado por tipo. Metadados de listagem expandidos por tipo (local, raça, profissão, tipo de local). Paste do MentionEditor sanitizado para texto puro. Scroll do dropdown de filtros corrigido via flex+minHeight. | 2026-04-04 |
 | Fragmentação de useSessionNotes (Story 20 — Correção de Padrões) | Hook monolítico (1500+ linhas) fragmentado em 4 sub-hooks na pasta `src/hooks/session-notes/`: `useWorldEntities.ts`, `useSessionMissions.ts`, `useSessionSkillsItems.ts`, `useSessionNotesDiary.ts`. `useSessionNotes.ts` mantido como orquestrador com API pública inalterada (spread dos sub-hooks). `alert()/confirm()` substituídos por `console.error`. CSS injections movidas para `*.styles.tsx` com componente `<style>`. userId normalizado com `.trim().toLowerCase()` na entrada de cada sub-hook. | 2026-04-04 |
 | WebRTC Qualidade de Áudio e Suporte Internacional | `latencyHint: 'interactive'` no AudioContext reduz buffer de processamento. `channelCount: 1` (mono) reduz carga ~50% por stream. Opus forçado como codec preferido via `setCodecPreferences` (reordenação, sem modificação de objetos — Chrome 105+ lança `InvalidModificationError` em objetos modificados). FEC (`useinbandfec=1`) e DTX (`usedtx=1`) via SDP munging em offer e answer, garantindo resiliência a perda de pacotes em links intercontinentais. Bitrate adaptativo por contagem de peers (64→32kbps), aplicado uma única vez em `connected` via `applyBitrateToSender`. Suporte até 12 peers em topologia mesh. `sampleRate` explícito removido do AudioContext e getUserMedia — browser usa taxa nativa do hardware para evitar mismatch com analyser. | 2026-04-04 |
+| Robustez em Imagens de Mundo (Story 21) | Implementação de `isImageProcessing` no formulário para bloquear submissão durante compressão (Canvas API) em background. Simplificação da lógica de `imageUrl` em `useWorldEntities.ts` (unificado para todos os tipos). `fieldVisibility` agora padrão `false` (visível) para evitar confusão de "item sumido" após criação. | 2026-04-04 |
+| Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

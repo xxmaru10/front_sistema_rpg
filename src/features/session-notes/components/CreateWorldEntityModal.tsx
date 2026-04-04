@@ -54,6 +54,8 @@ interface CreateWorldEntityModalProps {
     newEntityReligion: string;
     setNewEntityReligion: (id: string) => void;
     uniqueTags?: string[];
+    isImageProcessing: boolean;
+    setIsImageProcessing: (p: boolean) => void;
 }
 
 export function CreateWorldEntityModal({
@@ -105,7 +107,9 @@ export function CreateWorldEntityModal({
     religionsList,
     newEntityReligion,
     setNewEntityReligion,
-    uniqueTags = []
+    uniqueTags = [],
+    isImageProcessing,
+    setIsImageProcessing
 }: CreateWorldEntityModalProps) {
     const [showTagSuggestions, setShowTagSuggestions] = useState(false);
     const tagSuggestions = uniqueTags.filter(t =>
@@ -225,6 +229,7 @@ export function CreateWorldEntityModal({
                                         onChange={e => {
                                             const file = e.target.files?.[0];
                                             if (file) {
+                                                setIsImageProcessing(true);
                                                 const reader = new FileReader();
                                                 reader.onloadend = () => {
                                                     const img = new Image();
@@ -248,6 +253,7 @@ export function CreateWorldEntityModal({
                                                         } else {
                                                             setNewEntityImageUrl(reader.result as string);
                                                         }
+                                                        setIsImageProcessing(false);
                                                     };
                                                     img.src = reader.result as string;
                                                 };
@@ -284,6 +290,7 @@ export function CreateWorldEntityModal({
                                 onChange={e => {
                                     const file = e.target.files?.[0];
                                     if (file) {
+                                        setIsImageProcessing(true);
                                         const reader = new FileReader();
                                         reader.onloadend = () => {
                                             const img = new Image();
@@ -314,6 +321,7 @@ export function CreateWorldEntityModal({
                                                 } else {
                                                     setNewEntityImageUrl(reader.result as string);
                                                 }
+                                                setIsImageProcessing(false);
                                             };
                                             img.src = reader.result as string;
                                         };
@@ -525,9 +533,14 @@ export function CreateWorldEntityModal({
                 </div>
 
                 <div className="modal-footer">
-                    <button className="cancel-btn" onClick={handleCancelWorldEntityEdit}>CANCELAR</button>
-                    <button className="confirm-btn" onClick={handleCreateWorldEntity}>
-                        {editingWorldEntityId ? "SALVAR ALTERAÇÕES" : "CRIAR ELEMENTO"}
+                    <button className="cancel-btn" onClick={handleCancelWorldEntityEdit} disabled={isImageProcessing}>CANCELAR</button>
+                    <button 
+                        className="confirm-btn" 
+                        onClick={handleCreateWorldEntity} 
+                        disabled={isImageProcessing}
+                        style={{ opacity: isImageProcessing ? 0.6 : 1, cursor: isImageProcessing ? 'wait' : 'pointer' }}
+                    >
+                        {isImageProcessing ? 'PROCESSANDO...' : (editingWorldEntityId ? "SALVAR ALTERAÇÕES" : "CRIAR ELEMENTO")}
                     </button>
                 </div>
             </div>

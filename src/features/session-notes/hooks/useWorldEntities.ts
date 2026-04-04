@@ -126,12 +126,12 @@ export function useWorldEntities({
             currentLocationId: ["PERSONAGEM", "FACAO"].includes(newEntityType) ? (newEntityCurrentLoc || undefined) : undefined,
             locationType: newEntityType === "LOCALIZACAO" ? (newEntityLocationType || undefined) : undefined,
             linkedLocationId: ["LOCALIZACAO", "MAPA", "BESTIARIO"].includes(newEntityType) ? (newEntityLinkedLocation || undefined) : undefined,
-            imageUrl: ["MAPA", "FACAO", "FAMILIA", "RACA", "PERSONAGEM", "BESTIARIO", "RELIGIAO", "OUTROS", "LOCALIZACAO"].includes(newEntityType) ? (newEntityImageUrl || undefined) : undefined,
+            imageUrl: newEntityImageUrl || undefined,
             fieldVisibility: !editingWorldEntityId ? {
-                name: true, type: true, description: true, tags: true,
-                image: true, color: true, family: true, race: true,
-                origin: true, religion: true, currentLocation: true,
-                location: true, location_info: true
+                name: false, type: false, description: false, tags: false,
+                image: false, color: false, family: false, race: false,
+                origin: false, religion: false, currentLocation: false,
+                location: false, location_info: false
             } : undefined
         };
 

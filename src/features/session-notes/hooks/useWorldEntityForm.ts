@@ -47,6 +47,7 @@ export function useWorldEntityForm() {
     const [viewingEntityId, setViewingEntityId] = useState<string | null>(null);
     const [importBestiaryId, setImportBestiaryId] = useState("");
     const [editingWorldEntityId, setEditingWorldEntityId] = useState<string | null>(null);
+    const [isImageProcessing, setIsImageProcessing] = useState(false);
 
     const handleCancelWorldEntityEdit = () => {
         setShowAddWorldEntity(false);
@@ -66,6 +67,7 @@ export function useWorldEntityForm() {
         setNewEntityImageUrl("");
         setNewEntityReligion("");
         setImportBestiaryId("");
+        setIsImageProcessing(false);
     };
 
     const handleAddTag = (e?: React.KeyboardEvent | string) => {
@@ -112,6 +114,7 @@ export function useWorldEntityForm() {
         viewingEntityId, setViewingEntityId,
         importBestiaryId, setImportBestiaryId,
         editingWorldEntityId, setEditingWorldEntityId,
+        isImageProcessing, setIsImageProcessing,
         // Handlers
         handleCancelWorldEntityEdit,
         handleAddTag,

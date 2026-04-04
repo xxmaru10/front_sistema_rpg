@@ -34,6 +34,16 @@ function CustomMainTab({ id, label, icon, active, currentSub, onSelect, options 
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        function handleScroll() {
+            if (isOpen) setIsOpen(false);
+        }
+        
+        // Use capture: true to ensure we catch scroll events from any container inside
+        window.addEventListener("scroll", handleScroll, true);
+        return () => window.removeEventListener("scroll", handleScroll, true);
+    }, [isOpen]);
+
     const toggleMenu = () => {
         if (triggerRef.current) {
             setRect(triggerRef.current.getBoundingClientRect());
@@ -132,6 +142,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         newEntityReligion, setNewEntityReligion,
         viewingEntityId, setViewingEntityId,
         importBestiaryId, setImportBestiaryId,
+        isImageProcessing, setIsImageProcessing,
         
         // Mission State
         showAddMission, setShowAddMission,
@@ -267,10 +278,22 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                 setFilterSearch("");
             }
         }
+
+        function handleScroll() {
+            if (showWorldFilters) {
+                setShowWorldFilters(false);
+                setFilterSearch("");
+            }
+        }
+
         if (showWorldFilters) {
             document.addEventListener("mousedown", handleClickOutside);
+            window.addEventListener("scroll", handleScroll, true);
         }
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener("scroll", handleScroll, true);
+        };
     }, [showWorldFilters]);
 
     const handleSelectSearchResult = (entity: any) => {
@@ -796,6 +819,8 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                     newEntityReligion={newEntityReligion}
                     setNewEntityReligion={setNewEntityReligion}
                     uniqueTags={uniqueTags}
+                    isImageProcessing={isImageProcessing}
+                    setIsImageProcessing={setIsImageProcessing}
                 />
             )}
 
