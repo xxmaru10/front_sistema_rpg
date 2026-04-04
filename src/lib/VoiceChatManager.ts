@@ -86,6 +86,7 @@ export class VoiceChatManager {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun.services.mozilla.com' },
             // TURN servers gratuitos (OpenRelay) para bypass de NAT restritivo
             {
                 urls: 'turn:openrelay.metered.ca:80',
@@ -103,7 +104,9 @@ export class VoiceChatManager {
                 credential: 'openrelayproject',
             },
         ],
-        iceTransportPolicy: 'all', // Tenta STUN primeiro, fallback para TURN
+        iceTransportPolicy: 'all',
+        bundlePolicy: 'max-bundle',
+        iceCandidatePoolSize: 10,
     };
 
     private characterId?: string;

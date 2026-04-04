@@ -75,12 +75,20 @@ export function useSessionScreenControl({
 
             const tryPlay = async () => {
                 try {
+                    // Tenta play() normal (pode ter áudio se o usuário já interagiu com a página)
                     await videoEl.play();
-                } catch {
-                    // Autoplay bloqueado (comum em iOS sem interação prévia).
-                    // Silencia e retenta: garante que o vídeo apareça mesmo sem áudio.
+                    console.log("[ScreenShare] Play success with audio");
+                } catch (err) {
+                    console.warn("[ScreenShare] Autoplay with audio failed, retrying muted...", err);
+                    // Falha comum em mobile (Brave/iOS) se não houver interação prévia.
+                    // Silenciamos forçadamente e tentamos novamente.
                     videoEl.muted = true;
-                    videoEl.play().catch(e => console.warn("[ScreenShare] Muted play also failed:", e));
+                    try {
+                        await videoEl.play();
+                        console.log("[ScreenShare] Play success (muted fallback)");
+                    } catch (mutedErr) {
+                        console.error("[ScreenShare] Muted play also failed. Browser may be blocking WebRTC/Video or requires user gesture:", mutedErr);
+                    }
                 }
             };
             tryPlay();
@@ -117,11 +125,24 @@ export function useSessionScreenControl({
         return () => clearTimeout(timeout);
     }, [videoStream]);
 
-    // Visibilidade: quando o usuário volta à aba (mobile background / lock screen),
-    // verifica se a conexão WebRTC ainda está ativa e reconecta se necessário.
+    // Visibilidade e Diagnósticos para Brave/Mobile
     useEffect(() => {
+        const checkDiagnostics = async () => {
+            const isSecure = window.isSecureContext;
+            const isBrave = !!(navigator as any).brave && await (navigator as any).brave.isBrave();
+            
+            if (!isSecure) {
+                console.error("[WebRTC Diagnosis] AMBIENTE NÃO SEGURO (HTTP). WebRTC será bloqueado no celular.");
+            }
+            if (isBrave) {
+                console.info("[WebRTC Diagnosis] Navegador Brave detectado. Se a tela estiver preta, desative o 'Brave Shields' ou verifique as permissões de WebRTC.");
+            }
+        };
+        checkDiagnostics();
+
         const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
+                console.log("[ScreenShare] Visibility visible, checking connection...");
                 screenShareManagerRef.current?.checkAndReconnect();
             }
         };

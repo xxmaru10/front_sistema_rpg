@@ -42,7 +42,7 @@ export class ScreenShareManager {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            // TURN servers gratuitos (OpenRelay) para bypass de NAT restritivo
+            { urls: 'stun:stun.services.mozilla.com' },
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -59,7 +59,9 @@ export class ScreenShareManager {
                 credential: 'openrelayproject',
             },
         ],
-        iceTransportPolicy: 'all', // Tenta STUN primeiro, fallback para TURN
+        iceTransportPolicy: 'all',
+        bundlePolicy: 'max-bundle',
+        iceCandidatePoolSize: 10,
     };
 
     constructor(
@@ -486,10 +488,10 @@ export class ScreenShareManager {
      */
     private getAdaptiveBitrate(): number {
         const peerCount = this.peerConnections.size;
-        if (peerCount <= 2) return 4_000_000;
-        if (peerCount <= 5) return 2_500_000;
-        if (peerCount <= 8) return 1_500_000;
-        return 1_000_000;
+        if (peerCount <= 2) return 2_500_000;
+        if (peerCount <= 5) return 2_000_000;
+        if (peerCount <= 8) return 1_200_000;
+        return 800_000;
     }
 
     /**
