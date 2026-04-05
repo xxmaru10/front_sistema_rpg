@@ -78,6 +78,39 @@ export class EventStore {
         this.channel = supabase
             .channel(`session-${sessionId}`)
             .on(
+                'broadcast',
+                { event: 'sync_event' },
+                (payload: any) => {
+                    console.log(`%c[EventStore] 📡 Realtime BROADCAST recebido: type=${payload.payload?.type}, id=${payload.payload?.id?.substring(0, 8)}`, 'color: #00ddff; font-weight: bold');
+                    
+                    const newEvent = payload.payload as ActionEvent;
+                    
+                    if (!historicalLoadComplete) {
+                        bufferedRealtimeEvents.push(newEvent);
+                        return;
+                    }
+
+                    const idx = this.events.findIndex(e => e.id === newEvent.id);
+                    if (idx === -1) {
+                        this.events.push(newEvent);
+                        this._sort();
+                        this.listeners.forEach(l => l(newEvent));
+                        this.bulkListeners.forEach(l => l([...this.events]));
+                    } else if (newEvent.seq && (!this.events[idx].seq || newEvent.seq > this.events[idx].seq)) {
+                        this.failedEventIds.delete(newEvent.id);
+                        const updatedEvent = {
+                            ...this.events[idx],
+                            seq: newEvent.seq,
+                            createdAt: newEvent.createdAt || this.events[idx].createdAt
+                        };
+                        this.events[idx] = updatedEvent;
+                        this._sort();
+                        this.listeners.forEach(l => l(updatedEvent));
+                        this.bulkListeners.forEach(l => l([...this.events]));
+                    }
+                }
+            )
+            .on(
                 'postgres_changes',
                 {
                     event: 'INSERT',
@@ -200,6 +233,14 @@ export class EventStore {
                 this._sort();
                 this.listeners.forEach(l => l(optimisticEvent));
                 this.bulkListeners.forEach(l => l([...this.events]));
+
+                if (this.channel) {
+                    this.channel.send({
+                        type: 'broadcast',
+                        event: 'sync_event',
+                        payload: optimisticEvent
+                    });
+                }
             }
         }
 
@@ -212,6 +253,14 @@ export class EventStore {
                     this.events[idx].seq = result.seq;
                     this._sort();
                     this.bulkListeners.forEach(l => l([...this.events]));
+
+                    if (this.channel) {
+                        this.channel.send({
+                            type: 'broadcast',
+                            event: 'sync_event',
+                            payload: this.events[idx]
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("[EventStore] Erro no append via NestJS:", err);
