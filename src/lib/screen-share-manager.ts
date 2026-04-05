@@ -455,6 +455,34 @@ export class ScreenShareManager {
         }
     }
 
+    public async checkAndReconnect(): Promise<void> {
+        console.log(`[WebRTC - ${this.userId}] Checking connection state...`);
+
+        if (this.isBroadcaster && this.localStream) {
+            // Check if any peer connections are in bad state
+            let needsReconnect = false;
+            this.peerConnections.forEach((pc, peerId) => {
+                if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                    console.log(`[WebRTC] Peer ${peerId} in bad state: ${pc.connectionState}`);
+                    needsReconnect = true;
+                }
+            });
+
+            if (needsReconnect || this.peerConnections.size === 0) {
+                await this.sendSignal({ type: 'stream-started', from: this.userId });
+            }
+        } else if (!this.isBroadcaster) {
+            // Check broadcaster connection
+            const broadcasterPc = this.peerConnections.get('broadcaster');
+            if (!broadcasterPc ||
+                broadcasterPc.connectionState === 'failed' ||
+                broadcasterPc.connectionState === 'closed') {
+                console.log(`[WebRTC] Broadcaster connection lost, re-joining...`);
+                await this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+            }
+        }
+    }
+
     private cleanupPeers() {
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
