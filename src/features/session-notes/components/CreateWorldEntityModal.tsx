@@ -588,24 +588,30 @@ export function CreateWorldEntityModal({
         </>
     );
 
-    const fullContent = (
+    const renderCropper = isCropping && tempCropSrc ? (
+        <ImageCropper
+            src={tempCropSrc}
+            aspectRatio={cropConfig.aspectRatio}
+            outputWidth={cropConfig.outputWidth}
+            outputHeight={cropConfig.outputHeight}
+            onConfirm={handleCropConfirm}
+            onCancel={handleCropCancel}
+        />
+    ) : null;
+
+    if (typeof document !== 'undefined') {
+        return (
+            <>
+                {createPortal(modalContent, document.body)}
+                {renderCropper}
+            </>
+        );
+    }
+    return (
         <>
             {modalContent}
-            {isCropping && tempCropSrc && (
-                <ImageCropper
-                    src={tempCropSrc}
-                    aspectRatio={cropConfig.aspectRatio}
-                    outputWidth={cropConfig.outputWidth}
-                    outputHeight={cropConfig.outputHeight}
-                    onConfirm={handleCropConfirm}
-                    onCancel={handleCropCancel}
-                />
-            )}
+            {renderCropper}
         </>
     );
 
-    if (typeof document !== 'undefined') {
-        return createPortal(fullContent, document.body);
-    }
-    return fullContent;
 }
