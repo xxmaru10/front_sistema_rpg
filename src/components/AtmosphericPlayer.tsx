@@ -109,8 +109,12 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
             const el = audioRef.current;
             if (!isPlayingRef.current || !el?.src) return;
 
-            const tryPlay = () =>
-                el.play().catch(e => console.warn("[AtmosphericPlayer] Retry play after unlock blocked:", e));
+            const tryPlay = () => {
+                el.play().catch(e => {
+                    console.warn("[AtmosphericPlayer] Retry play after unlock failed:", e);
+                    audioUnlockManager.registerPendingPlay(el);
+                });
+            };
 
             if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 tryPlay();
@@ -118,7 +122,13 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                 el.addEventListener("canplay", tryPlay, { once: true });
             }
         });
-        return unsubscribeUnlock;
+
+        return () => {
+            unsubscribeUnlock();
+            if (audioRef.current) {
+                audioUnlockManager.unregisterPendingPlay(audioRef.current);
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -158,7 +168,10 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                                 }
                                 await audioRef.current?.play();
                             } catch (e) {
-                                console.warn("Atmospheric Autoplay blocked:", e);
+                                console.warn("[AtmosphericPlayer] play() blocked:", e);
+                                if (audioRef.current) {
+                                    audioUnlockManager.registerPendingPlay(audioRef.current);
+                                }
                             }
                         };
                         playAudio();

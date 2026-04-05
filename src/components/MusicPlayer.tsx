@@ -152,18 +152,27 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             const el = audioRef.current;
             if (!isPlayingRef.current || !el?.src) return;
 
-            const tryPlay = () =>
-                el.play().catch(e => console.warn("[MusicPlayer] Retry play after unlock blocked:", e));
+            const tryPlay = () => {
+                el.play().catch(e => {
+                    console.warn("[MusicPlayer] Retry play after unlock failed:", e);
+                    audioUnlockManager.registerPendingPlay(el);
+                });
+            };
 
-            // Se o áudio já tem dados suficientes, toca imediatamente.
-            // Caso contrário, aguarda o evento canplay para evitar race condition.
             if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 tryPlay();
             } else {
                 el.addEventListener("canplay", tryPlay, { once: true });
             }
         });
-        return unsubscribeUnlock;
+
+        // Cleanup: remove pending play ao desmontar
+        return () => {
+            unsubscribeUnlock();
+            if (audioRef.current) {
+                audioUnlockManager.unregisterPendingPlay(audioRef.current);
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -218,18 +227,23 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         if (playing) {
                             const playAudio = async () => {
                                 try {
-                                    if (event.payload.startedAt) {
+                                    if (event.payload.startedAt && audioRef.current) {
                                         const startedAt = new Date(event.payload.startedAt).getTime();
                                         const now = Date.now();
                                         const elapsed = (now - startedAt) / 1000;
 
-                                        if (audioRef.current && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
-                                            audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+                                        // Só faz seek se o áudio já carregou metadata (duration disponível)
+                                        if (audioRef.current.duration && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
+                                            audioRef.current.currentTime = elapsed % audioRef.current.duration;
                                         }
                                     }
                                     await audioRef.current?.play();
                                 } catch (e) {
-                                    console.warn("Autoplay blocked:", e);
+                                    console.warn("[MusicPlayer] play() blocked:", e);
+                                    // Registra para retry no próximo gesto do usuário
+                                    if (audioRef.current) {
+                                        audioUnlockManager.registerPendingPlay(audioRef.current);
+                                    }
                                 }
                             };
                             playAudio();

@@ -31,16 +31,15 @@ export function AudioUnlockBanner({ userRole }: AudioUnlockBannerProps) {
         setVisible(true);
     }, [userRole]);
 
-    const handleUnlock = async () => {
+    const handleUnlock = () => {
         if (unlocking || dismissedRef.current) return;
         setUnlocking(true);
-        try {
-            await audioUnlockManager.unlock();
-        } finally {
-            dismissedRef.current = true;
-            setUnlocking(false);
-            setVisible(false);
-        }
+        // unlock() é SÍNCRONO para manter o contexto de gesto do usuário.
+        // Browsers como Firefox/Safari perdem user activation após o primeiro await.
+        audioUnlockManager.unlock();
+        dismissedRef.current = true;
+        setUnlocking(false);
+        setVisible(false);
     };
 
     if (!visible) return null;
