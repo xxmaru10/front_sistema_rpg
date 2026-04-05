@@ -156,25 +156,30 @@ export function CreateWorldEntityModal({
         outputWidth: number,
         outputHeight: number
     ) => {
+        console.log("[processFileUpload] START", { fileName: file.name, fileSize: file.size, thresholdW, thresholdH });
         setIsImageProcessing(true);
         // blob URL: instantâneo, sem conversão base64 — evita travamento com imagens grandes
         const blobUrl = URL.createObjectURL(file);
+        console.log("[processFileUpload] blobUrl created:", blobUrl);
         const img = new Image();
 
         // Timeout de segurança: 15s para carregar metadados/decodificar
         const safetyTimeout = setTimeout(() => {
-            console.warn("Image processing stalled, resetting state.");
+            console.warn("[processFileUpload] SAFETY TIMEOUT HIT — img.onload never fired!");
             URL.revokeObjectURL(blobUrl);
             setIsImageProcessing(false);
         }, 15000);
 
         img.onload = () => {
             clearTimeout(safetyTimeout);
+            console.log("[processFileUpload] img.onload fired", { width: img.width, height: img.height, exceedsThreshold: img.width > thresholdW || img.height > thresholdH });
             if (img.width > thresholdW || img.height > thresholdH) {
                 // Imagem grande — abre cropper (isImageProcessing permanece true até confirm/cancel)
+                console.log("[processFileUpload] → opening cropper");
                 openCropper(blobUrl, aspectRatio, outputWidth, outputHeight);
             } else {
                 // Imagem pequena — comprime diretamente via requestIdleCallback para não travar UI
+                console.log("[processFileUpload] → direct compress (small image)");
                 const compressAndSave = () => {
                     const canvas = document.createElement("canvas");
                     canvas.width = img.width;
@@ -186,6 +191,7 @@ export function CreateWorldEntityModal({
                     }
                     URL.revokeObjectURL(blobUrl);
                     setIsImageProcessing(false);
+                    console.log("[processFileUpload] DONE — image compressed");
                 };
 
                 if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -195,12 +201,14 @@ export function CreateWorldEntityModal({
                 }
             }
         };
-        img.onerror = () => {
+        img.onerror = (err) => {
             clearTimeout(safetyTimeout);
+            console.error("[processFileUpload] img.onerror!", err);
             URL.revokeObjectURL(blobUrl);
             setIsImageProcessing(false);
         };
         img.src = blobUrl;
+        console.log("[processFileUpload] img.src set, waiting for onload...");
     };
 
     const modalContent = (
