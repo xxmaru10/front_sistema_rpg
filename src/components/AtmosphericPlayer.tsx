@@ -5,6 +5,7 @@ import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { audioUnlockManager } from "@/lib/audio-unlock-manager";
 
 interface AtmosphericPlayerProps {
     sessionId?: string;
@@ -86,6 +87,8 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
 
     const volumeRef = useRef(volume);
     const isMutedRef = useRef(isMuted);
+    // Ref espelhando isPlaying para uso dentro de callbacks sem stale closure
+    const isPlayingRef = useRef(isPlaying);
 
     useEffect(() => {
         volumeRef.current = volume;
@@ -94,6 +97,23 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
             audioRef.current.volume = isMuted ? 0 : volume;
         }
     }, [volume, isMuted]);
+
+    // Mantém isPlayingRef sincronizado com o estado
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+    }, [isPlaying]);
+
+    // Registra subscriber no audioUnlockManager para retry de play após desbloqueio
+    useEffect(() => {
+        const unsubscribeUnlock = audioUnlockManager.subscribe(() => {
+            if (isPlayingRef.current && audioRef.current?.src) {
+                audioRef.current.play().catch(e =>
+                    console.warn("[AtmosphericPlayer] Retry play after unlock blocked:", e)
+                );
+            }
+        });
+        return unsubscribeUnlock;
+    }, []);
 
     useEffect(() => {
         const unsubscribe = globalEventStore.subscribe((event: any) => {

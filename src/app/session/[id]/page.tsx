@@ -40,6 +40,7 @@ import { useSessionUIState } from "./hooks/useSessionUIState";
 import { useSessionDerivations } from "./hooks/useSessionDerivations";
 import { useSessionScreenControl } from "./hooks/useSessionScreenControl";
 import { diceSimulationStore } from "@/lib/diceSimulationStore";
+import { AudioUnlockBanner } from "@/components/AudioUnlockBanner";
 import dynamic from "next/dynamic";
 
 const FateDice3D = dynamic(() => import("@/components/FateDice3D"), { ssr: false });
@@ -799,6 +800,8 @@ export default function SessionPage() {
                     activeTab={activeTab}
                 />
             )}
+
+            <AudioUnlockBanner userRole={userRole} />
         </div>
     );
 }

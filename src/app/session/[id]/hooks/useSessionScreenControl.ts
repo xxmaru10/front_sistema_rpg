@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ScreenShareManager } from "@/lib/screen-share-manager";
+import { audioUnlockManager } from "@/lib/audio-unlock-manager";
 
 interface UseSessionScreenControlParams {
     sessionId: string;
@@ -103,6 +104,9 @@ export function useSessionScreenControl({
                     try {
                         await videoEl.play();
                         console.log("[ScreenShare] Play success (muted fallback)");
+                        // Registra o vídeo mutado no manager: ao usuário clicar no
+                        // AudioUnlockBanner, o manager desmutará e retocará automaticamente.
+                        audioUnlockManager.registerMutedVideo(videoEl);
                     } catch (mutedErr) {
                         console.error("[ScreenShare] Muted play also failed. Browser may be blocking WebRTC/Video or requires user gesture:", mutedErr);
                     }
@@ -115,6 +119,9 @@ export function useSessionScreenControl({
             videoEl.addEventListener('canplay', clearNoSignal, { once: true });
             return () => videoEl.removeEventListener('canplay', clearNoSignal);
         } else {
+            if (screenVideoRef.current) {
+                audioUnlockManager.unregisterVideo(screenVideoRef.current);
+            }
             videoEl.srcObject = null;
         }
     }, [videoStream, activeTab, spectatorMode]);
@@ -133,7 +140,10 @@ export function useSessionScreenControl({
             // Última tentativa com muted antes de mostrar o badge
             el.muted = true;
             el.play()
-                .then(() => { /* play ok, canplay vai limpar o badge */ })
+                .then(() => {
+                    // Registra o vídeo mutado: AudioUnlockBanner o desmutará no clique
+                    audioUnlockManager.registerMutedVideo(el);
+                })
                 .catch(() => {
                     // Mesmo com muted falhou — mostra badge para o usuário usar o botão
                     setVideoNoSignal(true);
