@@ -1,10 +1,11 @@
 "use client";
 
 import { Character } from "@/types/domain";
-import { LinkedNotes } from "@/components/SessionNotesTabs/LinkedNotes";
+import { LinkedNotes } from "@/features/session-notes/components/LinkedNotes";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
+import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { CharacterLore } from "./CharacterLore";
 import { CharacterVitality } from "./CharacterVitality";
@@ -71,6 +72,7 @@ export function CharacterCard({
                         onSaveName={hook.handleSaveName}
                         onCancelEditName={() => hook.setIsEditingName(false)}
                         onImageUpload={hook.handleImageUpload}
+                        isImageProcessing={hook.isImageProcessing}
                     />
 
                     <CharacterLore
@@ -111,6 +113,7 @@ export function CharacterCard({
                     onRefreshChange={hook.handleRefreshChange}
                 />
 
+
                 <div className="lower-content-grid">
                     <div className="lower-col-left">
                         <CharacterConsequences
@@ -133,7 +136,10 @@ export function CharacterCard({
                             actorUserId={actorUserId}
                             canEdit={canEdit}
                             isGM={isGM}
+                            magicLevel={character.magicLevel || 0}
+                            onMagicLevelChange={hook.handleMagicLevelChange}
                         />
+
 
                         <SkillsSection
                             character={character}
@@ -155,6 +161,17 @@ export function CharacterCard({
                         />
                     </div>
                 </div>
+
+                {hook.isCropping && hook.tempCropSrc && (
+                    <ImageCropper
+                        src={hook.tempCropSrc}
+                        aspectRatio={1}
+                        outputWidth={600}
+                        outputHeight={600}
+                        onConfirm={hook.handleCropConfirm}
+                        onCancel={hook.handleCropCancel}
+                    />
+                )}
 
                 {isGM && (
                     <div className="gm-delete-control">

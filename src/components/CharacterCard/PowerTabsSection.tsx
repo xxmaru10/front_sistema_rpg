@@ -1,6 +1,7 @@
 import { Character } from "@/types/domain";
 import { InventorySection } from "./InventorySection";
 import { usePowerTabs } from "./use-power-tabs";
+import { Zap, Briefcase, Wand2 } from "lucide-react";
 
 interface PowerTabsSectionProps {
     character: Character;
@@ -8,31 +9,38 @@ interface PowerTabsSectionProps {
     actorUserId: string;
     canEdit: boolean;
     isGM: boolean;
+    magicLevel: number;
+    onMagicLevelChange: (level: number) => void;
 }
 
-export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, isGM }: PowerTabsSectionProps) {
+
+export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, isGM, magicLevel, onMagicLevelChange }: PowerTabsSectionProps) {
+
     const hook = usePowerTabs({ character, sessionId, actorUserId });
 
     return (
         <div className="power-tabs-container">
             <div className="power-tabs-header">
-                <button 
+                <button
                     className={`power-tab-btn ${hook.activeTab === 'stunts' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('stunts')}
+                    title="FAÇANHAS"
                 >
-                    ✦ FAÇANHAS
+                    <Zap size={18} />
                 </button>
-                <button 
+                <button
                     className={`power-tab-btn ${hook.activeTab === 'inventory' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('inventory')}
+                    title="INVENTÁRIO"
                 >
-                    🎒 INVENTÁRIO
+                    <Briefcase size={18} />
                 </button>
-                <button 
+                <button
                     className={`power-tab-btn ${hook.activeTab === 'spells' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('spells')}
+                    title="MAGIAS"
                 >
-                    🔮 MAGIAS
+                    <Wand2 size={18} />
                 </button>
             </div>
 
@@ -110,6 +118,23 @@ export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, i
 
                 {hook.activeTab === 'spells' && (
                     <div className="spells-list-compact">
+                        <div className="magic-reserve-inline">
+                            <div className="reserve-label">NÍVEL DE MAGIA</div>
+                            <div className="magic-nodes">
+                                {[1, 2, 3].map((node) => (
+                                    <button
+                                        key={node}
+                                        className={`magic-node ${magicLevel >= node ? "active" : ""}`}
+                                        onClick={() => canEdit && onMagicLevelChange(magicLevel === node ? node - 1 : node)}
+                                        disabled={!canEdit}
+                                    >
+                                        <div className="node-glow" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+
                          {(character.spells || []).map(spell => (
                             <div key={spell.id} className="stunt-slot filled">
                                 {hook.editingSpellId === spell.id ? (

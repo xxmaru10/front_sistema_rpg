@@ -77,10 +77,16 @@ export class VoiceChatManager {
     private reconnectAttempts: Map<string, number> = new Map();
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
 
+    // H6: Flag de presença subscrita — track() só funciona após SUBSCRIBED
+    private _presenceSubscribed: boolean = false;
+    // H5: Peers com fallback de voice-join agendado (evita múltiplos timeouts para o mesmo peer)
+    private pendingFallbackJoins: Set<string> = new Set();
+
     private rtcConfig: RTCConfiguration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun.services.mozilla.com' },
             // TURN servers gratuitos (OpenRelay) para bypass de NAT restritivo
             {
                 urls: 'turn:openrelay.metered.ca:80',
@@ -98,7 +104,9 @@ export class VoiceChatManager {
                 credential: 'openrelayproject',
             },
         ],
-        iceTransportPolicy: 'all', // Tenta STUN primeiro, fallback para TURN
+        iceTransportPolicy: 'all',
+        bundlePolicy: 'max-bundle',
+        iceCandidatePoolSize: 10,
     };
 
     private characterId?: string;
@@ -132,7 +140,11 @@ export class VoiceChatManager {
             return {} as AudioContext; // Stub para SSR
         }
         if (!this.localAudioContext) {
-            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            // latencyHint 'interactive' minimiza buffer de processamento para voz em tempo real
+            // sampleRate omitido — usar taxa nativa do hardware evita mismatch com o stream do mic
+            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+                latencyHint: 'interactive',
+            });
         }
         return this.localAudioContext!;
     }
@@ -140,7 +152,9 @@ export class VoiceChatManager {
     private getPeerAudioContext(peerId: string): AudioContext {
         let ctx = this.peerAudioContexts.get(peerId);
         if (!ctx) {
-            ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
+                latencyHint: 'interactive',
+            });
             this.peerAudioContexts.set(peerId, ctx);
         }
         return ctx;
@@ -200,15 +214,20 @@ export class VoiceChatManager {
             .on('presence', { event: 'leave' }, () => {
                 this.syncPresence();
             })
-            .subscribe(async (status: string) => {
-                if (status === 'SUBSCRIBED') {
-                    const status = await this.presenceChannel?.track({
+            .subscribe(async (subStatus: string) => {
+                if (subStatus === 'SUBSCRIBED') {
+                    this._presenceSubscribed = true;
+                    const trackResult = await this.presenceChannel?.track({
                         userId: this.userId,
                         characterId: this.characterId,
                         inVoice: this._isConnected,
                         online_at: new Date().toISOString(),
                     });
-                    console.log(`[VoiceChat - ${this.userId}] Initial Presence Track Status:`, status);
+                    console.log(`[VoiceChat - ${this.userId}] Initial Presence Track Result:`, trackResult);
+                    // H6: Se joinVoice() foi chamado antes do canal ficar pronto, atualizar agora
+                    if (this._isConnected) {
+                        await this.updatePresenceVoiceState(true);
+                    }
                 }
             });
     }
@@ -275,16 +294,25 @@ export class VoiceChatManager {
         this.onPresenceUpdate(participants);
     }
 
-    private async updatePresenceVoiceState(inVoice: boolean) {
-        if (this.presenceChannel) {
-            const status = await this.presenceChannel.track({
-                userId: this.userId,
-                characterId: this.characterId,
-                inVoice,
-                online_at: new Date().toISOString(),
-            });
-            console.log(`[VoiceChat - ${this.userId}] Presence Track Update Status:`, status);
+    private async updatePresenceVoiceState(inVoice: boolean, attempt: number = 0) {
+        if (!this.presenceChannel) return;
+        // H6: Canal ainda não pronto — retry exponencial (max 3 tentativas, delay 2s)
+        if (!this._presenceSubscribed) {
+            if (attempt < 3) {
+                console.warn(`[VoiceChat - ${this.userId}] Presence not SUBSCRIBED yet — retry ${attempt + 1}/3 in 2s`);
+                setTimeout(() => this.updatePresenceVoiceState(inVoice, attempt + 1), 2000);
+            } else {
+                console.error(`[VoiceChat - ${this.userId}] Presence track failed: canal não ficou SUBSCRIBED após 3 tentativas`);
+            }
+            return;
         }
+        const trackResult = await this.presenceChannel.track({
+            userId: this.userId,
+            characterId: this.characterId,
+            inVoice,
+            online_at: new Date().toISOString(),
+        });
+        console.log(`[VoiceChat - ${this.userId}] Presence Track Update:`, { inVoice, trackResult });
     }
 
     // ─── Envio de sinais ────────────────────────────────────────
@@ -325,6 +353,9 @@ export class VoiceChatManager {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
+                    // Mono: voz não precisa de stereo, reduz carga ~50% por stream (bem suportado)
+                    // sampleRate omitido — deixar o browser usar a taxa nativa do hardware
+                    channelCount: 1,
                 }
             });
 
@@ -483,6 +514,8 @@ export class VoiceChatManager {
             supabase.removeChannel(this.presenceChannel);
             this.presenceChannel = null;
         }
+        this._presenceSubscribed = false;
+        this.pendingFallbackJoins.clear();
     }
 
     private cleanupAllPeers() {
@@ -524,14 +557,70 @@ export class VoiceChatManager {
     // ─── Bitrate Adaptativo ────────────────────────────────────
 
     private getAdaptiveBitrate(peerCount: number): number {
-        // Áudio consome pouca banda, limitar agressivamente causa cortes. 
-        // 128kbps é padrão Opis de alta qualidade.
-        return 128000;
+        // Opus voz: 32kbps já é indistinguível de original para fala humana
+        // Escala inversamente ao número de peers para suportar até 12 (66 conexões mesh)
+        if (peerCount <= 2)  return 64000;  // 1-2 peers: 64kbps — máxima qualidade
+        if (peerCount <= 6)  return 48000;  // 3-6 peers: 48kbps — alta qualidade
+        if (peerCount <= 10) return 40000;  // 7-10 peers: 40kbps — boa qualidade
+        return 32000;                        // 11-12 peers: 32kbps — qualidade sólida para voz
+    }
+
+    // Injeta parâmetros Opus no SDP via munging — única forma segura de definir FEC/DTX sem
+    // quebrar setCodecPreferences (Chrome 105+ invalida objetos de codec modificados).
+    private applyOpusParams(sdp: string): string {
+        if (!sdp) return sdp;
+        // Localiza o payload type do Opus (ex: "a=rtpmap:111 opus/48000/2")
+        const opusPtMatch = sdp.match(/a=rtpmap:(\d+) opus\/48000/i);
+        if (!opusPtMatch) return sdp;
+        const pt = opusPtMatch[1];
+        const desired: Record<string, string> = {
+            minptime: '10',
+            useinbandfec: '1',  // recuperação de pacotes perdidos sem retransmissão
+            usedtx: '1',        // para de transmitir durante silêncio (~40% menos banda)
+        };
+        const fmtpPattern = new RegExp(`(a=fmtp:${pt} )([^\\r\\n]*)`);
+        if (fmtpPattern.test(sdp)) {
+            // Linha fmtp já existe — merge para evitar duplicatas
+            return sdp.replace(fmtpPattern, (_, prefix, existing) => {
+                const params = new Map<string, string>(
+                    existing.split(';').filter(Boolean).map((p: string) => {
+                        const [k, v] = p.split('=');
+                        return [k.trim(), v?.trim() ?? '1'] as [string, string];
+                    })
+                );
+                Object.entries(desired).forEach(([k, v]) => params.set(k, v));
+                return `${prefix}${Array.from(params.entries()).map(([k, v]) => `${k}=${v}`).join(';')}`;
+            });
+        }
+        // Sem linha fmtp — inserir após o rtpmap
+        return sdp.replace(
+            new RegExp(`(a=rtpmap:${pt} opus[^\\r\\n]*)`),
+            `$1\r\na=fmtp:${pt} ${Object.entries(desired).map(([k, v]) => `${k}=${v}`).join(';')}`
+        );
+    }
+
+    // Aplica bitrate apenas uma vez quando a conexão atinge 'connected' — evita choppy audio
+    private async applyBitrateToSender(pc: RTCPeerConnection, peerId: string) {
+        const peerCount = this.peerConnections.size;
+        const targetBitrate = this.getAdaptiveBitrate(peerCount);
+        const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+        if (!sender) return;
+        try {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) {
+                params.encodings = [{}];
+            }
+            params.encodings[0].maxBitrate = targetBitrate;
+            await sender.setParameters(params);
+            console.log(`[VoiceChat - ${this.userId}] Bitrate ${targetBitrate / 1000}kbps aplicado para ${peerId} (${peerCount} peers ativos)`);
+        } catch (e) {
+            console.warn(`[VoiceChat - ${this.userId}] Não foi possível definir bitrate para ${peerId}:`, e);
+        }
     }
 
     private async updateAllPeersBitrate() {
-        // Desativado: setParameters frequentes na API do WebRTC causam 'choppy audio' / áudio robótico
-        // Deixamos a gestão de limite de banda nativa e a inicial tratarem disso.
+        // Manter como no-op: setParameters repetidos causam 'choppy audio'
+        // O bitrate é aplicado uma única vez via applyBitrateToSender em onconnectionstatechange
         return;
     }
 
@@ -735,14 +824,37 @@ export class VoiceChatManager {
 
             if (!this._isConnected || !this.localStream) return;
 
-            // Deterministic offerer: smaller userId always initiates the offer.
-            if (this.userId < from) {
-                console.log(`[VoiceChat - ${this.userId}] Peer joined (I am offerer), creating offer for:`, from);
+            // H1/H2: Normalizar userId antes da comparação — evita race por caixa/espaço/UUID vs nome
+            const myIdNorm = this.userId.trim().toLowerCase();
+            const fromIdNorm = from.trim().toLowerCase();
+            console.log(`[VoiceChat - ${this.userId}] Deterministic offerer check: me="${myIdNorm}" from="${fromIdNorm}" → offerer=${myIdNorm < fromIdNorm}`);
+
+            if (myIdNorm < fromIdNorm) {
+                // Eu sou o offerer — envio a offer imediatamente
+                console.log(`[VoiceChat - ${this.userId}] I am offerer → creating offer for:`, from);
                 await this.createPeerConnection(from, true);
+            } else if (myIdNorm > fromIdNorm) {
+                // H5: Não sou o offerer — espera passiva. O offerer enviará a offer.
+                // Fallback único após 5s caso a offer não chegue (ex: race condition de timing).
+                console.log(`[VoiceChat - ${this.userId}] Non-offerer — awaiting offer from ${from} (fallback in 5s if needed)`);
+                if (!this.pendingFallbackJoins.has(from)) {
+                    this.pendingFallbackJoins.add(from);
+                    setTimeout(async () => {
+                        this.pendingFallbackJoins.delete(from);
+                        if (!this._isConnected || !this.localStream) return;
+                        const pc = this.peerConnections.get(from);
+                        const state = pc?.connectionState;
+                        if (!pc || state === 'failed' || state === 'closed' || state === 'new') {
+                            console.log(`[VoiceChat - ${this.userId}] Fallback: offer de ${from} não chegou em 5s — enviando voice-join direcionado`);
+                            await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
+                        } else {
+                            console.log(`[VoiceChat - ${this.userId}] Fallback desnecessário para ${from} — connectionState: ${state}`);
+                        }
+                    }, 5000);
+                }
             } else {
-                console.log(`[VoiceChat - ${this.userId}] Peer joined (they are offerer), pinging back to correctly initiate negotiation with:`, from);
-                // Bug #2: Adicionar destinatário (to) para evitar flood e loops de negociação
-                await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
+                // userId idêntico após normalização — não é possível determinar offerer
+                console.warn(`[VoiceChat - ${this.userId}] userId colide com ${from} após normalização — handshake abortado`);
             }
             return;
         }
@@ -773,6 +885,8 @@ export class VoiceChatManager {
                     }
                     this.pendingCandidates.get(from)!.push(signal.candidate);
                 }
+            } else {
+                console.warn(`[VoiceChat - ${this.userId}] [ice] Candidato de ${from} descartado — sem PeerConnection (queuing not possible)`);
             }
         }
     }
@@ -792,6 +906,15 @@ export class VoiceChatManager {
 
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(peerId, pc);
+
+        // H4: Safety timeout — se em 15s a conexão não sair de 'connecting'/'new', remover e liberar re-negociação
+        const connectingTimeout = setTimeout(() => {
+            const currentState = this.peerConnections.get(peerId)?.connectionState;
+            if (currentState === 'connecting' || currentState === 'new') {
+                console.warn(`[VoiceChat - ${this.userId}] Conexão com ${peerId} travada em '${currentState}' por 15s — removendo peer`);
+                this.removePeer(peerId);
+            }
+        }, 15000);
 
         // Adicionar tracks locais
         if (this.localStream) {
@@ -835,17 +958,21 @@ export class VoiceChatManager {
         };
 
         pc.onconnectionstatechange = () => {
-            console.log(`[VoiceChat] Connection state for ${peerId}:`, pc.connectionState);
+            console.log(`[VoiceChat - ${this.userId}] Connection state for ${peerId}:`, pc.connectionState);
+            // H4: Limpar timeout de 'connecting' ao sair do estado pendente
+            if (pc.connectionState !== 'connecting' && pc.connectionState !== 'new') {
+                clearTimeout(connectingTimeout);
+            }
             if (pc.connectionState === 'failed') {
                 // Reconexão automática com limite de tentativas
                 const attempts = this.reconnectAttempts.get(peerId) || 0;
                 if (attempts < VoiceChatManager.MAX_RECONNECT_ATTEMPTS && this._isConnected && this.localStream) {
                     this.reconnectAttempts.set(peerId, attempts + 1);
-                    console.log(`[VoiceChat] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
+                    console.log(`[VoiceChat - ${this.userId}] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
                     setTimeout(() => {
                         if (this._isConnected && this.localStream) {
-                            // Respeitar deterministic offerer na reconexão!
-                            if (this.userId < peerId) {
+                            // H1/H2: Normalizar userId na reconexão — consistente com handleSignal
+                            if (this.userId.trim().toLowerCase() < peerId.trim().toLowerCase()) {
                                 this.createPeerConnection(peerId, true);
                             } else {
                                 this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
@@ -853,29 +980,53 @@ export class VoiceChatManager {
                         }
                     }, 3000 * (attempts + 1)); // Backoff progressivo
                 } else {
-                    console.warn(`[VoiceChat] Max reconnect attempts reached for ${peerId}`);
+                    console.warn(`[VoiceChat - ${this.userId}] Max reconnect attempts reached for ${peerId}`);
                 }
             } else if (pc.connectionState === 'connected') {
                 // Reset contador de reconexão quando conecta com sucesso
+                console.log(`[VoiceChat - ${this.userId}] Connected to ${peerId}`);
                 this.reconnectAttempts.delete(peerId);
+                // Aplicar bitrate adaptativo uma única vez ao conectar (sem setParameters repetidos)
+                void this.applyBitrateToSender(pc, peerId);
             }
         };
 
-        // Sem manipulação forçada de bitrate (WebRTC fallback natural ativado)
+        // Preferência por Opus com FEC e DTX — resiliente a perda de pacotes em links intercontinentais
+        if (typeof RTCRtpSender !== 'undefined' && RTCRtpSender.getCapabilities) {
+            const capabilities = RTCRtpSender.getCapabilities('audio');
+            if (capabilities) {
+                const audioTransceiver = pc.getTransceivers().find(t => t.sender.track?.kind === 'audio');
+                if (audioTransceiver && typeof audioTransceiver.setCodecPreferences === 'function') {
+                    // Apenas reordenar — NUNCA modificar os objetos de codec.
+                    // Chrome 105+ lança InvalidModificationError se sdpFmtpLine difere do original.
+                    // FEC/DTX são aplicados via SDP munging em createOffer/createAnswer.
+                    const opusCodecs = capabilities.codecs
+                        .filter(c => c.mimeType.toLowerCase() === 'audio/opus');
+                    const others = capabilities.codecs.filter(c => c.mimeType.toLowerCase() !== 'audio/opus');
+                    if (opusCodecs.length > 0) {
+                        audioTransceiver.setCodecPreferences([...opusCodecs, ...others]);
+                        console.log(`[VoiceChat - ${this.userId}] Opus+FEC+DTX definido para ${peerId}`);
+                    }
+                }
+            }
+        }
 
         if (createOffer) {
             try {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
+                const rawOffer = await pc.createOffer();
+                // SDP munging: injeta parâmetros Opus (FEC/DTX) sem modificar objetos de codec
+                const mungedOffer = { ...rawOffer, sdp: this.applyOpusParams(rawOffer.sdp ?? '') };
+                await pc.setLocalDescription(mungedOffer);
+                console.log(`[VoiceChat - ${this.userId}] [offer→] Enviando offer para: ${peerId}`);
                 await this.sendSignal({
                     type: 'voice-offer',
                     from: this.userId,
                     to: peerId,
                     peerId,
-                    offer
+                    offer: mungedOffer,
                 });
             } catch (error) {
-                console.error("[VoiceChat] Error creating offer:", error);
+                console.error(`[VoiceChat - ${this.userId}] Erro ao criar offer para ${peerId}:`, error);
             }
         }
 
@@ -885,7 +1036,7 @@ export class VoiceChatManager {
     private async handleOffer(signal: VoiceSignal) {
         if (!signal.offer) return;
         const peerId = signal.from;
-        console.log(`[VoiceChat - ${this.userId}] Handling offer from:`, peerId);
+        console.log(`[VoiceChat - ${this.userId}] [offer←] Recebida offer de: ${peerId} | localStream: ${!!this.localStream}`);
 
         const pc = await this.createPeerConnection(peerId, false);
         try {
@@ -898,14 +1049,17 @@ export class VoiceChatManager {
                 this.pendingCandidates.delete(peerId);
             }
 
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
+            const rawAnswer = await pc.createAnswer();
+            // SDP munging: injeta parâmetros Opus (FEC/DTX) no answer também
+            const mungedAnswer = { ...rawAnswer, sdp: this.applyOpusParams(rawAnswer.sdp ?? '') };
+            await pc.setLocalDescription(mungedAnswer);
+            console.log(`[VoiceChat - ${this.userId}] [answer→] Enviando answer para: ${peerId}`);
             await this.sendSignal({
                 type: 'voice-answer',
                 from: this.userId,
                 to: peerId,
                 peerId: this.userId,
-                answer
+                answer: mungedAnswer,
             });
         } catch (error) {
             console.error("[VoiceChat] Error handling offer:", error);
@@ -915,14 +1069,18 @@ export class VoiceChatManager {
     private async handleAnswer(signal: VoiceSignal) {
         if (!signal.answer) return;
         const pc = this.peerConnections.get(signal.from);
-        if (!pc) return;
-
-        // Only apply answer when expecting one — prevents "wrong state: stable" from offer glare
-        if (pc.signalingState !== 'have-local-offer') {
-            console.warn(`[VoiceChat] Ignoring stale answer from ${signal.from} (signalingState: ${pc.signalingState})`);
+        if (!pc) {
+            console.warn(`[VoiceChat - ${this.userId}] [answer←] Answer de ${signal.from} descartada — sem PeerConnection`);
             return;
         }
 
+        // Only apply answer when expecting one — prevents "wrong state: stable" from offer glare
+        if (pc.signalingState !== 'have-local-offer') {
+            console.warn(`[VoiceChat - ${this.userId}] [answer←] Answer de ${signal.from} descartada (signalingState: ${pc.signalingState})`);
+            return;
+        }
+
+        console.log(`[VoiceChat - ${this.userId}] [answer←] Aplicando answer de: ${signal.from}`);
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
             const queued = this.pendingCandidates.get(signal.from);

@@ -2,19 +2,26 @@ interface CharacterSelectionProps {
     availableCharacters: any[];
     onSelectCharacter: (char: any) => void;
     onBack: () => void;
+    isLoading: boolean;
 }
 
 export function CharacterSelection({
     availableCharacters,
     onSelectCharacter,
-    onBack
+    onBack,
+    isLoading
 }: CharacterSelectionProps) {
     return (
         <div className="character-selection animate-reveal">
             <h2 className="selection-title victorian-title">ESCOLHA SEU PERSONAGEM</h2>
             <div className="character-grid">
                 {availableCharacters.map(char => (
-                    <button key={char.id} className="char-select-card" onClick={() => onSelectCharacter(char)}>
+                    <button 
+                        key={char.id} 
+                        className="char-select-card" 
+                        onClick={() => onSelectCharacter(char)}
+                        disabled={isLoading}
+                    >
                         <div className="char-avatar-ring">
                             {char.imageUrl ? (
                                 <img src={char.imageUrl} alt={char.name} className="char-avatar-img" />
@@ -25,12 +32,13 @@ export function CharacterSelection({
                             )}
                         </div>
                         <div className="char-name-label">{char.name}</div>
+                        {isLoading && <div className="char-loading-overlay">CARREGANDO...</div>}
                         <div className="char-card-glow"></div>
                     </button>
                 ))}
             </div>
             <div className="selection-actions">
-                <button className="mystic-btn back-btn" onClick={onBack}>
+                <button className="mystic-btn back-btn" onClick={onBack} disabled={isLoading}>
                     VOLTAR AO INÍCIO
                 </button>
             </div>

@@ -12,7 +12,7 @@ import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
 import { computeState } from "@/lib/projections";
-import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv } from "lucide-react";
+import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw, Eye, VenetianMask } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
 import { AspectManager } from "@/components/AspectManager";
@@ -20,7 +20,7 @@ import { SessionHeader } from "@/components/SessionHeader";
 import { SummonModal } from "@/components/SummonModal";
 import { TurnOrderModal } from "@/components/TurnOrderModal";
 import { TurnOrderTracker } from "@/components/TurnOrderTracker";
-import { SessionNotes } from "@/components/SessionNotes";
+import { SessionNotes } from "@/features/session-notes/SessionNotes";
 import { VIControlPanel } from "@/components/VIControlPanel";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";
@@ -198,7 +198,7 @@ export default function SessionPage() {
     // ─── SCREEN SHARE / AUDIO LIFECYCLE ──────────────────────────────────────
     // Must come before useSessionActions so screenShareManagerRef is available.
 
-    const { screenVideoRef, screenShareManagerRef } = useSessionScreenControl({
+    const { screenVideoRef, screenShareManagerRef, videoNoSignal } = useSessionScreenControl({
         sessionId: sessionId as string,
         actorUserId,
         videoStream,
@@ -386,30 +386,35 @@ export default function SessionPage() {
 
     return (
         <div className={`session-view-wrapper${spectatorMode && videoStream ? " spectator-mode-active" : ""}`}>
-            {/* Screen share video */}
+            {/* Screen share video — mantido montado enquanto stream ativa; oculto via CSS
+                em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
                 <video
-                    autoPlay playsInline muted={false}
+                    autoPlay playsInline muted
+                    className="screenshare-video"
                     ref={(el) => {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
                             el.srcObject = videoStream;
-                            el.play().catch(e => console.warn("[ScreenShare] Video play() on mount failed:", e));
+                            // play() é gerenciado exclusivamente pelo hook (com muted fallback)
                         }
                     }}
                     style={{
-                        position: "fixed",
                         top: spectatorMode ? 0 : "70px",
-                        left: 0,
-                        width: "100vw",
                         height: spectatorMode ? "100vh" : "calc(100vh - 70px)",
-                        objectFit: "cover",
                         zIndex: spectatorMode ? 1 : 0,
-                        pointerEvents: "none",
                         background: spectatorMode ? "#000" : "transparent",
-                        transition: "all 0.4s ease"
+                        display: activeTab === "combat" ? undefined : "none",
                     }}
                 />
+            )}
+
+            {/* Badge "Sem sinal" — exibido quando stream está ativa mas vídeo não avança. */}
+            {videoStream && activeTab === "combat" && videoNoSignal && (
+                <div className="screenshare-nosignal">
+                    <span className="screenshare-nosignal-icon">📡</span>
+                    <span>Sem sinal — tente reconectar no botão <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
+                </div>
             )}
 
             {/* Spectator mode toggle button */}
@@ -424,7 +429,8 @@ export default function SessionPage() {
                         background: spectatorMode ? "rgba(20, 80, 30, 0.85)" : "rgba(10, 10, 10, 0.75)",
                         color: spectatorMode ? "#6edc80" : "#C5A059",
                         backdropFilter: "blur(8px)", cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
+                        display: activeTab === "combat" ? "flex" : "none",
+                        alignItems: "center", justifyContent: "center",
                         fontSize: "22px",
                         boxShadow: spectatorMode
                             ? "0 0 20px rgba(100, 220, 120, 0.4), 0 4px 16px rgba(0,0,0,0.5)"
@@ -434,7 +440,7 @@ export default function SessionPage() {
                     onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
                 >
-                    {spectatorMode ? "👁" : "🎭"}
+                    {spectatorMode ? <Eye size={24} /> : <VenetianMask size={24} />}
                 </button>
             )}
 

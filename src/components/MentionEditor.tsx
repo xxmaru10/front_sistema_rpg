@@ -178,6 +178,12 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
         setTimeout(() => editorRef.current?.focus(), 10);
     };
 
+    const handlePaste = (e: React.ClipboardEvent) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+    };
+
     return (
         <div className="mention-editor-container" style={{ position: "relative", width: "100%" }}>
             <div
@@ -185,6 +191,7 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
                 contentEditable
                 className={`mention-rich-editor ${className || ""}`}
                 data-placeholder={placeholder}
+                onPaste={handlePaste}
                 onKeyDown={(e) => {
                     if (mentionState.active && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Escape')) {
                         e.preventDefault();

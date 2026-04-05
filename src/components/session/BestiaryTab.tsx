@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Character } from "@/types/domain";
 import { CharacterCard } from "@/components/CharacterCard";
 import { globalEventStore } from "@/lib/eventStore";
+import { Skull, Globe, Trash2 } from "lucide-react";
 
 interface BestiaryTabProps {
     bestiaryList: Character[];
@@ -99,14 +100,14 @@ export function BestiaryTab({
                                                 {char.imageUrl ? (
                                                     <img src={char.imageUrl} alt={char.name} />
                                                 ) : (
-                                                    <div className="avatar-placeholder">👹</div>
+                                                    <div className="avatar-placeholder"><Skull size={24} /></div>
                                                 )}
                                             </div>
                                             <div className="entry-info">
                                                 <span className="entry-name">{char.name.toUpperCase()}</span>
                                                 <span className="entry-meta">
                                                     PD: {char.fatePoints} | Magia: {char.magicLevel}
-                                                    {char.scope === "global" && " | 🌐 Geral"}
+                                                    {char.scope === "global" && <> | <Globe size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Geral</>}
                                                 </span>
                                             </div>
                                         </button>
@@ -133,7 +134,7 @@ export function BestiaryTab({
                                                     });
                                                 }}
                                             >
-                                                🗑️
+                                                <Trash2 size={14} />
                                             </button>
                                         )}
                                     </div>

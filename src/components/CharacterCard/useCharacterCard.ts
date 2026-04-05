@@ -25,6 +25,8 @@ export function useCharacterCard({
     canEdit,
     canEditStressOrFP,
 }: UseCharacterCardOptions) {
+    const normalizedUserId = actorUserId.trim().toLowerCase();
+
     // ── Bio / Lore State ──────────────────────────────────────────────────────
     const [isEditingBio, setIsEditingBio] = useState(false);
     const [tempBio, setTempBio] = useState("");
@@ -52,7 +54,7 @@ export function useCharacterCard({
         if (!canEditStressOrFP) return;
         const type = current ? "STRESS_CLEARED" : "STRESS_MARKED";
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type, actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type, actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, track, boxIndex: index }
         } as any);
@@ -61,7 +63,7 @@ export function useCharacterCard({
     const handleAddStressBox = (track: "PHYSICAL" | "MENTAL") => {
         if (!isGM) return;
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_EXPANDED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_EXPANDED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, track }
         } as any);
@@ -70,7 +72,7 @@ export function useCharacterCard({
     const handleRemoveStressBox = (track: "PHYSICAL" | "MENTAL") => {
         if (!isGM) return;
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_REDUCED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_REDUCED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, track }
         } as any);
@@ -81,7 +83,7 @@ export function useCharacterCard({
         if (!canEditStressOrFP) return;
         const type = amount > 0 ? "FP_GAINED" : "FP_SPENT";
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type, actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type, actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, amount: Math.abs(amount), reason: "MANUAL" }
         } as any);
@@ -92,60 +94,99 @@ export function useCharacterCard({
         const currentRefresh = character.refresh ?? 3;
         const newRefresh = Math.max(1, currentRefresh + delta);
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_REFRESH_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_REFRESH_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, refresh: newRefresh }
         } as any);
     };
 
-    // ── Image Upload ──────────────────────────────────────────────────────────
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMagicLevelChange = (level: number) => {
+        if (!canEditStressOrFP) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_MAGIC_LEVEL_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, level: Math.max(0, Math.min(3, level)) }
+        } as any);
+    };
+
+
+    // ── Image Upload / Crop ───────────────────────────────────────────────────
+    const [isCropping, setIsCropping] = useState(false);
+    const [isImageProcessing, setIsImageProcessing] = useState(false);
+    const [tempCropSrc, setTempCropSrc] = useState<string | null>(null);
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!isGM || !e.target.files?.[0]) return;
         const file = e.target.files[0];
+        setIsImageProcessing(true);
+        // blob URL: instantâneo, sem conversão base64 — evita travamento com imagens grandes
+        const blobUrl = URL.createObjectURL(file);
+        const img = new Image();
 
-        // Compress to canvas blob
-        const compressedBlob = await new Promise<Blob>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let { width, height } = img;
-                    const MAX = 600;
-                    if (width > height) {
-                        if (width > MAX) { height = Math.round((height * MAX) / width); width = MAX; }
-                    } else {
-                        if (height > MAX) { width = Math.round((width * MAX) / height); height = MAX; }
+        // Safety timeout — 15s to load/decode
+        const timeout = setTimeout(() => {
+            console.warn("Portrait processing stalled.");
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        }, 15000);
+
+        img.onload = () => {
+            clearTimeout(timeout);
+            if (img.width > 600 || img.height > 600) {
+                setTempCropSrc(blobUrl);
+                setIsCropping(true);
+                // isImageProcessing stays true until modal confirmation
+            } else {
+                // Image small enough - process directly without blocking UI
+                const compressAndSave = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        globalEventStore.append({
+                            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+                            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                            payload: { characterId: character.id, imageUrl: canvas.toDataURL("image/jpeg", 0.7) }
+                        } as any);
                     }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) return reject(new Error('no canvas context'));
-                    ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => {
-                        if (blob) resolve(blob);
-                        else reject(new Error('canvas toBlob failed'));
-                    }, 'image/jpeg', 0.7);
+                    URL.revokeObjectURL(blobUrl);
+                    setIsImageProcessing(false);
                 };
-                img.onerror = reject;
-                img.src = reader.result as string;
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
 
-        try {
-            const publicUrl = await uploadImage(compressedBlob, 'image/jpeg');
+                if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+                   (window as any).requestIdleCallback(compressAndSave);
+                } else {
+                    setTimeout(compressAndSave, 1);
+                }
+            }
+        };
+        img.onerror = () => {
+            clearTimeout(timeout);
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        };
+        img.src = blobUrl;
+    };
 
-            globalEventStore.append({
-                id: uuidv4(), sessionId, seq: 0,
-                type: 'CHARACTER_IMAGE_UPDATED', actorUserId,
-                createdAt: new Date().toISOString(), visibility: 'PUBLIC',
-                payload: { characterId: character.id, imageUrl: publicUrl },
-            } as any);
-        } catch (err) {
-            console.error('[handleImageUpload] Upload failed:', err);
-        }
+    const handleCropConfirm = (base64: string) => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
+        setIsCropping(false);
+        setTempCropSrc(null);
+        setIsImageProcessing(false);
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, imageUrl: base64 }
+        } as any);
+    };
+
+    const handleCropCancel = () => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
+        setIsCropping(false);
+        setTempCropSrc(null);
+        setIsImageProcessing(false);
     };
 
     // ── Bio Handlers ──────────────────────────────────────────────────────────
@@ -156,7 +197,7 @@ export function useCharacterCard({
 
     const handleSaveBio = () => {
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_BIO_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_BIO_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, biography: tempBio }
         } as any);
@@ -171,7 +212,7 @@ export function useCharacterCard({
 
     const handleSaveAspect = (index: number) => {
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_SHEET_ASPECT_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_SHEET_ASPECT_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, index, value: tempAspect.toUpperCase() }
         } as any);
@@ -188,7 +229,7 @@ export function useCharacterCard({
         if (!tempName.trim()) return;
         globalEventStore.append({
             type: "CHARACTER_NAME_UPDATED",
-            id: uuidv4(), sessionId, seq: 0, actorUserId, visibility: "PUBLIC",
+            id: uuidv4(), sessionId, seq: 0, actorUserId: normalizedUserId, visibility: "PUBLIC",
             createdAt: new Date().toISOString(),
             payload: { characterId: character.id, name: tempName.trim() }
         } as any);
@@ -210,7 +251,7 @@ export function useCharacterCard({
         }
         const debuffPayload = debuff?.skill ? debuff : undefined;
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, slot, value, debuff: debuffPayload }
         } as any);
@@ -232,9 +273,9 @@ export function useCharacterCard({
     const handleDeleteConsequence = (slot: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isGM) return;
-        if (confirm("Tem certeza que deseja remover esta consequência extra?")) {
+        if (isGM) {
             globalEventStore.append({
-                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_DELETED", actorUserId,
+                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_DELETED", actorUserId: normalizedUserId,
                 createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: { characterId: character.id, slot }
             } as any);
@@ -245,21 +286,21 @@ export function useCharacterCard({
     const handleAddNote = (content: string, isPrivate: boolean = false) => {
         if (!content.trim()) return;
         const note = {
-            id: uuidv4(), authorId: actorUserId,
+            id: uuidv4(), authorId: normalizedUserId,
             authorName: isGM ? "MESTRE" : (character.name || actorUserId),
             content, createdAt: new Date().toISOString(), isPrivate
         };
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_ADDED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_ADDED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
-            visibility: isPrivate ? { kind: "PLAYER_ONLY", userId: actorUserId } : "PUBLIC",
+            visibility: isPrivate ? { kind: "PLAYER_ONLY", userId: normalizedUserId } : "PUBLIC",
             payload: { characterId: character.id, note }
         } as any);
     };
 
     const handleDeleteNote = (noteId: string) => {
         globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_DELETED", actorUserId,
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_NOTE_DELETED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, noteId }
         } as any);
@@ -267,10 +308,9 @@ export function useCharacterCard({
 
     // ── Delete Character ──────────────────────────────────────────────────────
     const handleDeleteCharacter = () => {
-        if (!confirm(`Tem certeza que deseja DELETAR a ficha de ${character.name}? Essa ação não pode ser desfeita.`)) return;
         globalEventStore.append({
             type: "CHARACTER_DELETED",
-            id: uuidv4(), sessionId, seq: 0, actorUserId, visibility: "PUBLIC",
+            id: uuidv4(), sessionId, seq: 0, actorUserId: normalizedUserId, visibility: "PUBLIC",
             createdAt: new Date().toISOString(),
             payload: { characterId: character.id }
         } as any);
@@ -292,10 +332,15 @@ export function useCharacterCard({
         // Handlers
         handleStressToggle, handleAddStressBox, handleRemoveStressBox,
         handleFPChange, handleRefreshChange,
+        handleMagicLevelChange,
         handleImageUpload,
+
         handleConsequenceChange, handleSaveConsequence,
         handleAddConsequence, handleDeleteConsequence,
         handleAddNote, handleDeleteNote,
         handleDeleteCharacter,
+        // Cropper
+        isCropping, tempCropSrc, handleCropConfirm, handleCropCancel,
+        isImageProcessing,
     };
 }

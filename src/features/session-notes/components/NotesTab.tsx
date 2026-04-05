@@ -1,6 +1,6 @@
 import { Bold, Italic, Underline, Trash2, Send, Users, ShieldAlert, Pencil, X, Check, ChevronDown, ChevronUp, BookOpen, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { MentionEditor } from "../MentionEditor";
+import { MentionEditor } from "@/components/MentionEditor";
 import { renderMentions } from "@/lib/mentionUtils";
 import { LinkedNotes } from "./LinkedNotes";
 
@@ -146,7 +146,7 @@ export function NotesTab({
                                         const isMyNote = note.authorId === userId;
                                         const isFailed = failedEventIds.has(note.id);
                                         const isPending = note.seq === 0 && !isFailed;
-                                        
+
                                         return (
                                             <div key={note.id} className={`note-entry animate-fade-in ${isPending ? 'pending' : ''} ${isFailed ? 'failed' : ''}`} style={{ borderLeftColor: getAuthorColor(note.authorId) }}>
                                                 <div className="entry-meta">
@@ -231,7 +231,7 @@ export function NotesTab({
             {notesSubTab !== "Jogadores" && notesSubTab !== "Sessão" && (<>
             <div className="notes-header">
                 <h3 className="notes-title">DIÁRIO DE CAMPANHA {notesSubTab === "Privado" && "(PRIVADO)"}</h3>
-                
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {notesSubTab === "Geral" && authors.length > 0 && (
                         <select
@@ -249,7 +249,7 @@ export function NotesTab({
                     {filteredNotes.length > 0 && (
                         <button
                             className="clear-all-btn"
-                            onClick={() => { if (confirm("Apagar todas as notas visíveis para você?")) handleClearNotesLocally(notesSubTab as 'Geral' | 'Privado'); }}
+                            onClick={() => handleClearNotesLocally(notesSubTab as 'Geral' | 'Privado')}
                             title="Apagar notas da minha visualização"
                         >
                             LIMPAR PARA MIM
@@ -260,7 +260,7 @@ export function NotesTab({
                         <button
                             className="clear-all-btn"
                             style={{ background: 'rgba(255,80,80,0.15)', borderColor: 'rgba(255,80,80,0.4)', color: '#ff6060' }}
-                            onClick={() => { if (confirm("⚠️ Apagar TODAS as notas gerais para TODOS os usuários? Esta ação é irreversível.")) handleDeleteAll(); }}
+                            onClick={() => handleDeleteAll()}
                             title="Apagar todas as notas gerais para todos"
                         >
                             LIMPAR TODOS
@@ -272,18 +272,18 @@ export function NotesTab({
             <div className="notes-scroll scrollbar-arcane" ref={scrollRef}>
                 {filteredNotes.length === 0 && (
                     <div className="empty-notes">
-                        {notesSubTab === "Geral" 
-                            ? "NENHUMA NOTA ENCONTRADA." 
+                        {notesSubTab === "Geral"
+                            ? "NENHUMA NOTA ENCONTRADA."
                             : "VOCÊ AINDA NÃO TEM ANOTAÇÕES PRIVADAS."}
                     </div>
                 )}
                 {filteredNotes.map((note) => {
                     const isMyNote = note.authorId === userId;
                     const isGM = userRole === "GM";
-                    
+
                     const canEdit = isMyNote || (isGM && !note.isPrivate);
                     const canDelete = isMyNote || (isGM && !note.isPrivate);
-                    
+
                     const authorColor = getAuthorColor(note.authorId, note.authorId === "GM" ? "GM" : undefined);
                     const isFailed = isMyNote && failedEventIds.has(note.id);
                     const isPending = isMyNote && note.seq === 0 && !isFailed;
@@ -344,17 +344,17 @@ export function NotesTab({
                         placeholder={notesSubTab === "Geral" ? "Digite sua nota..." : "Anote algo privado..."}
                         className="rich-editor"
                         mentionEntities={mentionEntities}
-                        onKeyDown={(e) => { 
-                            if (e.key === 'Enter' && !e.shiftKey) { 
-                                e.preventDefault(); 
-                                handleSend(); 
-                            } 
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend();
+                            }
                         }}
                     />
-                    <button 
-                        onClick={handleSend} 
-                        className={`send-btn ${editingNoteId ? 'save-mode' : ''}`} 
-                        disabled={!editorContent.trim() || isOffline} 
+                    <button
+                        onClick={handleSend}
+                        className={`send-btn ${editingNoteId ? 'save-mode' : ''}`}
+                        disabled={!editorContent.trim() || isOffline}
                         title={editingNoteId ? "Salvar Alterações" : "Enviar Nota"}
                     >
                         {editingNoteId ? <Check size={16} /> : <Send size={16} />}

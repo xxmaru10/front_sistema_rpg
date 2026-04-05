@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { X, Map as MapIcon } from "lucide-react";
-import { MentionEditor } from "../MentionEditor";
+import { MentionEditor } from "@/components/MentionEditor";
 import { createPortal } from "react-dom";
+import { CreateWorldEntityModalStyles } from "../styles/CreateWorldEntityModal.styles";
+import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
 
 interface CreateWorldEntityModalProps {
     setShowAddWorldEntity: (show: boolean) => void;
@@ -53,6 +55,8 @@ interface CreateWorldEntityModalProps {
     newEntityReligion: string;
     setNewEntityReligion: (id: string) => void;
     uniqueTags?: string[];
+    isImageProcessing: boolean;
+    setIsImageProcessing: (p: boolean) => void;
 }
 
 export function CreateWorldEntityModal({
@@ -104,15 +108,119 @@ export function CreateWorldEntityModal({
     religionsList,
     newEntityReligion,
     setNewEntityReligion,
-    uniqueTags = []
+    uniqueTags = [],
+    isImageProcessing,
+    setIsImageProcessing
 }: CreateWorldEntityModalProps) {
     const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-    const tagSuggestions = uniqueTags.filter(t => 
-        t.toLowerCase().includes(tagInput.toLowerCase()) && 
+    const tagSuggestions = uniqueTags.filter(t =>
+        t.toLowerCase().includes(tagInput.toLowerCase()) &&
         !newEntityTags.includes(t)
     ).slice(0, 5);
 
+    // ── Local cropper state ───────────────────────────────────────────────────
+    const [isCropping, setIsCropping] = useState(false);
+    const [tempCropSrc, setTempCropSrc] = useState<string | null>(null);
+    const [cropConfig, setCropConfig] = useState<{
+        aspectRatio: number;
+        outputWidth: number;
+        outputHeight: number;
+    }>({ aspectRatio: 1, outputWidth: 600, outputHeight: 600 });
+
+    console.log("[CreateWorldEntityModal] RENDER", {
+        isImageProcessing,
+        isCropping,
+        hasTempCropSrc: !!tempCropSrc,
+        editingId: editingWorldEntityId
+    });
+
+    const openCropper = (src: string, aspectRatio: number, outputWidth: number, outputHeight: number) => {
+        setCropConfig({ aspectRatio, outputWidth, outputHeight });
+        setTempCropSrc(src);
+        setIsCropping(true);
+    };
+
+    const handleCropConfirm = (base64: string) => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
+        setNewEntityImageUrl(base64);
+        setIsCropping(false);
+        setTempCropSrc(null);
+        setIsImageProcessing(false);
+    };
+
+    const handleCropCancel = () => {
+        if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
+        setIsCropping(false);
+        setTempCropSrc(null);
+        setIsImageProcessing(false);
+    };
+
+    const processFileUpload = (
+        file: File,
+        thresholdW: number,
+        thresholdH: number,
+        aspectRatio: number,
+        outputWidth: number,
+        outputHeight: number
+    ) => {
+        console.log("[processFileUpload] START", { fileName: file.name, fileSize: file.size, thresholdW, thresholdH });
+        setIsImageProcessing(true);
+        // blob URL: instantâneo, sem conversão base64 — evita travamento com imagens grandes
+        const blobUrl = URL.createObjectURL(file);
+        console.log("[processFileUpload] blobUrl created:", blobUrl);
+        const img = new Image();
+
+        // Timeout de segurança: 15s para carregar metadados/decodificar
+        const safetyTimeout = setTimeout(() => {
+            console.warn("[processFileUpload] SAFETY TIMEOUT HIT — img.onload never fired!");
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        }, 15000);
+
+        img.onload = () => {
+            clearTimeout(safetyTimeout);
+            console.log("[processFileUpload] img.onload fired", { width: img.width, height: img.height, exceedsThreshold: img.width > thresholdW || img.height > thresholdH });
+            if (img.width > thresholdW || img.height > thresholdH) {
+                // Imagem grande — abre cropper (isImageProcessing permanece true até confirm/cancel)
+                console.log("[processFileUpload] → opening cropper");
+                openCropper(blobUrl, aspectRatio, outputWidth, outputHeight);
+            } else {
+                // Imagem pequena — comprime diretamente via requestIdleCallback para não travar UI
+                console.log("[processFileUpload] → direct compress (small image)");
+                const compressAndSave = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        setNewEntityImageUrl(canvas.toDataURL("image/jpeg", 0.7));
+                    }
+                    URL.revokeObjectURL(blobUrl);
+                    setIsImageProcessing(false);
+                    console.log("[processFileUpload] DONE — image compressed");
+                };
+
+                if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+                    (window as any).requestIdleCallback(compressAndSave);
+                } else {
+                    setTimeout(compressAndSave, 1);
+                }
+            }
+        };
+        img.onerror = (err) => {
+            clearTimeout(safetyTimeout);
+            console.error("[processFileUpload] img.onerror!", err);
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        };
+        img.src = blobUrl;
+        console.log("[processFileUpload] img.src set, waiting for onload...");
+    };
+
     const modalContent = (
+        <>
+        <CreateWorldEntityModalStyles />
         <div className="modal-overlay" onClick={() => setShowAddWorldEntity(false)}>
             <div className="modal-content world-entity-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header-ornate">
@@ -169,7 +277,7 @@ export function CreateWorldEntityModal({
                                             type="text"
                                             placeholder="Pesquisar tipo... (ex: Cidade, Floresta)"
                                             value={locSearch}
-                                            onChange={e => setLocSearch(e.target.value)}
+                                            onChange={e => setLocSearch(e.target.value.trimStart())}
                                             onFocus={() => { if (!locSearch) setLocSearch(" "); }}
                                             style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px', fontSize: '0.8rem' }}
                                         />
@@ -222,33 +330,8 @@ export function CreateWorldEntityModal({
                                         onChange={e => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => {
-                                                    const img = new Image();
-                                                    img.onload = () => {
-                                                        const canvas = document.createElement('canvas');
-                                                        let width = img.width;
-                                                        let height = img.height;
-                                                        const MAX_WIDTH = 1200; // Mapas podem ser um pouco maiores
-                                                        const MAX_HEIGHT = 1200;
-                                                        if (width > height) {
-                                                            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                                                        } else {
-                                                            if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
-                                                        }
-                                                        canvas.width = width;
-                                                        canvas.height = height;
-                                                        const ctx = canvas.getContext('2d');
-                                                        if (ctx) {
-                                                            ctx.drawImage(img, 0, 0, width, height);
-                                                            setNewEntityImageUrl(canvas.toDataURL('image/jpeg', 0.7));
-                                                        } else {
-                                                            setNewEntityImageUrl(reader.result as string);
-                                                        }
-                                                    };
-                                                    img.src = reader.result as string;
-                                                };
-                                                reader.readAsDataURL(file);
+                                                // Mapa: aspect 16:9, saída 1200×720
+                                                processFileUpload(file, 1200, 720, 1200 / 720, 1200, 720);
                                             }
                                         }}
                                         style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}
@@ -281,44 +364,8 @@ export function CreateWorldEntityModal({
                                 onChange={e => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            const img = new Image();
-                                            img.onload = () => {
-                                                const canvas = document.createElement('canvas');
-                                                let width = img.width;
-                                                let height = img.height;
-                                                
-                                                // Max dimensions reduced for better performance and to avoid 413 errors
-                                                const MAX_WIDTH = 600;
-                                                const MAX_HEIGHT = 600;
-                                                
-                                                if (width > height) {
-                                                    if (width > MAX_WIDTH) {
-                                                        height = Math.round((height * MAX_WIDTH) / width);
-                                                        width = MAX_WIDTH;
-                                                    }
-                                                } else {
-                                                    if (height > MAX_HEIGHT) {
-                                                        width = Math.round((width * MAX_HEIGHT) / height);
-                                                        height = MAX_HEIGHT;
-                                                    }
-                                                }
-                                                
-                                                canvas.width = width;
-                                                canvas.height = height;
-                                                const ctx = canvas.getContext('2d');
-                                                if (ctx) {
-                                                    ctx.drawImage(img, 0, 0, width, height);
-                                                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                                                    setNewEntityImageUrl(compressedBase64);
-                                                } else {
-                                                    setNewEntityImageUrl(reader.result as string);
-                                                }
-                                            };
-                                            img.src = reader.result as string;
-                                        };
-                                        reader.readAsDataURL(file);
+                                        // Retrato/Entidade: aspect 1:1, saída 600×600
+                                        processFileUpload(file, 600, 600, 1, 600, 600);
                                     }
                                 }}
                                 style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}
@@ -353,8 +400,8 @@ export function CreateWorldEntityModal({
                             {newEntityType === "BESTIARIO" && (
                                 <div className="input-group" style={{ marginBottom: '20px', borderBottom: '1px solid rgba(var(--accent-rgb), 0.1)', paddingBottom: '15px' }}>
                                     <label>IMPORTAR DO BESTIÁRIO DO JOGO</label>
-                                    <select 
-                                        value={importBestiaryId} 
+                                    <select
+                                        value={importBestiaryId}
                                         onChange={e => {
                                             const id = e.target.value;
                                             setImportBestiaryId(id);
@@ -395,17 +442,17 @@ export function CreateWorldEntityModal({
                                         </div>
                                         <div className="input-group flex-1">
                                             <label>PROFISSÃO</label>
-                                            <input 
-                                                type="text" 
-                                                value={newEntityProfession} 
-                                                onChange={e => setNewEntityProfession(e.target.value)} 
+                                            <input
+                                                type="text"
+                                                value={newEntityProfession}
+                                                onChange={e => setNewEntityProfession(e.target.value)}
                                                 placeholder="Ex: Guerreiro, Ladino..."
                                                 style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px', fontSize: '0.8rem' }}
                                             />
                                         </div>
                                     </>
                                 )}
-                                {["FACAO", "FAMILIA", "BESTIARIO", "OUTROS"].includes(newEntityType) && (
+                                {newEntityType === "FACAO" && (
                                     <div className="input-group flex-1">
                                         <label>LOCALIZAÇÃO / BASE</label>
                                         <select value={newEntityCurrentLoc} onChange={e => setNewEntityCurrentLoc(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
@@ -414,7 +461,7 @@ export function CreateWorldEntityModal({
                                         </select>
                                     </div>
                                 )}
-                                {["PERSONAGEM", "FACAO", "FAMILIA", "BESTIARIO", "LOCALIZACAO"].includes(newEntityType) && (
+                                {newEntityType === "PERSONAGEM" && (
                                     <div className="input-group flex-1">
                                         <label>RELIGIÃO</label>
                                         <select value={newEntityReligion} onChange={e => setNewEntityReligion(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
@@ -436,6 +483,24 @@ export function CreateWorldEntityModal({
                                     <div className="input-group flex-1">
                                         <label>LOCAL ATUAL</label>
                                         <select value={newEntityCurrentLoc} onChange={e => setNewEntityCurrentLoc(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
+                                            <option value="">NENHUM</option>
+                                            {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                            {newEntityType === "BESTIARIO" && (
+                                <div className="input-row" style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+                                    <div className="input-group flex-1">
+                                        <label>LOCAL DE ORIGEM</label>
+                                        <select value={newEntityOrigin} onChange={e => setNewEntityOrigin(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
+                                            <option value="">NENHUM</option>
+                                            {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="input-group flex-1">
+                                        <label>LOCAL VINCULADO</label>
+                                        <select value={newEntityLinkedLocation} onChange={e => setNewEntityLinkedLocation(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
                                             <option value="">NENHUM</option>
                                             {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
                                         </select>
@@ -464,7 +529,6 @@ export function CreateWorldEntityModal({
                                 }}
                                 onKeyDown={handleAddTag}
                                 onBlur={() => {
-                                    // Pequeno delay para permitir clicar na sugestão
                                     setTimeout(() => {
                                         if (tagInput.trim()) handleAddTag(tagInput);
                                         setShowTagSuggestions(false);
@@ -480,9 +544,9 @@ export function CreateWorldEntityModal({
                         {showTagSuggestions && tagSuggestions.length > 0 && (
                             <div className="tag-suggestions-dropdown animate-fade-in">
                                 {tagSuggestions.map(tag => (
-                                    <div 
-                                        key={tag} 
-                                        className="suggestion-item" 
+                                    <div
+                                        key={tag}
+                                        className="suggestion-item"
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             handleAddTag(tag);
@@ -509,30 +573,45 @@ export function CreateWorldEntityModal({
                 </div>
 
                 <div className="modal-footer">
-                    <button className="cancel-btn" onClick={handleCancelWorldEntityEdit}>CANCELAR</button>
-                    <button className="confirm-btn" onClick={handleCreateWorldEntity}>
-                        {editingWorldEntityId ? "SALVAR ALTERAÇÕES" : "CRIAR ELEMENTO"}
+                    <button className="cancel-btn" onClick={handleCancelWorldEntityEdit} disabled={isImageProcessing}>CANCELAR</button>
+                    <button 
+                        className="confirm-btn" 
+                        onClick={handleCreateWorldEntity} 
+                        disabled={isImageProcessing}
+                        style={{ opacity: isImageProcessing ? 0.6 : 1, cursor: isImageProcessing ? 'wait' : 'pointer' }}
+                    >
+                        {isImageProcessing ? 'PROCESSANDO...' : (editingWorldEntityId ? "SALVAR ALTERAÇÕES" : "CRIAR ELEMENTO")}
                     </button>
                 </div>
             </div>
         </div>
+        </>
     );
 
+    const renderCropper = isCropping && tempCropSrc ? (
+        <ImageCropper
+            src={tempCropSrc}
+            aspectRatio={cropConfig.aspectRatio}
+            outputWidth={cropConfig.outputWidth}
+            outputHeight={cropConfig.outputHeight}
+            onConfirm={handleCropConfirm}
+            onCancel={handleCropCancel}
+        />
+    ) : null;
+
     if (typeof document !== 'undefined') {
-        return createPortal(modalContent, document.body);
+        return (
+            <>
+                {createPortal(modalContent, document.body)}
+                {renderCropper}
+            </>
+        );
     }
-    return modalContent;
-}
+    return (
+        <>
+            {modalContent}
+            {renderCropper}
+        </>
+    );
 
-const styles = `
-    .input-group select option {
-        background-color: #111;
-        color: #fff;
-    }
-`;
-
-if (typeof document !== 'undefined') {
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
 }

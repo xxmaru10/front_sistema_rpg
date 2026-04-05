@@ -10,6 +10,7 @@ interface CreateSessionCardProps {
     customPlayerCode: string;
     setCustomPlayerCode: (v: string) => void;
     onCreate: () => void;
+    isLoading: boolean;
 }
 
 export function CreateSessionCard({
@@ -21,7 +22,8 @@ export function CreateSessionCard({
     setCustomGmCode,
     customPlayerCode,
     setCustomPlayerCode,
-    onCreate
+    onCreate,
+    isLoading
 }: CreateSessionCardProps) {
     return (
         <div className="tarot-card action-card new-table-card">
@@ -59,8 +61,12 @@ export function CreateSessionCard({
                         />
                     </div>
 
-                    <button className="mystic-btn primary-btn" onClick={onCreate}>
-                        CRIAR CAMPANHA
+                     <button 
+                        className="mystic-btn primary-btn" 
+                        onClick={onCreate}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'CRIANDO...' : 'CRIAR CAMPANHA'}
                     </button>
                 </div>
             </div>

@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-03
+last_updated: 2026-04-04 (story-22/rebranding-security)
 status: ativo
 ---
 
@@ -18,7 +18,8 @@ status: ativo
 - **Constantes**: `UPPER_SNAKE_CASE` (ex: `DEFAULT_SKILLS`).
 
 ## Estrutura de Pastas
-- `src/components/ComponentName`: Subpasta contendo o componente principal, seus estilos (`*.styles.tsx`) e sub-componentes.
+- `src/components/ComponentName`: Subpasta contendo o componente principal, seus estilos (`*.styles.tsx`) e sub-componentes especializados.
+- `src/features/FeatureName`: Domínios completos que agregam componentes, hooks, estilos e tipos locais em um único diretório para redução de acoplamento global.
 - `src/lib`: Lógica de domínio, store de eventos e utilities.
 - `src/types`: Definições de contratos TS (especialmente `domain.ts`).
 
@@ -38,10 +39,13 @@ Siga o padrão Conventional Commits:
 - Não realizar chamadas de API diretamente em componentes. Use `apiClient.ts`.
 - Nunca modificar o arquivo `domain.ts` sem atualizar o `api-contract.md` correspondente.
 - Jamais commitar arquivos `.env` ou segredos sensíveis.
-- **Proibido usar `alert()`** em fluxos de rede ou lógica core; substitua por `console.error` ou toasts não-bloqueantes.
+- **Proibido usar `alert()` ou `confirm()`** em fluxos de rede ou lógica core; substitua por `console.error` ou UI states/Portals não-bloqueantes.
+- **Normalização de Identidade**: Todo `userId` deve ser normalizado com `.trim().toLowerCase()` antes de ser incluído em eventos ou comparado localmente para evitar dessincronia de permissão.
 - **Requisições `fetch` sem timeout**: Sempre use `AbortSignal.timeout()` ou AbortController para evitar requisições pendentes infinitas.
 - **Estado de UI stuck**: Toda ação de carregamento/estado bloqueado (ex: `isRolling`) deve ter um safety timeout para auto-destravamento.
 
 ## UI Patterns
 - **Luxury Portal Selection**: Para menus suspensos complexos (dropdowns), utilizar Portais (React Portal) fugindo do contexto de empilhamento local para garantir que menus flutuem acima de chats/logs sem recortes. O estilo deve seguir o padrão vitoriano: fundo sólido (obsidiana #0a0a0a para legibilidade), bordas douradas e animações de fade/slide.
+- **Background Image Processing (isImageProcessing)**: Todo upload de imagem que envolva compressão no cliente (Canvas API) deve implementar um estado de processamento (`isImageProcessing`). Esse estado deve desabilitar o botão de submissão e exibir feedback visual (ex: "PROCESSANDO...") para evitar que o usuário salve o formulário antes que a string Base64 final esteja pronta.
+
 

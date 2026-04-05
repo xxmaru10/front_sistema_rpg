@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Backpack } from "lucide-react";
 import { Character, Item } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
@@ -340,7 +341,9 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         {/* Quantity Controls for CONTAINERS (Cannot change qty, just label maybe?) */}
                                         {isFilled && item.isContainer && (
                                             <div className="inv-quantity-display">
-                                                <span className="qty-label" style={{ color: 'var(--accent-color)' }}>🎒 ARMAZENAMENTO</span>
+                                                <span className="qty-label" style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <Backpack size={14} /> ARMAZENAMENTO
+                                                </span>
                                             </div>
                                         )}
 
@@ -348,7 +351,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         {/* Quantity Display for non-editable view */}
                                         {isFilled && !canEdit && (item.quantityCurrent !== undefined || item.quantityTotal !== undefined) && (
                                             <div className="inv-quantity-display">
-                                                <span className="qty-label">{item.isContainer ? "🎒" : "QTD:"}</span>
+                                                <span className="qty-label">{item.isContainer ? <Backpack size={14} /> : "QTD:"}</span>
                                                 {!item.isContainer && <span className="qty-value">{item.quantityCurrent ?? 1}/{item.quantityTotal ?? 1}</span>}
                                             </div>
                                         )}
@@ -385,7 +388,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                         <div key={container.id} className="container-wrapper" style={{ marginTop: '16px', borderTop: '1px solid rgba(197, 160, 89, 0.2)', paddingTop: '8px' }}>
                             <div className="readout-header mobile-col compact-header" style={{ marginBottom: '8px' }}>
                                 <div className="header-group">
-                                    <span className="symbol">🎒</span>
+                                    <span className="symbol"><Backpack size={18} /></span>
                                     <span>{container.name.toUpperCase()}</span>
                                 </div>
                             </div>

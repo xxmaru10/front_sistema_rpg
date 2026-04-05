@@ -16,6 +16,8 @@ interface CharacterVitalityProps {
     onRefreshChange: (delta: number) => void;
 }
 
+
+
 export function CharacterVitality({
     stressPhysical,
     stressMental,
@@ -31,6 +33,8 @@ export function CharacterVitality({
     onFPChange,
     onRefreshChange,
 }: CharacterVitalityProps) {
+
+
     return (
         <div className="char-core-info">
             <div className="header-stress-tracks">
@@ -89,35 +93,33 @@ export function CharacterVitality({
                 </div>
             </div>
 
-            {/* Fate Reserve — hidden from players for NPCs */}
             {!(isNPC && !isGM) && (
-                <div className="fate-reserve">
-                    <div className="reserve-label">{isCompact ? "DESTINO" : "RESERVA DESTINO"}</div>
-                    <div className="reserve-value">
-                        <span className="symbol">🜂</span>
-                        <span>{fatePoints}</span>
-                        <span className="refresh-value">/ {refresh ?? 3}</span>
+                <div className="vitality-resources-row single">
+                    <div className="fate-reserve">
+                        <div className="reserve-label">{isCompact ? "DESTINO" : "PONTOS DE DESTINO"}</div>
+                        <div className="reserve-value">
+                            <span className="symbol">🜂</span>
+                            <span>{fatePoints}</span>
+                            <span className="refresh-value">/ {refresh ?? 3}</span>
 
-                        {isGM && !isCompact && (
-                            <div className="reserve-actions">
-                                <button onClick={() => onFPChange(-1)} className="reserve-btn">－</button>
-                                <button onClick={() => onFPChange(1)} className="reserve-btn">＋</button>
-                                <div className="refresh-controls">
-                                    <button onClick={() => onRefreshChange(-1)} className="reserve-btn refresh" title="Reduzir Recarga">v</button>
-                                    <button onClick={() => onRefreshChange(1)} className="reserve-btn refresh" title="Aumentar Recarga">^</button>
+                            {canEditStressOrFP && (
+                                <div className="reserve-actions">
+                                    <button onClick={() => onFPChange(-1)} className="reserve-btn">－</button>
+                                    <button onClick={() => onFPChange(1)} className="reserve-btn">＋</button>
+                                    {isGM && !isCompact && (
+                                        <div className="refresh-controls">
+                                            <button onClick={() => onRefreshChange(-1)} className="reserve-btn refresh" title="Reduzir Recarga">v</button>
+                                            <button onClick={() => onRefreshChange(1)} className="reserve-btn refresh" title="Aumentar Recarga">^</button>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        )}
-
-                        {!isGM && !isCompact && canEditStressOrFP && (
-                            <div className="reserve-actions">
-                                <button onClick={() => onFPChange(-1)} className="reserve-btn">－</button>
-                                <button onClick={() => onFPChange(1)} className="reserve-btn">＋</button>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
 }
+
+

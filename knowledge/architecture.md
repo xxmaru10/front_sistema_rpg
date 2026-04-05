@@ -6,14 +6,14 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-03
+last_updated: 2026-04-04 (story-23/image-cropper)
 status: ativo
 ---
 
 # Arquitetura
 
 ## Visão Geral
-O Fate Companion utiliza uma arquitetura de **Event Sourcing**. Isso significa que as ações mecânicas (movimentação, dano, rolagem de dados) não modificam o banco de dados diretamente; em vez disso, são anexadas a um log cronológico de eventos (timeline).
+O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que as ações mecânicas (movimentação, dano, rolagem de dados) não modificam o banco de dados diretamente; em vez disso, são anexadas a um log cronológico de eventos (timeline).
 
 ## O Ciclo do Evento
 1. **Ativação**: O usuário trigga uma ação na UI (ex: "Causar Dano").
@@ -54,6 +54,18 @@ O Fate Companion utiliza uma arquitetura de **Event Sourcing**. Isso significa q
 | Filtros Universais (Searchable) | Expansão do sistema de filtros para todas as abas (Notas, Tempo, Jogo) com busca interna e renderização via Portal para conformidade vitoriana. | 2026-04-03 |
 | Sugestões de Tags (Autocomplete) | Implementação de dropdown de sugestão em World Entities baseado na projeção de tags existentes, otimizando a criação de entidades. | 2026-04-03 |
 | Robustez de Tagging Mobile | Correção de salto de foco via `preventDefault` e suporte a `onBlur` + multiplicadores (,, ;) para entrada de tags estável em dispositivos móveis. | 2026-04-03 |
+| Transmissão de Tela Estável (Story 19) | Normalização de userId (`.trim().toLowerCase()`) no `screen-share-manager.ts`. Broadcaster sempre recria conexão ao receber `peer-join` (fix: F5 do jogador sem intervenção do mestre). Bitrate adaptativo por peerCount (≤2→4Mbps, ≤5→2.5Mbps, ≤8→1.5Mbps, 9+→1Mbps) via `getAdaptiveBitrate()`. Safety timeout 15s para ICE stuck. `reconnect()` público. Botão `RefreshCw` na Arena via `.screenshare-refresh-btn`. Badge "Sem sinal" após 10s sem frames via `.screenshare-nosignal`. Vídeo oculto via `display:none` CSS em outras abas (nunca unmount). | 2026-04-04 |
+| WebRTC Áudio Bidirecional (Story 18) | Fix do loop de re-join (H5): non-offerer agora faz espera passiva com fallback único de 5s. Normalização de userId (.trim().toLowerCase()) no deterministic offerer. Flag `_presenceSubscribed` + retry exponencial para `track()` prematuro. Safety timeout de 15s para conexões presas em 'connecting'. | 2026-04-04 |
+| Esquema de Campos por Tipo (Story 20) | Mapa estrito de campos por WorldEntityType: `religionId` apenas para PERSONAGEM; `originId` para PERSONAGEM e BESTIARIO; `currentLocationId` para PERSONAGEM e FACAO; `linkedLocationId` para LOCALIZACAO, MAPA e BESTIARIO. Modal condicionalizado por tipo. Metadados de listagem expandidos por tipo (local, raça, profissão, tipo de local). Paste do MentionEditor sanitizado para texto puro. Scroll do dropdown de filtros corrigido via flex+minHeight. | 2026-04-04 |
+| Fragmentação de useSessionNotes (Story 20 — Correção de Padrões) | Hook monolítico (1500+ linhas) fragmentado em 4 sub-hooks na pasta `src/hooks/session-notes/`: `useWorldEntities.ts`, `useSessionMissions.ts`, `useSessionSkillsItems.ts`, `useSessionNotesDiary.ts`. `useSessionNotes.ts` mantido como orquestrador com API pública inalterada (spread dos sub-hooks). `alert()/confirm()` substituídos por `console.error`. CSS injections movidas para `*.styles.tsx` com componente `<style>`. userId normalizado com `.trim().toLowerCase()` na entrada de cada sub-hook. | 2026-04-04 |
+| WebRTC Qualidade de Áudio e Suporte Internacional | `latencyHint: 'interactive'` no AudioContext reduz buffer de processamento. `channelCount: 1` (mono) reduz carga ~50% por stream. Opus forçado como codec preferido via `setCodecPreferences` (reordenação, sem modificação de objetos — Chrome 105+ lança `InvalidModificationError` em objetos modificados). FEC (`useinbandfec=1`) e DTX (`usedtx=1`) via SDP munging em offer e answer, garantindo resiliência a perda de pacotes em links intercontinentais. Bitrate adaptativo por contagem de peers (64→32kbps), aplicado uma única vez em `connected` via `applyBitrateToSender`. Suporte até 12 peers em topologia mesh. `sampleRate` explícito removido do AudioContext e getUserMedia — browser usa taxa nativa do hardware para evitar mismatch com analyser. | 2026-04-04 |
+| Robustez em Imagens de Mundo (Story 21) | Implementação de `isImageProcessing` no formulário para bloquear submissão durante compressão (Canvas API) em background. Simplificação da lógica de `imageUrl` em `useWorldEntities.ts` (unificado para todos os tipos). `fieldVisibility` agora padrão `false` (visível) para evitar confusão de "item sumido" após criação. | 2026-04-04 |
+| ImageCropper Modal (Story 23) | Componente portal-based `src/components/ImageCropper` com Canvas API. Detecta tamanho: >limiar → abre cropper; ≤limiar → comprime direto. Zoom multiplicativo com clamp ao coverZoom. Offset clamped para garantir imagem sempre cobre o frame. Saída JPEG 0.7 quality. Threshold: retratos 600×600, mapas 1200×720. Integrado em CharacterCard e CreateWorldEntityModal (self-contained via useState local no modal). | 2026-04-04 |
+| Responsividade e Iconografia da Ficha (Story 22) | Fix de overflow da coluna Lore/Aspectos via `minmax(0, 1fr)` no `.top-layout-grid` + `min-width: 0` em `.info-tower-column`. "RESERVA DESTINO" → "PONTOS DE DESTINO". Componente ~20% menor (padding 24→14px, font 3rem→2.4rem). Abas PowerTabs migradas para Lucide icons (`Zap`, `Briefcase`, `Wand2`) sem texto, com `title` tooltip. Barra mágica realocada para o topo do container de atributos e background unificado com o tema escuro global. | 2026-04-04 |
+| Rebranding Global (Cronos Vtt) | Renomeação completa de "Fate Companion / Project GM" para **Cronos Vtt** em layouts, metadados e documentação para alinhar com a nova identidade visual. | 2026-04-04 |
+| Padronização de Segurança e Eventos | Normalização obrigatória de `userId` (`.trim().toLowerCase()`) em todos os hooks e remoção total de chamadas nativas bloqueantes (`alert`/`confirm`) em favor de Portals/UI states. | 2026-04-04 |
+
+| Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

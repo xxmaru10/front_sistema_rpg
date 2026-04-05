@@ -37,6 +37,7 @@ export default function Home() {
   // Estados de Fluxo
   const [step, setStep] = useState<'HOME' | 'JOIN_CHARACTER'>('HOME');
   const [availableCharacters, setAvailableCharacters] = useState<any[]>([]);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   // Buscar sessões ao carregar
   useEffect(() => {
@@ -64,6 +65,8 @@ export default function Home() {
       return;
     }
 
+    setIsActionLoading(true);
+
     const sessionId = uuidv4().slice(0, 8); // ID curto
     // Define os códigos: customizados ou padrão
     const finalGmCode = customGmCode.trim() || `${sessionId}-GM`;
@@ -77,6 +80,7 @@ export default function Home() {
       });
     } catch {
       alert("Erro ao criar sessão no banco.");
+      setIsActionLoading(false);
       return;
     }
 
@@ -100,13 +104,15 @@ export default function Home() {
   };
 
   const handleJoinSession = async () => {
-    if (!selectedSession) return;
+    if (!selectedSession || isActionLoading) return;
 
+    setIsActionLoading(true);
     let joinInfo: apiClient.SessionJoinInfo;
     try {
       joinInfo = await apiClient.fetchSessionJoinInfo(selectedSession.id);
     } catch {
       alert("Erro ao verificar dados da sessão.");
+      setIsActionLoading(false);
       return;
     }
 
@@ -117,6 +123,7 @@ export default function Home() {
     if (joinRole === 'GM') {
       if (inputCode !== expectedGmCode) {
         alert("Código de Mestre incorreto.");
+        setIsActionLoading(false);
         return;
       }
       router.push(`/session/${selectedSession.id}?u=Mestre&r=GM`);
@@ -124,22 +131,26 @@ export default function Home() {
     } else {
       if (inputCode !== expectedPlayerCode) {
         alert("Código da Mesa incorreto. Peça ao se Mestre o 'Código do Jogador'.");
+        setIsActionLoading(false);
         return;
       }
 
       const playableCharacters = joinInfo.characters;
       if (playableCharacters.length === 0) {
         alert("Esta sala ainda não possui personagens jogáveis disponíveis.");
+        setIsActionLoading(false);
         return;
       }
 
       setAvailableCharacters(playableCharacters);
       setStep('JOIN_CHARACTER');
+      setIsActionLoading(false);
     }
   };
 
   const handleSelectCharacter = (char: any) => {
-    if (!selectedSession) return;
+    if (!selectedSession || isActionLoading) return;
+    setIsActionLoading(true);
     router.push(`/session/${selectedSession.id}?u=${encodeURIComponent(char.name)}&r=PLAYER&c=${char.id}`);
   };
 
@@ -152,14 +163,14 @@ export default function Home() {
         <div className="banner-container">
           <NextImage
             src="/banners/header-banner.png"
-            alt="Project GM Banner"
+            alt="Cronos Vtt Banner"
             width={1200}
             height={300}
             className="header-banner"
             priority
           />
         </div>
-        <h1 className="main-title glitch-text" data-text="PROJECT GM">PROJECT GM</h1>
+        <h1 className="main-title glitch-text" data-text="CRONOS VTT">CRONOS VTT</h1>
       </div>
 
       {step === 'HOME' && (
@@ -174,6 +185,7 @@ export default function Home() {
             customPlayerCode={customPlayerCode}
             setCustomPlayerCode={setCustomPlayerCode}
             onCreate={handleCreateSession}
+            isLoading={isActionLoading}
           />
 
           <JoinSessionCard
@@ -186,6 +198,7 @@ export default function Home() {
             accessCodeInput={accessCodeInput}
             setAccessCodeInput={setAccessCodeInput}
             onJoin={handleJoinSession}
+            isJoining={isActionLoading}
           />
         </div>
       )}
@@ -195,6 +208,7 @@ export default function Home() {
           availableCharacters={availableCharacters}
           onSelectCharacter={handleSelectCharacter}
           onBack={() => setStep('HOME')}
+          isLoading={isActionLoading}
         />
       )}
 
