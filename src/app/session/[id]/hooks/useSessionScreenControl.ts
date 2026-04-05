@@ -94,6 +94,7 @@ export function useSessionScreenControl({
             const tryPlay = async () => {
                 try {
                     // Tenta play() normal (pode ter áudio se o usuário já interagiu com a página)
+                    videoEl.muted = false;
                     await videoEl.play();
                     console.log("[ScreenShare] Play success with audio");
                 } catch (err) {

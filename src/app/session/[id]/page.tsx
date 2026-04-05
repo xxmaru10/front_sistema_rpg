@@ -391,7 +391,7 @@ export default function SessionPage() {
                 em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
                 <video
-                    autoPlay playsInline muted
+                    autoPlay playsInline
                     className="screenshare-video"
                     ref={(el) => {
                         screenVideoRef.current = el;
