@@ -5,7 +5,7 @@ tags: [stack, tecnologia, versões]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-04
+last_updated: 2026-04-05
 status: estável
 ---
 
