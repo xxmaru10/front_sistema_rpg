@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import ReactPlayer from "react-player/youtube";
+import ReactPlayer from "react-player";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
@@ -27,7 +27,7 @@ const isYouTubeUrl = (url: string) =>
 
 export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const reactPlayerRef = useRef<any>(null);
+    const reactPlayerRef = useRef<HTMLVideoElement | null>(null);
     // Seek pending until ReactPlayer is ready (e.g., late-join sync)
     const pendingSeekRef = useRef<number | null>(null);
     // isTemporary track state for onEnded restore logic (unified for audio and YouTube)
@@ -161,10 +161,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         const startedAt = new Date(event.payload.startedAt).getTime();
                         const now = Date.now();
                         const elapsed = (now - startedAt) / 1000;
-                        const currentTime = reactPlayerRef.current?.getCurrentTime() ?? 0;
+                        const currentTime = reactPlayerRef.current?.currentTime ?? 0;
                         if (Math.abs(currentTime - elapsed) > 2) {
                             if (reactPlayerRef.current) {
-                                reactPlayerRef.current.seekTo(elapsed, "seconds");
+                                reactPlayerRef.current.currentTime = elapsed;
                             } else {
                                 pendingSeekRef.current = elapsed;
                             }
@@ -269,7 +269,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             const now = Date.now();
             let currentSec = 0;
             if (isYouTubeUrl(url) && reactPlayerRef.current) {
-                currentSec = reactPlayerRef.current.getCurrentTime() ?? 0;
+                currentSec = reactPlayerRef.current.currentTime ?? 0;
             } else if (audioRef.current) {
                 currentSec = audioRef.current.currentTime;
             }
@@ -318,7 +318,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const handleYouTubeReady = () => {
         if (pendingSeekRef.current !== null && reactPlayerRef.current) {
-            reactPlayerRef.current.seekTo(pendingSeekRef.current, "seconds");
+            reactPlayerRef.current.currentTime = pendingSeekRef.current;
             pendingSeekRef.current = null;
         }
     };
@@ -479,7 +479,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             {isYouTubeUrl(currentTrack) && (
                 <ReactPlayer
                     ref={reactPlayerRef}
-                    url={currentTrack}
+                    src={currentTrack}
                     playing={isPlaying}
                     loop={isLooping}
                     volume={isMuted ? 0 : volume}
@@ -488,7 +488,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     height={0}
                     onEnded={handleTrackEnded}
                     onReady={handleYouTubeReady}
-                    config={{ youtube: { playerVars: { controls: 0 } } }}
                 />
             )}
 
