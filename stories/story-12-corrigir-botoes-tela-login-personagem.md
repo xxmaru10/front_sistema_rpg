@@ -1,6 +1,6 @@
 # Story: Corrigir Estética da Escolha de Personagem na Home
 
-## Status: 📝 Em Progresso
+Status: concluído
 
 O objetivo desta história é transformar a lista de seleção de personagens em uma interface "Premium" e mística, seguindo o padrão de **Cartas de Tarot/Vitoriano** já estabelecido no restante do sistema.
 

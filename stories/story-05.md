@@ -1,7 +1,7 @@
 ---
 story: story-05
 title: Corrigir Sincronização de Voz (WebRTC) e Reinicialização Nuclear
-status: em-andamento
+Status: concluído
 priority: alta
 ---
 

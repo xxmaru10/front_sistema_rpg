@@ -1,7 +1,7 @@
 ---
 title: "Story 15 - Refatoração UI: Submenus com Navegação em Dropdown"
 description: "Migrar sub-abas horizontais para seletores do tipo droplist para reduzir ruído visual."
-status: "completed"
+Status: concluído
 last_updated: 2026-04-02
 ---
 

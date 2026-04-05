@@ -1,5 +1,5 @@
 ---
-status: em-andamento
+Status: concluído
 priority: alta
 tags: [sincronia, notes, ux, stability]
 ---

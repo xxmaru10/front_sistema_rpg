@@ -1,7 +1,7 @@
 ---
 title: "Story 21: Ajustes de Scroll em Menus e Persistência de Imagens de Mundo"
 description: "Correção de menus suspensos (Portals) que não seguiam o scroll e bug de persistência em imagens de entidades de mundo."
-status: "concluído"
+Status: concluído
 last_updated: 2026-04-04
 ---
 

@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-04 (story-22/rebranding-security)
+last_updated: 2026-04-05 (revisao-atmospheric-player/userId-normalization)
 status: ativo
 ---
 

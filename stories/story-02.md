@@ -4,7 +4,7 @@ description: Refatorar o painel GM (VI) em sub-componentes especializados (Áudi
 tags: [ui, refactor, frontend, gm]
 epic: epic-01-refatoracao-modular
 repo: frontend
-status: pending
+Status: concluído
 last_updated: 2026-03-30
 ---
 

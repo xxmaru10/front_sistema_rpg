@@ -4,7 +4,7 @@ description: Implementar customização de grade (cor/espessura) e um modo teatr
 tags: [ui, battlemap, theater-mode, frontend]
 epic: epic-02-battlemap-v2
 repo: frontend
-status: done
+Status: concluído
 last_updated: 2026-03-30
 ---
 

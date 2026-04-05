@@ -1,7 +1,7 @@
 ---
 title: "Story 22 - Refatoração da Ficha: Responsividade, Pontos de Destino e Iconografia de Abas"
 description: "Tornar a ficha de personagem responsiva, integrando a Lore/Aspectos ao container principal, ampliando a largura automática e simplificando a UI de pontos de destino e abas de poder."
-status: "concluído"
+Status: concluído
 priority: "alta"
 last_updated: 2026-04-04
 tags: [ui, refactor, responsividade, ux]

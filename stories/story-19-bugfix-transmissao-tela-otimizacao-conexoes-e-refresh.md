@@ -2,7 +2,7 @@
 title: "Story 19 - Bugfix: Transmissão de Tela — Otimização de Conexões, Bitrate Adaptativo e Refresh UI"
 description: "Corrigir falhas de tela preta e instabilidade em sessões com muitos participantes via bitrate adaptativo, normalização de IDs, TURN server, timeouts de conexão e refresh manual da stream."
 reviewed_by: "claude-sonnet-4-6"
-status: "concluído"
+Status: concluído
 priority: "crítica"
 last_updated: 2026-04-04
 implemented_by: "claude-sonnet-4-6"

@@ -1,7 +1,7 @@
 ---
 story: story-06
 title: Corrigir Layout de Perícias Cortadas na Ficha
-status: em-andamento
+Status: concluído
 priority: alta
 ---
 

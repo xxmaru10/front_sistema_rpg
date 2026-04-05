@@ -4,7 +4,7 @@ description: Separar lógica de estresse, aspectos e estilos do componente princ
 tags: [ui, refactor, frontend, characters]
 epic: epic-01-refatoracao-modular
 repo: frontend
-status: done
+Status: concluído
 last_updated: 2026-03-30
 ---
 

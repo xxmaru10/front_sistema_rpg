@@ -1,7 +1,7 @@
 ---
 title: "Story 24 - Corrigir Demora de Upload de Imagem (Regressão da Story 23)"
 description: "Investigar e corrigir por que o upload de imagem ainda está lento após a Story 23. A substituição FileReader→createObjectURL já foi implementada; o problema residual aponta para isImageProcessing travado sem timeout de segurança."
-status: "concluído"
+Status: concluído
 priority: "crítica"
 last_updated: 2026-04-05
 tags: [ui, image, upload, performance, canvas, regressão]

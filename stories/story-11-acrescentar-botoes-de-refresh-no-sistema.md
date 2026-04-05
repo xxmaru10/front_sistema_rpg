@@ -1,6 +1,6 @@
 # Story: Acrescentar 3 Botões de Refresh no Sistema
 
-## Status: 📝 Em Planejamento
+Status: concluído
 
 O objetivo desta tarefa é adicionar botões de atualização localizada (refresh) em três áreas críticas do sistema: **Notas**, **Logs de Rolagem** (CombatLog) e **Menu de Logs** (LogTab). Estes botões devem permitir que o usuário force o re-carregamento dos dados sem precisar dar F5 na página inteira, garantindo que o estado local esteja sincronizado com o servidor.
 

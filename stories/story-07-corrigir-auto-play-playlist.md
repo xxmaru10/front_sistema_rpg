@@ -1,7 +1,7 @@
 ---
 story: story-07
 title: Corrigir Passagem Automática de Playlist (Auto-Play)
-status: concluído
+Status: concluído
 priority: média
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Story #09: Restauração Visual e de Layout da Ficha"
 description: "Resolvendo a estética inacabada em seções específicas da ficha e tornando o layout fluido para melhor aproveitamento de espaço em notebooks."
-status: draft
+Status: concluído
 last_updated: 2026-03-31
 ---
 

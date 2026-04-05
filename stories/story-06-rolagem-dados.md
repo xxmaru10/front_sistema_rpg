@@ -1,7 +1,7 @@
 ---
 story: story-06
 title: "Resolução de Problemas Críticos na Rolagem de Dados (Sincronização e Estabilidade)"
-status: pendente
+Status: concluído
 priority: critica
 epic: epic-01-refatoracao-modular
 ---

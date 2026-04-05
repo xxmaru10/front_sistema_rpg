@@ -1,7 +1,7 @@
 ---
 title: "Story 23 - Sistema de Corte e Redimensionamento de Imagem (Image Cropper)"
 description: "Implementar uma interface obrigatória de crop e resize para uploads de imagem, garantindo que as artes caibam no escopo pretendido do sistema com ferramentas de ajuste manual e automação para imagens pequenas."
-status: "concluído"
+Status: concluído
 priority: "alta"
 last_updated: 2026-04-04 (implementado)
 tags: [ui, image, upload, ux, canvas]

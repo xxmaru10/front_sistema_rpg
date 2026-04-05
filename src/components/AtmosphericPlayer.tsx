@@ -146,7 +146,7 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
 
     const handleTrackChange = (track: string) => {
         setCurrentTrack(track);
-        broadcastUpdate(track, true, isLooping);
+        broadcastUpdate(track, track ? true : false, isLooping);
     };
 
     const togglePlay = () => {
@@ -176,7 +176,7 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
             sessionId,
             seq: 0,
             type: "ATMOSPHERIC_PLAYBACK_CHANGED" as any,
-            actorUserId: userId,
+            actorUserId: userId?.trim().toLowerCase(),
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { url, playing, loop, startedAt }
@@ -252,7 +252,7 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                 <button
                     className={`control-btn ${isPlaying ? "active" : ""}`}
                     onClick={togglePlay}
-                    disabled={!currentTrack}
+                    disabled={!currentTrack && !isPlaying}
                     title={isPlaying ? "Parar" : "Tocar"}
                 >
                     {isPlaying ? <Pause size={14} /> : <Play size={14} />}
@@ -336,7 +336,7 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                         <button
                             className={`control-btn ${isPlaying ? "active" : ""}`}
                             onClick={togglePlay}
-                            disabled={!currentTrack}
+                            disabled={!currentTrack && !isPlaying}
                         >
                             {isPlaying ? <Pause size={12} /> : <Play size={12} />}
                         </button>
@@ -476,6 +476,11 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                     border-color: #555;
                 }
 
+                .control-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+
                 .control-btn.active {
                     color: #82b4ff;
                     border-color: #82b4ff;
@@ -528,7 +533,7 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                     text-overflow: ellipsis;
                 }
 
-                .volume-input.atmos {
+                .atmos-input {
                     background: #050a12;
                     border: 1px solid #1e2a3b;
                     color: #82b4ff;
@@ -539,8 +544,8 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                     -moz-appearance: textfield;
                 }
 
-                .volume-input.atmos::-webkit-outer-spin-button,
-                .volume-input.atmos::-webkit-inner-spin-button {
+                .atmos-input::-webkit-outer-spin-button,
+                .atmos-input::-webkit-inner-spin-button {
                     -webkit-appearance: none;
                     margin: 0;
                 }

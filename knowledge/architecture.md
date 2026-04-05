@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-04 (story-23/image-cropper)
+last_updated: 2026-04-05 (revisao-atmospheric-player)
 status: ativo
 ---
 
@@ -66,6 +66,8 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Padronização de Segurança e Eventos | Normalização obrigatória de `userId` (`.trim().toLowerCase()`) em todos os hooks e remoção total de chamadas nativas bloqueantes (`alert`/`confirm`) em favor de Portals/UI states. | 2026-04-04 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
+| YouTube no MusicPlayer (Story 25) | Renderização dual em `MusicPlayer.tsx`: `<audio>` mantido para tracks Supabase; `ReactPlayer` (react-player/youtube) renderizado condicionalmente para URLs YouTube. Helper `isYouTubeUrl()` roteia lógica de player, `getSupabaseUrl`, `startedAt` e volume. `pendingSeekRef` para sync de late-join. `isTemporaryRef`/`restoreUrlRef` unificam restore de tracks temporárias entre os dois players. Import otimizado `react-player/youtube`. | 2026-04-05 |
+| Fix Pause AtmosphericPlayer + Normalização | Correção do botão de pause da atmosfera (`audioRef.current.pause()` movido para fora do guard `isNewTrack`). Normalização de `actorUserId` com `.trim().toLowerCase()` em `AtmosphericPlayer.tsx` e `MusicPlayer.tsx`. CSS corrigido: adicionado `.control-btn:disabled` e selector `.volume-input.atmos` renomeado para `.atmos-input` para corresponder à classe real no HTML. | 2026-04-05 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

@@ -1,7 +1,7 @@
 ---
 title: "Story 17 - Bugfix: Tags Mobile, Filtros UI e Sugestões de Tags"
 description: "Corrigir input de tags em dispositivos móveis, expandir filtros contextuais para todas as abas e implementar sugestões de tags."
-status: "completed"
+Status: concluído
 last_updated: 2026-04-03
 ---
 

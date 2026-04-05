@@ -2,7 +2,7 @@
 title: "Story 18 - Bugfix: Voice Chat — Visibilidade Mútua e Áudio Bidirecional entre Mestre e Jogador"
 description: "Corrigir falha onde jogador ouve o mestre mas mestre não ouve o jogador, e ambos não se vêem na lista de participantes do voice chat."
 reviewed_by: "Análise externa (2026-04-04) — 2 hipóteses adicionais incorporadas"
-status: "concluído"
+Status: concluído
 priority: "crítica"
 last_updated: 2026-04-04
 implemented_at: 2026-04-04

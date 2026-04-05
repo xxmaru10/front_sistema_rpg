@@ -4,7 +4,7 @@ description: Implementar escala reduzida (50%), Câmara de Convocatória inicial
 tags: [ui, dice-roller, threejs, physics, glassmorphism]
 epic: epic-01-global-dice-roller
 repo: frontend
-status: done
+Status: concluído
 last_updated: 2026-03-30
 ---
 

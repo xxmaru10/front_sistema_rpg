@@ -1,7 +1,7 @@
 ---
 title: "Story 16 - bugfix: post its estão viajando para todas as mesas"
 description: "Migrar Post-its do localStorage para o EventStore para permitir acesso multi-dispositivo e isolamento total por usuário/mesa."
-status: "in_progress"
+Status: concluído
 last_updated: 2026-04-02
 ---
 

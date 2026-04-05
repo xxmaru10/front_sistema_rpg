@@ -2,7 +2,7 @@
 title: "Story 20 - Ajustes e Correções no Sistema de Notas e Entidades"
 description: "Resolver falhas de salvamento (imagens/mapas), corrigir esquemas de campos por tipo (Religião/Origem), implementar limpeza de fonte no editor e melhorar UI de listagem e filtros."
 priority: "alta"
-status: "concluído"
+Status: concluído
 last_updated: 2026-04-04 (correção de padrões)
 tags: [notas, mundo, bugfix, ui, editor]
 ---

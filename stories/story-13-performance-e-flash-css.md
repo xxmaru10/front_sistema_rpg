@@ -1,7 +1,7 @@
 ---
 title: "Story #13: Performance da Ficha e Correção de Flash CSS"
 description: "Diagnóstico e correção dos problemas de performance na aba PERSONAGENS e de flash visual ao clicar em botões de stress, pontos de destino e perícias."
-status: in_progress
+Status: concluído
 last_updated: 2026-04-02
 ---
 

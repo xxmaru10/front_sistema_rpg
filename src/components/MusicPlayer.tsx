@@ -2,9 +2,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import ReactPlayer from "react-player/youtube";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
-import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw } from "lucide-react";
+import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface MusicPlayerProps {
@@ -21,8 +22,19 @@ interface Playlist {
 
 const BUCKET_NAME = "campaign-uploads";
 
+const isYouTubeUrl = (url: string) =>
+    /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
+
 export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const reactPlayerRef = useRef<any>(null);
+    // Seek pending until ReactPlayer is ready (e.g., late-join sync)
+    const pendingSeekRef = useRef<number | null>(null);
+    // isTemporary track state for onEnded restore logic (unified for audio and YouTube)
+    const isTemporaryRef = useRef(false);
+    const restoreUrlRef = useRef("");
+    const restoreLoopRef = useRef(true);
+
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
     const [currentTrack, setCurrentTrack] = useState<string>("");
@@ -33,6 +45,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const [showControls, setShowControls] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [youtubeInputUrl, setYoutubeInputUrl] = useState("");
 
     useEffect(() => {
         setIsMounted(true);
@@ -66,13 +79,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 }
 
                 // Get tracks from subfolders and merge them into THIS folder's tracker
-                // (This makes parent folders include all subfolder tracks, as requested before)
                 const subFolderResults = await Promise.all(subFolders.map(scanFoldersRecursive));
                 for (const subTracks of subFolderResults) {
                     allTracksInThisPath = [...allTracksInThisPath, ...subTracks];
                 }
 
-                // If this folder (or its children) has tracks, add it as a playlist
                 if (allTracksInThisPath.length > 0) {
                     newPlaylists[path || "Geral"] = allTracksInThisPath;
                 }
@@ -139,52 +150,69 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             } else if (event.type === "MUSIC_PLAYBACK_CHANGED") {
                 const { url, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
 
-                if (audioRef.current) {
-                    const fullUrl = getSupabaseUrl(url);
+                setCurrentTrack(url);
+                setIsPlaying(playing);
+                setIsLooping(loop);
 
-                    if (audioRef.current.src !== fullUrl && url) {
-                        audioRef.current.src = fullUrl;
-                        audioRef.current.load();
-                        setCurrentTrack(url);
+                if (isYouTubeUrl(url)) {
+                    // YouTube: ReactPlayer is controlled via props (playing, loop, volume).
+                    // Handle startedAt sync: seek if player ready, otherwise queue via pendingSeekRef.
+                    if (playing && event.payload.startedAt) {
+                        const startedAt = new Date(event.payload.startedAt).getTime();
+                        const now = Date.now();
+                        const elapsed = (now - startedAt) / 1000;
+                        const currentTime = reactPlayerRef.current?.getCurrentTime() ?? 0;
+                        if (Math.abs(currentTime - elapsed) > 2) {
+                            if (reactPlayerRef.current) {
+                                reactPlayerRef.current.seekTo(elapsed, "seconds");
+                            } else {
+                                pendingSeekRef.current = elapsed;
+                            }
+                        }
                     }
+                    // isTemporary restore: stored in refs, handled by handleTrackEnded
+                    isTemporaryRef.current = !!isTemporary;
+                    restoreUrlRef.current = restoreUrl || "";
+                    restoreLoopRef.current = restoreLoop ?? true;
+                } else {
+                    // Supabase audio: use native audioRef
+                    if (audioRef.current) {
+                        const fullUrl = getSupabaseUrl(url);
 
-                    if (playing) {
-                        const playAudio = async () => {
-                            try {
-                                if (event.payload.startedAt) {
-                                    const startedAt = new Date(event.payload.startedAt).getTime();
-                                    const now = Date.now();
-                                    const elapsed = (now - startedAt) / 1000;
+                        if (audioRef.current.src !== fullUrl && url) {
+                            audioRef.current.src = fullUrl;
+                            audioRef.current.load();
+                        }
 
-                                    if (audioRef.current && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
-                                        audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+                        if (playing) {
+                            const playAudio = async () => {
+                                try {
+                                    if (event.payload.startedAt) {
+                                        const startedAt = new Date(event.payload.startedAt).getTime();
+                                        const now = Date.now();
+                                        const elapsed = (now - startedAt) / 1000;
+
+                                        if (audioRef.current && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
+                                            audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+                                        }
                                     }
+                                    await audioRef.current?.play();
+                                } catch (e) {
+                                    console.warn("Autoplay blocked:", e);
                                 }
-                                await audioRef.current?.play();
-                            } catch (e) {
-                                console.warn("Autoplay blocked:", e);
-                            }
-                        };
-                        playAudio();
-                    } else {
-                        audioRef.current.pause();
+                            };
+                            playAudio();
+                        } else {
+                            audioRef.current.pause();
+                        }
+
+                        audioRef.current.loop = loop;
+
+                        // isTemporary restore: stored in refs, handled by handleTrackEnded
+                        isTemporaryRef.current = !!isTemporary;
+                        restoreUrlRef.current = restoreUrl || "";
+                        restoreLoopRef.current = restoreLoop ?? true;
                     }
-
-                    audioRef.current.loop = loop;
-
-                    if (isTemporary && userRole === "GM") {
-                        audioRef.current.onended = () => {
-                            if (restoreUrl) {
-                                broadcastUpdate(restoreUrl, true, restoreLoop || true);
-                            }
-                            if (audioRef.current) audioRef.current.onended = null;
-                        };
-                    } else {
-                        if (audioRef.current) audioRef.current.onended = null;
-                    }
-
-                    setIsPlaying(playing);
-                    setIsLooping(loop);
                 }
             }
         });
@@ -237,9 +265,14 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         if (!sessionId || !userId) return;
 
         let startedAt: string | undefined = undefined;
-        if (playing && audioRef.current) {
+        if (playing) {
             const now = Date.now();
-            const currentSec = audioRef.current.currentTime;
+            let currentSec = 0;
+            if (isYouTubeUrl(url) && reactPlayerRef.current) {
+                currentSec = reactPlayerRef.current.getCurrentTime() ?? 0;
+            } else if (audioRef.current) {
+                currentSec = audioRef.current.currentTime;
+            }
             startedAt = new Date(now - (currentSec * 1000)).toISOString();
         }
 
@@ -248,7 +281,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             sessionId,
             seq: 0,
             type: "MUSIC_PLAYBACK_CHANGED",
-            actorUserId: userId,
+            actorUserId: userId?.trim().toLowerCase(),
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { url, playing, loop, startedAt }
@@ -265,10 +298,35 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const currentPlaylistTracks = getActiveTracks();
 
+    const handleTrackEnded = () => {
+        if (isLooping) {
+            // YouTube: loop prop handles this natively; <audio> needs manual reset as safety
+            if (!isYouTubeUrl(currentTrack) && audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => console.warn("[MusicPlayer] Retry play (Loop):", e));
+            }
+        } else if (isTemporaryRef.current && restoreUrlRef.current && userRole === "GM") {
+            // Temporary track ended: restore previous music
+            broadcastUpdate(restoreUrlRef.current, true, restoreLoopRef.current);
+            isTemporaryRef.current = false;
+        } else if (userRole === "GM") {
+            // Advance playlist: GM orchestrates to keep Event Sourcing intact
+            console.log(`[MusicPlayer - ${userId}] Track ended. Orchestrating next track for session: ${sessionId}`);
+            playNext();
+        }
+    };
+
+    const handleYouTubeReady = () => {
+        if (pendingSeekRef.current !== null && reactPlayerRef.current) {
+            reactPlayerRef.current.seekTo(pendingSeekRef.current, "seconds");
+            pendingSeekRef.current = null;
+        }
+    };
+
     const volumeRow = (
         <div className="control-row volume-horizontal">
-            <button 
-                onClick={() => setIsMuted(!isMuted)} 
+            <button
+                onClick={() => setIsMuted(!isMuted)}
                 className="mute-btn-premium"
                 title={isMuted ? "Unmute" : "Mute"}
             >
@@ -309,6 +367,37 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         </div>
     );
 
+    const youtubeInputRow = (
+        <div className="control-row">
+            <input
+                type="text"
+                placeholder="URL do YouTube..."
+                value={youtubeInputUrl}
+                onChange={(e) => setYoutubeInputUrl(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" && youtubeInputUrl.trim() && isYouTubeUrl(youtubeInputUrl.trim())) {
+                        handleTrackChange(youtubeInputUrl.trim());
+                        setYoutubeInputUrl("");
+                    }
+                }}
+                className="track-select youtube-url-input"
+            />
+            <button
+                className="control-btn"
+                onClick={() => {
+                    if (youtubeInputUrl.trim() && isYouTubeUrl(youtubeInputUrl.trim())) {
+                        handleTrackChange(youtubeInputUrl.trim());
+                        setYoutubeInputUrl("");
+                    }
+                }}
+                disabled={!youtubeInputUrl.trim() || !isYouTubeUrl(youtubeInputUrl.trim())}
+                title="Tocar Link do YouTube"
+            >
+                <Link size={12} />
+            </button>
+        </div>
+    );
+
     const gmControls = userRole === "GM" ? (
         <>
             <div className="control-row">
@@ -322,9 +411,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         const parts = pl.name.split('/');
                         const depth = parts.length - 1;
                         const displayName = pl.name === "Geral" ? "Geral" : parts[parts.length - 1];
-                        // Using non-breaking spaces for indentation in standard select
                         const indent = "\u00A0".repeat(depth * 3);
-                        
+
                         return (
                             <option key={pl.name} value={pl.name}>
                                 {indent}{depth > 0 ? "📁 " : ""}{displayName}
@@ -340,7 +428,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             <div className="control-row">
                 <select
                     className="track-select"
-                    value={currentTrack}
+                    value={isYouTubeUrl(currentTrack) ? "" : currentTrack}
                     onChange={(e) => handleTrackChange(e.target.value)}
                 >
                     <option value="">Escolha sua trilha sonora! 🎵</option>
@@ -351,6 +439,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     ))}
                 </select>
             </div>
+            {youtubeInputRow}
             <div className="control-row actions">
                 <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0} title="Anterior">
                     <SkipBack size={14} />
@@ -369,31 +458,39 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     ) : (
         <div className="now-playing">
             <span className="scrolling-text">
-                {isPlaying ? (currentTrack.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '') || "Reproduzindo...") : "Pausado"}
+                {isPlaying
+                    ? (isYouTubeUrl(currentTrack)
+                        ? "YouTube ▶"
+                        : (currentTrack.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '') || "Reproduzindo..."))
+                    : "Pausado"}
             </span>
         </div>
     );
-
-    const handleTrackEnded = useCallback(() => {
-        if (isLooping) {
-            // Loop de faixa individual: comportamento local controlado por cada cliente
-            if (audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(e => console.warn("[MusicPlayer] Retry play (Loop):", e));
-            }
-        } else if (userRole === "GM") {
-            // Avanço de playlist: gerenciado pelo Mestre para manter Event Sourcing íntegro
-            console.log(`[MusicPlayer - ${userId}] Track ended. Orchestrating next track for session: ${sessionId}`);
-            playNext();
-        }
-    }, [isLooping, userRole, playNext, userId, sessionId]);
 
     return (
         <div
             className="music-player-container"
             style={unifiedMode ? { display: 'contents' } : { position: 'relative' }}
         >
+            {/* Native audio element: used for Supabase tracks */}
             <audio ref={audioRef} onEnded={handleTrackEnded} />
+
+            {/* ReactPlayer: used for YouTube URLs only, hidden visually */}
+            {isYouTubeUrl(currentTrack) && (
+                <ReactPlayer
+                    ref={reactPlayerRef}
+                    url={currentTrack}
+                    playing={isPlaying}
+                    loop={isLooping}
+                    volume={isMuted ? 0 : volume}
+                    muted={isMuted}
+                    width={0}
+                    height={0}
+                    onEnded={handleTrackEnded}
+                    onReady={handleYouTubeReady}
+                    config={{ youtube: { playerVars: { controls: 0 } } }}
+                />
+            )}
 
             {/* Non-unified: toggle button */}
             {!unifiedMode && (
@@ -440,7 +537,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 const depth = parts.length - 1;
                                 const displayName = pl.name === "Geral" ? "Geral" : parts[parts.length - 1];
                                 const indent = "\u00A0".repeat(depth * 3);
-                                
+
                                 return (
                                     <option key={pl.name} value={pl.name}>
                                         {indent}{depth > 0 ? "📁 " : ""}{displayName}
@@ -456,7 +553,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     <div className="control-row">
                         <select
                             className="track-select"
-                            value={currentTrack}
+                            value={isYouTubeUrl(currentTrack) ? "" : currentTrack}
                             onChange={(e) => handleTrackChange(e.target.value)}
                         >
                             <option value="">Escolha sua trilha sonora! 🎵</option>
@@ -467,6 +564,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             ))}
                         </select>
                     </div>
+                    {youtubeInputRow}
                     <div className="control-row actions">
                         <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0}>
                             <SkipBack size={12} />
@@ -604,6 +702,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     flex: 1;
                     min-width: 0;
                     width: auto;
+                }
+
+                .youtube-url-input {
+                    background-image: none;
+                    padding: 6px 8px;
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .youtube-url-input::placeholder {
+                    color: rgba(197, 160, 89, 0.4);
+                    font-style: italic;
                 }
 
                 .control-btn {

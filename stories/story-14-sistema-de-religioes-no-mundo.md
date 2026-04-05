@@ -1,6 +1,6 @@
 # Story: Sistema de Religiões no Mundo
 
-## Status: 📝 Em Progresso
+Status: concluído
 
 O objetivo desta história é implementar um sistema completo de Religiões dentro do módulo de notas de mundo, permitindo que personagens, localizações, facções e criaturas tenham vínculos religiosos formais, facilitando a construção de mundo e lore.
 
