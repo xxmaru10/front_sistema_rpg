@@ -475,20 +475,20 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             {/* Native audio element: used for Supabase tracks */}
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
-            {/* ReactPlayer: used for YouTube URLs only, hidden visually */}
+            {/* ReactPlayer: used for YouTube URLs only — wrapped in display:none to suppress video/thumbnail render */}
             {isYouTubeUrl(currentTrack) && (
-                <ReactPlayer
-                    ref={reactPlayerRef}
-                    src={currentTrack}
-                    playing={isPlaying}
-                    loop={isLooping}
-                    volume={isMuted ? 0 : volume}
-                    muted={isMuted}
-                    width={0}
-                    height={0}
-                    onEnded={handleTrackEnded}
-                    onReady={handleYouTubeReady}
-                />
+                <div style={{ display: "none" }}>
+                    <ReactPlayer
+                        ref={reactPlayerRef}
+                        src={currentTrack}
+                        playing={isPlaying}
+                        loop={isLooping}
+                        volume={isMuted ? 0 : volume}
+                        muted={isMuted}
+                        onEnded={handleTrackEnded}
+                        onReady={handleYouTubeReady}
+                    />
+                </div>
             )}
 
             {/* Non-unified: toggle button */}

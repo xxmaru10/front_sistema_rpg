@@ -96,7 +96,7 @@ const getActiveCurrentTime = (): number => {
 - [x] O Mestre (GM) verá um campo para colar um link do YouTube no player de música.
 - [x] Ao clicar em "Tocar Link", um evento `MUSIC_PLAYBACK_CHANGED` é disparado contendo a URL externa no payload.
 - [x] As URLs do bucket do Supabase **não podem quebrar** com esta implementação — `<audio>` continua ativo para elas.
-- [x] O áudio do vídeo do YouTube é reproduzido em modo oculto (`width=0 height=0`) em todos os clientes conectados.
+- [x] O áudio do vídeo do YouTube é reproduzido em modo oculto (`display: none` no wrapper) em todos os clientes conectados. `width`/`height` props sozinhos não suprimem o thumbnail no react-player v3 — o wrapper `display:none` é obrigatório.
 - [x] Os controles de Mute, Volume, Play/Pause e Loop afetam a música do YouTube (via props reativas do `ReactPlayer`).
 - [x] `startedAt` funciona para ambos os tipos de mídia (sincronia temporal ao entrar na sala).
 - [x] Ao avançar a faixa ou ao terminar (`onEnded`), o comportamento de loop e next track funciona para ambos.
