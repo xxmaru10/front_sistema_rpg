@@ -40,7 +40,13 @@ export function ImageCropper({
     onConfirm,
     onCancel,
 }: ImageCropperProps) {
-    console.log("[ImageCropper] MOUNTED with src:", src?.substring(0, 60));
+    useEffect(() => {
+        console.log("[ImageCropper] MOUNTED with src:", src.substring(0, 50));
+        setTimeout(() => {
+            const el = document.querySelector('.ic-overlay');
+            console.log("[ImageCropper] DOM Check after mount:", el ? "FOUND" : "NOT FOUND", el);
+        }, 100);
+    }, [src]);
     const frameW = aspectRatio >= 1 ? MAX_FRAME_DIM : Math.round(MAX_FRAME_DIM * aspectRatio);
     const frameH = aspectRatio >= 1 ? Math.round(MAX_FRAME_DIM / aspectRatio) : MAX_FRAME_DIM;
 
@@ -212,9 +218,35 @@ export function ImageCropper({
         onConfirm(outputCanvas.toDataURL("image/jpeg", 0.7));
     };
 
+    const overlayStyle: React.CSSProperties = {
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0, 0, 0, 0.95)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2147483647 // max int z-index
+    };
+
+    const containerStyle: React.CSSProperties = {
+        background: '#0a0a0a',
+        border: '2px solid #C5A059',
+        borderRadius: '4px',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '14px',
+        boxShadow: '0 0 50px rgba(197, 160, 89, 0.4), 0 20px 60px rgba(0, 0, 0, 0.9)',
+        maxWidth: '95vw',
+        maxHeight: '95vh',
+        zIndex: 2147483647
+    };
+
     const content = (
-        <div className="ic-overlay" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-                <div className="ic-container" onClick={e => e.stopPropagation()}>
+        <div className="ic-overlay" style={overlayStyle} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+                <div className="ic-container" style={containerStyle} onClick={e => e.stopPropagation()}>
                     <div className="ic-header">
                         <span className="ic-title">AJUSTAR ENQUADRAMENTO</span>
                         <button className="ic-close" onClick={onCancel} aria-label="Fechar">
