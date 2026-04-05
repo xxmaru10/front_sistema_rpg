@@ -1,7 +1,7 @@
 ---
 title: "Story 26 - Bugfix: Jogadores sem áudio de Música, Atmosfera e Transmissão de Tela"
 description: "Jogadores não ouvem nada do MusicPlayer, AtmosphericPlayer nem da transmissão de tela — apenas a chamada de voz WebRTC funciona. Causa: política de autoplay do browser bloqueando .play() sem gesto do usuário."
-status: "aguardando aprovação"
+status: "em andamento"
 priority: "crítica"
 last_updated: 2026-04-05
 tags: [audio, autoplay, webrtc, ui, eventsourcing, estável]

@@ -149,10 +149,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // Registra subscriber no audioUnlockManager para retry de play após desbloqueio
     useEffect(() => {
         const unsubscribeUnlock = audioUnlockManager.subscribe(() => {
-            if (isPlayingRef.current && audioRef.current?.src) {
-                audioRef.current.play().catch(e =>
-                    console.warn("[MusicPlayer] Retry play after unlock blocked:", e)
-                );
+            const el = audioRef.current;
+            if (!isPlayingRef.current || !el?.src) return;
+
+            const tryPlay = () =>
+                el.play().catch(e => console.warn("[MusicPlayer] Retry play after unlock blocked:", e));
+
+            // Se o áudio já tem dados suficientes, toca imediatamente.
+            // Caso contrário, aguarda o evento canplay para evitar race condition.
+            if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+                tryPlay();
+            } else {
+                el.addEventListener("canplay", tryPlay, { once: true });
             }
         });
         return unsubscribeUnlock;
@@ -201,7 +209,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
                         if (audioRef.current.src !== fullUrl && url) {
                             audioRef.current.src = fullUrl;
-                            audioRef.current.load();
+                            // Não chamar load() aqui: play() aciona o carregamento
+                            // internamente. Chamar load() + play() em sequência causa
+                            // "play() interrupted by a new call to load()" no browser,
+                            // silenciando o áudio mesmo com user activation.
                         }
 
                         if (playing) {

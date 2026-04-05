@@ -106,10 +106,16 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
     // Registra subscriber no audioUnlockManager para retry de play após desbloqueio
     useEffect(() => {
         const unsubscribeUnlock = audioUnlockManager.subscribe(() => {
-            if (isPlayingRef.current && audioRef.current?.src) {
-                audioRef.current.play().catch(e =>
-                    console.warn("[AtmosphericPlayer] Retry play after unlock blocked:", e)
-                );
+            const el = audioRef.current;
+            if (!isPlayingRef.current || !el?.src) return;
+
+            const tryPlay = () =>
+                el.play().catch(e => console.warn("[AtmosphericPlayer] Retry play after unlock blocked:", e));
+
+            if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+                tryPlay();
+            } else {
+                el.addEventListener("canplay", tryPlay, { once: true });
             }
         });
         return unsubscribeUnlock;
@@ -128,7 +134,9 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
 
                     if (isNewTrack) {
                         audioRef.current.src = targetFullUrl;
-                        audioRef.current.load();
+                        // Não chamar load() aqui: play() aciona o carregamento
+                        // internamente. load() + play() imediatos causam
+                        // "interrupted by a new call to load()" no browser.
                         setCurrentTrack(url);
                     }
 
