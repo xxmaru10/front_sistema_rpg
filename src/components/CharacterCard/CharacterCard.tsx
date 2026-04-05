@@ -72,6 +72,7 @@ export function CharacterCard({
                         onSaveName={hook.handleSaveName}
                         onCancelEditName={() => hook.setIsEditingName(false)}
                         onImageUpload={hook.handleImageUpload}
+                        isImageProcessing={hook.isImageProcessing}
                     />
 
                     <CharacterLore

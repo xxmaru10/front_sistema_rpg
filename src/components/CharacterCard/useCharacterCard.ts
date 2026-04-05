@@ -111,35 +111,61 @@ export function useCharacterCard({
 
     // ── Image Upload / Crop ───────────────────────────────────────────────────
     const [isCropping, setIsCropping] = useState(false);
+    const [isImageProcessing, setIsImageProcessing] = useState(false);
     const [tempCropSrc, setTempCropSrc] = useState<string | null>(null);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!isGM || !e.target.files?.[0]) return;
         const file = e.target.files[0];
+        setIsImageProcessing(true);
         // blob URL: instantâneo, sem conversão base64 — evita travamento com imagens grandes
         const blobUrl = URL.createObjectURL(file);
         const img = new Image();
+
+        // Safety timeout — 15s to load/decode
+        const timeout = setTimeout(() => {
+            console.warn("Portrait processing stalled.");
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        }, 15000);
+
         img.onload = () => {
+            clearTimeout(timeout);
             if (img.width > 600 || img.height > 600) {
                 setTempCropSrc(blobUrl);
                 setIsCropping(true);
+                // isImageProcessing stays true until modal confirmation
             } else {
-                const canvas = document.createElement("canvas");
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext("2d");
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0);
-                    globalEventStore.append({
-                        id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
-                        createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                        payload: { characterId: character.id, imageUrl: canvas.toDataURL("image/jpeg", 0.7) }
-                    } as any);
+                // Image small enough - process directly without blocking UI
+                const compressAndSave = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        globalEventStore.append({
+                            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+                            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                            payload: { characterId: character.id, imageUrl: canvas.toDataURL("image/jpeg", 0.7) }
+                        } as any);
+                    }
+                    URL.revokeObjectURL(blobUrl);
+                    setIsImageProcessing(false);
+                };
+
+                if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+                   (window as any).requestIdleCallback(compressAndSave);
+                } else {
+                    setTimeout(compressAndSave, 1);
                 }
-                URL.revokeObjectURL(blobUrl);
             }
         };
-        img.onerror = () => URL.revokeObjectURL(blobUrl);
+        img.onerror = () => {
+            clearTimeout(timeout);
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        };
         img.src = blobUrl;
     };
 
@@ -147,6 +173,7 @@ export function useCharacterCard({
         if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
+        setIsImageProcessing(false);
         globalEventStore.append({
             id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
@@ -158,6 +185,7 @@ export function useCharacterCard({
         if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
+        setIsImageProcessing(false);
     };
 
     // ── Bio Handlers ──────────────────────────────────────────────────────────
@@ -312,5 +340,6 @@ export function useCharacterCard({
         handleDeleteCharacter,
         // Cropper
         isCropping, tempCropSrc, handleCropConfirm, handleCropCancel,
+        isImageProcessing,
     };
 }

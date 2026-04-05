@@ -14,6 +14,7 @@ interface CharacterPortraitProps {
     onSaveName: () => void;
     onCancelEditName: () => void;
     onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    isImageProcessing: boolean;
 }
 
 export function CharacterPortrait({
@@ -28,11 +29,12 @@ export function CharacterPortrait({
     onSaveName,
     onCancelEditName,
     onImageUpload,
+    isImageProcessing,
 }: CharacterPortraitProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handlePortraitClick = () => {
-        if (isGM) {
+        if (isGM && !isImageProcessing) {
             fileInputRef.current?.click();
         }
     };
@@ -75,16 +77,22 @@ export function CharacterPortrait({
                     accept="image/*"
                     onChange={onImageUpload}
                     style={{ display: "none" }}
+                    disabled={isImageProcessing}
                 />
             )}
 
             <div
-                className={`character-portrait ${isGM ? "editable" : ""}`}
+                className={`character-portrait ${isGM && !isImageProcessing ? "editable" : ""} ${isImageProcessing ? "processing" : ""}`}
                 onClick={handlePortraitClick}
-                title={isGM ? "Clique para alterar a imagem" : undefined}
-                style={{ cursor: isGM ? "pointer" : "default" }}
+                title={isGM && !isImageProcessing ? "Clique para alterar a imagem" : undefined}
+                style={{ cursor: isGM && !isImageProcessing ? "pointer" : "default" }}
             >
-                {imageUrl ? (
+                {isImageProcessing ? (
+                    <div className="portrait-processing-overlay">
+                        <div className="spinner-arcane" />
+                        <span className="processing-label">PROCESSANDO...</span>
+                    </div>
+                ) : imageUrl ? (
                     /* Tem imagem: mostra o retrato. Clique já aciona o picker via handlePortraitClick */
                     <div
                         className="portrait-image"
@@ -194,6 +202,44 @@ export function CharacterPortrait({
                 .character-portrait.editable:hover .upload-icon,
                 .character-portrait.editable:hover .upload-label {
                     opacity: 0.9;
+                }
+
+                .portrait-processing-overlay {
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 15px;
+                    background: rgba(0, 0, 0, 0.7);
+                    backdrop-filter: blur(2px);
+                }
+
+                .spinner-arcane {
+                    width: 30px;
+                    height: 30px;
+                    border: 2px solid rgba(var(--accent-rgb), 0.1);
+                    border-top-color: var(--accent-color);
+                    border-radius: 50%;
+                    animation: rotate-arcane 1s linear infinite;
+                }
+
+                .processing-label {
+                    font-family: var(--font-header);
+                    font-size: 0.65rem;
+                    color: var(--accent-color);
+                    letter-spacing: 0.1em;
+                    animation: pulse-arcane 1.5s ease-in-out infinite;
+                }
+
+                @keyframes rotate-arcane {
+                    to { transform: rotate(360deg); }
+                }
+
+                @keyframes pulse-arcane {
+                    0%, 100% { opacity: 0.6; }
+                    50% { opacity: 1; }
                 }
             `}</style>
         </div>

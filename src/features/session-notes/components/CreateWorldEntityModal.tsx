@@ -160,25 +160,43 @@ export function CreateWorldEntityModal({
         // blob URL: instantâneo, sem conversão base64 — evita travamento com imagens grandes
         const blobUrl = URL.createObjectURL(file);
         const img = new Image();
+
+        // Timeout de segurança: 15s para carregar metadados/decodificar
+        const safetyTimeout = setTimeout(() => {
+            console.warn("Image processing stalled, resetting state.");
+            URL.revokeObjectURL(blobUrl);
+            setIsImageProcessing(false);
+        }, 15000);
+
         img.onload = () => {
+            clearTimeout(safetyTimeout);
             if (img.width > thresholdW || img.height > thresholdH) {
                 // Imagem grande — abre cropper (isImageProcessing permanece true até confirm/cancel)
                 openCropper(blobUrl, aspectRatio, outputWidth, outputHeight);
             } else {
-                // Imagem pequena — comprime diretamente
-                const canvas = document.createElement("canvas");
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext("2d");
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0);
-                    setNewEntityImageUrl(canvas.toDataURL("image/jpeg", 0.7));
+                // Imagem pequena — comprime diretamente via requestIdleCallback para não travar UI
+                const compressAndSave = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        setNewEntityImageUrl(canvas.toDataURL("image/jpeg", 0.7));
+                    }
+                    URL.revokeObjectURL(blobUrl);
+                    setIsImageProcessing(false);
+                };
+
+                if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+                    (window as any).requestIdleCallback(compressAndSave);
+                } else {
+                    setTimeout(compressAndSave, 1);
                 }
-                URL.revokeObjectURL(blobUrl);
-                setIsImageProcessing(false);
             }
         };
         img.onerror = () => {
+            clearTimeout(safetyTimeout);
             URL.revokeObjectURL(blobUrl);
             setIsImageProcessing(false);
         };
