@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { Plus, Minus, RotateCcw, Check, X } from "lucide-react";
 import { createPortal } from "react-dom";
-import { ImageCropperStyles } from "./ImageCropper.styles";
+
 
 export interface ImageCropperProps {
     src: string;
@@ -213,9 +213,7 @@ export function ImageCropper({
     };
 
     const content = (
-        <>
-            <ImageCropperStyles />
-            <div className="ic-overlay" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div className="ic-overlay" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
                 <div className="ic-container" onClick={e => e.stopPropagation()}>
                     <div className="ic-header">
                         <span className="ic-title">AJUSTAR ENQUADRAMENTO</span>
@@ -266,7 +264,6 @@ export function ImageCropper({
                     </div>
                 </div>
             </div>
-        </>
     );
 
     if (typeof document !== "undefined") {

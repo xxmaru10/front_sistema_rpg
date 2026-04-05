@@ -3,6 +3,40 @@
 import { useState, useEffect, useRef } from "react";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { AtmosphericEffectType } from "./AtmosphericEffects";
+import { 
+    Sparkles, 
+    CircleSlash, 
+    CloudRain, 
+    Snowflake, 
+    Wind, 
+    Leaf, 
+    Cloud, 
+    Flame, 
+    FlaskConical, 
+    Droplet, 
+    Palette, 
+    Monitor, 
+    Swords, 
+    Library,
+    Skull,
+    User,
+    ChevronDown,
+    Tv
+} from "lucide-react";
+
+const ATMOSPHERIC_OPTIONS: { value: AtmosphericEffectType, label: string, icon: any, color?: string }[] = [
+    { value: 'none', label: 'NENHUM', icon: CircleSlash },
+    { value: 'rain', label: 'CHUVA', icon: CloudRain },
+    { value: 'snow', label: 'NEVE', icon: Snowflake },
+    { value: 'blizzard', label: 'BLIZZARD', icon: Wind },
+    { value: 'leaves_green', label: 'FOLHAS VERDES', icon: Leaf, color: '#4ade80' },
+    { value: 'leaves_orange', label: 'FOLHAS LARANJAS', icon: Leaf, color: '#f97316' },
+    { value: 'fog', label: 'NÉVOA', icon: Cloud },
+    { value: 'sparks', label: 'FAÍSCAS', icon: Sparkles },
+    { value: 'inferno', label: 'INCÊNDIO', icon: Flame },
+    { value: 'acid_rain', label: 'CHUVA ÁCIDA', icon: FlaskConical },
+    { value: 'blood_rain', label: 'CHUVA SANGUE', icon: Droplet },
+];
 
 interface SessionHeaderProps {
     imageUrl?: string;
@@ -53,6 +87,7 @@ export function SessionHeader({
     const [showLibrary, setShowLibrary] = useState(false);
     const [showSummonMenu, setShowSummonMenu] = useState(false);
     const [showBgMenu, setShowBgMenu] = useState(false);
+    const [showEffectsMenu, setShowEffectsMenu] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     if (!imageUrl && !isGM && !videoStream && !children) return null;
@@ -155,42 +190,73 @@ export function SessionHeader({
                     }}
                 >
                     <div style={{ position: 'relative', display: 'flex', gap: '4px', width: '100%', justifyContent: 'flex-end' }}>
-                        <select
-                            value={currentAtmosphericEffect === 'none' ? 'placeholder' : currentAtmosphericEffect}
-                            onChange={(e) => {
-                                if (e.target.value !== 'placeholder') {
-                                    onAtmosphericEffectChange?.(e.target.value as any);
-                                }
-                            }}
+                        <button
+                            onClick={() => setShowEffectsMenu(!showEffectsMenu)}
+                            className="btn btn-secondary btn-sm action-btn"
                             style={{
                                 background: 'rgba(0,0,0,0.6)',
                                 border: '1px solid var(--accent-color)',
                                 color: 'var(--accent-color)',
                                 backdropFilter: 'blur(4px)',
-                                padding: '4px 8px',
-                                fontFamily: 'var(--font-header)',
-                                letterSpacing: '0.05em',
-                                fontSize: '0.65rem',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                height: '32px',
-                                outline: 'none',
-                                width: '120px'
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '0 12px',
+                                height: '32px'
                             }}
                         >
-                            <option value="placeholder" style={{ background: '#000' }} disabled hidden>✨ EFEITOS</option>
-                            <option value="none" style={{ background: '#000' }}>🚫 NENHUM</option>
-                            <option value="rain" style={{ background: '#000' }}>🌧️ CHUVA</option>
-                            <option value="snow" style={{ background: '#000' }}>❄️ NEVE</option>
-                            <option value="blizzard" style={{ background: '#000' }}>🌪️ TEMPESTADE DE NEVE</option>
-                            <option value="leaves_green" style={{ background: '#000' }}>🍃 FOLHAS VERDES</option>
-                            <option value="leaves_orange" style={{ background: '#000' }}>🍂 FOLHAS LARANJAS</option>
-                            <option value="fog" style={{ background: '#000' }}>🌫️ NÉVOA</option>
-                            <option value="sparks" style={{ background: '#000' }}>🔥 FAÍSCAS</option>
-                            <option value="inferno" style={{ background: '#000' }}>🔥 INCÊNDIO</option>
-                            <option value="acid_rain" style={{ background: '#000' }}>🧪 CHUVA ÁCIDA</option>
-                            <option value="blood_rain" style={{ background: '#000' }}>🩸 CHUVA DE SANGUE</option>
-                        </select>
+                            <Sparkles size={14} />
+                            <span style={{ fontSize: '0.65rem' }}>EFEITOS ▼</span>
+                        </button>
+
+                        {showEffectsMenu && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                right: 0,
+                                marginTop: '8px',
+                                background: '#0a0a0a',
+                                border: '1px solid var(--accent-color)',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden',
+                                zIndex: 120,
+                                boxShadow: '0 4px 12px rgba(var(--accent-rgb),0.6)',
+                                minWidth: '180px'
+                            }}>
+                                {ATMOSPHERIC_OPTIONS.map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => {
+                                            onAtmosphericEffectChange?.(opt.value);
+                                            setShowEffectsMenu(false);
+                                        }}
+                                        style={{
+                                            background: currentAtmosphericEffect === opt.value ? 'rgba(var(--accent-rgb), 0.2)' : 'transparent',
+                                            border: 'none',
+                                            borderBottom: '1px solid rgba(var(--accent-rgb), 0.1)',
+                                            color: opt.color || '#fff',
+                                            padding: '8px 16px',
+                                            fontFamily: 'var(--font-header)',
+                                            fontSize: '0.65rem',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            transition: '0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = currentAtmosphericEffect === opt.value ? 'rgba(var(--accent-rgb), 0.2)' : 'transparent'}
+                                    >
+                                        <opt.icon size={14} />
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div style={{ position: 'relative' }}>
                         <button
@@ -211,7 +277,7 @@ export function SessionHeader({
                             }}
                             title="Opções de Fundo"
                         >
-                            <span>🎨</span>
+                            <Palette size={14} />
                             <span style={{ fontSize: '0.65rem' }}>FUNDO ▼</span>
                         </button>
 
@@ -262,7 +328,7 @@ export function SessionHeader({
                                             else e.currentTarget.style.background = 'rgba(200, 50, 50, 0.15)';
                                         }}
                                     >
-                                        <span>📺</span> {videoStream ? 'PARAR TELA' : 'COMP. TELA'}
+                                        <Tv size={14} /> {videoStream ? 'PARAR TELA' : 'COMP. TELA'}
                                     </button>
                                 )}
                                 {isArena && (
@@ -290,7 +356,7 @@ export function SessionHeader({
                                         onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        <span>⚔️</span> BATTLEMAP
+                                        <Swords size={14} /> BATTLEMAP
                                     </button>
                                 )}
                                 <button
@@ -313,7 +379,7 @@ export function SessionHeader({
                                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
                                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                 >
-                                    <span>📚</span> ALTERAR BANNER
+                                    <Library size={14} /> ALTERAR BANNER
                                 </button>
                             </div>
                         )}
@@ -397,7 +463,7 @@ export function SessionHeader({
                                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 50, 50, 0.3)'}
                                     onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 50, 50, 0.15)'}
                                 >
-                                    👿 INIMIGO
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Skull size={14} /> INIMIGO</div>
                                 </button>
                                 <button
                                     onClick={() => { onSummonAlly?.(); setShowSummonMenu(false); }}
@@ -417,7 +483,7 @@ export function SessionHeader({
                                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(50, 150, 255, 0.3)'}
                                     onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(50, 150, 255, 0.15)'}
                                 >
-                                    🙎‍♂️ ALIADO
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><User size={14} /> ALIADO</div>
                                 </button>
                             </div>
                         )}
