@@ -57,6 +57,7 @@ class AudioUnlockManager {
      * lugar da página), sem depender do AudioUnlockBanner.
      */
     registerPendingPlay(element: HTMLMediaElement): void {
+        console.log(`%c[AudioUnlockManager] registerPendingPlay — src=${element.src?.substring(0, 80)}, total=${this._pendingPlays.size + 1}`, 'color: #ff8800');
         this._pendingPlays.add(element);
         this._ensureInteractionListener();
     }
@@ -91,6 +92,8 @@ class AudioUnlockManager {
             this._removeInteractionListener();
             return;
         }
+
+        console.log(`%c[AudioUnlockManager] User interaction detected — retrying ${this._pendingPlays.size} pending play(s)`, 'color: #ff8800; font-weight: bold');
 
         const pending = [...this._pendingPlays];
         this._pendingPlays.clear();

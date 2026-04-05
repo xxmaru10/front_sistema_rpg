@@ -176,6 +176,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, []);
 
     useEffect(() => {
+        console.log(`%c[MusicPlayer] Subscriber registrado (sessionId=${sessionId}, userRole=${userRole})`, 'color: #c5a059; font-weight: bold');
+
         const unsubscribe = globalEventStore.subscribe((event: any) => {
             if (event.type === "SFX_TRIGGERED") {
                 const sfxUrl = getSupabaseUrl(event.payload.url);
@@ -186,6 +188,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 }
             } else if (event.type === "MUSIC_PLAYBACK_CHANGED") {
                 const { url, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
+
+                console.log(`%c[MusicPlayer] Evento recebido: playing=${playing}, url=${url}, audioRef=${!!audioRef.current}`, 'color: #c5a059');
 
                 setCurrentTrack(url);
                 setIsPlaying(playing);
@@ -232,15 +236,15 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                         const now = Date.now();
                                         const elapsed = (now - startedAt) / 1000;
 
-                                        // Só faz seek se o áudio já carregou metadata (duration disponível)
                                         if (audioRef.current.duration && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
                                             audioRef.current.currentTime = elapsed % audioRef.current.duration;
                                         }
                                     }
+                                    console.log(`%c[MusicPlayer] Chamando play() — src=${audioRef.current?.src?.substring(0, 80)}, readyState=${audioRef.current?.readyState}`, 'color: #c5a059');
                                     await audioRef.current?.play();
-                                } catch (e) {
-                                    console.warn("[MusicPlayer] play() blocked:", e);
-                                    // Registra para retry no próximo gesto do usuário
+                                    console.log(`%c[MusicPlayer] ✅ play() SUCCESS`, 'color: #00ff00; font-weight: bold');
+                                } catch (e: any) {
+                                    console.warn(`%c[MusicPlayer] ❌ play() FAILED: ${e?.name}: ${e?.message}`, 'color: #ff4444; font-weight: bold');
                                     if (audioRef.current) {
                                         audioUnlockManager.registerPendingPlay(audioRef.current);
                                     }

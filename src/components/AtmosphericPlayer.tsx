@@ -132,8 +132,11 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
     }, []);
 
     useEffect(() => {
+        console.log(`%c[AtmosphericPlayer] Subscriber registrado (sessionId=${sessionId}, userRole=${userRole})`, 'color: #82b4ff; font-weight: bold');
+
         const unsubscribe = globalEventStore.subscribe((event: any) => {
             if (event.type === "ATMOSPHERIC_PLAYBACK_CHANGED") {
+                console.log(`%c[AtmosphericPlayer] Evento recebido: playing=${event.payload?.playing}, url=${event.payload?.url}`, 'color: #82b4ff');
                 if (!event.payload) return;
                 const { url, playing, loop, startedAt } = event.payload;
 
@@ -166,9 +169,11 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
                                         audioRef.current.currentTime = elapsed % audioRef.current.duration;
                                     }
                                 }
+                                console.log(`%c[AtmosphericPlayer] Chamando play() — src=${audioRef.current?.src?.substring(0, 80)}, readyState=${audioRef.current?.readyState}`, 'color: #82b4ff');
                                 await audioRef.current?.play();
-                            } catch (e) {
-                                console.warn("[AtmosphericPlayer] play() blocked:", e);
+                                console.log(`%c[AtmosphericPlayer] ✅ play() SUCCESS`, 'color: #00ff00; font-weight: bold');
+                            } catch (e: any) {
+                                console.warn(`%c[AtmosphericPlayer] ❌ play() FAILED: ${e?.name}: ${e?.message}`, 'color: #ff4444; font-weight: bold');
                                 if (audioRef.current) {
                                     audioUnlockManager.registerPendingPlay(audioRef.current);
                                 }
