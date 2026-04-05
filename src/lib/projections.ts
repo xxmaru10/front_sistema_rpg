@@ -1087,8 +1087,20 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
 }
 
 
-
-
 export function computeState(events: ActionEvent[], baseState?: SessionState): SessionState {
-    return events.reduce(reduce, baseState ?? initialState);
+  return events.reduce(reduce, baseState ?? initialState);
+}
+
+// Add a separate function only used when saving snapshot
+export function sanitizeStateForSnapshot(state: SessionState): SessionState {
+  const sanitizedCharacters: Record<string, any> = {};
+  for (const [id, char] of Object.entries(state.characters || {})) {
+    if ((char as any).imageUrl?.startsWith('data:')) {
+      const { imageUrl, ...rest } = char as any;
+      sanitizedCharacters[id] = rest;
+    } else {
+      sanitizedCharacters[id] = char;
+    }
+  }
+  return { ...state, characters: sanitizedCharacters };
 }

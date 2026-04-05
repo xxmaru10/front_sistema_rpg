@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Character, ConsequenceDebuff } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
+import { uploadImage } from '@/lib/apiClient';
 import { v4 as uuidv4 } from "uuid";
 
 interface UseCharacterCardOptions {

@@ -9,6 +9,8 @@ import { ActionEvent, SessionState } from "@/types/domain";
 import { supabase } from "./supabaseClient";
 import { computeState } from "./projections";
 import * as apiClient from "./apiClient";
+import { v4 as uuidv4 } from 'uuid';
+import { uploadImage } from "./apiClient";
 
 export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
 
@@ -30,13 +32,13 @@ export class EventStore {
             // seq 0 represents "optimistic/not yet confirmed"
             const seqA = a.seq || 0;
             const seqB = b.seq || 0;
-            
+
             if (seqA !== seqB) {
                 if (seqA === 0) return 1;
                 if (seqB === 0) return -1;
                 return seqA - seqB;
             }
-            
+
             // If both have same seq or both are 0, sort by createdAt
             const timeA = new Date(a.createdAt).getTime();
             const timeB = new Date(b.createdAt).getTime();
@@ -125,11 +127,11 @@ export class EventStore {
             .subscribe((status: string) => {
                 console.log(`[EventStore] Realtime channel status: ${status}`);
                 this._setStatus(status as ConnectionStatus);
-                
+
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                     console.warn('[EventStore] Canal realtime desconectado, tentando reconectar...');
                     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
-                    
+
                     this.reconnectTimeout = setTimeout(() => {
                         if (this.currentSessionId === sessionId) {
                             this.channel = null;
@@ -174,7 +176,10 @@ export class EventStore {
 
         this._sort();
         this.bulkListeners.forEach(l => l([...this.events]));
-        this._updateSnapshot().catch(() => {});
+        this._updateSnapshot().catch(() => { });
+        this._migrateBase64Images().catch((err) => {
+            console.error('[EventStore] _migrateBase64Images falhou:', err);
+        });
     }
 
     private _setStatus(status: ConnectionStatus) {
@@ -210,7 +215,7 @@ export class EventStore {
                 console.error("[EventStore] Erro no append via NestJS:", err);
                 this.failedEventIds.add(event.id);
                 this.bulkListeners.forEach(l => l([...this.events]));
-                
+
                 // Exponential backoff retry para notas (limitado a 3 tentativas)
                 const isNoteEvent = ['NOTE_ADDED', 'STICKY_NOTE_CREATED', 'STICKY_NOTE_UPDATED', 'STICKY_NOTE_DELETED'].includes(event.type);
                 if (isNoteEvent && retryCount < 3) {
@@ -268,29 +273,90 @@ export class EventStore {
     getSnapshotState(): SessionState | null {
         return this.snapshotState;
     }
-
-    private async _updateSnapshot(): Promise<void> {
+    private async _migrateBase64Images(): Promise<void> {
         if (!this.currentSessionId) return;
-        const maxSeq = this.events.reduce((max, e) => Math.max(max, e.seq || 0), 0);
-        if (maxSeq <= this.snapshotUpToSeq) return; 
 
-        const fullState = computeState(this.events, this.snapshotState ?? undefined);
-        try {
-            const snapshotStr = JSON.stringify(fullState);
-            if (snapshotStr.length > 1024 * 1024) {
-                console.warn('[EventStore] Snapshot muito grande (>1MB), pulando salvamento.');
-                return;
+        const state = computeState(this.events, this.snapshotState ?? undefined);
+
+        // Migrate character images
+        const characters = state.characters || {};
+        for (const [charId, char] of Object.entries(characters)) {
+            const imageUrl = (char as any).imageUrl;
+            if (!imageUrl?.startsWith('data:')) continue;
+
+            console.info(`[EventStore] Migrando imagem de personagem: ${(char as any).name || charId}`);
+            try {
+                const res = await fetch(imageUrl);
+                const blob = await res.blob();
+                const publicUrl = await uploadImage(blob, 'image/jpeg');
+
+                await this.append({
+                    id: uuidv4(),
+                    sessionId: this.currentSessionId!,
+                    seq: 0,
+                    type: 'CHARACTER_IMAGE_UPDATED',
+                    actorUserId: 'SYSTEM',
+                    createdAt: new Date().toISOString(),
+                    visibility: 'PUBLIC',
+                    payload: { characterId: charId, imageUrl: publicUrl },
+                } as any);
+
+                console.info(`[EventStore] Personagem migrado: ${publicUrl}`);
+            } catch (err) {
+                console.error(`[EventStore] Falha ao migrar personagem ${charId}:`, err);
             }
+        }
 
-            await apiClient.updateSnapshot(this.currentSessionId, maxSeq, fullState);
-            this.snapshotState = fullState;
-            this.snapshotUpToSeq = maxSeq;
-            console.info(`[EventStore] Snapshot salvo: seq ${maxSeq}`);
-        } catch (err) {
-            console.warn('[EventStore] Falha ao salvar snapshot:', err);
+        // Migrate header images
+        const headerImages = state.headerImages || {};
+        for (const [tab, imageUrl] of Object.entries(headerImages)) {
+            if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:')) continue;
+
+            console.info(`[EventStore] Migrando header image: tab ${tab}`);
+            try {
+                const res = await fetch(imageUrl);
+                const blob = await res.blob();
+                const publicUrl = await uploadImage(blob, 'image/jpeg');
+
+                await this.append({
+                    id: uuidv4(),
+                    sessionId: this.currentSessionId!,
+                    seq: 0,
+                    type: 'SESSION_HEADER_UPDATED',
+                    actorUserId: 'SYSTEM',
+                    createdAt: new Date().toISOString(),
+                    visibility: 'PUBLIC',
+                    payload: { tab, imageUrl: publicUrl },
+                } as any);
+
+                console.info(`[EventStore] Header migrado: ${publicUrl}`);
+            } catch (err) {
+                console.error(`[EventStore] Falha ao migrar header ${tab}:`, err);
+            }
         }
     }
 
+    private async _updateSnapshot(): Promise<void> {
+        if (!this.currentSessionId) return;
+
+        const maxSeq = this.events.reduce((max, e) => Math.max(max, e.seq || 0), 0);
+        if (maxSeq <= this.snapshotUpToSeq) return;
+
+        const fullState = computeState(this.events, this.snapshotState ?? undefined);
+        const snapshotStr = JSON.stringify(fullState);
+        const sizeKB = Math.round(snapshotStr.length / 1024);
+
+        console.info(`[EventStore] Salvando snapshot: seq ${maxSeq}, tamanho: ${sizeKB}KB`);
+
+        try {
+            await apiClient.updateSnapshot(this.currentSessionId, maxSeq, fullState);
+            this.snapshotState = fullState;
+            this.snapshotUpToSeq = maxSeq;
+            console.info(`[EventStore] Snapshot salvo: seq ${maxSeq} (${sizeKB}KB)`);
+        } catch (err) {
+            console.error('[EventStore] Falha ao salvar snapshot:', err);
+        }
+    }
     async fetchGlobalBestiary(): Promise<ActionEvent[]> {
         const CACHE_KEY = 'bestiary_cache_v1';
         const CACHE_TTL = 5 * 60 * 1000;

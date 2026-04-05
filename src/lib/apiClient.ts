@@ -115,3 +115,18 @@ export async function updateSnapshot(sessionId: string, upToSeq: number, state: 
         throw new Error(`[apiClient] updateSnapshot falhou: ${res.status}`);
     }
 }
+
+export async function uploadImage(blob: Blob, contentType: string): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', blob, 'image.jpg');
+
+  const res = await fetch(`${API_BASE}/api/storage/upload`, {
+    method: 'POST',
+    body: formData,
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+  const data = await res.json();
+  return data.publicUrl;
+}
