@@ -86,6 +86,8 @@ export class EventStore {
                     filter: `session_id=eq.${sessionId}`
                 },
                 (payload: any) => {
+                    console.log(`%c[EventStore] 🔔 Realtime INSERT recebido: type=${payload.new?.type}, id=${payload.new?.id?.substring(0, 8)}`, 'color: #00ff88; font-weight: bold');
+
                     const newEvent = payload.new as any;
                     const formattedEvent: ActionEvent = {
                         id: newEvent.id,
