@@ -440,6 +440,21 @@ export class ScreenShareManager {
         }
     }
 
+    public async reconnect(): Promise<void> {
+        console.log(`[WebRTC - ${this.userId}] Reconnect triggered`);
+
+        // Clean up existing peer connections
+        this.cleanupPeers();
+
+        if (this.isBroadcaster && this.localStream) {
+            // Re-announce stream to all peers
+            await this.sendSignal({ type: 'stream-started', from: this.userId });
+        } else if (!this.isBroadcaster) {
+            // Re-announce presence as viewer
+            await this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+        }
+    }
+
     private cleanupPeers() {
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
