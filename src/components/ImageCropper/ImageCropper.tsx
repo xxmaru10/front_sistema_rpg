@@ -40,6 +40,7 @@ export function ImageCropper({
     onConfirm,
     onCancel,
 }: ImageCropperProps) {
+    console.log("[ImageCropper] MOUNTED with src:", src?.substring(0, 60));
     const frameW = aspectRatio >= 1 ? MAX_FRAME_DIM : Math.round(MAX_FRAME_DIM * aspectRatio);
     const frameH = aspectRatio >= 1 ? Math.round(MAX_FRAME_DIM / aspectRatio) : MAX_FRAME_DIM;
 

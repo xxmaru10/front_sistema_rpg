@@ -127,6 +127,13 @@ export function CreateWorldEntityModal({
         outputHeight: number;
     }>({ aspectRatio: 1, outputWidth: 600, outputHeight: 600 });
 
+    console.log("[CreateWorldEntityModal] RENDER", {
+        isImageProcessing,
+        isCropping,
+        hasTempCropSrc: !!tempCropSrc,
+        editingId: editingWorldEntityId
+    });
+
     const openCropper = (src: string, aspectRatio: number, outputWidth: number, outputHeight: number) => {
         setCropConfig({ aspectRatio, outputWidth, outputHeight });
         setTempCropSrc(src);
