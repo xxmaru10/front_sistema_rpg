@@ -12,7 +12,7 @@ import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
 import { computeState } from "@/lib/projections";
-import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw } from "lucide-react";
+import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw, Eye, VenetianMask } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
 import { AspectManager } from "@/components/AspectManager";
@@ -440,7 +440,7 @@ export default function SessionPage() {
                     onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
                 >
-                    {spectatorMode ? "👁" : "🎭"}
+                    {spectatorMode ? <Eye size={24} /> : <VenetianMask size={24} />}
                 </button>
             )}
 
