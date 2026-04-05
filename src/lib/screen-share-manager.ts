@@ -1,28 +1,18 @@
 import { supabase } from "./supabaseClient";
 import { v4 as uuidv4 } from "uuid";
 
-// Tipos de sinal WebRTC
 export type SignalType = 'peer-join' | 'offer' | 'answer' | 'ice-candidate' | 'stream-started' | 'stop-share';
 
 export interface WebRTCSignal {
     type: SignalType;
     from: string;
-    to?: string; // undefined = broadcast para todos
+    to?: string;
     peerId?: string;
     offer?: RTCSessionDescriptionInit;
     answer?: RTCSessionDescriptionInit;
     candidate?: RTCIceCandidateInit;
 }
 
-/**
- * ScreenShareManager v3 - Sinalização via Supabase DB (postgres_changes)
- *
- * Em vez do canal Broadcast (instável), usa a tabela 'webrtc_signals' diretamente.
- * - ENVIO: supabase.from('webrtc_signals').insert(...)
- * - RECEBIMENTO: postgres_changes subscription (mesmo mecanismo do eventStore, confiável)
- *
- * Cada sinal expira automaticamente (TTL de 30s) para não poluir o banco.
- */
 export class ScreenShareManager {
     private sessionId: string;
     private userId: string;
@@ -36,13 +26,13 @@ export class ScreenShareManager {
     private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
     private processedSignalIds: Set<string> = new Set();
     private reconnectAttempts: Map<string, number> = new Map();
+    private _receivedTracks: Map<string, MediaStreamTrack> = new Map();
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
 
     private rtcConfig: RTCConfiguration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun.services.mozilla.com' },
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -60,8 +50,6 @@ export class ScreenShareManager {
             },
         ],
         iceTransportPolicy: 'all',
-        bundlePolicy: 'max-bundle',
-        iceCandidatePoolSize: 10,
     };
 
     constructor(
@@ -70,14 +58,13 @@ export class ScreenShareManager {
         onStreamReceived: (stream: MediaStream | null) => void
     ) {
         this.sessionId = sessionId;
-        this.userId = userId.trim().toLowerCase();
+        this.userId = userId;
         this.onStreamReceived = onStreamReceived;
     }
 
     public async initialize() {
         if (this.channel) return;
 
-        // Subscribes a postgres_changes na tabela webrtc_signals desta sessão
         this.channel = supabase
             .channel(`webrtc-db-${this.sessionId}`)
             .on(
@@ -90,11 +77,8 @@ export class ScreenShareManager {
                 },
                 (payload: any) => {
                     const row = payload.new;
-                    // Ignorar sinais de si mesmo
-                    if (row.from_user?.trim().toLowerCase() === this.userId) return;
-                    // Ignorar sinais direcionados a outro usuário
-                    if (row.to_user && row.to_user.trim().toLowerCase() !== this.userId) return;
-                    // Deduplicar
+                    if (row.from_user === this.userId) return;
+                    if (row.to_user && row.to_user !== this.userId) return;
                     if (this.processedSignalIds.has(row.id)) return;
                     this.processedSignalIds.add(row.id);
 
@@ -112,10 +96,8 @@ export class ScreenShareManager {
                 console.log(`[WebRTC - ${this.userId}] DB channel status:`, status);
                 if (status === 'SUBSCRIBED') {
                     if (this.isBroadcaster) {
-                        // Broadcaster reconectou: reanunciar stream ativo
                         this.sendSignal({ type: 'stream-started', from: this.userId });
                     } else {
-                        // Viewer: anunciar nossa presença
                         this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
                     }
                 }
@@ -131,7 +113,7 @@ export class ScreenShareManager {
                     id: uuidv4(),
                     session_id: this.sessionId,
                     from_user: this.userId,
-                    to_user: signal.to || null, // null = broadcast
+                    to_user: signal.to || null,
                     signal_type: signal.type,
                     payload: {
                         peerId: signal.peerId,
@@ -144,9 +126,8 @@ export class ScreenShareManager {
 
             if (error) {
                 console.error(`[WebRTC - ${this.userId}] DB insert error for ${signal.type}:`, error.message);
-                // Se a tabela não existe, log específico
                 if (error.code === '42P01') {
-                    console.error('[WebRTC] TABELA webrtc_signals NÃO EXISTE. Execute o SQL de criação no Supabase.');
+                    console.error('[WebRTC] TABELA webrtc_signals NÃO EXISTE.');
                 }
             }
         } catch (e) {
@@ -159,19 +140,24 @@ export class ScreenShareManager {
         try {
             this.localStream = await navigator.mediaDevices.getDisplayMedia({
                 video: {
-                    // Captura em Full HD estável e nítida
                     width: { ideal: 1920, max: 2560 },
                     height: { ideal: 1080, max: 1440 },
                     frameRate: { ideal: 30, max: 60 },
                 },
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                }
+                // System audio should NOT have echoCancellation/noiseSuppression/autoGainControl
+                // These are microphone processing features that corrupt or drop system audio
+                audio: true,
             });
 
-            // Otimiza para nitidez/detalhes (texto e mapas) ao invés de movimento rápido
+            // Check if audio was actually captured
+            const audioTracks = this.localStream.getAudioTracks();
+            if (audioTracks.length === 0) {
+                console.warn('[ScreenShare] No audio track — user may not have checked "Share system audio" in the dialog');
+            } else {
+                console.log('[ScreenShare] Audio tracks captured:', audioTracks.length, audioTracks[0].label);
+            }
+
+            // Optimize video for sharpness (text, maps) not motion
             this.localStream.getVideoTracks().forEach(track => {
                 if ('contentHint' in track) {
                     (track as any).contentHint = 'detail';
@@ -181,7 +167,6 @@ export class ScreenShareManager {
             this.isBroadcaster = true;
             this.onStreamReceived(this.localStream);
 
-            // Conectar imediatamente a peers que já enviaram peer-join
             if (this.bufferedPeerIds.size > 0) {
                 console.log(`[WebRTC - ${this.userId}] Connecting to ${this.bufferedPeerIds.size} buffered peers`);
                 this.bufferedPeerIds.forEach(peerId => this.createPeerConnection(peerId));
@@ -190,7 +175,6 @@ export class ScreenShareManager {
 
             await this.sendSignal({ type: 'stream-started', from: this.userId });
 
-            // Heartbeat a cada 30s para novos jogadores que entrarem depois
             this.heartbeatInterval = setInterval(() => {
                 if (this.isBroadcaster && this.localStream) {
                     this.sendSignal({ type: 'stream-started', from: this.userId });
@@ -236,8 +220,7 @@ export class ScreenShareManager {
     }
 
     private async handleSignal(signal: WebRTCSignal) {
-        const type = signal.type;
-        const from = signal.from?.trim().toLowerCase() ?? '';
+        const { type, from } = signal;
 
         if (type === 'stop-share') {
             if (!this.isBroadcaster) {
@@ -249,10 +232,8 @@ export class ScreenShareManager {
 
         if (type === 'stream-started') {
             if (!this.isBroadcaster) {
-                // Se já temos uma conexão ativa com o broadcaster, ignorar heartbeat
                 const existingPc = this.peerConnections.get('broadcaster');
                 if (existingPc && existingPc.connectionState !== 'failed' && existingPc.connectionState !== 'closed') {
-                    // Conexão já ativa, não precisa reconectar
                     return;
                 }
                 console.log(`[WebRTC - ${this.userId}] Stream active, sending peer-join`);
@@ -262,14 +243,15 @@ export class ScreenShareManager {
         }
 
         if (type === 'peer-join') {
-            const peerId = (signal.peerId || from)?.trim().toLowerCase();
+            const peerId = signal.peerId || from;
             if (!peerId || peerId === this.userId) return;
 
             if (this.isBroadcaster) {
-                // Sempre recria a conexão ao receber peer-join, mesmo que já exista.
-                // Garante que jogadores que deram F5 ou usaram o botão refresh sejam
-                // atendidos sem o mestre precisar fechar e reabrir a transmissão.
-                console.log(`[WebRTC - ${this.userId}] Peer joined (broadcasting): ${peerId} — recriando conexão`);
+                const existingPc = this.peerConnections.get(peerId);
+                if (existingPc && existingPc.connectionState !== 'failed' && existingPc.connectionState !== 'closed') {
+                    return;
+                }
+                console.log(`[WebRTC - ${this.userId}] Peer joined (broadcasting): ${peerId}`);
                 this.createPeerConnection(peerId);
             } else {
                 console.log(`[WebRTC - ${this.userId}] Buffering peer: ${peerId}`);
@@ -314,25 +296,6 @@ export class ScreenShareManager {
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(peerId, pc);
 
-        // Safety timeout: fecha conexões presas em 'new' ou 'connecting' após 15s
-        const safetyTimeout = setTimeout(() => {
-            if (pc.connectionState === 'new' || pc.connectionState === 'connecting') {
-                console.warn(`[WebRTC] Safety timeout (15s): fechando conexão presa para ${peerId} (state: ${pc.connectionState})`);
-                pc.close();
-                this.peerConnections.delete(peerId);
-                const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
-                const attempts = this.reconnectAttempts.get(reconnectKey) || 0;
-                if (attempts < ScreenShareManager.MAX_RECONNECT_ATTEMPTS) {
-                    this.reconnectAttempts.set(reconnectKey, attempts + 1);
-                    if (this.isBroadcaster && this.localStream) {
-                        this.createPeerConnection(peerId);
-                    } else if (!this.isBroadcaster) {
-                        this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
-                    }
-                }
-            }
-        }, 15000);
-
         pc.onicecandidate = (event) => {
             if (event.candidate) {
                 this.sendSignal({
@@ -345,12 +308,8 @@ export class ScreenShareManager {
             }
         };
 
-        // Reconexão automática para conexões falhadas
         pc.onconnectionstatechange = () => {
             console.log(`[WebRTC] Connection state for ${peerId}:`, pc.connectionState);
-            if (pc.connectionState !== 'new' && pc.connectionState !== 'connecting') {
-                clearTimeout(safetyTimeout);
-            }
             if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
                 const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
                 const attempts = this.reconnectAttempts.get(reconnectKey) || 0;
@@ -361,7 +320,6 @@ export class ScreenShareManager {
                         if (this.isBroadcaster && this.localStream) {
                             this.createPeerConnection(peerId);
                         } else if (!this.isBroadcaster) {
-                            // Viewer: pedir ao broadcaster para reconectar
                             this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
                         }
                     }, 3000 * (attempts + 1));
@@ -375,11 +333,13 @@ export class ScreenShareManager {
         };
 
         if (this.isBroadcaster && this.localStream) {
+            // Add ALL tracks (video + audio)
             this.localStream.getTracks().forEach(track => {
+                console.log(`[WebRTC - ${this.userId}] Adding ${track.kind} track to peer connection`);
                 if (this.localStream) pc.addTrack(track, this.localStream);
             });
 
-            // Forçar alta qualidade no encoding WebRTC
+            // Set encoding params for video only
             try {
                 const senders = pc.getSenders();
                 for (const sender of senders) {
@@ -388,22 +348,20 @@ export class ScreenShareManager {
                         if (!params.encodings || params.encodings.length === 0) {
                             params.encodings = [{}];
                         }
-                        // Bitrate adaptativo: reduz conforme mais peers entram na sessão
-                        params.encodings[0].maxBitrate = this.getAdaptiveBitrate();
+                        params.encodings[0].maxBitrate = 12_000_000;
                         params.encodings[0].priority = 'high';
                         params.encodings[0].networkPriority = 'high';
 
-                        // Tenta manter a resolução em vez de baixar o FPS (ideal para arena com textos/detalhes)
                         try {
                             if ('setDegradationPreference' in (sender as any)) {
                                 (sender as any).setDegradationPreference('maintain-resolution');
                             }
-                        } catch(e) { /* ignore fallback */ }
+                        } catch (e) { /* ignore */ }
 
-                        // Sem limite de framerate no encoder
                         delete (params.encodings[0] as any).maxFramerate;
                         await sender.setParameters(params);
                     }
+                    // Audio sender — leave at browser defaults, do not restrict bitrate
                 }
             } catch (e) {
                 console.warn('[WebRTC] Could not set encoding params:', e);
@@ -417,12 +375,19 @@ export class ScreenShareManager {
                 console.error("Error creating offer:", error);
             }
         } else {
+            // Receiver side — accumulate tracks as they arrive
             pc.ontrack = (event) => {
-                console.log(`[WebRTC - ${this.userId}] Received remote track!`);
+                console.log(`[WebRTC - ${this.userId}] Received ${event.track.kind} track`);
+
                 if (event.streams?.[0]) {
+                    // streams[0] is the same MediaStream object for all tracks from the same sender
+                    // calling onStreamReceived multiple times is fine — same reference, React deduplicates
                     this.onStreamReceived(event.streams[0]);
-                } else if (event.track) {
-                    this.onStreamReceived(new MediaStream([event.track]));
+                } else {
+                    // Fallback: accumulate tracks manually
+                    this._receivedTracks.set(event.track.kind, event.track);
+                    const tracks = Array.from(this._receivedTracks.values());
+                    this.onStreamReceived(new MediaStream(tracks));
                 }
             };
         }
@@ -433,6 +398,10 @@ export class ScreenShareManager {
     private async handleOffer(signal: WebRTCSignal) {
         if (!signal.offer) return;
         console.log(`[WebRTC - ${this.userId}] Handling offer from broadcaster`);
+
+        // Reset received tracks for fresh connection
+        this._receivedTracks.clear();
+
         const pc = await this.createPeerConnection('broadcaster');
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.offer));
@@ -445,7 +414,6 @@ export class ScreenShareManager {
 
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            // Responder diretamente para o broadcaster (from = broadcaster userId)
             await this.sendSignal({ type: 'answer', from: this.userId, to: signal.from, peerId: this.userId, answer });
         } catch (error) {
             console.error("Error handling offer:", error);
@@ -476,55 +444,6 @@ export class ScreenShareManager {
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
         this.pendingCandidates.clear();
-        // Zera contadores para que a próxima sessão de conexões comece do zero.
-        // Sem isso, falhas acumuladas de uma transmissão anterior bloqueiam retries da próxima.
-        this.reconnectAttempts.clear();
-    }
-
-    /**
-     * Bitrate adaptativo baseado na quantidade de peers conectados.
-     * Mesh de N viewers = broadcaster envia N streams simultâneos.
-     * Valores: ≤2 peers → 4Mbps | ≤5 → 2.5Mbps | ≤8 → 1.5Mbps | 9+ → 1Mbps
-     */
-    private getAdaptiveBitrate(): number {
-        const peerCount = this.peerConnections.size;
-        if (peerCount <= 2) return 2_500_000;
-        if (peerCount <= 5) return 2_000_000;
-        if (peerCount <= 8) return 1_200_000;
-        return 800_000;
-    }
-
-    /**
-     * Reconecta apenas se não houver conexão ativa (usa `visibilitychange` e focus events).
-     * Diferente de `reconnect()`, não interrompe uma conexão que já está funcionando.
-     */
-    public async checkAndReconnect() {
-        if (this.isBroadcaster) return;
-        const existingPc = this.peerConnections.get('broadcaster');
-        const isHealthy = existingPc &&
-            existingPc.connectionState !== 'failed' &&
-            existingPc.connectionState !== 'closed' &&
-            existingPc.connectionState !== 'disconnected';
-        if (!isHealthy) {
-            console.log(`[WebRTC - ${this.userId}] checkAndReconnect: sem conexão ativa, enviando peer-join`);
-            await this.reconnect();
-        }
-    }
-
-    /**
-     * Reconnect manual (viewer only): fecha a RTCPeerConnection local com o broadcaster
-     * e re-envia peer-join para iniciar um novo handshake sem exigir F5 na página.
-     */
-    public async reconnect() {
-        if (this.isBroadcaster) return;
-        console.log(`[WebRTC - ${this.userId}] Reconnect manual solicitado`);
-        const existingPc = this.peerConnections.get('broadcaster');
-        if (existingPc) {
-            existingPc.close();
-            this.peerConnections.delete('broadcaster');
-        }
-        this.pendingCandidates.delete('broadcaster');
-        this.reconnectAttempts.delete('broadcaster');
-        await this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+        this._receivedTracks.clear();
     }
 }
