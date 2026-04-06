@@ -167,10 +167,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     if (playing && event.payload.startedAt) {
                         const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
                         if (reactPlayerRef.current) {
-                            const internalPlayer = reactPlayerRef.current.getInternalPlayer();
-                            if (internalPlayer?.seekTo) {
-                                internalPlayer.seekTo(elapsed, 'seconds');
-                            }
+                            reactPlayerRef.current.seekTo(elapsed, 'seconds');
                         } else {
                             pendingSeekRef.current = elapsed;
                         }
@@ -272,9 +269,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         if (!sessionId || !userId) return;
 
         let startedAt: string | undefined = undefined;
-        if (playing && audioRef.current) {
+        if (playing) {
             const now = Date.now();
-            const currentSec = audioRef.current.currentTime;
+            const currentSec = isYouTubeUrl(url) 
+                ? (reactPlayerRef.current?.getCurrentTime() || 0) 
+                : (audioRef.current?.currentTime || 0);
             startedAt = new Date(now - (currentSec * 1000)).toISOString();
         }
 
@@ -481,7 +480,16 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
             {/* ReactPlayer: apenas para URLs YouTube — display:none suprime vídeo/thumbnail */}
             {isYouTubeUrl(currentTrack) && (
-                <div style={{ display: "none" }}>
+                <div style={{ 
+                    position: 'fixed', 
+                    top: '-1px', 
+                    left: '-1px', 
+                    width: '1px', 
+                    height: '1px', 
+                    opacity: 0, 
+                    pointerEvents: 'none', 
+                    overflow: 'hidden' 
+                }}>
                     <ReactPlayer
                         ref={reactPlayerRef}
                         {...{
@@ -777,7 +785,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     cursor: not-allowed;
                 }
 
-                .volume-slider {
                     flex: 1;
                     height: 4px;
                     -webkit-appearance: none;

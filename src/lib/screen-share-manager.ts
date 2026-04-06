@@ -158,16 +158,13 @@ export class ScreenShareManager {
                 payload: { type: 'stream-started' },
             });
 
-            // Update heartbeat to also emit transmission-sync
+            // Heartbeat de descoberta — apenas para quem ainda não conectou
             this.heartbeatInterval = setInterval(() => {
                 if (this.isBroadcaster && this.localStream) {
+                    // Só enviar o sinal WebRTC, sem forçar o socket 'transmission-sync' que reseta viewers
                     this.sendSignal({ type: 'stream-started', from: this.userId });
-                    socket.emit('transmission-sync', {
-                        sessionId: this.sessionId,
-                        payload: { type: 'stream-started' },
-                    });
                 }
-            }, 30000);
+            }, 60000); // Aumentado para 60s
 
             this.localStream.getVideoTracks()[0].onended = () => this.stopSharing();
 

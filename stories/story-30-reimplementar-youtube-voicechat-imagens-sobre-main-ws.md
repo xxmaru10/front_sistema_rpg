@@ -649,3 +649,334 @@ adicionar os seletores de dispositivo quando `isConnected && devicesLoaded`:
 - `src/lib/eventStore.ts` — não tocar
 - `src/lib/socketClient.ts` — não tocar
 - Qualquer outro arquivo fora dos 3 listados em "Arquivos modificados"
+
+---
+
+## Bugs Detectados Pós-Implementação (2026-04-06)
+
+> Esta seção documenta três bugs encontrados na sessão de teste com a jogadora (Margot Laveau)
+> e o Mestre. Inclui diagnóstico preciso e instruções de correção para qualquer IA aplicar.
+
+---
+
+### Bug 1 — Sem imagem no avatar do VoiceChat (letras no lugar da foto)
+
+#### Diagnóstico
+
+**Arquivo afetado**: `src/components/VoiceChatPanel.tsx`
+
+A função `getCharacterImage` existe e está corretamente implementada. O problema está na
+**cadeia de lookup**: ela só retorna uma imagem se `c.imageUrl` for truthy. O fallback de
+nome (`c.name.toLowerCase() === uidLower`) funciona apenas para o usuário local — para
+peers remotos, o campo `user.characterId` vem do servidor via `voice-presence-update`.
+
+**Causa raiz confirmada pelo log**:
+```
+[VoiceChatPanel] Mount Props Sync Check: Object
+```
+O log mostra o objeto mas não seus valores. O `characterId` passado como prop pode ser
+`undefined` se a página da sessão não está passando a prop corretamente, ou pode ser o
+nome do personagem (string) em vez do UUID do personagem.
+
+**Duas causas possíveis — verificar qual se aplica**:
+
+**Causa A** — `characterId` não está chegando corretamente para peers remotos:
+```
+allUsers = participants.map(p => ({
+    characterId: isMe ? characterId : p.characterId,  // p.characterId pode ser undefined
+}))
+```
+O `p.characterId` vem do `voice-presence-update` que o servidor emite. Se o **backend NestJS**
+não está re-transmitindo o campo `characterId` no evento `voice-presence-update`, todos os
+peers remotos terão `characterId = undefined`. Com `charId = undefined`, o `getCharacterImage`
+cai no fallback por `ownerUserId`/`name`, que exige `c.ownerUserId === uid` — mas `uid` aqui
+é o display name ("Margot Laveau") enquanto `ownerUserId` é um UUID do Supabase. Match falha.
+
+**Causa B** — `characterId` chega corretamente, mas o personagem não tem `imageUrl`:
+O personagem existe em `state.characters` com `imageUrl: ""` (valor padrão de projections.ts
+linha 1069). A condição `c.id === charId && c.imageUrl` falha porque `"" === false`.
+
+#### Como confirmar qual causa
+
+Adicionar temporariamente no início de `getCharacterImage`:
+```ts
+console.log('[VoiceChat] getCharacterImage called', { uid, charId, chars: Object.values(state.characters).map(c => ({ id: c.id, name: c.name, owner: c.ownerUserId, img: !!c.imageUrl })) });
+```
+- Se `charId` for `undefined` para peers remotos → Causa A (backend)
+- Se `charId` é um UUID mas `imageUrl` está vazio → Causa B (personagem sem imagem)
+
+#### Correção para Causa A (backend não transmite characterId)
+
+**Arquivo**: `back_sistema_rpg` (backend NestJS) — verificar o gateway que processa
+`voice-presence` e emite `voice-presence-update`. O servidor deve incluir o campo
+`characterId` ao construir a lista de participantes para broadcast.
+
+Localizar no backend o handler do evento `voice-presence` (provavelmente em um arquivo
+`session.gateway.ts` ou `voice.gateway.ts`). Garantir que o `characterId` recebido é
+armazenado no objeto de participante e incluído no broadcast de `voice-presence-update`.
+
+#### Correção para Causa A (alternativa no frontend, sem tocar backend)
+
+Modificar o fallback em `getCharacterImage` para também cruzar pelo `c.name`:
+
+```ts
+// Em VoiceChatPanel.tsx, dentro de getCharacterImage, logo após a busca por charId
+// Adicionar uma segunda tentativa: busca pelo NOME do usuário como nome do personagem
+// (funciona quando uid === nome do personagem, ex: "Margot Laveau")
+const matchedByName = allChars.find(c => {
+    const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
+    return nameMatch; // sem exigir imageUrl aqui, para saber se o personagem existe
+});
+
+if (matchedByName?.imageUrl) return matchedByName.imageUrl;
+```
+
+Essa modificação vai além do fallback atual — no fallback atual, a condição `&& c.imageUrl`
+impede encontrar o personagem sem imagem. Separar em dois passos: primeiro achar o personagem,
+depois checar a imagem.
+
+#### Correção para Causa B (personagem sem imagem)
+
+Não há bug de código — o personagem simplesmente não tem imagem cadastrada. O comportamento
+correto (mostrar inicial/emoji) já ocorre. Solução: o usuário ou GM deve fazer upload da imagem
+do personagem via o painel de personagem. Após o upload, o evento `CHARACTER_IMAGE_UPDATED`
+será emitido e `imageUrl` será preenchido.
+
+---
+
+### Bug 2 — YouTube sem som (nem para o Mestre, nem para a Jogadora)
+
+#### Diagnóstico
+
+**Arquivo afetado**: `src/components/MusicPlayer.tsx`, linhas 169–173
+
+**Erro exato no log do Mestre**:
+```
+Uncaught (in promise) TypeError: c.current.getInternalPlayer is not a function
+    at layout-72f037ad6bbbbdf4.js:1:62424
+```
+
+O código implementado na linha 170 chama:
+```ts
+const internalPlayer = reactPlayerRef.current.getInternalPlayer();
+```
+
+Este método **não existe** neste contexto. Há duas causas:
+
+**Causa 1 — API errada do react-player via Next.js `dynamic()`**:
+O `ReactPlayer` foi carregado com:
+```ts
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+```
+Quando o `dynamic()` do Next.js envolve o componente, o `ref` resultante aponta para o
+componente wrapper gerado pelo `dynamic`, **não** para a instância real do ReactPlayer.
+Portanto `reactPlayerRef.current.getInternalPlayer` é `undefined`.
+
+**Causa 2 — Momento de execução (antes do `onReady`)**:
+O evento `MUSIC_PLAYBACK_CHANGED` pode ser recebido **antes** do ReactPlayer terminar de
+montar (antes de `onReady` disparar). Mesmo que `reactPlayerRef.current` não seja `null`,
+a API interna do YouTube pode não estar disponível ainda.
+
+**Causa 3 — API incorreta**:
+`getInternalPlayer()` retorna o player nativo do YouTube (objeto do YouTube API), e o
+seek via YouTube API usa `seekTo(seconds, true)` (segundo argumento booleano), não
+`seekTo(seconds, 'seconds')` como no react-player. O seek via YouTube API é diferente
+do seek via react-player.
+
+#### Correção
+
+**Arquivo**: `src/components/MusicPlayer.tsx`, bloco do subscriber de eventos
+(aproximadamente linha 169–173).
+
+**Antes (incorreto)**:
+```ts
+if (reactPlayerRef.current) {
+    const internalPlayer = reactPlayerRef.current.getInternalPlayer();
+    if (internalPlayer?.seekTo) {
+        internalPlayer.seekTo(elapsed, 'seconds');
+    }
+} else {
+    pendingSeekRef.current = elapsed;
+}
+```
+
+**Depois (correto)**:
+```ts
+if (reactPlayerRef.current) {
+    try {
+        reactPlayerRef.current.seekTo(elapsed, 'seconds');
+    } catch {
+        pendingSeekRef.current = elapsed;
+    }
+} else {
+    pendingSeekRef.current = elapsed;
+}
+```
+
+**Explicação**: `reactPlayerRef.current.seekTo(seconds, 'seconds')` é a **API pública
+e documentada** do react-player para seek. Funciona tanto com a instância real quanto
+com o wrapper do `dynamic()` do Next.js, pois o react-player expõe `seekTo` no ref
+diretamente (via `forwardRef`). O `try/catch` cobre o caso em que o player ainda não
+está pronto — neste caso o seek é armazenado em `pendingSeekRef` e aplicado no `onReady`.
+
+#### Problema secundário: autoplay bloqueado pelo browser
+
+Mesmo com o seek corrigido, o YouTube pode não tocar audio para clientes que chegam na
+sala sem ter interagido com a página (política de autoplay do browser). O ReactPlayer
+em `display: none` não recebe interação do usuário e o browser pode bloquear o play.
+
+**Sintoma**: O Mestre inicia a música mas o jogador não ouve nada (sem erro visível).
+
+**Correção adicional**:
+No JSX do ReactPlayer (Passo 10), substituir `display: none` por posicionamento fora
+da tela — isso mantém o elemento "vivo" no DOM sem interromper o autoplay:
+
+```tsx
+{/* ReactPlayer: fora da tela para não bloquear autoplay */}
+{isYouTubeUrl(currentTrack) && (
+    <div style={{
+        position: 'fixed',
+        top: '-1px',
+        left: '-1px',
+        width: '1px',
+        height: '1px',
+        overflow: 'hidden',
+        opacity: 0,
+        pointerEvents: 'none',
+    }}>
+        <ReactPlayer
+            ref={reactPlayerRef}
+            url={currentTrack}
+            playing={isPlaying}
+            loop={isLooping}
+            volume={isMuted ? 0 : volume}
+            muted={isMuted}
+            onEnded={handleTrackEnded}
+            onReady={handleYouTubeReady}
+            width="1px"
+            height="1px"
+        />
+    </div>
+)}
+```
+
+> `display: none` suprime visualmente mas em alguns browsers também suspende a reprodução
+> de áudio. Com `position: fixed` e dimensões mínimas, o elemento fica ativo no DOM.
+
+---
+
+### Bug 3 — Jogadora não ouve a transmissão de tela / música parece distante
+
+#### Diagnóstico
+
+**Arquivos envolvidos**: `src/lib/screen-share-manager.ts` (fora do escopo original
+da story-30, mas documentado aqui para a IA que for corrigir).
+
+**Análise do log** — dois problemas distintos:
+
+**Problema 3A — Loop de reconexão WebRTC (tela compartilhada)**
+
+No log do Mestre:
+```
+[WebRTC - mestre] Sending signal: stream-started   ← 3 vezes
+[WebRTC] Safety timeout: closing stuck connection for margot laveau
+Error handling answer: InvalidStateError: Failed to set remote answer sdp:
+    Called in wrong state: stable
+```
+
+No log da Jogadora:
+```
+[WebRTC - margot laveau] Signal received: stream-started from: mestre  ← 3 vezes
+[WebRTC - margot laveau] Stream active, sending peer-join              ← cada vez
+```
+
+**Root cause**: O `screen-share-manager` tem um heartbeat que envia `stream-started`
+periodicamente enquanto a transmissão está ativa. Cada vez que a jogadora recebe
+`stream-started`, ela acredita que é uma nova transmissão, descarta a conexão existente
+e envia `peer-join`. O Mestre, ao receber `peer-join`, cria uma nova conexão e manda nova
+`offer`. A conexão anterior pode estar em state `stable` (já conectada), então aplicar
+um `answer` nela resulta em `InvalidStateError`.
+
+O ciclo:
+```
+heartbeat → stream-started → peer-join → nova offer → novo answer
+    ↑                                                      |
+    └──────────────── loop a cada N segundos ──────────────┘
+```
+
+**Problema 3B — Música "distante" (faixa local vs. transmissão)**
+
+A música do MusicPlayer toca **localmente** em cada cliente via `<audio>` ou ReactPlayer.
+Mas se o ReactPlayer do YouTube estiver silenciado ou bloqueado por autoplay (Bug 2), a
+jogadora não ouve a música localmente. O que ela ouve é o **vazamento acústico**: o áudio
+do YouTube tocando nos alto-falantes do Mestre sendo captado pelo microfone do Mestre e
+transmitido via WebRTC de voz. Por isso soa "distante" — é o áudio degradado pelo mic.
+
+A solução principal é corrigir o Bug 2 (YouTube sem som), que fará a música tocar
+localmente na máquina da jogadora.
+
+#### Correção para Problema 3A — Loop de reconexão na transmissão de tela
+
+**Arquivo**: `src/lib/screen-share-manager.ts` — **este arquivo está fora do escopo
+original da story-30 mas deve ser corrigido em nova story separada ou hotfix**.
+
+**O que corrigir**: No receptor (viewer side), ao receber `stream-started`, verificar
+se já existe uma conexão ativa com o broadcaster antes de enviar `peer-join`:
+
+Localizar no `screen-share-manager.ts` o handler do evento `stream-started`. O código
+provavelmente faz algo como:
+
+```ts
+// COMPORTAMENTO ATUAL (problemático)
+socket.on('webrtc-signal', (data) => {
+    if (signal.type === 'stream-started') {
+        sendSignal('peer-join');  // envia sempre, sem verificar se já conectado
+    }
+});
+```
+
+**Correção**:
+```ts
+if (signal.type === 'stream-started') {
+    const existingPc = peerConnections.get('broadcaster');
+    // Só enviar peer-join se não há conexão ativa
+    if (!existingPc || existingPc.connectionState === 'failed' || existingPc.connectionState === 'closed' || existingPc.connectionState === 'disconnected') {
+        sendSignal('peer-join');
+    }
+    // Se já está 'connected' ou 'connecting', ignorar o stream-started
+}
+```
+
+Além disso, no emissor (broadcaster side), ao receber `peer-join`, verificar se já existe
+uma conexão estável com aquele peer antes de criar uma nova:
+
+```ts
+if (signal.type === 'peer-join') {
+    const existingPc = peerConnections.get(signal.from);
+    if (existingPc && (existingPc.connectionState === 'connected' || existingPc.connectionState === 'connecting')) {
+        return; // Já conectado, ignorar
+    }
+    // Só criar nova conexão se não há uma ativa
+    createPeerConnection(signal.from);
+}
+```
+
+#### Correção para Problema 3B — Música distante
+
+Corriger o Bug 2 (seção acima). Quando o ReactPlayer do YouTube estiver funcionando
+corretamente na máquina da jogadora, a música tocará localmente e não será mais ouvida
+"distante" via mic do Mestre.
+
+---
+
+### Sumário de Arquivos a Modificar nas Correções
+
+| Bug | Arquivo | Linha aproximada | Mudança |
+|-----|---------|-----------------|---------|
+| Bug 2 — seek errado | `src/components/MusicPlayer.tsx` | ~170 | `getInternalPlayer().seekTo()` → `reactPlayerRef.current.seekTo()` |
+| Bug 2 — autoplay | `src/components/MusicPlayer.tsx` | ~482–495 | `display: none` → `position: fixed; top: -1px; left: -1px` |
+| Bug 3A — loop reconexão | `src/lib/screen-share-manager.ts` | handler `stream-started` | Verificar `connectionState` antes de enviar `peer-join` |
+| Bug 1 — imagem | `src/components/VoiceChatPanel.tsx` | ~181 | Separar busca do personagem da verificação de imageUrl |
+
+**Prioridade de execução**: Bug 2 primeiro (impacto maior — ninguém ouve YouTube),
+depois Bug 3A (transmissão de tela instável), depois Bug 1 (avatar).

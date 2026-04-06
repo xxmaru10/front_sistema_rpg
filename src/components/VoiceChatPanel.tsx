@@ -138,33 +138,24 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             return uid;
         }
 
-        if (storedRole === 'GM' && uid === userId) {
-            return uid;
-        }
-
         const allChars = Object.values(state.characters);
 
-        // Prioridade: busca pelo characterId quando disponível
+        // 1. Prioridade absoluta por charId
         if (charId) {
             const byId = allChars.find(c => c.id === charId);
             if (byId) return byId.name;
         }
 
-        // Fallback: busca por ownerUserId, nome ou id
+        // 2. Fallback por display name (uid) ou ownerUserId
         const matchedChar = allChars.find(c => {
+            const uidLower = uid.trim().toLowerCase();
             const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
             const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            const idMatch = c.id.toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch || idMatch) && c.imageUrl;
-        }) || allChars.find(c => {
-            const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
-            const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            const idMatch = c.id.toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch || idMatch);
+            return (ownerMatch || nameMatch);
         });
 
         return matchedChar ? matchedChar.name : uid;
-    }, [state.characters, userId]);
+    }, [state.characters]);
 
     const getCharacterImage = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
@@ -177,18 +168,17 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
         const allChars = Object.values(state.characters);
 
-        // Prioridade: busca pelo characterId quando disponível (evita erros de nome/ownerUserId)
+        // 1. Prioridade por charId
         if (charId) {
-            const byId = allChars.find(c => c.id === charId && c.imageUrl);
-            if (byId) return byId.imageUrl;
+            const byId = allChars.find(c => c.id === charId);
+            if (byId?.imageUrl) return byId.imageUrl;
         }
 
-        // Fallback: busca robusta por ownerUserId, nome ou id
+        // 2. Fallback robusto por ownerUserId ou nome
         const matchedChar = allChars.find(c => {
             const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
             const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            const idMatch = c.id.toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch || idMatch) && c.imageUrl;
+            return (ownerMatch || nameMatch);
         });
 
         return matchedChar?.imageUrl || null;
