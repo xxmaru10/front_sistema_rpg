@@ -109,8 +109,15 @@ export function useSessionScreenControl({
                 try {
                     videoEl.muted = false;
                     await videoEl.play();
-                    setVideoMuted(false);
-                    console.log("[ScreenShare] Play success with audio");
+                    // If we are the broadcaster, mute our own audio to avoid feedback
+                    const isBroadcasting = screenShareManagerRef.current?.broadcasting ?? false;
+                    if (isBroadcasting) {
+                        videoEl.muted = true;
+                        console.log("[ScreenShare] Broadcaster — muted own audio to prevent feedback");
+                    } else {
+                        setVideoMuted(false);
+                        console.log("[ScreenShare] Play success with audio");
+                    }
                 } catch (err) {
                     console.warn("[ScreenShare] Autoplay with audio blocked, retrying muted...", err);
                     videoEl.muted = true;
@@ -258,7 +265,7 @@ export function useSessionScreenControl({
             videoEl.play().catch(() => {
                 videoEl.muted = true;
                 setVideoMuted(true);
-                videoEl.play().catch(() => {});
+                videoEl.play().catch(() => { });
             });
         }
         await screenShareManagerRef.current?.reconnect();

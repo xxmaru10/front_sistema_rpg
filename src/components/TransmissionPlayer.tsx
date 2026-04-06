@@ -35,7 +35,8 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
         };
 
         socket.on('transmission-sync', handleSync);
-
+        socket.emit('transmission-status-req', { sessionId });
+        
         return () => {
             socket.off('transmission-sync', handleSync);
         };

@@ -56,6 +56,15 @@ export class ScreenShareManager {
     public async initialize() {
         const socket = getSocket(this.userId);
 
+        socket.on('transmission-status-req', (data: { fromSocketId: string }) => {
+            if (this.isBroadcaster && this.localStream) {
+                socket.emit('transmission-status-res', {
+                    toSocketId: data.fromSocketId,
+                    isActive: true,
+                });
+            }
+        });
+
         // Remove previous handler if reinitializing
         if (this.signalHandler) {
             socket.off('webrtc-signal', this.signalHandler);
@@ -81,6 +90,10 @@ export class ScreenShareManager {
         } else {
             this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
         }
+    }
+
+    public get broadcasting(): boolean {
+        return this.isBroadcaster;
     }
 
     // ─── Signal sending ────────────────────────────────────────
@@ -139,11 +152,20 @@ export class ScreenShareManager {
             }
 
             await this.sendSignal({ type: 'stream-started', from: this.userId });
+            const socket = getSocket(this.userId);
+            socket.emit('transmission-sync', {
+                sessionId: this.sessionId,
+                payload: { type: 'stream-started' },
+            });
 
-            // Heartbeat for late joiners
+            // Update heartbeat to also emit transmission-sync
             this.heartbeatInterval = setInterval(() => {
                 if (this.isBroadcaster && this.localStream) {
                     this.sendSignal({ type: 'stream-started', from: this.userId });
+                    socket.emit('transmission-sync', {
+                        sessionId: this.sessionId,
+                        payload: { type: 'stream-started' },
+                    });
                 }
             }, 30000);
 
@@ -169,6 +191,11 @@ export class ScreenShareManager {
 
         if (this.isBroadcaster) {
             this.sendSignal({ type: 'stop-share', from: this.userId });
+            const socket = getSocket(this.userId);
+            socket.emit('transmission-sync', {
+                sessionId: this.sessionId,
+                payload: { type: 'stop-share' },
+            });
             this.isBroadcaster = false;
         }
 
