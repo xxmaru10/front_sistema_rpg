@@ -1,11 +1,17 @@
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace('/api', '');
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+const WS_URL = apiUrl.replace(/\/api$/, ''); // strip trailing /api if present
+
+console.log('[SocketClient] WS_URL:', WS_URL);
 
 let socket: Socket | null = null;
 
 export function getSocket(userId?: string): Socket {
   if (!socket) {
+    if (!WS_URL) {
+      console.error('[SocketClient] WS_URL is empty — NEXT_PUBLIC_API_URL not set');
+    }
     socket = io(WS_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: false,
@@ -19,10 +25,9 @@ export function getSocket(userId?: string): Socket {
   return socket;
 }
 
-export function connectSocket(userId: string) {
+export function connectSocket(userId: string): Socket {
   const s = getSocket(userId);
   if (!s.connected) {
-    // Update auth before connecting
     (s.auth as any).userId = userId;
     s.connect();
   }
