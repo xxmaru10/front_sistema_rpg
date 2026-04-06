@@ -790,8 +790,9 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                             width: '50px',
                                             height: '50px',
                                             borderRadius: '50%',
+                                            overflow: 'hidden',
                                             background: charImg
-                                                ? `url(${charImg}) center/cover no-repeat`
+                                                ? 'transparent'
                                                 : (user.inVoice
                                                     ? (user.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
                                                     : 'rgba(255,255,255,0.04)'),
@@ -807,7 +808,15 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                             fontSize: '1.2rem',
                                             transition: 'all 0.2s ease',
                                         }}>
-                                            {!charImg && (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))}
+                                            {charImg ? (
+                                                <img 
+                                                    src={charImg} 
+                                                    alt={displayName} 
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                />
+                                            ) : (
+                                                (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))
+                                            )}
                                         </div>
 
                                         {/* Badge de Mudo em cima do avatar se necessário */}
@@ -871,13 +880,15 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                         {user.isMe && <div style={{ color: 'var(--accent-color)', fontSize: '0.55rem', opacity: 0.8 }}>EU</div>}
                                     </div>
 
-                                    {/* Botões e Sliders compactos (visíveis em hover ou sutilmente) */}
+                                    {/* Botões e Sliders compactos */}
                                     <div className="participant-controls" style={{
                                         width: '100%',
                                         display: 'flex',
-                                        flexDirection: 'column',
+                                        flexDirection: 'row',
+                                        flexWrap: 'wrap',
                                         gap: '4px',
                                         alignItems: 'center',
+                                        justifyContent: 'center',
                                         marginTop: '2px'
                                     }}>
                                         {user.inVoice && user.isMe && (
@@ -887,18 +898,19 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                     background: micMuted ? 'rgba(255, 77, 77, 0.2)' : 'rgba(80, 200, 120, 0.1)',
                                                     border: 'none',
                                                     color: micMuted ? '#ff6666' : '#50c878',
-                                                    padding: '2px 6px',
+                                                    padding: '2px 4px',
                                                     cursor: 'pointer',
-                                                    fontSize: '0.55rem',
+                                                    fontSize: '0.5rem',
                                                     fontFamily: 'var(--font-header)',
                                                     borderRadius: '4px',
+                                                    flexShrink: 0
                                                 }}
                                             >
                                                 {micMuted ? 'OFF' : 'ON'}
                                             </button>
                                         )}
                                         {user.inVoice && !user.isMe && user.hasPeer && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', width: '100%', justifyContent: 'center' }}>
                                                 <button
                                                     onClick={() => handlePeerMute(user.id)}
                                                     style={{
@@ -906,8 +918,9 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                         border: 'none',
                                                         color: user.muted ? '#ff6666' : 'rgba(255,255,255,0.4)',
                                                         cursor: 'pointer',
-                                                        fontSize: '0.65rem',
+                                                        fontSize: '0.6rem',
                                                         padding: '0',
+                                                        flexShrink: 0
                                                     }}
                                                 >
                                                     {user.muted ? '🔇' : '🔈'}
@@ -918,19 +931,23 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                     max="200"
                                                     value={user.volume}
                                                     onChange={e => handlePeerVolume(user.id, parseInt(e.target.value))}
-                                                    style={{ width: '35px', accentColor: 'var(--accent-color)', height: '12px' }}
+                                                    style={{ flex: 1, minWidth: 0, accentColor: 'var(--accent-color)', height: '12px' }}
                                                 />
+                                                <span style={{ fontSize: '0.5rem', opacity: 0.6, width: '15px' }}>{user.volume}%</span>
                                             </div>
                                         )}
                                         {user.inVoice && user.isMe && (
-                                            <input
-                                                type="range"
-                                                min="0"
-                                                max="200"
-                                                value={micVolume}
-                                                onChange={e => handleMicVolume(parseInt(e.target.value))}
-                                                style={{ width: '45px', accentColor: 'var(--accent-color)', height: '12px' }}
-                                            />
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', width: '100%', justifyContent: 'center' }}>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="200"
+                                                    value={micVolume}
+                                                    onChange={e => handleMicVolume(parseInt(e.target.value))}
+                                                    style={{ flex: 1, minWidth: 0, accentColor: 'var(--accent-color)', height: '12px' }}
+                                                />
+                                                <span style={{ fontSize: '0.5rem', opacity: 0.6, width: '15px' }}>{micVolume}%</span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -986,8 +1003,9 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     width: '48px',
                                     height: '48px',
                                     borderRadius: '50%',
+                                    overflow: 'hidden',
                                     background: charImg
-                                        ? `url(${charImg}) center/cover no-repeat`
+                                        ? 'transparent'
                                         : (user.speaking
                                             ? 'rgba(80, 200, 120, 0.25)'
                                             : 'rgba(30, 30, 30, 0.6)'),
@@ -1005,7 +1023,11 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
                                     transition: 'all 0.2s ease',
                                 }}>
-                                    {!charImg && initial}
+                                    {charImg ? (
+                                        <img src={charImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        initial
+                                    )}
                                 </div>
                                 <div style={{
                                     fontSize: '0.55rem',
