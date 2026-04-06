@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-06 (voice-avatar-compact-story-28)
+last_updated: 2026-04-06 (voice-layout-fix-story-28)
 status: ativo
 ---
 
