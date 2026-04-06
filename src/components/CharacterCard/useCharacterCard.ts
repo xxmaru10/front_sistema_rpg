@@ -60,6 +60,16 @@ export function useCharacterCard({
         } as any);
     };
 
+    const handleStressBoxValueChange = (track: "PHYSICAL" | "MENTAL", index: number, newValue: number) => {
+        if (!isGM) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "STRESS_BOX_VALUE_CHANGED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, track, boxIndex: index, value: newValue }
+        } as any);
+    };
+
+
     const handleAddStressBox = (track: "PHYSICAL" | "MENTAL") => {
         if (!isGM) return;
         globalEventStore.append({
@@ -330,7 +340,7 @@ export function useCharacterCard({
         consequenceModal, setConsequenceModal,
         showAddConsequenceModal, setShowAddConsequenceModal,
         // Handlers
-        handleStressToggle, handleAddStressBox, handleRemoveStressBox,
+        handleStressToggle, handleStressBoxValueChange, handleAddStressBox, handleRemoveStressBox,
         handleFPChange, handleRefreshChange,
         handleMagicLevelChange,
         handleImageUpload,

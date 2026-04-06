@@ -9,6 +9,7 @@ interface DiceSimulationParams {
     accentColor?: string;
     onSettled: DiceSimulationCallback;
     onPreResult?: DiceSimulationCallback;
+    onFirstImpact?: () => void;
 }
 
 class DiceSimulationStore {

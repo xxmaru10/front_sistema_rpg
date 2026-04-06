@@ -91,11 +91,11 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                 fatePoints: preset?.fatePoints ?? (isNPC ? 0 : 3),
                 refresh: preset?.refresh ?? 3,
                 stress: preset ? {
-                    physical: Array(preset.physicalStress).fill(false),
-                    mental: Array(preset.mentalStress).fill(false)
+                    physical: Array(preset.physicalStress).fill(0).map((_, i) => ({ value: i + 1, checked: false })),
+                    mental: Array(preset.mentalStress).fill(0).map((_, i) => ({ value: i + 1, checked: false }))
                 } : {
-                    physical: Array(physStress).fill(false),
-                    mental: Array(mentStress).fill(false)
+                    physical: Array(physStress).fill(0).map((_, i) => ({ value: i + 1, checked: false })),
+                    mental: Array(mentStress).fill(0).map((_, i) => ({ value: i + 1, checked: false }))
                 },
                 skills: preset?.skills ?? DEFAULT_SKILLS.reduce((acc, sk) => ({ ...acc, [sk]: 0 }), {}),
                 consequences: preset?.consequences ?? {

@@ -107,6 +107,7 @@ export function CharacterCard({
                     isCompact={isCompact}
                     canEditStressOrFP={canEditStressOrFP}
                     onStressToggle={hook.handleStressToggle}
+                    onStressBoxValueChange={hook.handleStressBoxValueChange}
                     onAddStressBox={hook.handleAddStressBox}
                     onRemoveStressBox={hook.handleRemoveStressBox}
                     onFPChange={hook.handleFPChange}

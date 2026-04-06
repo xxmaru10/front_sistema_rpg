@@ -271,7 +271,7 @@ export function useDiceRoller({
         setLastTotal(null);
         
         diceSimulationStore.show({
-            onPreResult: () => {
+            onFirstImpact: () => {
                 const diceSound = soundSettings?.dice || "/audio/Effects/dados.MP3";
                 const audio = new Audio(diceSound);
                 audio.play().catch(e => console.warn("Failed to play dice sound:", e));

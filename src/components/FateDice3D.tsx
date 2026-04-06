@@ -8,7 +8,9 @@ interface FateDice3DProps {
     accentColor?: string;
     onSettled: (results: number[]) => void;
     onPreResult?: (results: number[]) => void;
+    onFirstImpact?: () => void;
     userRole?: "GM" | "PLAYER";
+
     activeTab?: string;
 }
 
@@ -21,9 +23,11 @@ export default function FateDice3D({
     accentColor = "#C5A059",
     onSettled,
     onPreResult,
+    onFirstImpact,
     userRole,
     activeTab,
 }: FateDice3DProps) {
+
     const {
         mountRef,
         uiPhase,
@@ -36,7 +40,9 @@ export default function FateDice3D({
         accentColor,
         onSettled,
         onPreResult,
+        onFirstImpact,
     });
+
 
     if (!isVisible) return null;
 

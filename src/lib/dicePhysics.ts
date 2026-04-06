@@ -11,7 +11,9 @@ export interface PhysicsDie {
     vel: { x: number; y: number; z: number };
     angVel: { x: number; y: number; z: number };
     onFloor: boolean;
+    _hasImpacted?: boolean;
 }
+
 
 export interface TrapWalls {
     xNear: number;  // x máx no lado near (baixo da tela, z positivo)
@@ -64,7 +66,8 @@ export function computeTrapWalls(THREE: any, camera: any): TrapWalls {
 /**
  * Executa um passo da simulação física para um dado.
  */
-export function physicsStep(die: PhysicsDie, walls: TrapWalls): void {
+export function physicsStep(die: PhysicsDie, walls: TrapWalls, onFirstFloorHit?: () => void): void {
+
     die.vel.y -= GRAVITY;
 
     die.pos.x += die.vel.x;
@@ -75,6 +78,10 @@ export function physicsStep(die: PhysicsDie, walls: TrapWalls): void {
 
     const floorRest = FLOOR_Y + DIE_HALF;
     if (die.pos.y < floorRest) {
+        if (!die._hasImpacted) {
+             die._hasImpacted = true;
+             onFirstFloorHit?.();
+        }
         die.pos.y = floorRest;
         die.vel.y = Math.abs(die.vel.y) * BOUNCE;
         if (die.vel.y < 0.025) { die.vel.y = 0; die.pos.y = floorRest; }
@@ -82,6 +89,7 @@ export function physicsStep(die: PhysicsDie, walls: TrapWalls): void {
         die.vel.z *= FLOOR_FRIC;
         die.onFloor = true;
     }
+
 
     const zRange = walls.zNear - walls.zFar;
     const tZ = zRange > 0 ? Math.max(0, Math.min(1, (walls.zNear - die.pos.z) / zRange)) : 0.5;

@@ -106,14 +106,21 @@ export type ConsequenceData = {
   debuff?: ConsequenceDebuff;
 };
 
+export type StressBox = {
+  value: number;
+  checked: boolean;
+};
+
+
 export type Character = {
   id: string;
   name: string;
   fatePoints: number;
   refresh?: number; // Total / Max Fate Points
+  impulses?: number; // Current combat impulses
   stress: {
-    physical: boolean[]; // boxes
-    mental: boolean[];
+    physical: StressBox[]; // boxes
+    mental: StressBox[];
   };
   consequences: {
     [key: string]: ConsequenceData | undefined;
@@ -435,8 +442,11 @@ export type ActionEvent =
   | EventEnvelope<"CHARACTER_SPELL_DELETED", { characterId: string; spellId: string }>
   | EventEnvelope<"CHARACTER_MAGIC_LEVEL_UPDATED", { characterId: string; level: number }>
   | EventEnvelope<"CHARACTER_IMAGE_UPDATED", { characterId: string; imageUrl: string }>
-  | EventEnvelope<"STRESS_TRACK_EXPANDED", { characterId: string; track: "PHYSICAL" | "MENTAL" }>
+  | EventEnvelope<"STRESS_TRACK_EXPANDED", { characterId: string; track: "PHYSICAL" | "MENTAL"; value?: number }>
   | EventEnvelope<"STRESS_TRACK_REDUCED", { characterId: string; track: "PHYSICAL" | "MENTAL" }>
+  | EventEnvelope<"STRESS_BOX_VALUE_CHANGED", { characterId: string; track: "PHYSICAL" | "MENTAL"; boxIndex: number; value: number }>
+  | EventEnvelope<"CHARACTER_IMPULSE_ADDED", { characterId: string }>
+  | EventEnvelope<"CHARACTER_IMPULSE_REMOVED", { characterId: string }>
   | EventEnvelope<"CHARACTER_REFRESH_UPDATED", { characterId: string; refresh: number }>
   | EventEnvelope<"CHARACTER_BIO_UPDATED", { characterId: string; biography: string }>
   | EventEnvelope<"CHARACTER_SHEET_ASPECT_UPDATED", { characterId: string; index: number; value: string }>

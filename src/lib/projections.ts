@@ -4,7 +4,29 @@
  * Contains the initial state and the 'reduce' function that processes each ActionEvent.
  * @note: This is a synthesis guide for architectural understanding.
  */
-import { ActionEvent, SessionState, Character, Aspect, DEFAULT_SKILLS } from "@/types/domain";
+import { ActionEvent, SessionState, Character, Aspect, DEFAULT_SKILLS, StressBox } from "@/types/domain";
+
+/** 
+ * Normalizes a stress track (array of booleans or StressBoxes) into current StressBox[] format.
+ * Ensures backward compatibility with older characters.
+ */
+function normalizeStressTrack(track: (boolean | StressBox)[] | undefined): StressBox[] {
+    if (!track) return [];
+    return track.map((item, i) => {
+        if (typeof item === 'boolean') {
+            return { value: i + 1, checked: item };
+        }
+        return item;
+    });
+}
+
+function normalizeStress(stress: { physical: (boolean | StressBox)[], mental: (boolean | StressBox)[] } | undefined) {
+    return {
+        physical: normalizeStressTrack(stress?.physical),
+        mental: normalizeStressTrack(stress?.mental)
+    };
+}
+
 
 /** The initial state for a new game session */
 export const initialState: SessionState = {
@@ -83,7 +105,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                         ...payload,
                         activeInArena: payload.activeInArena ?? false,
                         fatePoints: payload.fatePoints ?? 3,
-                        stress: payload.stress ?? { physical: [false, false], mental: [false, false] },
+                        stress: normalizeStress(payload.stress),
                         skills: payload.skills ?? DEFAULT_SKILLS.reduce((acc: Record<string, number>, sk: string) => ({ ...acc, [sk]: 0 }), {}),
                         consequences: payload.consequences ?? {},
                         inventory: payload.inventory ?? [],
@@ -156,10 +178,10 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
         case "STRESS_MARKED": {
             const char = state.characters[payload.characterId];
             if (!char) return state;
-            const track = payload.track.toLowerCase() as "physical" | "mental";
-            const newTrack = [...char.stress[track]];
+            const trackType = payload.track.toLowerCase() as "physical" | "mental";
+            const newTrack = normalizeStressTrack(char.stress[trackType]);
             if (payload.boxIndex >= 0 && payload.boxIndex < newTrack.length) {
-                newTrack[payload.boxIndex] = true;
+                newTrack[payload.boxIndex].checked = true;
             }
             return {
                 ...state,
@@ -167,7 +189,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        stress: { ...char.stress, [track]: newTrack }
+                        stress: { ...char.stress, [trackType]: newTrack }
                     }
                 }
             };
@@ -176,10 +198,10 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
         case "STRESS_CLEARED": {
             const char = state.characters[payload.characterId];
             if (!char) return state;
-            const track = payload.track.toLowerCase() as "physical" | "mental";
-            const newTrack = [...char.stress[track]];
+            const trackType = payload.track.toLowerCase() as "physical" | "mental";
+            const newTrack = normalizeStressTrack(char.stress[trackType]);
             if (payload.boxIndex >= 0 && payload.boxIndex < newTrack.length) {
-                newTrack[payload.boxIndex] = false;
+                newTrack[payload.boxIndex].checked = false;
             }
             return {
                 ...state,
@@ -187,11 +209,32 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        stress: { ...char.stress, [track]: newTrack }
+                        stress: { ...char.stress, [trackType]: newTrack }
                     }
                 }
             };
         }
+
+        case "STRESS_BOX_VALUE_CHANGED": {
+            const char = state.characters[payload.characterId];
+            if (!char) return state;
+            const trackType = payload.track.toLowerCase() as "physical" | "mental";
+            const newTrack = normalizeStressTrack(char.stress[trackType]);
+            if (payload.boxIndex >= 0 && payload.boxIndex < newTrack.length) {
+                newTrack[payload.boxIndex].value = payload.value;
+            }
+            return {
+                ...state,
+                characters: {
+                    ...state.characters,
+                    [payload.characterId]: {
+                        ...char,
+                        stress: { ...char.stress, [trackType]: newTrack }
+                    }
+                }
+            };
+        }
+
 
         case "CHARACTER_CONSEQUENCE_UPDATED": {
             const char = state.characters[payload.characterId];
@@ -407,7 +450,9 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
         case "STRESS_TRACK_EXPANDED": {
             const char = state.characters[payload.characterId];
             if (!char) return state;
-            const track = payload.track.toLowerCase() as "physical" | "mental";
+            const trackType = payload.track.toLowerCase() as "physical" | "mental";
+            const currentTrack = normalizeStressTrack(char.stress[trackType]);
+            const nextValue = payload.value ?? (currentTrack.length > 0 ? (Math.max(...currentTrack.map(b => b.value)) + 1) : 1);
             return {
                 ...state,
                 characters: {
@@ -416,7 +461,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                         ...char,
                         stress: {
                             ...char.stress,
-                            [track]: [...char.stress[track], false]
+                            [trackType]: [...currentTrack, { value: nextValue, checked: false }]
                         }
                     }
                 }
@@ -424,11 +469,12 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
         }
 
 
+
         case "STRESS_TRACK_REDUCED": {
             const char = state.characters[payload.characterId];
             if (!char) return state;
-            const track = payload.track.toLowerCase() as "physical" | "mental";
-            const currentTrack = char.stress[track];
+            const trackType = payload.track.toLowerCase() as "physical" | "mental";
+            const currentTrack = char.stress[trackType];
             if (currentTrack.length === 0) return state;
 
             return {
@@ -439,8 +485,38 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                         ...char,
                         stress: {
                             ...char.stress,
-                            [track]: currentTrack.slice(0, -1)
+                            [trackType]: currentTrack.slice(0, -1)
                         }
+                    }
+                }
+            };
+        }
+
+        case "CHARACTER_IMPULSE_ADDED": {
+            const char = state.characters[payload.characterId];
+            if (!char) return state;
+            return {
+                ...state,
+                characters: {
+                    ...state.characters,
+                    [payload.characterId]: {
+                        ...char,
+                        impulses: (char.impulses || 0) + 1
+                    }
+                }
+            };
+        }
+
+        case "CHARACTER_IMPULSE_REMOVED": {
+            const char = state.characters[payload.characterId];
+            if (!char) return state;
+            return {
+                ...state,
+                characters: {
+                    ...state.characters,
+                    [payload.characterId]: {
+                        ...char,
+                        impulses: Math.max(0, (char.impulses || 0) - 1)
                     }
                 }
             };

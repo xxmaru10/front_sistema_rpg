@@ -45,22 +45,28 @@ interface UseFateDiceSimulationProps {
     accentColor: string;
     onSettled: (results: number[]) => void;
     onPreResult?: (results: number[]) => void;
+    onFirstImpact?: () => void;
 }
+
 
 export function useFateDiceSimulation({
     isVisible,
     accentColor,
     onSettled,
     onPreResult,
+    onFirstImpact,
 }: UseFateDiceSimulationProps) {
     const mountRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<SceneState | null>(null);
     const onSettledRef = useRef(onSettled);
     const onPreResultRef = useRef(onPreResult);
+    const onFirstImpactRef = useRef(onFirstImpact);
     
     // Atualiza refs para evitar stale closures no loop de animação
     onSettledRef.current = onSettled;
     onPreResultRef.current = onPreResult;
+    onFirstImpactRef.current = onFirstImpact;
+
 
     const mouseRef = useRef({ x: 0, y: 0 });
     const mousePrevRef = useRef({ x: 0, y: 0 });
@@ -327,7 +333,8 @@ export function useFateDiceSimulation({
                     });
 
                 } else if (state.phase === "thrown") {
-                    state.dice.forEach(d => physicsStep(d, state.trapWalls));
+                    state.dice.forEach(d => physicsStep(d, state.trapWalls, onFirstImpactRef.current));
+
                     state.dice.forEach(d => {
                         const sp = new THREE.Vector3(d.pos.x, d.pos.y, d.pos.z).project(camera);
                         const LIM = 0.90;

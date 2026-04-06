@@ -19,11 +19,11 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     {character.stress.physical.map((box, i) => (
                         <button
                             key={i}
-                            className={`stress-box ${box ? "marked" : ""}`}
-                            onClick={() => canEditSelf && handleStressToggle("PHYSICAL", i, box)}
+                            className={`stress-box ${box.checked ? "marked" : ""}`}
+                            onClick={() => canEditSelf && handleStressToggle("PHYSICAL", i, box.checked)}
                             disabled={!canEditSelf}
                         >
-                            {i + 1}
+                            {box.value}
                         </button>
                     ))}
                 </div>
@@ -36,11 +36,11 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     {character.stress.mental.map((box, i) => (
                         <button
                             key={i}
-                            className={`stress-box ${box ? "marked" : ""}`}
-                            onClick={() => canEditSelf && handleStressToggle("MENTAL", i, box)}
+                            className={`stress-box ${box.checked ? "marked" : ""}`}
+                            onClick={() => canEditSelf && handleStressToggle("MENTAL", i, box.checked)}
                             disabled={!canEditSelf}
                         >
-                            {i + 1}
+                            {box.value}
                         </button>
                     ))}
                 </div>
