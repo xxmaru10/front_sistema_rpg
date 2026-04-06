@@ -131,7 +131,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (seqA !== 0 && seqB === 0) return -1;
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
-        return computeState(sorted);
+        return computeState(sorted, globalEventStore.getSnapshotState() ?? undefined);
     }, [events]);
 
     const getDisplayName = useCallback((uid: string, charId?: string) => {
@@ -702,17 +702,15 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         )}
                     </div>
 
-                    {/* Lista de TODOS os participantes em GRID COMPACTO */}
+                    {/* Lista de participantes */}
                     <div style={{
                         overflowY: 'auto',
                         flex: 1,
-                        position: 'relative' as const, 
-                        padding: '16px',
+                        position: 'relative' as const,
+                        padding: '8px 0',
                         display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '20px',
-                        justifyContent: 'flex-start',
-                        alignContent: 'flex-start',
+                        flexDirection: 'column',
+                        gap: '2px',
                     }}>
                         {/* Overlay de carregamento durante o refresh */}
                         {isRefreshing && (
@@ -765,189 +763,141 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         {allUsers.map(user => {
                             const charImg = getCharacterImage(user.id, user.characterId);
                             const displayName = getDisplayName(user.id, user.characterId);
-                            const shortName = displayName.length > 8 ? displayName.substring(0, 7) + ".." : displayName;
-                            
+
                             return (
                                 <div
                                     key={user.id}
-                                    className="participant-card"
-                                    title={displayName}
                                     style={{
                                         display: 'flex',
-                                        flexDirection: 'column',
+                                        flexDirection: 'row',
                                         alignItems: 'center',
-                                        width: '75px', // Tamanho fixo para o grid responder bem
-                                        gap: '6px',
-                                        padding: '4px',
-                                        borderRadius: '8px',
+                                        gap: '10px',
+                                        padding: '8px 14px',
                                         background: user.isMe ? 'rgba(var(--accent-rgb), 0.05)' : 'transparent',
-                                        position: 'relative' as const,
+                                        borderBottom: '1px solid rgba(255,255,255,0.04)',
                                     }}
                                 >
-                                    {/* Círculo do Avatar */}
+                                    {/* Avatar circular */}
                                     <div style={{ position: 'relative', flexShrink: 0 }}>
                                         <div style={{
-                                            width: '50px',
-                                            height: '50px',
+                                            width: '42px',
+                                            height: '42px',
                                             borderRadius: '50%',
                                             overflow: 'hidden',
-                                            background: charImg
-                                                ? 'transparent'
-                                                : (user.inVoice
-                                                    ? (user.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
-                                                    : 'rgba(255,255,255,0.04)'),
                                             border: `2px solid ${user.inVoice
-                                                ? (user.speaking ? '#50c878' : 'rgba(80, 200, 120, 0.3)')
+                                                ? (user.speaking ? '#50c878' : 'rgba(80,200,120,0.3)')
                                                 : 'rgba(255,255,255,0.08)'}`,
                                             boxShadow: user.speaking
-                                                ? '0 0 10px rgba(80, 200, 120, 0.6), 0 0 20px rgba(80, 200, 120, 0.3)'
+                                                ? '0 0 10px rgba(80,200,120,0.6), 0 0 20px rgba(80,200,120,0.3)'
                                                 : 'none',
+                                            background: charImg ? 'transparent'
+                                                : (user.inVoice
+                                                    ? (user.speaking ? 'rgba(80,200,120,0.35)' : 'rgba(80,200,120,0.08)')
+                                                    : 'rgba(255,255,255,0.04)'),
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            fontSize: '1.2rem',
+                                            fontSize: '1.1rem',
                                             transition: 'all 0.2s ease',
                                         }}>
-                                            {charImg ? (
-                                                <img 
-                                                    src={charImg} 
-                                                    alt={displayName} 
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                />
-                                            ) : (
-                                                (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))
-                                            )}
+                                            {charImg
+                                                ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))
+                                            }
                                         </div>
-
-                                        {/* Badge de Mudo em cima do avatar se necessário */}
-                                        {user.inVoice && user.muted && (
+                                        {/* Badge de mudo sobre o avatar */}
+                                        {charImg && user.inVoice && user.muted && (
                                             <div style={{
-                                                position: 'absolute',
-                                                bottom: '-2px',
-                                                right: '-2px',
-                                                width: '18px',
-                                                height: '18px',
-                                                background: '#ff4d4d',
-                                                borderRadius: '50%',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '0.6rem',
-                                                border: '1px solid #111',
-                                                zIndex: 2,
-                                            }}>
-                                                🔇
-                                            </div>
+                                                position: 'absolute', bottom: '-2px', right: '-2px',
+                                                width: '16px', height: '16px',
+                                                background: '#ff4d4d', borderRadius: '50%',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '0.55rem', border: '1px solid #111', zIndex: 2,
+                                            }}>🔇</div>
                                         )}
-                                        
-                                        {/* Pequena barra lateral de áudio level para feedback visual sutil */}
-                                        {user.inVoice && (user.speaking || user.audioLevel > 0.05) && (
+                                    </div>
+
+                                    {/* Coluna central: nome + barra de áudio level */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: '0 0 70px' }}>
+                                        <div style={{
+                                            fontSize: '0.7rem',
+                                            color: user.inVoice ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            fontFamily: 'var(--font-header)',
+                                            letterSpacing: '0.04em',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {displayName}
+                                            {user.isMe && <span style={{ color: 'var(--accent-color)', fontSize: '0.55rem', marginLeft: '4px' }}>EU</span>}
+                                        </div>
+                                        {/* Barra de nível de áudio */}
+                                        <div style={{
+                                            width: '100%', height: '4px',
+                                            background: 'rgba(255,255,255,0.06)',
+                                            borderRadius: '2px', overflow: 'hidden',
+                                        }}>
                                             <div style={{
-                                                position: 'absolute',
-                                                left: '-5px',
-                                                bottom: '0',
-                                                width: '3px',
-                                                height: '20px',
-                                                background: 'rgba(255,255,255,0.1)',
+                                                height: '100%',
+                                                width: `${Math.round(user.audioLevel * 100)}%`,
+                                                background: user.audioLevel > 0.6 ? '#50c878' : 'var(--accent-color)',
                                                 borderRadius: '2px',
-                                                overflow: 'hidden'
-                                            }}>
-                                                <div style={{
-                                                    width: '100%',
-                                                    height: `${Math.round(user.audioLevel * 100)}%`,
-                                                    position: 'absolute',
-                                                    bottom: 0,
-                                                    background: user.audioLevel > 0.6 ? '#50c878' : 'var(--accent-color)',
-                                                    transition: 'height 0.1s ease-out'
-                                                }} />
+                                                transition: 'width 0.08s ease-out',
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Controles de volume — coluna direita */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                                        {/* Slider de mic (usuário local) */}
+                                        {user.inVoice && user.isMe && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <button
+                                                    onClick={handleToggleMic}
+                                                    style={{
+                                                        background: micMuted ? 'rgba(255,77,77,0.2)' : 'rgba(80,200,120,0.1)',
+                                                        border: 'none',
+                                                        color: micMuted ? '#ff6666' : '#50c878',
+                                                        padding: '2px 5px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.5rem',
+                                                        fontFamily: 'var(--font-header)',
+                                                        borderRadius: '4px',
+                                                        flexShrink: 0,
+                                                    }}
+                                                >{micMuted ? 'OFF' : 'ON'}</button>
+                                                <input
+                                                    type="range" min="0" max="200" value={micVolume}
+                                                    onChange={e => handleMicVolume(parseInt(e.target.value))}
+                                                    style={{ flex: 1, minWidth: 0, accentColor: 'var(--accent-color)', height: '3px', cursor: 'pointer' }}
+                                                />
+                                                <span style={{ fontSize: '0.5rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '22px', textAlign: 'right' }}>{micVolume}</span>
                                             </div>
                                         )}
-                                    </div>
-
-                                    {/* Nome Curto Abaixo */}
-                                    <div style={{
-                                        fontSize: '0.65rem',
-                                        color: user.inVoice ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                        fontFamily: 'var(--font-header)',
-                                        textAlign: 'center',
-                                        lineHeight: '1.1',
-                                        width: '100%',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                    }}>
-                                        {shortName}
-                                        {user.isMe && <div style={{ color: 'var(--accent-color)', fontSize: '0.55rem', opacity: 0.8 }}>EU</div>}
-                                    </div>
-
-                                    {/* Botões e Sliders compactos */}
-                                    <div className="participant-controls" style={{
-                                        width: '100%',
-                                        display: 'flex',
-                                        flexDirection: 'row',
-                                        flexWrap: 'wrap',
-                                        gap: '4px',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        marginTop: '2px'
-                                    }}>
-                                        {user.inVoice && user.isMe && (
-                                            <button
-                                                onClick={handleToggleMic}
-                                                style={{
-                                                    background: micMuted ? 'rgba(255, 77, 77, 0.2)' : 'rgba(80, 200, 120, 0.1)',
-                                                    border: 'none',
-                                                    color: micMuted ? '#ff6666' : '#50c878',
-                                                    padding: '2px 4px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.5rem',
-                                                    fontFamily: 'var(--font-header)',
-                                                    borderRadius: '4px',
-                                                    flexShrink: 0
-                                                }}
-                                            >
-                                                {micMuted ? 'OFF' : 'ON'}
-                                            </button>
-                                        )}
+                                        {/* Slider de volume de peer */}
                                         {user.inVoice && !user.isMe && user.hasPeer && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', width: '100%', justifyContent: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <button
                                                     onClick={() => handlePeerMute(user.id)}
                                                     style={{
-                                                        background: 'transparent',
-                                                        border: 'none',
+                                                        background: 'transparent', border: 'none',
                                                         color: user.muted ? '#ff6666' : 'rgba(255,255,255,0.4)',
-                                                        cursor: 'pointer',
-                                                        fontSize: '0.6rem',
-                                                        padding: '0',
-                                                        flexShrink: 0
+                                                        cursor: 'pointer', fontSize: '0.7rem', padding: '0', flexShrink: 0,
                                                     }}
-                                                >
-                                                    {user.muted ? '🔇' : '🔈'}
-                                                </button>
+                                                >{user.muted ? '🔇' : '🔈'}</button>
                                                 <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="200"
-                                                    value={user.volume}
+                                                    type="range" min="0" max="200" value={user.volume}
                                                     onChange={e => handlePeerVolume(user.id, parseInt(e.target.value))}
-                                                    style={{ flex: 1, minWidth: 0, accentColor: 'var(--accent-color)', height: '12px' }}
+                                                    style={{ flex: 1, minWidth: 0, accentColor: 'var(--accent-color)', height: '3px', cursor: 'pointer' }}
                                                 />
-                                                <span style={{ fontSize: '0.5rem', opacity: 0.6, width: '15px' }}>{user.volume}%</span>
+                                                <span style={{ fontSize: '0.5rem', color: 'var(--text-secondary)', flexShrink: 0, minWidth: '22px', textAlign: 'right' }}>{user.volume}</span>
                                             </div>
                                         )}
-                                        {user.inVoice && user.isMe && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', width: '100%', justifyContent: 'center' }}>
-                                                <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="200"
-                                                    value={micVolume}
-                                                    onChange={e => handleMicVolume(parseInt(e.target.value))}
-                                                    style={{ flex: 1, minWidth: 0, accentColor: 'var(--accent-color)', height: '12px' }}
-                                                />
-                                                <span style={{ fontSize: '0.5rem', opacity: 0.6, width: '15px' }}>{micVolume}%</span>
-                                            </div>
+                                        {/* Status offline */}
+                                        {!user.inVoice && (
+                                            <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)', opacity: 0.5 }}>
+                                                Online
+                                            </span>
                                         )}
                                     </div>
                                 </div>
