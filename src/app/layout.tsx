@@ -33,6 +33,10 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "Cronos Vtt",
   description: "Plataforma avançada para narração e automação de mesas de RPG (Fate Core)",
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon_256.png',
+  },
 };
 
 export default function RootLayout({
