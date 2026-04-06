@@ -27,7 +27,11 @@ export function CombatLog({ events, characters, sessionNumber, onRefresh }: Comb
     const currentSessionEvents = sessionBoundarySeq === null
         ? events
         : events.filter(e => {
-            if (typeof sessionBoundarySeq === 'number') return (e.seq || 0) >= (sessionBoundarySeq as number);
+            if (typeof sessionBoundarySeq === 'number') {
+                // seq=0 means optimistic (not yet confirmed by server) — always include
+                if (!e.seq) return true;
+                return e.seq >= sessionBoundarySeq;
+            }
             return new Date(e.createdAt) >= new Date(sessionBoundarySeq as string);
         });
 

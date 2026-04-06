@@ -788,6 +788,9 @@ export default function SessionPage() {
                 <FateDice3D
                     isVisible={true}
                     accentColor={diceParams?.accentColor}
+                    onFirstImpact={() => {
+                        diceParams?.onFirstImpact?.();
+                    }}
                     onSettled={(results) => {
                         diceParams?.onSettled(results);
                         diceSimulationStore.hide();

@@ -86,8 +86,9 @@ export function CombatHeader({
                 )}
             </div>
 
-            {!isCollapsed && (isGM || isOwner) && (
+            {!isCollapsed && (
                 <div className="combat-header-bottom">
+                    {(isGM || isOwner) && (
                     <div className="combat-fate">
                         <span className="fate-label">{character.isNPC ? "GM" : "PD"}</span>
                         <div className="fate-controls">
@@ -96,6 +97,7 @@ export function CombatHeader({
                             {canEditSelf && <button onClick={() => handleFPChange(1)} className="fate-btn">+</button>}
                         </div>
                     </div>
+                    )}
 
                     <div className="combat-impulses">
                         <span className="impulse-label">IMPULSO</span>

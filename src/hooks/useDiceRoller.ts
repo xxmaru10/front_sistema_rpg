@@ -54,6 +54,7 @@ export function useDiceRoller({
     const [lastReactionState, setLastReactionState] = useState(false);
 
     const pendingCharIdRef = useRef<string>("");
+    const impactSoundPlayedRef = useRef(false);
     const [isRolling, setIsRolling] = useState(false);
     const [diceResults, setDiceResults] = useState<number[]>([0, 0, 0, 0]);
     const [diceRotations, setDiceRotations] = useState<{ x: number, y: number }[]>([
@@ -269,9 +270,12 @@ export function useDiceRoller({
         if (!charId || isRolling) return;
         setIsRolling(true);
         setLastTotal(null);
-        
+        impactSoundPlayedRef.current = false;
+
         diceSimulationStore.show({
             onFirstImpact: () => {
+                if (impactSoundPlayedRef.current) return;
+                impactSoundPlayedRef.current = true;
                 const diceSound = soundSettings?.dice || "/audio/Effects/dados.MP3";
                 const audio = new Audio(diceSound);
                 audio.play().catch(e => console.warn("Failed to play dice sound:", e));
