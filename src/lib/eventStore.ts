@@ -6,11 +6,11 @@
  */
 // Teste de commit - Conta Kasaxi ✅
 import { ActionEvent, SessionState } from "@/types/domain";
-import { supabase } from "./supabaseClient";
 import { computeState } from "./projections";
 import * as apiClient from "./apiClient";
 import { v4 as uuidv4 } from 'uuid';
 import { uploadImage } from "./apiClient";
+import { getSocket } from "./socketClient";
 
 export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
 
@@ -47,10 +47,6 @@ export class EventStore {
     }
 
     async initSession(sessionId: string, force = false) {
-        if (typeof window !== 'undefined') {
-            // console.log(`%c[EventStore] Inicializando Sessão: ${sessionId}`, 'color: #bada55; font-weight: bold');
-        }
-
         if (this.currentSessionId === sessionId && !force) return;
 
         if (this.reconnectTimeout) {
@@ -58,10 +54,12 @@ export class EventStore {
             this.reconnectTimeout = null;
         }
 
-        // Cleanup previous subscription
-        if (this.channel) {
-            await supabase.removeChannel(this.channel);
-        }
+        // Cleanup previous WebSocket listeners
+        const socket = getSocket();
+        socket.off('new-event');
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('connect_error');
 
         this.currentSessionId = sessionId;
         this.events = [];
@@ -71,88 +69,96 @@ export class EventStore {
         this._setStatus('CONNECTING');
         console.info(`[EventStore] Inicializando sessão: ${sessionId} (forçado: ${force})`);
 
-        // --- Subscribe to realtime BEFORE fetching history ---
         const bufferedRealtimeEvents: ActionEvent[] = [];
         let historicalLoadComplete = false;
 
-        this.channel = supabase
-            .channel(`session-${sessionId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'events',
-                    filter: `session_id=eq.${sessionId}`
-                },
-                (payload: any) => {
-                    const newEvent = payload.new as any;
-                    const formattedEvent: ActionEvent = {
-                        id: newEvent.id,
-                        sessionId: newEvent.session_id,
-                        seq: newEvent.seq,
-                        type: newEvent.type,
-                        actorUserId: newEvent.actor_user_id,
-                        visibility: newEvent.visibility,
-                        createdAt: newEvent.created_at,
-                        payload: newEvent.payload
-                    };
+        // Connect WebSocket and join session room
+        if (!socket.connected) {
+            socket.connect();
+        }
 
-                    if (!historicalLoadComplete) {
-                        bufferedRealtimeEvents.push(formattedEvent);
-                        return;
-                    }
+        socket.on('connect', () => {
+            console.log('[EventStore] WebSocket connected, joining session:', sessionId);
+            socket.emit('join-session', { sessionId, userId: 'client' });
+            this._setStatus('SUBSCRIBED');
+        });
 
-                    const idx = this.events.findIndex(e => e.id === newEvent.id);
-                    if (idx === -1) {
-                        this.events.push(formattedEvent);
-                        this._sort();
-                        this.listeners.forEach(l => l(formattedEvent));
-                        this.bulkListeners.forEach(l => l([...this.events]));
-                    } else {
-                        // Confirmação do evento (limpa falha se houver)
-                        this.failedEventIds.delete(newEvent.id);
-                        const updatedEvent = {
-                            ...this.events[idx],
-                            seq: newEvent.seq,
-                            createdAt: newEvent.created_at
-                        };
-                        this.events[idx] = updatedEvent;
-                        this._sort();
-                        this.listeners.forEach(l => l(updatedEvent));
-                        this.bulkListeners.forEach(l => l([...this.events]));
-                    }
+        socket.on('disconnect', (reason) => {
+            console.warn('[EventStore] WebSocket disconnected:', reason);
+            this._setStatus('CLOSED');
+
+            if (reason === 'io server disconnect') {
+                // Server disconnected us — reconnect
+                socket.connect();
+            }
+            // All other reasons reconnect automatically via socket.io reconnection
+        });
+
+        socket.on('connect_error', (err) => {
+            console.error('[EventStore] WebSocket connection error:', err.message);
+            this._setStatus('CHANNEL_ERROR');
+
+            if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = setTimeout(() => {
+                if (this.currentSessionId === sessionId) {
+                    console.log('[EventStore] Retrying WebSocket connection...');
+                    socket.connect();
                 }
-            )
-            .subscribe((status: string) => {
-                console.log(`[EventStore] Realtime channel status: ${status}`);
-                this._setStatus(status as ConnectionStatus);
+            }, 3000);
+        });
 
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                    console.warn('[EventStore] Canal realtime desconectado, tentando reconectar...');
-                    if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+        // If already connected, join immediately
+        if (socket.connected) {
+            socket.emit('join-session', { sessionId, userId: 'client' });
+            this._setStatus('SUBSCRIBED');
+        }
 
-                    this.reconnectTimeout = setTimeout(() => {
-                        if (this.currentSessionId === sessionId) {
-                            this.channel = null;
-                            this.currentSessionId = null;
-                            this.initSession(sessionId);
-                        }
-                    }, 3000);
-                }
-            });
+        socket.on('new-event', (newEvent: any) => {
+            const formattedEvent: ActionEvent = {
+                id: newEvent.id,
+                sessionId: newEvent.sessionId,
+                seq: newEvent.seq,
+                type: newEvent.type,
+                actorUserId: newEvent.actorUserId,
+                visibility: newEvent.visibility,
+                createdAt: newEvent.createdAt,
+                payload: newEvent.payload,
+            };
 
-        // 2. Load historical events
+            if (!historicalLoadComplete) {
+                bufferedRealtimeEvents.push(formattedEvent);
+                return;
+            }
+
+            const idx = this.events.findIndex(e => e.id === newEvent.id);
+            if (idx === -1) {
+                this.events.push(formattedEvent);
+                this._sort();
+                this.listeners.forEach(l => l(formattedEvent));
+                this.bulkListeners.forEach(l => l([...this.events]));
+            } else {
+                this.failedEventIds.delete(newEvent.id);
+                const updatedEvent = {
+                    ...this.events[idx],
+                    seq: newEvent.seq,
+                    createdAt: newEvent.createdAt,
+                };
+                this.events[idx] = updatedEvent;
+                this._sort();
+                this.listeners.forEach(l => l(updatedEvent));
+                this.bulkListeners.forEach(l => l([...this.events]));
+            }
+        });
+
+        // Load historical events via REST (unchanged)
         let fetchSuccess = false;
         try {
             const result = await apiClient.loadSessionEvents(sessionId);
-
             if (result.snapshot) {
                 this.snapshotState = result.snapshot.state as SessionState;
                 this.snapshotUpToSeq = result.snapshot.upToSeq;
                 console.info(`[EventStore] Snapshot encontrado: seq ${this.snapshotUpToSeq}`);
             }
-
             this.events = result.events;
             fetchSuccess = true;
             console.info(`[EventStore] ${result.events.length} eventos delta carregados via NestJS.`);
@@ -160,11 +166,9 @@ export class EventStore {
             console.error('[EventStore] Falha crítica no fetch via NestJS:', err);
         }
 
-        if (!fetchSuccess && this.snapshotState !== null) {
-            fetchSuccess = true;
-        }
+        if (!fetchSuccess && this.snapshotState !== null) fetchSuccess = true;
 
-        // 3. Merge buffered updates
+        // Merge buffered WebSocket events
         historicalLoadComplete = true;
         const existingIds = new Set(this.events.map(e => e.id));
         for (const buffered of bufferedRealtimeEvents) {
@@ -176,7 +180,7 @@ export class EventStore {
 
         this._sort();
         this.bulkListeners.forEach(l => l([...this.events]));
-        this._updateSnapshot().catch(() => { });
+        this._updateSnapshot().catch(() => {});
         this._migrateBase64Images().catch((err) => {
             console.error('[EventStore] _migrateBase64Images falhou:', err);
         });
