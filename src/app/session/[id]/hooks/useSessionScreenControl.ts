@@ -65,6 +65,17 @@ export function useSessionScreenControl({
         };
     }, [sessionId, actorUserId, setVideoStream]);
 
+    useEffect(() => {
+        const videoEl = screenVideoRef.current;
+        if (!videoEl || !videoStream) return;
+
+        const isBroadcasting = screenShareManagerRef.current?.broadcasting ?? false;
+        if (isBroadcasting) {
+            videoEl.muted = true;
+            console.log("[ScreenShare] Broadcaster — own audio muted to prevent feedback");
+        }
+    }, [videoStream]);
+
     // ── Global reconnect trigger ─────────────────────────────────
     useEffect(() => {
         const unsubscribe = screenShareStore.subscribe(() => {
