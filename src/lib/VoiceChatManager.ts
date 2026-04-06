@@ -121,22 +121,29 @@ export class VoiceChatManager {
     public async initialize() {
         const socket = getSocket(this.userId);
 
-        // Handle incoming WebRTC signals
         const handleSignal = (signal: VoiceSignal) => {
-            if (signal.from === this.userId) return;
-            if (signal.to && signal.to !== this.userId) return;
+            console.log(`[VoiceChat - ${this.userId}] Raw signal received:`, JSON.stringify(signal));
+
+            if (signal.from === this.userId) {
+                console.log(`[VoiceChat] Ignoring own signal`);
+                return;
+            }
+            if (signal.to && signal.to !== this.userId) {
+                console.log(`[VoiceChat] Signal for ${signal.to}, ignoring (I am ${this.userId})`);
+                return;
+            }
 
             const signalType = signal.type as string;
-            if (!signalType.startsWith('voice-')) return;
+            if (!signalType.startsWith('voice-')) {
+                console.log(`[VoiceChat] Non-voice signal ignored:`, signalType);
+                return;
+            }
 
-            const id = `${signal.from}-${signal.type}-${Date.now()}`;
-            if (this.processedSignalIds.has(id)) return;
-            this.processedSignalIds.add(id);
-
-            console.log(`[VoiceChat - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
+            console.log(`[VoiceChat - ${this.userId}] Processing signal:`, signal.type, 'from:', signal.from);
             this.handleSignal(signal);
         };
 
+        socket.off('webrtc-signal', handleSignal);
         socket.on('webrtc-signal', handleSignal);
 
         // Announce presence
@@ -147,7 +154,6 @@ export class VoiceChatManager {
             inVoice: this._isConnected,
         });
 
-        // Handle presence updates from server
         socket.on('voice-presence-update', (participants: SessionParticipant[]) => {
             this._sessionParticipants = participants;
             this.onPresenceUpdate(participants);
@@ -212,7 +218,7 @@ export class VoiceChatManager {
         if (this.heartbeatInterval) { clearInterval(this.heartbeatInterval); this.heartbeatInterval = null; }
         if (this.localSpeakingInterval) { clearInterval(this.localSpeakingInterval); this.localSpeakingInterval = null; }
         if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
-        if (this.localAudioContext) { this.localAudioContext.close().catch(() => {}); this.localAudioContext = null; }
+        if (this.localAudioContext) { this.localAudioContext.close().catch(() => { }); this.localAudioContext = null; }
 
         this.sendSignal({ type: 'voice-leave', from: this.userId, peerId: this.userId });
 
@@ -305,7 +311,7 @@ export class VoiceChatManager {
         this.dummyAudioElements.clear();
         this.audioNodes.forEach(nodes => { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); });
         this.audioNodes.clear();
-        this.peerAudioContexts.forEach(ctx => ctx.close().catch(() => {}));
+        this.peerAudioContexts.forEach(ctx => ctx.close().catch(() => { }));
         this.peerAudioContexts.clear();
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
@@ -328,7 +334,7 @@ export class VoiceChatManager {
         const pc = this.peerConnections.get(peerId);
         if (pc) { pc.close(); this.peerConnections.delete(peerId); }
         const ctx = this.peerAudioContexts.get(peerId);
-        if (ctx) { ctx.close().catch(() => {}); this.peerAudioContexts.delete(peerId); }
+        if (ctx) { ctx.close().catch(() => { }); this.peerAudioContexts.delete(peerId); }
         this.peerStreams.delete(peerId);
         this.peerVolumes.delete(peerId);
         this.peerMuted.delete(peerId);
@@ -397,7 +403,7 @@ export class VoiceChatManager {
                 dummyAudio.srcObject = stream;
                 dummyAudio.muted = true;
                 dummyAudio.autoplay = true;
-                dummyAudio.play().catch(() => {});
+                dummyAudio.play().catch(() => { });
                 this.dummyAudioElements.set(peerId, dummyAudio);
                 audioEl.srcObject = dst.stream;
                 audioEl.play().catch(e => console.warn('[VoiceChat] Audio destination play failed:', e));
