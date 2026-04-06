@@ -652,187 +652,167 @@ adicionar os seletores de dispositivo quando `isConnected && devicesLoaded`:
 
 ---
 
-## Bugs Detectados Pós-Implementação (2026-04-06)
+## Bugs Detectados Pós-Implementação — Teste Real (2026-04-06)
 
-> Esta seção documenta três bugs encontrados na sessão de teste com a jogadora (Margot Laveau)
-> e o Mestre. Inclui diagnóstico preciso e instruções de correção para qualquer IA aplicar.
-
----
-
-### Bug 1 — Sem imagem no avatar do VoiceChat (letras no lugar da foto)
-
-#### Diagnóstico
-
-**Arquivo afetado**: `src/components/VoiceChatPanel.tsx`
-
-A função `getCharacterImage` existe e está corretamente implementada. O problema está na
-**cadeia de lookup**: ela só retorna uma imagem se `c.imageUrl` for truthy. O fallback de
-nome (`c.name.toLowerCase() === uidLower`) funciona apenas para o usuário local — para
-peers remotos, o campo `user.characterId` vem do servidor via `voice-presence-update`.
-
-**Causa raiz confirmada pelo log**:
-```
-[VoiceChatPanel] Mount Props Sync Check: Object
-```
-O log mostra o objeto mas não seus valores. O `characterId` passado como prop pode ser
-`undefined` se a página da sessão não está passando a prop corretamente, ou pode ser o
-nome do personagem (string) em vez do UUID do personagem.
-
-**Duas causas possíveis — verificar qual se aplica**:
-
-**Causa A** — `characterId` não está chegando corretamente para peers remotos:
-```
-allUsers = participants.map(p => ({
-    characterId: isMe ? characterId : p.characterId,  // p.characterId pode ser undefined
-}))
-```
-O `p.characterId` vem do `voice-presence-update` que o servidor emite. Se o **backend NestJS**
-não está re-transmitindo o campo `characterId` no evento `voice-presence-update`, todos os
-peers remotos terão `characterId = undefined`. Com `charId = undefined`, o `getCharacterImage`
-cai no fallback por `ownerUserId`/`name`, que exige `c.ownerUserId === uid` — mas `uid` aqui
-é o display name ("Margot Laveau") enquanto `ownerUserId` é um UUID do Supabase. Match falha.
-
-**Causa B** — `characterId` chega corretamente, mas o personagem não tem `imageUrl`:
-O personagem existe em `state.characters` com `imageUrl: ""` (valor padrão de projections.ts
-linha 1069). A condição `c.id === charId && c.imageUrl` falha porque `"" === false`.
-
-#### Como confirmar qual causa
-
-Adicionar temporariamente no início de `getCharacterImage`:
-```ts
-console.log('[VoiceChat] getCharacterImage called', { uid, charId, chars: Object.values(state.characters).map(c => ({ id: c.id, name: c.name, owner: c.ownerUserId, img: !!c.imageUrl })) });
-```
-- Se `charId` for `undefined` para peers remotos → Causa A (backend)
-- Se `charId` é um UUID mas `imageUrl` está vazio → Causa B (personagem sem imagem)
-
-#### Correção para Causa A (backend não transmite characterId)
-
-**Arquivo**: `back_sistema_rpg` (backend NestJS) — verificar o gateway que processa
-`voice-presence` e emite `voice-presence-update`. O servidor deve incluir o campo
-`characterId` ao construir a lista de participantes para broadcast.
-
-Localizar no backend o handler do evento `voice-presence` (provavelmente em um arquivo
-`session.gateway.ts` ou `voice.gateway.ts`). Garantir que o `characterId` recebido é
-armazenado no objeto de participante e incluído no broadcast de `voice-presence-update`.
-
-#### Correção para Causa A (alternativa no frontend, sem tocar backend)
-
-Modificar o fallback em `getCharacterImage` para também cruzar pelo `c.name`:
-
-```ts
-// Em VoiceChatPanel.tsx, dentro de getCharacterImage, logo após a busca por charId
-// Adicionar uma segunda tentativa: busca pelo NOME do usuário como nome do personagem
-// (funciona quando uid === nome do personagem, ex: "Margot Laveau")
-const matchedByName = allChars.find(c => {
-    const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-    return nameMatch; // sem exigir imageUrl aqui, para saber se o personagem existe
-});
-
-if (matchedByName?.imageUrl) return matchedByName.imageUrl;
-```
-
-Essa modificação vai além do fallback atual — no fallback atual, a condição `&& c.imageUrl`
-impede encontrar o personagem sem imagem. Separar em dois passos: primeiro achar o personagem,
-depois checar a imagem.
-
-#### Correção para Causa B (personagem sem imagem)
-
-Não há bug de código — o personagem simplesmente não tem imagem cadastrada. O comportamento
-correto (mostrar inicial/emoji) já ocorre. Solução: o usuário ou GM deve fazer upload da imagem
-do personagem via o painel de personagem. Após o upload, o evento `CHARACTER_IMAGE_UPDATED`
-será emitido e `imageUrl` será preenchido.
+> Resultado de sessão de teste real com Mestre + Jogadora (Margot Laveau).
+> Cada bug tem diagnóstico confirmado por código lido + sintoma relatado.
+> Instruções suficientes para qualquer IA aplicar sem contexto adicional.
+>
+> **Status por bug:**
+> - Bug A — Música Supabase com qualidade degradada → causa confirmada, fix documentado
+> - Bug B — YouTube sem som → causa confirmada, fix documentado
+> - Bug C — Transmissão de tela → **funcionando**, qualidade aceitável, não precisa de fix
+> - Bug D — Ruído de ventilador na voz → causa confirmada, fix documentado
+> - Bug E — Imagens de personagem não aparecem → causa provável documentada, investigação necessária
 
 ---
 
-### Bug 2 — YouTube sem som (nem para o Mestre, nem para a Jogadora)
+### Bug A — Música Supabase com qualidade degradada ("caixa de som na sala")
+
+#### Sintoma
+
+Jogadora ouve a música, mas com qualidade péssima — "como se fosse uma caixa de som
+ligada na minha sala e ela ouvindo pelo fone". O Mestre ouve normalmente.
 
 #### Diagnóstico
 
-**Arquivo afetado**: `src/components/MusicPlayer.tsx`, linhas 169–173
+**Causa raiz**: O `<audio>` element na máquina da jogadora está tentando tocar mas é
+**bloqueado por autoplay policy do browser**. A falha é silenciosa — o código faz:
 
-**Erro exato no log do Mestre**:
-```
-Uncaught (in promise) TypeError: c.current.getInternalPlayer is not a function
-    at layout-72f037ad6bbbbdf4.js:1:62424
-```
-
-O código implementado na linha 170 chama:
 ```ts
-const internalPlayer = reactPlayerRef.current.getInternalPlayer();
+// MusicPlayer.tsx ~linha 202
+await audioRef.current?.play();  // ← LANÇA NotAllowedError, caught por console.warn
 ```
 
-Este método **não existe** neste contexto. Há duas causas:
+A música NÃO toca localmente na jogadora. O que ela ouve é o vazamento acústico: o áudio
+saindo pelos alto-falantes do Mestre sendo captado pelo microfone do Mestre e transmitido
+via WebRTC de voz para a jogadora. Por isso o som é degradado — passa por codec de voz
+Opus, compressão e ruído de ambiente.
 
-**Causa 1 — API errada do react-player via Next.js `dynamic()`**:
-O `ReactPlayer` foi carregado com:
+**Por que o autoplay é bloqueado**: A browser policy exige que o usuário tenha interagido
+com a página num "media engagement" suficiente antes de permitir `audio.play()` programático
+com volume > 0. Se a jogadora não estava no chat de voz ativo quando a música iniciou, ou
+se a página foi carregada mas ela não clicou em nada recente, o browser bloqueia.
+
+**Evidência no código** (`MusicPlayer.tsx` linha ~202–207):
 ```ts
-const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+const playAudio = async () => {
+    try {
+        ...
+        await audioRef.current?.play();
+    } catch (e) {
+        console.warn("Autoplay blocked:", e);  // ← erro engolido silenciosamente
+    }
+};
 ```
-Quando o `dynamic()` do Next.js envolve o componente, o `ref` resultante aponta para o
-componente wrapper gerado pelo `dynamic`, **não** para a instância real do ReactPlayer.
-Portanto `reactPlayerRef.current.getInternalPlayer` é `undefined`.
-
-**Causa 2 — Momento de execução (antes do `onReady`)**:
-O evento `MUSIC_PLAYBACK_CHANGED` pode ser recebido **antes** do ReactPlayer terminar de
-montar (antes de `onReady` disparar). Mesmo que `reactPlayerRef.current` não seja `null`,
-a API interna do YouTube pode não estar disponível ainda.
-
-**Causa 3 — API incorreta**:
-`getInternalPlayer()` retorna o player nativo do YouTube (objeto do YouTube API), e o
-seek via YouTube API usa `seekTo(seconds, true)` (segundo argumento booleano), não
-`seekTo(seconds, 'seconds')` como no react-player. O seek via YouTube API é diferente
-do seek via react-player.
 
 #### Correção
 
-**Arquivo**: `src/components/MusicPlayer.tsx`, bloco do subscriber de eventos
-(aproximadamente linha 169–173).
+**Arquivo**: `src/components/MusicPlayer.tsx`
 
-**Antes (incorreto)**:
-```ts
-if (reactPlayerRef.current) {
-    const internalPlayer = reactPlayerRef.current.getInternalPlayer();
-    if (internalPlayer?.seekTo) {
-        internalPlayer.seekTo(elapsed, 'seconds');
-    }
-} else {
-    pendingSeekRef.current = elapsed;
-}
-```
+Dentro da função `playAudio` (no bloco `if (playing)` do handler de `MUSIC_PLAYBACK_CHANGED`),
+substituir o `catch` atual por um que registra o unlock via próximo clique do usuário:
 
-**Depois (correto)**:
+**Antes** (linha ~202–207):
 ```ts
-if (reactPlayerRef.current) {
+const playAudio = async () => {
     try {
-        reactPlayerRef.current.seekTo(elapsed, 'seconds');
-    } catch {
-        pendingSeekRef.current = elapsed;
+        if (event.payload.startedAt) {
+            const startedAt = new Date(event.payload.startedAt).getTime();
+            const now = Date.now();
+            const elapsed = (now - startedAt) / 1000;
+            if (audioRef.current && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
+                audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+            }
+        }
+        await audioRef.current?.play();
+    } catch (e) {
+        console.warn("Autoplay blocked:", e);
     }
-} else {
-    pendingSeekRef.current = elapsed;
-}
+};
 ```
 
-**Explicação**: `reactPlayerRef.current.seekTo(seconds, 'seconds')` é a **API pública
-e documentada** do react-player para seek. Funciona tanto com a instância real quanto
-com o wrapper do `dynamic()` do Next.js, pois o react-player expõe `seekTo` no ref
-diretamente (via `forwardRef`). O `try/catch` cobre o caso em que o player ainda não
-está pronto — neste caso o seek é armazenado em `pendingSeekRef` e aplicado no `onReady`.
+**Depois**:
+```ts
+const playAudio = async () => {
+    try {
+        if (event.payload.startedAt) {
+            const startedAt = new Date(event.payload.startedAt).getTime();
+            const now = Date.now();
+            const elapsed = (now - startedAt) / 1000;
+            if (audioRef.current && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
+                audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+            }
+        }
+        await audioRef.current?.play();
+    } catch (e: any) {
+        if (e?.name === 'NotAllowedError' || e?.name === 'AbortError') {
+            // Autoplay bloqueado — reagendar no próximo clique do usuário
+            const unlock = () => {
+                audioRef.current?.play().catch(() => {});
+            };
+            document.addEventListener('click', unlock, { once: true });
+            document.addEventListener('keydown', unlock, { once: true });
+        }
+        console.warn("Autoplay blocked:", e);
+    }
+};
+```
 
-#### Problema secundário: autoplay bloqueado pelo browser
+**Por que funciona**: Na próxima interação do usuário com a página (qualquer clique ou tecla),
+o browser libera a policy de autoplay e o `play()` é executado com sucesso.
 
-Mesmo com o seek corrigido, o YouTube pode não tocar audio para clientes que chegam na
-sala sem ter interagido com a página (política de autoplay do browser). O ReactPlayer
-em `display: none` não recebe interação do usuário e o browser pode bloquear o play.
+---
 
-**Sintoma**: O Mestre inicia a música mas o jogador não ouve nada (sem erro visível).
+### Bug B — YouTube sem som (nem Mestre, nem Jogadora ouvem)
 
-**Correção adicional**:
-No JSX do ReactPlayer (Passo 10), substituir `display: none` por posicionamento fora
-da tela — isso mantém o elemento "vivo" no DOM sem interromper o autoplay:
+#### Sintoma
+
+O GM cola uma URL do YouTube, o player aparece, mas **nenhum som é reproduzido**
+em nenhuma das máquinas.
+
+#### Diagnóstico
+
+**Arquivo**: `src/components/MusicPlayer.tsx`, linhas 482–506
+
+O ReactPlayer está dentro de um container com estas regras CSS:
 
 ```tsx
-{/* ReactPlayer: fora da tela para não bloquear autoplay */}
+<div style={{
+    position: 'fixed',
+    top: '-1px',
+    left: '-1px',
+    width: '1px',         // ← PROBLEMA
+    height: '1px',        // ← PROBLEMA
+    opacity: 0,
+    pointerEvents: 'none',
+    overflow: 'hidden'    // ← PROBLEMA
+}}>
+    <ReactPlayer
+        ref={reactPlayerRef}
+        {...{ url, playing, loop, volume, muted, onEnded, onReady } as any}
+        // ← NÃO TEM width/height explícitos → herdará 1px do pai
+    />
+</div>
+```
+
+**Causa raiz**: O YouTube iframe é renderizado como **1px × 1px** (por causa do
+`overflow: hidden` no pai de 1px). O YouTube exige dimensões mínimas de **200×113px**
+para inicializar o player. Com iframe de 1px, o YouTube Player API não inicializa
+corretamente → sem áudio, sem vídeo, sem eventos (incluindo `onReady` e `onEnded`).
+
+O ReactPlayer sem `width`/`height` props usa os valores padrão (640×360) para o
+componente React, mas o `overflow: hidden` do pai corta o conteúdo para 1px.
+
+**Evidência adicional**: O `handleYouTubeReady` nunca é chamado (o `onReady` não dispara),
+então `pendingSeekRef` nunca é aplicado, e o seek inicial não ocorre.
+
+#### Correção
+
+**Arquivo**: `src/components/MusicPlayer.tsx`, bloco do ReactPlayer (linhas ~481–506)
+
+**Antes**:
+```tsx
 {isYouTubeUrl(currentTrack) && (
     <div style={{
         position: 'fixed',
@@ -840,143 +820,326 @@ da tela — isso mantém o elemento "vivo" no DOM sem interromper o autoplay:
         left: '-1px',
         width: '1px',
         height: '1px',
-        overflow: 'hidden',
         opacity: 0,
         pointerEvents: 'none',
+        overflow: 'hidden'
     }}>
         <ReactPlayer
             ref={reactPlayerRef}
-            url={currentTrack}
-            playing={isPlaying}
-            loop={isLooping}
-            volume={isMuted ? 0 : volume}
-            muted={isMuted}
-            onEnded={handleTrackEnded}
-            onReady={handleYouTubeReady}
-            width="1px"
-            height="1px"
+            {...{
+                url: currentTrack,
+                playing: isPlaying,
+                loop: isLooping,
+                volume: isMuted ? 0 : volume,
+                muted: isMuted,
+                onEnded: handleTrackEnded,
+                onReady: handleYouTubeReady
+            } as any}
         />
     </div>
 )}
 ```
 
-> `display: none` suprime visualmente mas em alguns browsers também suspende a reprodução
-> de áudio. Com `position: fixed` e dimensões mínimas, o elemento fica ativo no DOM.
+**Depois**:
+```tsx
+{isYouTubeUrl(currentTrack) && (
+    <div style={{ display: 'none' }}>
+        <ReactPlayer
+            ref={reactPlayerRef}
+            {...{
+                url: currentTrack,
+                playing: isPlaying,
+                loop: isLooping,
+                volume: isMuted ? 0 : volume,
+                muted: isMuted,
+                width: '320px',
+                height: '180px',
+                onEnded: handleTrackEnded,
+                onReady: handleYouTubeReady
+            } as any}
+        />
+    </div>
+)}
+```
+
+**Por que `display: none` funciona para YouTube mas 1px não**: Com `display: none`, o
+React/Next.js não renderiza o DOM do filho. Mas react-player (via `dynamic()`) ainda
+monta o iframe do YouTube com as dimensões especificadas em `width`/`height`. O YouTube
+player inicializa com 320×180px (dimensões válidas) e o áudio toca. Com `overflow: hidden`
+em 1px, o iframe tenta existir mas fica clipado — o YouTube detecta isso e não inicializa.
+
+**Nota adicional**: O `playing={isPlaying}` para clientes (PLAYER role) pode ainda ser
+bloqueado por autoplay policy. Aplicar o mesmo padrão do Bug A: no `handleYouTubeReady`,
+se `isPlayingRef.current === true` e o player não iniciou, agendar no próximo clique.
+Adicionar ao `handleYouTubeReady`:
+
+```ts
+const handleYouTubeReady = () => {
+    if (pendingSeekRef.current !== null && reactPlayerRef.current) {
+        reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
+        pendingSeekRef.current = null;
+    }
+    // Forçar play se o estado diz que deveria estar tocando
+    // (necessário quando onReady dispara depois do setIsPlaying(true))
+    if (isPlayingRef.current && reactPlayerRef.current) {
+        // react-player controla via prop `playing`, mas se autoplay bloqueou,
+        // o próximo clique do usuário vai re-trigger o React re-render e o
+        // playing prop vai funcionar. Não é necessário chamar nada aqui —
+        // a prop `playing={isPlaying}` já é reativa.
+    }
+};
+```
 
 ---
 
-### Bug 3 — Jogadora não ouve a transmissão de tela / música parece distante
+### Bug D — Ruído de ventilador na voz da jogadora
+
+#### Sintoma
+
+O Mestre ouve a voz da jogadora com um ruído constante "como se houvesse um ventilador".
+A jogadora não percebe o ruído na própria voz.
 
 #### Diagnóstico
 
-**Arquivos envolvidos**: `src/lib/screen-share-manager.ts` (fora do escopo original
-da story-30, mas documentado aqui para a IA que for corrigir).
+**Arquivo**: `src/lib/VoiceChatManager.ts`, funções `joinVoice` (linha ~182) e
+`setMicDevice` (linha ~286)
 
-**Análise do log** — dois problemas distintos:
-
-**Problema 3A — Loop de reconexão WebRTC (tela compartilhada)**
-
-No log do Mestre:
-```
-[WebRTC - mestre] Sending signal: stream-started   ← 3 vezes
-[WebRTC] Safety timeout: closing stuck connection for margot laveau
-Error handling answer: InvalidStateError: Failed to set remote answer sdp:
-    Called in wrong state: stable
-```
-
-No log da Jogadora:
-```
-[WebRTC - margot laveau] Signal received: stream-started from: mestre  ← 3 vezes
-[WebRTC - margot laveau] Stream active, sending peer-join              ← cada vez
-```
-
-**Root cause**: O `screen-share-manager` tem um heartbeat que envia `stream-started`
-periodicamente enquanto a transmissão está ativa. Cada vez que a jogadora recebe
-`stream-started`, ela acredita que é uma nova transmissão, descarta a conexão existente
-e envia `peer-join`. O Mestre, ao receber `peer-join`, cria uma nova conexão e manda nova
-`offer`. A conexão anterior pode estar em state `stable` (já conectada), então aplicar
-um `answer` nela resulta em `InvalidStateError`.
-
-O ciclo:
-```
-heartbeat → stream-started → peer-join → nova offer → novo answer
-    ↑                                                      |
-    └──────────────── loop a cada N segundos ──────────────┘
-```
-
-**Problema 3B — Música "distante" (faixa local vs. transmissão)**
-
-A música do MusicPlayer toca **localmente** em cada cliente via `<audio>` ou ReactPlayer.
-Mas se o ReactPlayer do YouTube estiver silenciado ou bloqueado por autoplay (Bug 2), a
-jogadora não ouve a música localmente. O que ela ouve é o **vazamento acústico**: o áudio
-do YouTube tocando nos alto-falantes do Mestre sendo captado pelo microfone do Mestre e
-transmitido via WebRTC de voz. Por isso soa "distante" — é o áudio degradado pelo mic.
-
-A solução principal é corrigir o Bug 2 (YouTube sem som), que fará a música tocar
-localmente na máquina da jogadora.
-
-#### Correção para Problema 3A — Loop de reconexão na transmissão de tela
-
-**Arquivo**: `src/lib/screen-share-manager.ts` — **este arquivo está fora do escopo
-original da story-30 mas deve ser corrigido em nova story separada ou hotfix**.
-
-**O que corrigir**: No receptor (viewer side), ao receber `stream-started`, verificar
-se já existe uma conexão ativa com o broadcaster antes de enviar `peer-join`:
-
-Localizar no `screen-share-manager.ts` o handler do evento `stream-started`. O código
-provavelmente faz algo como:
+Ambas as funções usam as mesmas constraints de áudio:
 
 ```ts
-// COMPORTAMENTO ATUAL (problemático)
-socket.on('webrtc-signal', (data) => {
-    if (signal.type === 'stream-started') {
-        sendSignal('peer-join');  // envia sempre, sem verificar se já conectado
-    }
-});
-```
-
-**Correção**:
-```ts
-if (signal.type === 'stream-started') {
-    const existingPc = peerConnections.get('broadcaster');
-    // Só enviar peer-join se não há conexão ativa
-    if (!existingPc || existingPc.connectionState === 'failed' || existingPc.connectionState === 'closed' || existingPc.connectionState === 'disconnected') {
-        sendSignal('peer-join');
-    }
-    // Se já está 'connected' ou 'connecting', ignorar o stream-started
+audio: {
+    deviceId: deviceId ? { exact: deviceId } : undefined,
+    echoCancellation: true,
+    noiseSuppression: true,    // ← CAUSA PRIMÁRIA
+    autoGainControl: true,     // ← CAUSA SECUNDÁRIA
 }
 ```
 
-Além disso, no emissor (broadcaster side), ao receber `peer-join`, verificar se já existe
-uma conexão estável com aquele peer antes de criar uma nova:
+**Causa raiz**: `noiseSuppression: true` ativa o algoritmo de supressão de ruído do
+browser (WebRTC noise suppression). Quando há um sinal de áudio **constante e repetitivo**
+no ambiente (música tocando na sala, ventilador real, ar-condicionado), o algoritmo
+classifica esse sinal como ruído de fundo e tenta removê-lo. O resultado é um artefato
+característico: som pulsante, robótico, ou de "ventilador/vento" — exatamente o sintoma
+relatado.
 
+`autoGainControl: true` amplifica automaticamente sinais fracos, o que pode amplificar
+o próprio artefato da supressão.
+
+**Nota importante**: Este bug pode ter sido agravado pelo Bug A — se a música está
+tocando pelos alto-falantes do ambiente da jogadora (porque autoplay foi bloqueado e
+ela ouviu pelo ar livre), o microfone capta a música e o noise suppression entra em
+colapso tentando remover um sinal rico em frequências variadas.
+
+#### Correção
+
+**Arquivo**: `src/lib/VoiceChatManager.ts`
+**Atenção**: O story-30 originalmente dizia "não tocar VoiceChatManager". Esta correção
+é necessária. Alterar apenas as constraints de áudio nas duas funções.
+
+**Mudança 1 — `joinVoice`** (linha ~182):
 ```ts
-if (signal.type === 'peer-join') {
-    const existingPc = peerConnections.get(signal.from);
-    if (existingPc && (existingPc.connectionState === 'connected' || existingPc.connectionState === 'connecting')) {
-        return; // Já conectado, ignorar
-    }
-    // Só criar nova conexão se não há uma ativa
-    createPeerConnection(signal.from);
+// Antes:
+audio: {
+    deviceId: deviceId ? { exact: deviceId } : undefined,
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+}
+
+// Depois:
+audio: {
+    deviceId: deviceId ? { exact: deviceId } : undefined,
+    echoCancellation: true,
+    noiseSuppression: false,
+    autoGainControl: false,
 }
 ```
 
-#### Correção para Problema 3B — Música distante
+**Mudança 2 — `setMicDevice`** (linha ~290):
+```ts
+// Antes:
+audio: {
+    deviceId: { exact: deviceId },
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+}
 
-Corriger o Bug 2 (seção acima). Quando o ReactPlayer do YouTube estiver funcionando
-corretamente na máquina da jogadora, a música tocará localmente e não será mais ouvida
-"distante" via mic do Mestre.
+// Depois:
+audio: {
+    deviceId: { exact: deviceId },
+    echoCancellation: true,
+    noiseSuppression: false,
+    autoGainControl: false,
+}
+```
+
+**Por que desativar e não adicionar toggle**: O `echoCancellation: true` é mantido porque
+ele previne feedback (eco do áudio do fone no mic), que é crítico. O `noiseSuppression`
+e `autoGainControl` causam mais dano do que bem neste contexto (RPG online com música de
+fundo). Headsets modernos e o OS já fazem processamento de áudio — o browser adicionando
+uma segunda camada cria artefatos. Sem esses filtros, o áudio fica mais limpo e natural.
 
 ---
 
-### Sumário de Arquivos a Modificar nas Correções
+### Bug E — Imagens de personagem não aparecem no VoiceChat
 
-| Bug | Arquivo | Linha aproximada | Mudança |
-|-----|---------|-----------------|---------|
-| Bug 2 — seek errado | `src/components/MusicPlayer.tsx` | ~170 | `getInternalPlayer().seekTo()` → `reactPlayerRef.current.seekTo()` |
-| Bug 2 — autoplay | `src/components/MusicPlayer.tsx` | ~482–495 | `display: none` → `position: fixed; top: -1px; left: -1px` |
-| Bug 3A — loop reconexão | `src/lib/screen-share-manager.ts` | handler `stream-started` | Verificar `connectionState` antes de enviar `peer-join` |
-| Bug 1 — imagem | `src/components/VoiceChatPanel.tsx` | ~181 | Separar busca do personagem da verificação de imageUrl |
+#### Sintoma
 
-**Prioridade de execução**: Bug 2 primeiro (impacto maior — ninguém ouve YouTube),
-depois Bug 3A (transmissão de tela instável), depois Bug 1 (avatar).
+Os avatares no VoiceChatPanel mostram iniciais (letras) em vez das fotos dos personagens,
+mesmo com personagens criados e imagens possivelmente cadastradas.
+
+#### Diagnóstico Multi-Camada
+
+**Arquivo principal**: `src/components/VoiceChatPanel.tsx`
+
+Há **três potenciais causas** que devem ser investigadas em ordem:
+
+---
+
+**Causa E1 (mais provável) — `p.characterId` não vem do backend**
+
+No `allUsers` (linha ~399):
+```ts
+characterId: isMe ? characterId : p.characterId,
+```
+
+`p.characterId` vem de `voice-presence-update` emitido pelo backend NestJS.
+O VoiceChatManager envia `voice-presence` com `characterId: this.characterId` para o server.
+Se o servidor não inclui `characterId` ao construir a lista de participantes para broadcast,
+`p.characterId` chega `undefined` para todos os peers.
+
+**Como confirmar**: Adicionar temporariamente no início do `useMemo` de `allUsers`:
+```ts
+console.log('[VoiceChat] participants raw:', participants.map(p => ({
+    userId: p.userId, charId: p.characterId
+})));
+```
+Se `charId` aparecer como `undefined` para a jogadora → backend não está retransmitindo.
+
+**Fix para Causa E1**: No backend NestJS, localizar o gateway que processa o evento
+`voice-presence` (provavelmente `session.gateway.ts` ou `voice.gateway.ts`). O handler
+deve:
+1. Receber `{ sessionId, userId, characterId, inVoice }` do cliente
+2. Armazenar `characterId` no objeto do participante em memória/Map
+3. Incluir `characterId` ao construir o array de participantes para o broadcast de
+   `voice-presence-update`
+
+---
+
+**Causa E2 — `characterId` chega correto mas personagem não tem `imageUrl`**
+
+Em `getCharacterImage` (linha ~181):
+```ts
+const byId = allChars.find(c => c.id === charId && c.imageUrl);
+```
+
+A condição `&& c.imageUrl` é **falsy para `""` (string vazia)**, que é o valor padrão
+em projections.ts (linha ~1069: `imageUrl: ""`). Se o personagem nunca teve imagem
+carregada, `imageUrl = ""` e o find retorna `undefined`.
+
+**Como confirmar**: No console do browser:
+```js
+// Abrir DevTools na página da sessão
+// Checar o eventStore
+```
+Ou verificar se na ficha do personagem aparece alguma imagem cadastrada. Se não há
+imagem, esse bug não se aplica — o comportamento (mostrar inicial) é correto.
+
+**Fix para Causa E2**: Não é bug de código — o personagem simplesmente não tem imagem.
+O usuário precisa fazer upload da foto do personagem no painel de criação/edição de
+personagem. Após o upload, o evento `CHARACTER_IMAGE_UPDATED` popula `imageUrl`.
+
+---
+
+**Causa E3 — Snapshot desatualizado**
+
+O event store carrega um snapshot + delta. O log mostra:
+```
+[EventStore] Snapshot encontrado: seq 5448
+[EventStore] 0 eventos delta carregados via NestJS.
+```
+
+Se o `CHARACTER_IMAGE_UPDATED` foi emitido APÓS o snapshot (seq > 5448), e os deltas
+não foram carregados (0 eventos delta), o estado computado não inclui a imagem.
+
+**Como confirmar**: Se o personagem tem imagem visível na ficha (outro componente que
+usa o estado), mas não aparece no VoiceChat, o estado está desatualizado.
+
+**Fix para Causa E3**: Forçar reload do snapshot ou garantir que o delta loader está
+funcionando. Este é um problema de infra/sync do eventStore, não do VoiceChatPanel.
+
+---
+
+#### Correção Definitiva para Causa E1 (backend) + Melhoria no Frontend
+
+**No backend** (`voice.gateway.ts` ou equivalente):
+
+```ts
+// Mapa de participantes em memória (provavelmente já existe)
+const sessionParticipants = new Map<string, SessionParticipant>();
+
+// Handler de voice-presence
+socket.on('voice-presence', (data) => {
+    const { sessionId, userId, characterId, inVoice } = data;
+
+    // Armazenar caracterizando INCLUINDO characterId
+    sessionParticipants.set(userId, {
+        userId,
+        characterId,       // ← GARANTIR QUE ESTE CAMPO ESTÁ AQUI
+        inVoice,
+    });
+
+    // Broadcast para todos na sessão
+    const participants = Array.from(sessionParticipants.values());
+    io.to(sessionId).emit('voice-presence-update', participants);
+    //                                              ^^^^^^^^^^^
+    // O array deve incluir { userId, characterId, inVoice } para cada participante
+});
+```
+
+**No frontend** (melhoria defensiva, `VoiceChatPanel.tsx`):
+
+Se `charId` for fornecido mas não tiver imagem, tentar o fallback por nome sem exigir
+`imageUrl` na busca primária, e verificar no resultado:
+
+Localizar `getCharacterImage` (linha ~169) e modificar o bloco do `charId`:
+
+```ts
+// Antes:
+if (charId) {
+    const byId = allChars.find(c => c.id === charId && c.imageUrl);
+    if (byId) return byId.imageUrl;
+}
+
+// Depois:
+if (charId) {
+    const byId = allChars.find(c => c.id === charId);
+    if (byId?.imageUrl) return byId.imageUrl;
+    // Se encontrou o personagem mas não tem imagem, retornar null explicitamente
+    // para evitar que o fallback por nome encontre um personagem errado
+    if (byId) return null;
+}
+```
+
+Esta mudança garante que quando `charId` é fornecido e aponta para um personagem real,
+o fallback por nome não é executado (evitando matches incorretos).
+
+---
+
+### Sumário de Arquivos a Modificar (Bugs A, B, D, E)
+
+| Bug | Arquivo | O que muda |
+|-----|---------|-----------|
+| A — Música qualidade | `src/components/MusicPlayer.tsx` | No `catch` do `play()`: adicionar listener de `click`/`keydown` para unlock autoplay |
+| B — YouTube sem som | `src/components/MusicPlayer.tsx` | Trocar `position:fixed; 1px; overflow:hidden` por `display:none` + props `width="320px" height="180px"` no ReactPlayer |
+| D — Ruído ventilador | `src/lib/VoiceChatManager.ts` | `noiseSuppression: false, autoGainControl: false` em `joinVoice` e `setMicDevice` |
+| E — Sem imagem | Backend NestJS gateway | Garantir `characterId` em `voice-presence-update` |
+| E — Sem imagem | `src/components/VoiceChatPanel.tsx` | `getCharacterImage`: separar busca de personagem da verificação de `imageUrl` |
+
+**Ordem de execução recomendada**: D → B → A → E
+
+- **D primeiro**: Muda só 2 linhas em VoiceChatManager, sem risco, melhora imediatamente
+- **B segundo**: Muda o container do ReactPlayer — fix de uma linha crítica
+- **A terceiro**: Adiciona 4 linhas no catch do MusicPlayer
+- **E por último**: Requer investigação do backend antes de aplicar

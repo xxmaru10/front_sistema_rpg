@@ -183,8 +183,8 @@ export class VoiceChatManager {
                 audio: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
                     echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
+                    noiseSuppression: false,
+                    autoGainControl: false,
                 }
             });
 
@@ -291,8 +291,8 @@ export class VoiceChatManager {
                 audio: {
                     deviceId: { exact: deviceId },
                     echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
+                    noiseSuppression: false,
+                    autoGainControl: false,
                 }
             });
 

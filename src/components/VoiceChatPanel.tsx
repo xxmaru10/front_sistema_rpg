@@ -172,6 +172,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         if (charId) {
             const byId = allChars.find(c => c.id === charId);
             if (byId?.imageUrl) return byId.imageUrl;
+            if (byId) return null; // personagem encontrado mas sem imagem — não tentar fallback por nome
         }
 
         // 2. Fallback robusto por ownerUserId ou nome
@@ -195,7 +196,24 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         setPeers([...updatedPeers]);
                     },
                     (updatedParticipants) => {
-                        setParticipants([...updatedParticipants]);
+                        console.log('[VoiceChat] Presence Update (Raw):', updatedParticipants.map(u => ({ userId: u.userId, char: u.characterId })));
+                        
+                        // Map missing characterIds from local character state if possible
+                        // Isto ajuda se o backend não retransmitir o characterId no broadcast
+                        const enriched = updatedParticipants.map(p => {
+                            if (p.characterId) return p;
+                            const char = Object.values(state.characters).find(c => 
+                                (c.ownerUserId || "").toLowerCase() === p.userId.toLowerCase() ||
+                                (c.name || "").toLowerCase() === p.userId.toLowerCase()
+                            );
+                            if (char) {
+                                console.log(`[VoiceChat] Enriched missing characterId for ${p.userId} -> ${char.id}`);
+                                return { ...p, characterId: char.id };
+                            }
+                            return p;
+                        });
+                        
+                        setParticipants(enriched);
                     },
                     characterId
                 );

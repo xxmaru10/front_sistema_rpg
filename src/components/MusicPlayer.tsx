@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -84,14 +83,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     }
                 }
 
-                // Get tracks from subfolders and merge them into THIS folder's tracker
-                // (This makes parent folders include all subfolder tracks, as requested before)
                 const subFolderResults = await Promise.all(subFolders.map(scanFoldersRecursive));
                 for (const subTracks of subFolderResults) {
                     allTracksInThisPath = [...allTracksInThisPath, ...subTracks];
                 }
 
-                // If this folder (or its children) has tracks, add it as a playlist
                 if (allTracksInThisPath.length > 0) {
                     newPlaylists[path || "Geral"] = allTracksInThisPath;
                 }
@@ -163,7 +159,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     setIsPlaying(playing);
                     setIsLooping(loop);
                     
-                    // Sincronizar seek se player estiver montado
                     if (playing && event.payload.startedAt) {
                         const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
                         if (reactPlayerRef.current) {
@@ -201,7 +196,17 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 }
                                 await audioRef.current?.play();
                             } catch (e) {
-                                console.warn("Autoplay blocked:", e);
+                                console.warn("Autoplay blocked, scheduling retry on click:", e);
+                                const unlock = async () => {
+                                    try {
+                                        await audioRef.current?.play();
+                                        console.log("Autoplay unlocked by interaction");
+                                    } catch (err) {
+                                        console.warn("Autoplay still blocked after interaction:", err);
+                                    }
+                                };
+                                document.addEventListener('pointerdown', unlock, { once: true });
+                                document.addEventListener('keydown', unlock, { once: true });
                             }
                         };
                         playAudio();
@@ -356,7 +361,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         const parts = pl.name.split('/');
                         const depth = parts.length - 1;
                         const displayName = pl.name === "Geral" ? "Geral" : parts[parts.length - 1];
-                        // Using non-breaking spaces for indentation in standard select
                         const indent = "\u00A0".repeat(depth * 3);
                         
                         return (
@@ -442,8 +446,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const handleTrackEnded = useCallback(() => {
         if (isLooping) {
-            // YouTube: loop prop cuida disso nativamente
-            // Áudio normal: reset manual de segurança
             if (!isYouTubeUrl(currentTrack) && audioRef.current) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(e => console.warn("[MusicPlayer] Retry play (Loop):", e));
@@ -458,8 +460,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         }
 
         if (userRole === "GM") {
-            // Avanço de playlist: gerenciado pelo Mestre para manter Event Sourcing íntegro
-            console.log(`[MusicPlayer - ${userId}] Track ended. Orchestrating next track for session: ${sessionId}`);
             playNext();
         }
     }, [isLooping, userRole, playNext, userId, sessionId, currentTrack]);
@@ -478,20 +478,12 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         >
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
-            {/* ReactPlayer: apenas para URLs YouTube — display:none suprime vídeo/thumbnail */}
             {isYouTubeUrl(currentTrack) && (
-                <div style={{ 
-                    position: 'fixed', 
-                    top: '-1px', 
-                    left: '-1px', 
-                    width: '1px', 
-                    height: '1px', 
-                    opacity: 0, 
-                    pointerEvents: 'none', 
-                    overflow: 'hidden' 
-                }}>
+                <div style={{ display: 'none' }}>
                     <ReactPlayer
                         ref={reactPlayerRef}
+                        width="320px"
+                        height="180px"
                         {...{
                             url: currentTrack,
                             playing: isPlaying,
@@ -505,7 +497,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </div>
             )}
 
-            {/* Non-unified: toggle button */}
             {!unifiedMode && (
                 <button
                     className={`player-toggle ${isPlaying ? "playing" : ""}`}
@@ -517,7 +508,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </button>
             )}
 
-            {/* Non-unified: controls panel */}
             {!unifiedMode && showControls && (
                 <div className="player-controls-panel animate-reveal">
                     {gmControls}
@@ -525,7 +515,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </div>
             )}
 
-            {/* Unified: volume section */}
             {unifiedMode && (
                 <div className="unified-vol-row" style={{ order: 2 }}>
                     <div className="unified-ch-label" style={{ color: '#c5a059' }}>
@@ -536,7 +525,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </div>
             )}
 
-            {/* Unified: controls section */}
             {unifiedMode && userRole === "GM" && (
                 <div className="unified-ctrl-row" style={{ order: 5 }}>
                     <div className="control-row">
@@ -785,6 +773,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     cursor: not-allowed;
                 }
 
+                .volume-slider {
                     flex: 1;
                     height: 4px;
                     -webkit-appearance: none;
@@ -808,117 +797,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     border-radius: 50%;
                     cursor: pointer;
                     margin-top: -4px;
-                }
-
-                .mute-btn {
-                    background: none;
-                    border: none;
-                    color: #666;
-                    cursor: pointer;
-                    padding: 0;
-                    display: flex;
-                    align-items: center;
-                }
-                .mute-btn:hover { color: #ccc; }
-
-                .now-playing {
-                    font-size: 0.7rem;
-                    color: #c5a059;
-                    text-align: center;
-                }
-
-                .volume-input {
-                    background: #050505;
-                    border: 1px solid #333;
-                    color: #c5a059;
-                    width: 40px;
-                    font-size: 0.75rem;
-                    padding: 2px;
-                    text-align: center;
-                    -moz-appearance: textfield;
-                }
-
-                .volume-input::-webkit-outer-spin-button,
-                .volume-input::-webkit-inner-spin-button {
-                    -webkit-appearance: none;
-                    margin: 0;
-                }
-
-                .volume-horizontal {
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    gap: 16px;
-                    width: 100%;
-                }
-
-                .mute-btn-premium {
-                    background: rgba(197, 160, 89, 0.05);
-                    border: 1px solid rgba(197, 160, 89, 0.2);
-                    color: #c5a059;
-                    width: 26px;
-                    height: 26px;
-                    border-radius: 4px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    flex-shrink: 0;
-                }
-
-                .mute-btn-premium:hover {
-                    background: rgba(197, 160, 89, 0.15);
-                    border-color: #c5a059;
-                }
-
-                .volume-slider.dynamic-fill {
-                    background: none; /* Controlled by inline style */
-                }
-
-                .volume-val-badge {
-                    color: #c5a059;
-                    border-color: rgba(197, 160, 89, 0.3) !important;
-                }
-
-                /* Unified mode */
-                .unified-vol-row {
-                    width: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    padding: 8px 0;
-                    border-bottom: 1px solid rgba(197, 160, 89, 0.1);
-                }
-
-                .unified-ctrl-row {
-                    width: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    padding: 8px 0;
-                }
-
-                .unified-ch-label {
-                    font-size: 0.6rem;
-                    font-weight: 800;
-                    text-transform: uppercase;
-                    letter-spacing: 0.1em;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-
-                .pulse-mini {
-                    width: 4px;
-                    height: 4px;
-                    border-radius: 50%;
-                }
-
-                .pulse-mini.gold {
-                    background: #c5a059;
-                    box-shadow: 0 0 5px #c5a059;
-                    animation: pulse 2s infinite;
                 }
             `}</style>
         </div>
