@@ -664,6 +664,8 @@ adicionar os seletores de dispositivo quando `isConnected && devicesLoaded`:
 > - Bug C — Transmissão de tela → **funcionando**, qualidade aceitável, não precisa de fix
 > - Bug D — Ruído de ventilador na voz → causa confirmada, fix documentado
 > - Bug E — Imagens de personagem não aparecem → causa provável documentada, investigação necessária
+> - Bug F — YouTube `seekTo`/`getCurrentTime` não são função → causa confirmada (`dynamic()` não encaminha ref), fix documentado (ReactPlayerWrapper com forwardRef)
+> - Bug G — Qualidade de áudio geral degradada com Bluetooth → causa confirmada (HFP mode switch do OS + AudioContext sem sampleRate), fix documentado
 
 ---
 
@@ -1127,7 +1129,222 @@ o fallback por nome não é executado (evitando matches incorretos).
 
 ---
 
-### Sumário de Arquivos a Modificar (Bugs A, B, D, E)
+---
+
+### Bug F — YouTube: `seekTo is not a function` / `getCurrentTime is not a function`
+
+#### Sintoma
+
+Erros no console do Mestre ao iniciar ou pausar uma faixa YouTube:
+
+```
+TypeError: c.current.seekTo is not a function
+TypeError: n.getCurrentTime is not a function
+```
+
+O YouTube pode carregar mas não sincronizar o seek entre usuários, e o GM não consegue
+pausar/play corretamente.
+
+#### Diagnóstico
+
+**Arquivo**: `src/components/MusicPlayer.tsx`
+
+O ReactPlayer é importado via `dynamic()`:
+```ts
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+```
+
+O `dynamic()` do Next.js envolve o componente em um wrapper de lazy loading. Quando um
+`ref` é passado para esse wrapper, **ele NÃO é automaticamente encaminhado** para o
+componente interno (ReactPlayer real), a menos que o componente dynamic use `forwardRef`.
+
+Como resultado:
+- `reactPlayerRef.current` aponta para o wrapper do `dynamic()`, não para o ReactPlayer
+- O wrapper não tem métodos como `seekTo` ou `getCurrentTime`
+- Chamar `reactPlayerRef.current.seekTo(...)` lança `TypeError`
+
+O código atual usa essas chamadas diretas em dois lugares:
+
+1. No subscriber de `MUSIC_PLAYBACK_CHANGED` (seek após receber evento):
+```ts
+reactPlayerRef.current.seekTo(elapsed, 'seconds');   // ← TypeError aqui
+```
+
+2. Em `broadcastUpdate` (pegar tempo atual ao pausar/play):
+```ts
+reactPlayerRef.current?.getCurrentTime() || 0        // ← TypeError aqui
+```
+
+#### Correção
+
+**Dois arquivos alterados.**
+
+**Passo F1 — Criar `src/components/ReactPlayerWrapper.tsx`** (arquivo novo):
+
+```tsx
+"use client";
+import ReactPlayerLib from "react-player";
+import { forwardRef } from "react";
+
+const ReactPlayerWrapper = forwardRef<any, any>((props, ref) => (
+    <ReactPlayerLib ref={ref} {...props} />
+));
+ReactPlayerWrapper.displayName = "ReactPlayerWrapper";
+export default ReactPlayerWrapper;
+```
+
+Este arquivo é necessário porque `forwardRef` garante que o `ref` passado ao componente
+dinâmico seja encaminhado para o ReactPlayer real, não para o wrapper do `dynamic()`.
+
+**Passo F2 — Atualizar o import em `src/components/MusicPlayer.tsx`**:
+
+```ts
+// Antes:
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+
+// Depois:
+const ReactPlayer = dynamic(() => import("@/components/ReactPlayerWrapper"), { ssr: false });
+```
+
+Nenhuma outra mudança é necessária. Com `forwardRef` no wrapper, o `ref` passado ao
+`<ReactPlayer ref={reactPlayerRef} ...>` no JSX agora aponta para a instância real do
+ReactPlayer, que possui os métodos `seekTo` e `getCurrentTime`.
+
+---
+
+### Bug G — Qualidade de áudio geral degradada com fones Bluetooth/WiFi
+
+#### Sintoma
+
+A jogadora relata que **música do site** (além da voz) soa com qualidade ruim — "chiado",
+"tudo abafado", "como se estivesse longe". O problema acontece com dois fones diferentes:
+um WiFi com adaptador Bluetooth, e outro fone. O Mestre ouve normalmente.
+
+#### Diagnóstico
+
+**Causa raiz — Bluetooth HFP Mode Switch**:
+
+Quando o browser executa `getUserMedia({ audio: true })` (ao entrar no voice chat), o
+sistema operacional detecta que o dispositivo Bluetooth está sendo usado como **entrada
+(microfone) E saída (fones) simultaneamente**.
+
+O OS força a troca do perfil Bluetooth de:
+- **A2DP** (Advanced Audio Distribution Profile) — stereo, 44.1/48kHz, alta fidelidade
+- para **HFP** (Hands Free Profile) — mono, 8kHz ou 16kHz, qualidade de telefone
+
+Esta troca **rebaixa TODO o áudio de saída** pelo dispositivo, incluindo música, YouTube e
+voz dos peers. O usuário percebe como chiado, abafamento ou qualidade degradada geral.
+
+**Por que dois fones têm o mesmo problema**: o fone WiFi com "adaptador Bluetooth" usa o
+mesmo protocolo de rádio — o adaptador comunica via Bluetooth com o fone, disparando o
+mesmo HFP mode switch no OS. Não é defeito de hardware.
+
+**Segunda causa — `AudioContext` sem `sampleRate`**:
+
+Em `VoiceChatManager.ts` (linhas ~110 e ~118), os AudioContexts são criados sem taxa de
+amostragem explícita:
+
+```ts
+// Antes (getLocalAudioContext e getPeerAudioContext):
+new (window.AudioContext || (window as any).webkitAudioContext)()
+```
+
+Sem `sampleRate`, o AudioContext herda a taxa atual do sistema. Quando o OS está em modo
+HFP (8 ou 16kHz), o AudioContext processa todo o pipeline de voz nessa taxa degradada:
+`source → gainNode → analyser → MediaStreamDestination → audioElement`.
+
+A voz dos peers chega ao `audioElement` reprocessada a 8-16kHz, resultando em chiado.
+
+#### Correção
+
+**Dois arquivos alterados.**
+
+**Passo G1 — Forçar 48kHz nos AudioContexts (`src/lib/VoiceChatManager.ts`)**:
+
+Localizar as funções `getLocalAudioContext` (linha ~107) e `getPeerAudioContext` (linha ~115).
+Em ambas, adicionar `{ sampleRate: 48000 }`:
+
+```ts
+// Antes (getLocalAudioContext, linha ~110):
+this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+// Depois:
+this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000 });
+```
+
+```ts
+// Antes (getPeerAudioContext, linha ~118):
+ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+// Depois:
+ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000 });
+```
+
+**Passo G2 — Adicionar `sampleRate` nas constraints do `getUserMedia` (`src/lib/VoiceChatManager.ts`)**:
+
+Em `joinVoice` (linha ~182) e `setMicDevice` (linha ~286), adicionar `sampleRate`:
+
+```ts
+// Antes (joinVoice):
+audio: {
+    deviceId: deviceId ? { exact: deviceId } : undefined,
+    echoCancellation: true,
+    noiseSuppression: false,
+    autoGainControl: false,
+}
+
+// Depois:
+audio: {
+    deviceId: deviceId ? { exact: deviceId } : undefined,
+    echoCancellation: true,
+    noiseSuppression: false,
+    autoGainControl: false,
+    sampleRate: { ideal: 48000 },
+    channelCount: { ideal: 1 },
+}
+```
+
+Aplicar a mesma mudança em `setMicDevice` (mesmo bloco `audio: { ... }`).
+
+**Passo G3 — Aviso visual na UI quando Bluetooth for detectado (`src/components/VoiceChatPanel.tsx`)**:
+
+Esta é a mitigação definitiva. Se a jogadora selecionar o microfone embutido (não Bluetooth)
+como entrada enquanto usa o fone Bluetooth como saída, o OS não precisa entrar em modo HFP
+— o A2DP (alta qualidade) é mantido.
+
+Localizar o bloco onde os seletores de dispositivo são renderizados (Passo I desta story).
+Após o `<select>` de MIC (ENTRADA), adicionar um aviso condicional:
+
+```tsx
+{/* Aviso Bluetooth — mostrar sempre que voice estiver conectado */}
+{isConnected && (
+    <div style={{
+        fontSize: '0.58rem',
+        color: 'rgba(255, 200, 80, 0.85)',
+        background: 'rgba(255, 180, 0, 0.08)',
+        border: '1px solid rgba(255, 200, 80, 0.2)',
+        borderRadius: '4px',
+        padding: '5px 7px',
+        lineHeight: '1.4',
+        marginTop: '2px',
+    }}>
+        ⚠ Usando fone Bluetooth? Selecione o <strong>microfone do computador</strong> como
+        entrada para manter a qualidade de áudio. Fones Bluetooth no mic degradam toda a
+        saída de áudio (incluindo música).
+    </div>
+)}
+```
+
+**Por que os fixes G1/G2 ajudam mas não resolvem 100%**: O `sampleRate: 48000` no
+`getUserMedia` é uma *sugestão* (hint), não uma garantia. O browser pode ignorá-la se
+o hardware não suportar. O fix no AudioContext (G1) garante que o pipeline de voz opera
+em 48kHz independente do sistema, o que elimina a degradação causada pelo próprio código.
+A degradação causada pelo HFP mode do OS (que afeta a saída) só é resolvida com G3
+(usar mic separado). Combinar G1 + G2 + G3 resolve o problema completamente.
+
+---
+
+### Sumário de Arquivos a Modificar (Bugs A, B, D, E, F, G)
 
 | Bug | Arquivo | O que muda |
 |-----|---------|-----------|
@@ -1136,10 +1353,16 @@ o fallback por nome não é executado (evitando matches incorretos).
 | D — Ruído ventilador | `src/lib/VoiceChatManager.ts` | `noiseSuppression: false, autoGainControl: false` em `joinVoice` e `setMicDevice` |
 | E — Sem imagem | Backend NestJS gateway | Garantir `characterId` em `voice-presence-update` |
 | E — Sem imagem | `src/components/VoiceChatPanel.tsx` | `getCharacterImage`: separar busca de personagem da verificação de `imageUrl` |
+| F — YouTube seekTo/getCurrentTime | `src/components/ReactPlayerWrapper.tsx` | Criar wrapper com `forwardRef` (arquivo novo) |
+| F — YouTube seekTo/getCurrentTime | `src/components/MusicPlayer.tsx` | Mudar import do `dynamic()` para apontar para `ReactPlayerWrapper` |
+| G — Qualidade Bluetooth | `src/lib/VoiceChatManager.ts` | `sampleRate: 48000` nos dois AudioContexts + `sampleRate`/`channelCount` no `getUserMedia` |
+| G — Qualidade Bluetooth | `src/components/VoiceChatPanel.tsx` | Aviso visual orientando uso do mic do computador quando em Bluetooth |
 
-**Ordem de execução recomendada**: D → B → A → E
+**Ordem de execução recomendada**: D → F → B → G → A → E
 
-- **D primeiro**: Muda só 2 linhas em VoiceChatManager, sem risco, melhora imediatamente
-- **B segundo**: Muda o container do ReactPlayer — fix de uma linha crítica
-- **A terceiro**: Adiciona 4 linhas no catch do MusicPlayer
+- **D primeiro**: 2 linhas em VoiceChatManager, sem risco, elimina ruído de ventilador
+- **F segundo**: Criar ReactPlayerWrapper + atualizar import — resolve seekTo/getCurrentTime antes de testar YouTube
+- **B terceiro**: Fix do container do ReactPlayer — YouTube começa a tocar
+- **G quarto**: AudioContext 48kHz + sampleRate constraints + aviso Bluetooth — melhora qualidade geral
+- **A quinto**: Unlock de autoplay para música Supabase
 - **E por último**: Requer investigação do backend antes de aplicar

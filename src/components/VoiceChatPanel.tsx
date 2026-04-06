@@ -709,6 +709,24 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                 )}
                             </div>
                         )}
+
+                        {/* Aviso Bluetooth — mostrar sempre que voice estiver conectado */}
+                        {isConnected && (
+                            <div style={{
+                                fontSize: '0.58rem',
+                                color: 'rgba(255, 200, 80, 0.85)',
+                                background: 'rgba(255, 180, 0, 0.08)',
+                                border: '1px solid rgba(255, 200, 80, 0.2)',
+                                borderRadius: '4px',
+                                padding: '5px 7px',
+                                lineHeight: '1.4',
+                                marginTop: '6px',
+                            }}>
+                                ⚠ Usando fone Bluetooth? Selecione o <strong>microfone do computador</strong> como
+                                entrada para manter a qualidade de áudio. Fones Bluetooth no mic degradam toda a
+                                saída de áudio (incluindo música).
+                            </div>
+                        )}
                     </div>
 
                     {/* Lista de TODOS os participantes */}
