@@ -654,22 +654,23 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     <label style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)' }}>MIC (ENTRADA)</label>
-                                    <select 
-                                        value={audioInputDeviceId} 
+                                    <select
+                                        value={audioInputDeviceId}
                                         onChange={handleInputDeviceChange}
-                                        style={{ 
-                                            background: 'rgba(255,255,255,0.05)', 
-                                            border: '1px solid rgba(255,255,255,0.1)', 
-                                            color: '#fff', 
-                                            padding: '4px 6px', 
+                                        style={{
+                                            background: '#1a1a1a',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            color: '#fff',
+                                            padding: '4px 6px',
                                             fontSize: '0.7rem',
                                             borderRadius: '4px',
                                             outline: 'none',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            width: '100%',
                                         }}
                                     >
-                                        <option value="">Padrão do Sistema</option>
-                                        {inputDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Microfone'}</option>)}
+                                        <option value="" style={{ background: '#1a1a1a', color: '#fff' }}>Padrão do Sistema</option>
+                                        {inputDevices.map(d => <option key={d.deviceId} value={d.deviceId} style={{ background: '#1a1a1a', color: '#fff' }}>{d.label || 'Microfone'}</option>)}
                                     </select>
                                 </div>
                                 {supportsSinkId ? (
@@ -679,18 +680,19 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                             value={audioOutputDeviceId}
                                             onChange={handleOutputDeviceChange}
                                             style={{
-                                                background: 'rgba(255,255,255,0.05)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                background: '#1a1a1a',
+                                                border: '1px solid rgba(255,255,255,0.15)',
                                                 color: '#fff',
                                                 padding: '4px 6px',
                                                 fontSize: '0.7rem',
                                                 borderRadius: '4px',
                                                 outline: 'none',
-                                                cursor: 'pointer'
+                                                cursor: 'pointer',
+                                                width: '100%',
                                             }}
                                         >
-                                            <option value="">Padrão do Sistema</option>
-                                            {outputDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Alto-falante'}</option>)}
+                                            <option value="" style={{ background: '#1a1a1a', color: '#fff' }}>Padrão do Sistema</option>
+                                            {outputDevices.map(d => <option key={d.deviceId} value={d.deviceId} style={{ background: '#1a1a1a', color: '#fff' }}>{d.label || 'Alto-falante'}</option>)}
                                         </select>
                                     </div>
                                 ) : (
