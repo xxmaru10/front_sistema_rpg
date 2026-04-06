@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-05 (youtube-player-fixes-4.1-4.2)
+last_updated: 2026-04-05 (branch-4.0-fixes-transmissao-realtime)
 status: ativo
 ---
 
@@ -69,6 +69,8 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | YouTube no MusicPlayer (Story 25 + Fixes 4.1/4.2) | Renderização dual em `MusicPlayer.tsx`: `<audio>` mantido para tracks Supabase; `ReactPlayer` genérico renderizado condicionalmente para URLs YouTube. Helper `isYouTubeUrl()` roteia a lógica. Ocultamento de frame garantido via wrapper `<div style={{ display: "none" }}>` para suprimir vazamento de thumbnails (substituindo `width=0/height=0`). Sincronia de replay/late-join corrigida acessando ref via setter nativo `.currentTime = elapsed`. | 2026-04-05 |
 | Fix Pause AtmosphericPlayer + Normalização | Correção do botão de pause da atmosfera (`audioRef.current.pause()` movido para fora do guard `isNewTrack`). Normalização de `actorUserId` com `.trim().toLowerCase()` em `AtmosphericPlayer.tsx` e `MusicPlayer.tsx`. CSS corrigido: adicionado `.control-btn:disabled` e selector `.volume-input.atmos` renomeado para `.atmos-input` para corresponder à classe real no HTML. | 2026-04-05 |
 | Remoção de load() antes de play() (Story 26) | Chamar `audioRef.current.load()` imediatamente antes de `play()` causava `"play() interrupted by a new call to load()"` no browser, silenciando o áudio para jogadores. Removido o `load()` explícito em `MusicPlayer.tsx` e `AtmosphericPlayer.tsx` — `play()` aciona o carregamento internamente. O retry do `audioUnlockManager` agora verifica `readyState >= HAVE_FUTURE_DATA` antes de tocar, ou aguarda o evento `canplay` para evitar a mesma race condition. | 2026-04-05 |
+| Sincronização Fallback de Eventos (Broadcast RT) | Inclusão de escuta direta a pacotes `'broadcast'` (`sync_event`) no `EventStore` como rota alternativa lateral no canal WS. Contorna inoperâncias temporárias no banco/trigger nativo `postgres_changes`. Envio espelhado ocorre via `channel.send()` otimista e confirmado, mitigando saltos cronológicos sem reload (commit: `fix_problemas_semsom`). | 2026-04-05 |
+| Transmissão WebRTC sem HTML Muted Lock | Remoção da tag fixa `muted` no render do comp. principal de vídeo `<video>` (`page.tsx`), transferindo gerência imperativa pura (`videoEl.muted = false`) atrelada ao `try/catch` de Autoplay do browser. Recupera propagação original do Web Audio Track aos jogadores sob uso do banner fallback de intervenção UI (commit: `test_4_transmissao_som`). | 2026-04-05 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
