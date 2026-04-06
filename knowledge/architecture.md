@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-05 (branch-4.0-fixes-transmissao-realtime)
+last_updated: 2026-04-06 (selecao-dispositivos-audio-story-27)
 status: ativo
 ---
 
@@ -71,6 +71,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Remoção de load() antes de play() (Story 26) | Chamar `audioRef.current.load()` imediatamente antes de `play()` causava `"play() interrupted by a new call to load()"` no browser, silenciando o áudio para jogadores. Removido o `load()` explícito em `MusicPlayer.tsx` e `AtmosphericPlayer.tsx` — `play()` aciona o carregamento internamente. O retry do `audioUnlockManager` agora verifica `readyState >= HAVE_FUTURE_DATA` antes de tocar, ou aguarda o evento `canplay` para evitar a mesma race condition. | 2026-04-05 |
 | Sincronização Fallback de Eventos (Broadcast RT) | Inclusão de escuta direta a pacotes `'broadcast'` (`sync_event`) no `EventStore` como rota alternativa lateral no canal WS. Contorna inoperâncias temporárias no banco/trigger nativo `postgres_changes`. Envio espelhado ocorre via `channel.send()` otimista e confirmado, mitigando saltos cronológicos sem reload (commit: `fix_problemas_semsom`). | 2026-04-05 |
 | Transmissão WebRTC sem HTML Muted Lock | Remoção da tag fixa `muted` no render do comp. principal de vídeo `<video>` (`page.tsx`), transferindo gerência imperativa pura (`videoEl.muted = false`) atrelada ao `try/catch` de Autoplay do browser. Recupera propagação original do Web Audio Track aos jogadores sob uso do banner fallback de intervenção UI (commit: `test_4_transmissao_som`). | 2026-04-05 |
+| Seleção de Dispositivos WebRTC (Story 27) | Adição de seletor independente de entrada/saída de áudio. `setSinkId` aplicado globalmente em todos os elementos de áudio. Bypass ativo do perfil Bluetooth HFP nativo de SOs para manter qualidade A2DP com fones BT e microfone distinto. Fallback gracioso implementado para browsers sem suporte a `setSinkId` (ex: Firefox). | 2026-04-06 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

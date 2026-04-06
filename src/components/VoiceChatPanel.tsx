@@ -27,6 +27,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [isManagerReady, setIsManagerReady] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [audioStatus, setAudioStatus] = useState<AudioContextState>('closed');
+    const [audioInputDeviceId, setAudioInputDeviceId] = useState<string>('');
+    const [audioOutputDeviceId, setAudioOutputDeviceId] = useState<string>('');
+    const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
+    const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
+    const [devicesLoaded, setDevicesLoaded] = useState(false);
+    const supportsSinkId = typeof (new Audio() as any).setSinkId === 'function';
     const hasAttemptedAutoJoin = useRef(false);
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -34,6 +40,54 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const wasConnectedBeforeRefresh = useRef(false);
 
     const [events, setEvents] = useState<ActionEvent[]>([]);
+
+    const loadDevices = useCallback(async () => {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const inputs = devices.filter(d => d.kind === 'audioinput' && d.deviceId);
+            const outputs = devices.filter(d => d.kind === 'audiooutput' && d.deviceId);
+            setInputDevices(inputs);
+            setOutputDevices(outputs);
+            setDevicesLoaded(true);
+        } catch (e) {
+            console.warn('[VoiceChatPanel] Error enumerating devices', e);
+        }
+    }, []);
+
+    useEffect(() => {
+        const savedInput = localStorage.getItem('voice_input_device');
+        const savedOutput = localStorage.getItem('voice_output_device');
+        if (savedInput) setAudioInputDeviceId(savedInput);
+        if (savedOutput) setAudioOutputDeviceId(savedOutput);
+    }, []);
+
+    useEffect(() => {
+        if (isConnected) {
+            loadDevices();
+            navigator.mediaDevices.addEventListener('devicechange', loadDevices);
+            return () => {
+                navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
+            };
+        }
+    }, [isConnected, loadDevices]);
+
+    const handleInputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const deviceId = e.target.value;
+        setAudioInputDeviceId(deviceId);
+        localStorage.setItem('voice_input_device', deviceId);
+        if (managerRef.current && isConnected) {
+            await managerRef.current.setMicDevice(deviceId);
+        }
+    }, [isConnected]);
+
+    const handleOutputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const deviceId = e.target.value;
+        setAudioOutputDeviceId(deviceId);
+        localStorage.setItem('voice_output_device', deviceId);
+        if (managerRef.current) {
+            await managerRef.current.setOutputDevice(deviceId);
+        }
+    }, []);
 
     // Diagnóstico Etapa 1: Sanitização de IDs
     useEffect(() => {
@@ -238,7 +292,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         if (!mgr || isJoining) return;
         setIsJoining(true);
         try {
-            const ok = await mgr.joinVoice();
+            const savedOutput = localStorage.getItem('voice_output_device');
+            if (savedOutput) {
+                mgr.setOutputDevice(savedOutput).catch(console.warn);
+            }
+            const savedInput = localStorage.getItem('voice_input_device') || undefined;
+            const ok = await mgr.joinVoice(savedInput);
             if (ok) {
                 setIsConnected(true);
                 setMicMuted(false);
@@ -589,6 +648,58 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                             <span>{isJoining ? '⏳' : (isConnected ? '📴' : '📡')}</span>
                             {isJoining ? 'CONECTANDO...' : (isConnected ? 'SAIR DO VOICE' : 'ENTRAR NO VOICE')}
                         </button>
+
+                        {/* Seletores de Dispositivo */}
+                        {isConnected && devicesLoaded && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <label style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)' }}>MIC (ENTRADA)</label>
+                                    <select 
+                                        value={audioInputDeviceId} 
+                                        onChange={handleInputDeviceChange}
+                                        style={{ 
+                                            background: 'rgba(255,255,255,0.05)', 
+                                            border: '1px solid rgba(255,255,255,0.1)', 
+                                            color: '#fff', 
+                                            padding: '4px 6px', 
+                                            fontSize: '0.7rem',
+                                            borderRadius: '4px',
+                                            outline: 'none',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <option value="">Padrão do Sistema</option>
+                                        {inputDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Microfone'}</option>)}
+                                    </select>
+                                </div>
+                                {supportsSinkId ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <label style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)' }}>FONE (SAÍDA)</label>
+                                        <select
+                                            value={audioOutputDeviceId}
+                                            onChange={handleOutputDeviceChange}
+                                            style={{
+                                                background: 'rgba(255,255,255,0.05)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                color: '#fff',
+                                                padding: '4px 6px',
+                                                fontSize: '0.7rem',
+                                                borderRadius: '4px',
+                                                outline: 'none',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <option value="">Padrão do Sistema</option>
+                                            {outputDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Alto-falante'}</option>)}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)', opacity: 0.6 }}>
+                                        SAÍDA: não suportado neste browser
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Lista de TODOS os participantes */}

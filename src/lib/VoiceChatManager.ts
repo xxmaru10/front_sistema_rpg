@@ -72,6 +72,7 @@ export class VoiceChatManager {
     private localGainNode: GainNode | null = null;
     private _sessionParticipants: SessionParticipant[] = [];
     private voicePeerIds: Set<string> = new Set();
+    private currentAudioOutputDeviceId: string | null = null;
 
     // Tentativas de reconexão por peer (max 3)
     private reconnectAttempts: Map<string, number> = new Map();
@@ -346,18 +347,18 @@ export class VoiceChatManager {
 
     // ─── Entrar no voice ───────────────────────────────────────
 
-    public async joinVoice(): Promise<boolean> {
+    public async joinVoice(audioInputDeviceId?: string): Promise<boolean> {
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({
+            const constraints: MediaStreamConstraints = {
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
-                    // Mono: voz não precisa de stereo, reduz carga ~50% por stream (bem suportado)
-                    // sampleRate omitido — deixar o browser usar a taxa nativa do hardware
                     channelCount: 1,
+                    ...(audioInputDeviceId ? { deviceId: { exact: audioInputDeviceId } } : {})
                 }
-            });
+            };
+            this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
             const audioCtx = this.getLocalAudioContext();
             if (audioCtx.state === 'suspended') {
@@ -431,6 +432,77 @@ export class VoiceChatManager {
     }
 
     // ─── Controles locais ──────────────────────────────────────
+
+    public async setMicDevice(deviceId: string): Promise<boolean> {
+        if (!this._isConnected) return false;
+        try {
+            const constraints: MediaStreamConstraints = {
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    channelCount: 1,
+                    deviceId: { exact: deviceId }
+                }
+            };
+            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(t => t.stop());
+            }
+            this.localStream = newStream;
+            
+            // Sync muted state
+            this.localStream.getAudioTracks().forEach(t => {
+                t.enabled = !this._micMuted;
+            });
+
+            // Replace track in peer connections
+            const newAudioTrack = newStream.getAudioTracks()[0];
+            this.peerConnections.forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                if (sender && newAudioTrack) {
+                    sender.replaceTrack(newAudioTrack).catch(e => console.warn('[VoiceChat] Failed to replace track', e));
+                }
+            });
+
+            // Restart local speaking detection
+            if (this.localSpeakingInterval) {
+                clearInterval(this.localSpeakingInterval);
+                this.localSpeakingInterval = null;
+            }
+            if (this.localGainNode) {
+                this.localGainNode.disconnect();
+                this.localGainNode = null;
+            }
+            this.startLocalSpeakingDetection();
+
+            return true;
+        } catch (error) {
+            console.error("[VoiceChat] Failed to switch mic:", error);
+            return false;
+        }
+    }
+
+    public async setOutputDevice(deviceId: string) {
+        this.currentAudioOutputDeviceId = deviceId;
+        const promises: Promise<void>[] = [];
+        
+        const attachSinkId = (audioEl: HTMLAudioElement, pId: string, isDummy: boolean) => {
+            if (typeof (audioEl as any).setSinkId === 'function') {
+                promises.push(
+                    (audioEl as any).setSinkId(deviceId).catch((e: any) => {
+                        console.warn(`[VoiceChat] setSinkId failed for ${isDummy ? 'dummy ' : ''}${pId}:`, e);
+                    })
+                );
+            }
+        };
+
+        this.peerAudioElements.forEach((el, peerId) => attachSinkId(el, peerId, false));
+        this.dummyAudioElements.forEach((el, peerId) => attachSinkId(el, peerId, true));
+
+        await Promise.all(promises);
+    }
 
     public setMicMuted(muted: boolean) {
         this._micMuted = muted;
@@ -768,6 +840,9 @@ export class VoiceChatManager {
                 dummyAudio.srcObject = stream;
                 dummyAudio.muted = true;
                 dummyAudio.autoplay = true;
+                if (this.currentAudioOutputDeviceId && typeof (dummyAudio as any).setSinkId === 'function') {
+                    (dummyAudio as any).setSinkId(this.currentAudioOutputDeviceId).catch(console.warn);
+                }
                 dummyAudio.play().catch(() => {});
                 this.dummyAudioElements.set(peerId, dummyAudio);
 
@@ -946,6 +1021,9 @@ export class VoiceChatManager {
             if (!audioEl) {
                 audioEl = new Audio();
                 audioEl.autoplay = true;
+                if (this.currentAudioOutputDeviceId && typeof (audioEl as any).setSinkId === 'function') {
+                    (audioEl as any).setSinkId(this.currentAudioOutputDeviceId).catch(console.warn);
+                }
                 this.peerAudioElements.set(peerId, audioEl);
             }
             audioEl.muted = this.peerMuted.get(peerId) ?? false;

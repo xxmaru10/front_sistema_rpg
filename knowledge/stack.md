@@ -5,7 +5,7 @@ tags: [stack, tecnologia, versões]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-05
+last_updated: 2026-04-06 (selecao-dispositivos-audio-story-27)
 status: estável
 ---
 
