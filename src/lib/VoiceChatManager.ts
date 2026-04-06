@@ -1,5 +1,4 @@
 import { getSocket } from "./socketClient";
-import { v4 as uuidv4 } from "uuid";
 
 type VoiceSignalType = 'voice-join' | 'voice-leave' | 'voice-offer' | 'voice-answer' | 'voice-ice-candidate';
 
@@ -41,7 +40,6 @@ export class VoiceChatManager {
     private peerVolumes: Map<string, number> = new Map();
     private peerMuted: Map<string, boolean> = new Map();
     private peerAudioElements: Map<string, HTMLAudioElement> = new Map();
-    private processedSignalIds: Set<string> = new Set();
     private onPeerUpdate: PeerUpdateCallback;
     private onPresenceUpdate: PresenceUpdateCallback;
     private _micMuted: boolean = false;
@@ -49,7 +47,12 @@ export class VoiceChatManager {
 
     private localAudioContext: AudioContext | null = null;
     private peerAudioContexts: Map<string, AudioContext> = new Map();
-    private audioNodes: Map<string, { source: MediaStreamAudioSourceNode; gain: GainNode; analyser: AnalyserNode; destination: MediaStreamAudioDestinationNode }> = new Map();
+    private audioNodes: Map<string, {
+        source: MediaStreamAudioSourceNode;
+        gain: GainNode;
+        analyser: AnalyserNode;
+        destination: MediaStreamAudioDestinationNode;
+    }> = new Map();
     private dummyAudioElements: Map<string, HTMLAudioElement> = new Map();
     private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
     private speakingAnalysers: Map<string, { analyser: AnalyserNode; interval: ReturnType<typeof setInterval> }> = new Map();
@@ -64,9 +67,7 @@ export class VoiceChatManager {
     private reconnectAttempts: Map<string, number> = new Map();
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
     private characterId?: string;
-
-    // Presence tracking via WebSocket (replaces Supabase presence)
-    private presenceInterval: ReturnType<typeof setInterval> | null = null;
+    private signalHandler: ((signal: VoiceSignal) => void) | null = null;
 
     private rtcConfig: RTCConfiguration = {
         iceServers: [
@@ -101,6 +102,8 @@ export class VoiceChatManager {
     get sessionParticipants() { return this._sessionParticipants; }
     get audioContextState() { return this.localAudioContext?.state || 'closed'; }
 
+    // ─── Audio helpers ─────────────────────────────────────────
+
     private getLocalAudioContext(): AudioContext {
         if (typeof window === 'undefined') return {} as AudioContext;
         if (!this.localAudioContext) {
@@ -118,33 +121,36 @@ export class VoiceChatManager {
         return ctx;
     }
 
+    // ─── Initialize ────────────────────────────────────────────
+
     public async initialize() {
         const socket = getSocket(this.userId);
 
-        const handleSignal = (signal: VoiceSignal) => {
-            console.log(`[VoiceChat - ${this.userId}] Raw signal received:`, JSON.stringify(signal));
+        // Remove previous handler if reinitializing
+        if (this.signalHandler) {
+            socket.off('webrtc-signal', this.signalHandler);
+        }
 
-            if (signal.from === this.userId) {
-                console.log(`[VoiceChat] Ignoring own signal`);
-                return;
-            }
-            if (signal.to && signal.to !== this.userId) {
-                console.log(`[VoiceChat] Signal for ${signal.to}, ignoring (I am ${this.userId})`);
-                return;
-            }
+        this.signalHandler = (signal: VoiceSignal) => {
+            // Ignore own signals
+            if (signal.from === this.userId) return;
+            // Ignore signals directed to someone else
+            if (signal.to && signal.to !== this.userId) return;
+            // Ignore non-voice signals
+            if (!signal.type?.startsWith('voice-')) return;
 
-            const signalType = signal.type as string;
-            if (!signalType.startsWith('voice-')) {
-                console.log(`[VoiceChat] Non-voice signal ignored:`, signalType);
-                return;
-            }
-
-            console.log(`[VoiceChat - ${this.userId}] Processing signal:`, signal.type, 'from:', signal.from);
+            console.log(`[VoiceChat - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
             this.handleSignal(signal);
         };
 
-        socket.off('webrtc-signal', handleSignal);
-        socket.on('webrtc-signal', handleSignal);
+        socket.on('webrtc-signal', this.signalHandler);
+
+        // Handle presence updates from server
+        socket.off('voice-presence-update');
+        socket.on('voice-presence-update', (participants: SessionParticipant[]) => {
+            this._sessionParticipants = participants;
+            this.onPresenceUpdate(participants);
+        });
 
         // Announce presence
         socket.emit('voice-presence', {
@@ -153,23 +159,23 @@ export class VoiceChatManager {
             characterId: this.characterId,
             inVoice: this._isConnected,
         });
-
-        socket.on('voice-presence-update', (participants: SessionParticipant[]) => {
-            this._sessionParticipants = participants;
-            this.onPresenceUpdate(participants);
-        });
     }
+
+    // ─── Signal sending ────────────────────────────────────────
 
     private async sendSignal(signal: VoiceSignal) {
         const socket = getSocket(this.userId);
-        console.log(`[VoiceChat - ${this.userId}] Sending signal:`, signal.type);
+        console.log(`[VoiceChat - ${this.userId}] Sending signal:`, signal.type, '→', signal.to ?? 'broadcast');
 
+        // Always broadcast to session room — receiver filters by signal.to
+        // Direct userId routing is unreliable due to userId format differences across devices
         socket.emit('webrtc-signal', {
             sessionId: this.sessionId,
             signal,
-            toUserId: signal.to,
         });
     }
+
+    // ─── Join / Leave ──────────────────────────────────────────
 
     public async joinVoice(): Promise<boolean> {
         try {
@@ -182,13 +188,15 @@ export class VoiceChatManager {
             });
 
             const audioCtx = this.getLocalAudioContext();
-            if (audioCtx.state === 'suspended') await audioCtx.resume().catch(console.warn);
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume().catch(console.warn);
+            }
 
             this._isConnected = true;
             this._micMuted = false;
             this.voicePeerIds.add(this.userId);
 
-            // Update presence
+            // Update presence to inVoice: true
             const socket = getSocket(this.userId);
             socket.emit('voice-presence', {
                 sessionId: this.sessionId,
@@ -198,8 +206,11 @@ export class VoiceChatManager {
             });
 
             this.startLocalSpeakingDetection();
+
+            // Announce to peers
             await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
 
+            // Heartbeat so late-joiners see us
             this.heartbeatInterval = setInterval(() => {
                 if (this._isConnected) {
                     this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
@@ -215,10 +226,22 @@ export class VoiceChatManager {
     }
 
     public leaveVoice() {
-        if (this.heartbeatInterval) { clearInterval(this.heartbeatInterval); this.heartbeatInterval = null; }
-        if (this.localSpeakingInterval) { clearInterval(this.localSpeakingInterval); this.localSpeakingInterval = null; }
-        if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
-        if (this.localAudioContext) { this.localAudioContext.close().catch(() => { }); this.localAudioContext = null; }
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+        if (this.localSpeakingInterval) {
+            clearInterval(this.localSpeakingInterval);
+            this.localSpeakingInterval = null;
+        }
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(t => t.stop());
+            this.localStream = null;
+        }
+        if (this.localAudioContext) {
+            this.localAudioContext.close().catch(() => {});
+            this.localAudioContext = null;
+        }
 
         this.sendSignal({ type: 'voice-leave', from: this.userId, peerId: this.userId });
 
@@ -239,6 +262,8 @@ export class VoiceChatManager {
         this.cleanupAllPeers();
         this.notifyPeerUpdate();
     }
+
+    // ─── Local controls ────────────────────────────────────────
 
     public setMicMuted(muted: boolean) {
         this._micMuted = muted;
@@ -277,6 +302,8 @@ export class VoiceChatManager {
         this.notifyPeerUpdate();
     }
 
+    // ─── Peer state ────────────────────────────────────────────
+
     public getActivePeers(): VoicePeer[] {
         const peers: VoicePeer[] = [];
         this.peerConnections.forEach((_, peerId) => {
@@ -293,28 +320,47 @@ export class VoiceChatManager {
         return peers;
     }
 
-    private notifyPeerUpdate() { this.onPeerUpdate(this.getActivePeers()); }
+    private notifyPeerUpdate() {
+        this.onPeerUpdate(this.getActivePeers());
+    }
+
+    // ─── Disconnect ────────────────────────────────────────────
 
     public disconnect() {
         this.leaveVoice();
         const socket = getSocket(this.userId);
-        socket.off('webrtc-signal');
+        if (this.signalHandler) {
+            socket.off('webrtc-signal', this.signalHandler);
+            this.signalHandler = null;
+        }
         socket.off('voice-presence-update');
     }
+
+    // ─── Cleanup ───────────────────────────────────────────────
 
     private cleanupAllPeers() {
         this.speakingAnalysers.forEach(({ interval }) => clearInterval(interval));
         this.speakingAnalysers.clear();
+
         this.peerAudioElements.forEach(el => { el.pause(); el.srcObject = null; });
         this.peerAudioElements.clear();
+
         this.dummyAudioElements.forEach(el => { el.pause(); el.srcObject = null; });
         this.dummyAudioElements.clear();
-        this.audioNodes.forEach(nodes => { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); });
+
+        this.audioNodes.forEach(nodes => {
+            nodes.source.disconnect();
+            nodes.gain.disconnect();
+            nodes.analyser.disconnect();
+        });
         this.audioNodes.clear();
-        this.peerAudioContexts.forEach(ctx => ctx.close().catch(() => { }));
+
+        this.peerAudioContexts.forEach(ctx => ctx.close().catch(() => {}));
         this.peerAudioContexts.clear();
+
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
+
         this.peerStreams.clear();
         this.peerVolumes.clear();
         this.peerMuted.clear();
@@ -325,22 +371,30 @@ export class VoiceChatManager {
     private removePeer(peerId: string) {
         const analyser = this.speakingAnalysers.get(peerId);
         if (analyser) { clearInterval(analyser.interval); this.speakingAnalysers.delete(peerId); }
+
         const audioEl = this.peerAudioElements.get(peerId);
         if (audioEl) { audioEl.pause(); audioEl.srcObject = null; this.peerAudioElements.delete(peerId); }
+
         const dummyEl = this.dummyAudioElements.get(peerId);
         if (dummyEl) { dummyEl.pause(); dummyEl.srcObject = null; this.dummyAudioElements.delete(peerId); }
+
         const nodes = this.audioNodes.get(peerId);
         if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); this.audioNodes.delete(peerId); }
+
         const pc = this.peerConnections.get(peerId);
         if (pc) { pc.close(); this.peerConnections.delete(peerId); }
+
         const ctx = this.peerAudioContexts.get(peerId);
-        if (ctx) { ctx.close().catch(() => { }); this.peerAudioContexts.delete(peerId); }
+        if (ctx) { ctx.close().catch(() => {}); this.peerAudioContexts.delete(peerId); }
+
         this.peerStreams.delete(peerId);
         this.peerVolumes.delete(peerId);
         this.peerMuted.delete(peerId);
         this.pendingCandidates.delete(peerId);
         this.notifyPeerUpdate();
     }
+
+    // ─── Speaking detection ────────────────────────────────────
 
     private startLocalSpeakingDetection() {
         if (!this.localStream) return;
@@ -364,7 +418,7 @@ export class VoiceChatManager {
                 if (wasSpeaking !== this._localSpeaking) this.notifyPeerUpdate();
             }, 250);
         } catch (e) {
-            console.warn('[VoiceChat] Could not start speaking detection:', e);
+            console.warn('[VoiceChat] Could not start local speaking detection:', e);
         }
     }
 
@@ -383,7 +437,9 @@ export class VoiceChatManager {
             if (existingDummy) { existingDummy.pause(); existingDummy.srcObject = null; this.dummyAudioElements.delete(peerId); }
 
             const audioCtx = this.getPeerAudioContext(peerId);
-            if (audioCtx.state === 'suspended') audioCtx.resume().catch(e => console.warn('[VoiceChat] Auto-resume AudioContext failed:', e));
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(e => console.warn('[VoiceChat] Auto-resume AudioContext failed:', e));
+            }
 
             const source = audioCtx.createMediaStreamSource(stream);
             const gainNode = audioCtx.createGain();
@@ -403,10 +459,10 @@ export class VoiceChatManager {
                 dummyAudio.srcObject = stream;
                 dummyAudio.muted = true;
                 dummyAudio.autoplay = true;
-                dummyAudio.play().catch(() => { });
+                dummyAudio.play().catch(() => {});
                 this.dummyAudioElements.set(peerId, dummyAudio);
                 audioEl.srcObject = dst.stream;
-                audioEl.play().catch(e => console.warn('[VoiceChat] Audio destination play failed:', e));
+                audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
             }
 
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -426,6 +482,8 @@ export class VoiceChatManager {
         }
     }
 
+    // ─── Signal handling ───────────────────────────────────────
+
     private async handleSignal(signal: VoiceSignal) {
         const { type, from } = signal;
 
@@ -438,21 +496,48 @@ export class VoiceChatManager {
 
         if (type === 'voice-join') {
             if (from === this.userId) return;
+
+            // Guard: don't reconnect to already-connected peers
             const existingPc = this.peerConnections.get(from);
-            if (existingPc && existingPc.connectionState !== 'failed' && existingPc.connectionState !== 'closed') return;
+            if (existingPc
+                && existingPc.connectionState !== 'failed'
+                && existingPc.connectionState !== 'closed') {
+                console.log(`[VoiceChat - ${this.userId}] voice-join from ${from} ignored — already ${existingPc.connectionState}`);
+                return;
+            }
+
+            // Guard: if already tracking this peer and we're the answerer,
+            // don't keep ping-ponging — only the offerer drives reconnection
+            if (this.voicePeerIds.has(from) && this._isConnected && this.localStream) {
+                const isOfferer = this.userId < from;
+                if (!isOfferer) {
+                    console.log(`[VoiceChat - ${this.userId}] voice-join from ${from} — already tracking, answerer skipping re-ping`);
+                    return;
+                }
+            }
+
             this.removePeer(from);
             this.voicePeerIds.add(from);
+
             if (!this._isConnected || !this.localStream) return;
+
             if (this.userId < from) {
+                // Deterministic: smaller userId is always the offerer
+                console.log(`[VoiceChat - ${this.userId}] I am offerer → creating offer for:`, from);
                 await this.createPeerConnection(from, true);
             } else {
+                // Answerer: ping back so offerer knows we're here
+                console.log(`[VoiceChat - ${this.userId}] I am answerer → pinging back to:`, from);
                 await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
             }
             return;
         }
 
         if (type === 'voice-offer' && signal.offer) {
-            if (!this._isConnected || !this.localStream) return;
+            if (!this._isConnected || !this.localStream) {
+                console.warn(`[VoiceChat - ${this.userId}] Offer from ${from} dropped — not connected`);
+                return;
+            }
             await this.handleOffer(signal);
             return;
         }
@@ -475,9 +560,17 @@ export class VoiceChatManager {
         }
     }
 
+    // ─── Peer connection ───────────────────────────────────────
+
     private async createPeerConnection(peerId: string, createOffer: boolean) {
-        if (peerId === this.userId) return new RTCPeerConnection(this.rtcConfig);
-        if (this.peerConnections.has(peerId)) this.peerConnections.get(peerId)?.close();
+        if (peerId === this.userId) {
+            console.warn('[VoiceChat] Blocked self-connection attempt');
+            return new RTCPeerConnection(this.rtcConfig);
+        }
+
+        if (this.peerConnections.has(peerId)) {
+            this.peerConnections.get(peerId)?.close();
+        }
 
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(peerId, pc);
@@ -500,9 +593,12 @@ export class VoiceChatManager {
         };
 
         pc.ontrack = (event) => {
+            console.log(`[VoiceChat - ${this.userId}] Received audio track from:`, peerId);
             if (event.track.kind !== 'audio') return;
+
             const stream = event.streams?.[0] || new MediaStream([event.track]);
             this.peerStreams.set(peerId, stream);
+
             let audioEl = this.peerAudioElements.get(peerId);
             if (!audioEl) {
                 audioEl = new Audio();
@@ -511,6 +607,7 @@ export class VoiceChatManager {
             }
             audioEl.muted = this.peerMuted.get(peerId) ?? false;
             audioEl.volume = 1;
+
             this.startPeerSpeakingDetection(peerId, stream);
             this.notifyPeerUpdate();
         };
@@ -521,6 +618,7 @@ export class VoiceChatManager {
                 const attempts = this.reconnectAttempts.get(peerId) || 0;
                 if (attempts < VoiceChatManager.MAX_RECONNECT_ATTEMPTS && this._isConnected && this.localStream) {
                     this.reconnectAttempts.set(peerId, attempts + 1);
+                    console.log(`[VoiceChat] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
                     setTimeout(() => {
                         if (this._isConnected && this.localStream) {
                             if (this.userId < peerId) {
@@ -530,9 +628,12 @@ export class VoiceChatManager {
                             }
                         }
                     }, 3000 * (attempts + 1));
+                } else {
+                    console.warn(`[VoiceChat] Max reconnect attempts reached for ${peerId}`);
                 }
             } else if (pc.connectionState === 'connected') {
                 this.reconnectAttempts.delete(peerId);
+                console.log(`[VoiceChat] Successfully connected to ${peerId}`);
             }
         };
 
@@ -540,7 +641,13 @@ export class VoiceChatManager {
             try {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-                await this.sendSignal({ type: 'voice-offer', from: this.userId, to: peerId, peerId, offer });
+                await this.sendSignal({
+                    type: 'voice-offer',
+                    from: this.userId,
+                    to: peerId,
+                    peerId,
+                    offer,
+                });
             } catch (error) {
                 console.error("[VoiceChat] Error creating offer:", error);
             }
@@ -552,14 +659,27 @@ export class VoiceChatManager {
     private async handleOffer(signal: VoiceSignal) {
         if (!signal.offer) return;
         const peerId = signal.from;
+        console.log(`[VoiceChat - ${this.userId}] Handling offer from:`, peerId);
+
         const pc = await this.createPeerConnection(peerId, false);
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.offer));
+
             const queued = this.pendingCandidates.get(peerId);
-            if (queued) { queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error)); this.pendingCandidates.delete(peerId); }
+            if (queued) {
+                queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
+                this.pendingCandidates.delete(peerId);
+            }
+
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            await this.sendSignal({ type: 'voice-answer', from: this.userId, to: peerId, peerId: this.userId, answer });
+            await this.sendSignal({
+                type: 'voice-answer',
+                from: this.userId,
+                to: peerId,
+                peerId: this.userId,
+                answer,
+            });
         } catch (error) {
             console.error("[VoiceChat] Error handling offer:", error);
         }
@@ -569,15 +689,25 @@ export class VoiceChatManager {
         if (!signal.answer) return;
         const pc = this.peerConnections.get(signal.from);
         if (!pc) return;
-        if (pc.signalingState !== 'have-local-offer') return;
+
+        if (pc.signalingState !== 'have-local-offer') {
+            console.warn(`[VoiceChat] Ignoring stale answer from ${signal.from} (state: ${pc.signalingState})`);
+            return;
+        }
+
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
             const queued = this.pendingCandidates.get(signal.from);
-            if (queued) { queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error)); this.pendingCandidates.delete(signal.from); }
+            if (queued) {
+                queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
+                this.pendingCandidates.delete(signal.from);
+            }
         } catch (error) {
             console.error("[VoiceChat] Error handling answer:", error);
         }
     }
+
+    // ─── Public helpers ────────────────────────────────────────
 
     public isPeerSpeaking(peerId: string): boolean {
         const data = this.speakingAnalysers.get(peerId);
