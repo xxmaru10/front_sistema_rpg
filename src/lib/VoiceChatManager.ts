@@ -177,10 +177,11 @@ export class VoiceChatManager {
 
     // ─── Join / Leave ──────────────────────────────────────────
 
-    public async joinVoice(): Promise<boolean> {
+    public async joinVoice(deviceId?: string): Promise<boolean> {
         try {
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
+                    deviceId: deviceId ? { exact: deviceId } : undefined,
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
@@ -280,6 +281,64 @@ export class VoiceChatManager {
             this.localGainNode.gain.setTargetAtTime(this._micVolume, ctx.currentTime, 0.01);
         }
         this.notifyPeerUpdate();
+    }
+
+    public async setMicDevice(deviceId: string) {
+        if (!this._isConnected) return;
+
+        try {
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    deviceId: { exact: deviceId },
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                }
+            });
+
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(t => t.stop());
+            }
+
+            const newTrack = newStream.getAudioTracks()[0];
+            this.localStream = newStream;
+
+            // Replace track in all peer connections
+            const replacements = Array.from(this.peerConnections.entries()).map(async ([peerId, pc]) => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                if (sender) {
+                    await sender.replaceTrack(newTrack);
+                }
+            });
+
+            await Promise.all(replacements);
+
+            // Re-setup local analysis
+            if (this.localSpeakingInterval) {
+                clearInterval(this.localSpeakingInterval);
+                this.localSpeakingInterval = null;
+            }
+            this.startLocalSpeakingDetection();
+            this.setMicMuted(this._micMuted);
+
+            console.log(`[VoiceChat - ${this.userId}] Mic device changed to:`, deviceId);
+        } catch (e) {
+            console.error('[VoiceChat] Failed to change mic device:', e);
+        }
+    }
+
+    public async setOutputDevice(deviceId: string) {
+        try {
+            const promises = Array.from(this.peerAudioElements.values()).map(async (el) => {
+                if ((el as any).setSinkId) {
+                    await (el as any).setSinkId(deviceId);
+                }
+            });
+            await Promise.all(promises);
+            console.log(`[VoiceChat - ${this.userId}] Output device changed to:`, deviceId);
+        } catch (e) {
+            console.error('[VoiceChat] Failed to set sinkId on audio elements:', e);
+        }
     }
 
     public setPeerVolume(peerId: string, volume: number) {

@@ -2,10 +2,16 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+// Carregamento dinâmico do ReactPlayer para evitar erros de SSR e types em tempo de compilação
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
-import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw } from "lucide-react";
+import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+
+const isYouTubeUrl = (url: string) =>
+    /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
 
 interface MusicPlayerProps {
     sessionId?: string;
@@ -23,10 +29,23 @@ const BUCKET_NAME = "campaign-uploads";
 
 export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const reactPlayerRef = useRef<any>(null);
+    const pendingSeekRef = useRef<number | null>(null);
+    const isTemporaryRef = useRef(false);
+    const restoreUrlRef = useRef("");
+    const restoreLoopRef = useRef(true);
+
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
     const [currentTrack, setCurrentTrack] = useState<string>("");
+    const [youtubeInputUrl, setYoutubeInputUrl] = useState("");
     const [isPlaying, setIsPlaying] = useState(false);
+    const isPlayingRef = useRef(isPlaying);
+
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+    }, [isPlaying]);
+
     const [isLooping, setIsLooping] = useState(true);
     const [volume, setVolume] = useState(0.5);
     const [isMuted, setIsMuted] = useState(false);
@@ -139,6 +158,29 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             } else if (event.type === "MUSIC_PLAYBACK_CHANGED") {
                 const { url, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
 
+                if (isYouTubeUrl(url)) {
+                    setCurrentTrack(url);
+                    setIsPlaying(playing);
+                    setIsLooping(loop);
+                    
+                    // Sincronizar seek se player estiver montado
+                    if (playing && event.payload.startedAt) {
+                        const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
+                        if (reactPlayerRef.current) {
+                            const internalPlayer = reactPlayerRef.current.getInternalPlayer();
+                            if (internalPlayer?.seekTo) {
+                                internalPlayer.seekTo(elapsed, 'seconds');
+                            }
+                        } else {
+                            pendingSeekRef.current = elapsed;
+                        }
+                    }
+                    isTemporaryRef.current = !!isTemporary;
+                    restoreUrlRef.current = restoreUrl || "";
+                    restoreLoopRef.current = restoreLoop ?? true;
+                    return;
+                }
+
                 if (audioRef.current) {
                     const fullUrl = getSupabaseUrl(url);
 
@@ -172,16 +214,9 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
                     audioRef.current.loop = loop;
 
-                    if (isTemporary && userRole === "GM") {
-                        audioRef.current.onended = () => {
-                            if (restoreUrl) {
-                                broadcastUpdate(restoreUrl, true, restoreLoop || true);
-                            }
-                            if (audioRef.current) audioRef.current.onended = null;
-                        };
-                    } else {
-                        if (audioRef.current) audioRef.current.onended = null;
-                    }
+                    isTemporaryRef.current = !!isTemporary;
+                    restoreUrlRef.current = restoreUrl || "";
+                    restoreLoopRef.current = restoreLoop ?? true;
 
                     setIsPlaying(playing);
                     setIsLooping(loop);
@@ -338,6 +373,34 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </button>
             </div>
             <div className="control-row">
+                <input
+                    type="text"
+                    placeholder="URL do YouTube..."
+                    value={youtubeInputUrl}
+                    onChange={(e) => setYoutubeInputUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && isYouTubeUrl(youtubeInputUrl.trim())) {
+                            handleTrackChange(youtubeInputUrl.trim());
+                            setYoutubeInputUrl("");
+                        }
+                    }}
+                    className="track-select youtube-url-input"
+                />
+                <button
+                    className="control-btn"
+                    onClick={() => {
+                        if (isYouTubeUrl(youtubeInputUrl.trim())) {
+                            handleTrackChange(youtubeInputUrl.trim());
+                            setYoutubeInputUrl("");
+                        }
+                    }}
+                    disabled={!isYouTubeUrl(youtubeInputUrl.trim())}
+                    title="Tocar Link do YouTube"
+                >
+                    <Link size={12} />
+                </button>
+            </div>
+            <div className="control-row">
                 <select
                     className="track-select"
                     value={currentTrack}
@@ -369,24 +432,45 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     ) : (
         <div className="now-playing">
             <span className="scrolling-text">
-                {isPlaying ? (currentTrack.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '') || "Reproduzindo...") : "Pausado"}
+                {isPlaying
+                    ? (isYouTubeUrl(currentTrack)
+                        ? "YouTube ▶"
+                        : (currentTrack.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '') || "Reproduzindo..."))
+                    : "Pausado"}
             </span>
         </div>
     );
 
     const handleTrackEnded = useCallback(() => {
         if (isLooping) {
-            // Loop de faixa individual: comportamento local controlado por cada cliente
-            if (audioRef.current) {
+            // YouTube: loop prop cuida disso nativamente
+            // Áudio normal: reset manual de segurança
+            if (!isYouTubeUrl(currentTrack) && audioRef.current) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(e => console.warn("[MusicPlayer] Retry play (Loop):", e));
             }
-        } else if (userRole === "GM") {
+            return;
+        }
+
+        if (isTemporaryRef.current && restoreUrlRef.current && userRole === "GM") {
+            broadcastUpdate(restoreUrlRef.current, true, restoreLoopRef.current);
+            isTemporaryRef.current = false;
+            return;
+        }
+
+        if (userRole === "GM") {
             // Avanço de playlist: gerenciado pelo Mestre para manter Event Sourcing íntegro
             console.log(`[MusicPlayer - ${userId}] Track ended. Orchestrating next track for session: ${sessionId}`);
             playNext();
         }
-    }, [isLooping, userRole, playNext, userId, sessionId]);
+    }, [isLooping, userRole, playNext, userId, sessionId, currentTrack]);
+
+    const handleYouTubeReady = () => {
+        if (pendingSeekRef.current !== null && reactPlayerRef.current) {
+            reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
+            pendingSeekRef.current = null;
+        }
+    };
 
     return (
         <div
@@ -394,6 +478,24 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             style={unifiedMode ? { display: 'contents' } : { position: 'relative' }}
         >
             <audio ref={audioRef} onEnded={handleTrackEnded} />
+
+            {/* ReactPlayer: apenas para URLs YouTube — display:none suprime vídeo/thumbnail */}
+            {isYouTubeUrl(currentTrack) && (
+                <div style={{ display: "none" }}>
+                    <ReactPlayer
+                        ref={reactPlayerRef}
+                        {...{
+                            url: currentTrack,
+                            playing: isPlaying,
+                            loop: isLooping,
+                            volume: isMuted ? 0 : volume,
+                            muted: isMuted,
+                            onEnded: handleTrackEnded,
+                            onReady: handleYouTubeReady
+                        } as any}
+                    />
+                </div>
+            )}
 
             {/* Non-unified: toggle button */}
             {!unifiedMode && (
@@ -451,6 +553,34 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         </select>
                         <button onClick={fetchPlaylists} className="control-btn" title="Atualizar Lista" disabled={loading}>
                             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                        </button>
+                    </div>
+                    <div className="control-row">
+                        <input
+                            type="text"
+                            placeholder="URL do YouTube..."
+                            value={youtubeInputUrl}
+                            onChange={(e) => setYoutubeInputUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && isYouTubeUrl(youtubeInputUrl.trim())) {
+                                    handleTrackChange(youtubeInputUrl.trim());
+                                    setYoutubeInputUrl("");
+                                }
+                            }}
+                            className="track-select youtube-url-input"
+                        />
+                        <button
+                            className="control-btn"
+                            onClick={() => {
+                                if (isYouTubeUrl(youtubeInputUrl.trim())) {
+                                    handleTrackChange(youtubeInputUrl.trim());
+                                    setYoutubeInputUrl("");
+                                }
+                            }}
+                            disabled={!isYouTubeUrl(youtubeInputUrl.trim())}
+                            title="Tocar Link do YouTube"
+                        >
+                            <Link size={12} />
                         </button>
                     </div>
                     <div className="control-row">
@@ -604,6 +734,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     flex: 1;
                     min-width: 0;
                     width: auto;
+                }
+
+                .youtube-url-input {
+                    background-image: none !important;
+                    padding: 6px 8px !important;
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .youtube-url-input::placeholder {
+                    color: rgba(197, 160, 89, 0.4);
+                    font-style: italic;
                 }
 
                 .control-btn {

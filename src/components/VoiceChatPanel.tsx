@@ -26,7 +26,13 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isManagerReady, setIsManagerReady] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [audioStatus, setAudioStatus] = useState<AudioContextState>('closed');
+    const [audioStatus, setAudioStatus] = useState<any>('closed');
+    const [audioInputDeviceId, setAudioInputDeviceId] = useState<string>('');
+    const [audioOutputDeviceId, setAudioOutputDeviceId] = useState<string>('');
+    const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
+    const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
+    const [devicesLoaded, setDevicesLoaded] = useState(false);
+    const supportsSinkId = typeof (new Audio() as any).setSinkId === 'function';
     const hasAttemptedAutoJoin = useRef(false);
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -34,6 +40,50 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const wasConnectedBeforeRefresh = useRef(false);
 
     const [events, setEvents] = useState<ActionEvent[]>([]);
+
+    useEffect(() => {
+        const savedInput = localStorage.getItem('voice_input_device');
+        const savedOutput = localStorage.getItem('voice_output_device');
+        if (savedInput) setAudioInputDeviceId(savedInput);
+        if (savedOutput) setAudioOutputDeviceId(savedOutput);
+    }, []);
+
+    const loadDevices = useCallback(async () => {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            setInputDevices(devices.filter(d => d.kind === 'audioinput' && d.deviceId));
+            setOutputDevices(devices.filter(d => d.kind === 'audiooutput' && d.deviceId));
+            setDevicesLoaded(true);
+        } catch (e) {
+            console.warn('[VoiceChatPanel] Error enumerating devices', e);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isConnected) {
+            loadDevices();
+            navigator.mediaDevices.addEventListener('devicechange', loadDevices);
+            return () => navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
+        }
+    }, [isConnected, loadDevices]);
+
+    const handleInputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const deviceId = e.target.value;
+        setAudioInputDeviceId(deviceId);
+        localStorage.setItem('voice_input_device', deviceId);
+        if (managerRef.current && isConnected) {
+            await managerRef.current.setMicDevice(deviceId);
+        }
+    }, [isConnected]);
+
+    const handleOutputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const deviceId = e.target.value;
+        setAudioOutputDeviceId(deviceId);
+        localStorage.setItem('voice_output_device', deviceId);
+        if (managerRef.current) {
+            await managerRef.current.setOutputDevice(deviceId);
+        }
+    }, []);
 
     // Diagnóstico Etapa 1: Sanitização de IDs
     useEffect(() => {
@@ -238,11 +288,18 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         if (!mgr || isJoining) return;
         setIsJoining(true);
         try {
-            const ok = await mgr.joinVoice();
+            const savedInput = localStorage.getItem('voice_input_device') || undefined;
+            const ok = await mgr.joinVoice(savedInput);
             if (ok) {
                 setIsConnected(true);
                 setMicMuted(false);
                 localStorage.setItem(`voice_autojoin_${sessionId}`, "true");
+
+                // Restaura device de saída se salvo
+                const savedOutput = localStorage.getItem('voice_output_device');
+                if (savedOutput) {
+                    mgr.setOutputDevice(savedOutput).catch(console.warn);
+                }
             }
         } finally {
             setIsJoining(false);
@@ -589,6 +646,61 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                             <span>{isJoining ? '⏳' : (isConnected ? '📴' : '📡')}</span>
                             {isJoining ? 'CONECTANDO...' : (isConnected ? 'SAIR DO VOICE' : 'ENTRAR NO VOICE')}
                         </button>
+
+                        {/* Seletores de dispositivo */}
+                        {isConnected && devicesLoaded && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <label style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)' }}>
+                                        MIC (ENTRADA)
+                                    </label>
+                                    <select
+                                        value={audioInputDeviceId}
+                                        onChange={handleInputDeviceChange}
+                                        style={{
+                                            background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.15)',
+                                            color: '#fff', padding: '4px 6px', fontSize: '0.7rem',
+                                            borderRadius: '4px', outline: 'none', cursor: 'pointer', width: '100%',
+                                        }}
+                                    >
+                                        <option value="" style={{ background: '#1a1a1a' }}>Padrão do Sistema</option>
+                                        {inputDevices.map(d => (
+                                            <option key={d.deviceId} value={d.deviceId} style={{ background: '#1a1a1a' }}>
+                                                {d.label || 'Microfone'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {supportsSinkId ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <label style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)' }}>
+                                            FONE (SAÍDA)
+                                        </label>
+                                        <select
+                                            value={audioOutputDeviceId}
+                                            onChange={handleOutputDeviceChange}
+                                            style={{
+                                                background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.15)',
+                                                color: '#fff', padding: '4px 6px', fontSize: '0.7rem',
+                                                borderRadius: '4px', outline: 'none', cursor: 'pointer', width: '100%',
+                                            }}
+                                        >
+                                            <option value="" style={{ background: '#1a1a1a' }}>Padrão do Sistema</option>
+                                            {outputDevices.map(d => (
+                                                <option key={d.deviceId} value={d.deviceId} style={{ background: '#1a1a1a' }}>
+                                                    {d.label || 'Alto-falante'}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
+                                        SAÍDA: não suportado neste browser
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Lista de TODOS os participantes */}
@@ -663,6 +775,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     {/* Indicador de fala / status */}
                                     {(() => {
                                         const charImg = getCharacterImage(user.id, user.characterId);
+                                        const displayName = getDisplayName(user.id, user.characterId);
                                         return (
                                             <div style={{ position: 'relative', flexShrink: 0 }}>
                                                 <div style={{
@@ -670,7 +783,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                     height: '45px',
                                                     borderRadius: '50%',
                                                     background: charImg
-                                                        ? `url(${charImg}) center/cover no-repeat`
+                                                        ? 'transparent'
                                                         : (user.inVoice
                                                             ? (user.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
                                                             : 'rgba(255,255,255,0.04)'),
@@ -684,11 +797,25 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     fontSize: '1.2rem',
+                                                    overflow: 'hidden',
                                                     transition: 'all 0.2s ease',
                                                 }}>
-                                                    {!charImg && (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))}
+                                                    {charImg
+                                                        ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        : (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))
+                                                    }
                                                 </div>
-                                                {charImg && (
+                                                {/* Badge de mudo sobre avatar quando há imagem */}
+                                                {charImg && user.inVoice && user.muted && (
+                                                    <div style={{
+                                                        position: 'absolute', bottom: '-2px', right: '-2px',
+                                                        width: '16px', height: '16px',
+                                                        background: '#ff4d4d', borderRadius: '50%',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '0.55rem', border: '1px solid #111', zIndex: 2,
+                                                    }}>🔇</div>
+                                                )}
+                                                {!charImg && user.inVoice && (
                                                     <span style={{
                                                         position: 'absolute',
                                                         bottom: '-2px',
@@ -708,7 +835,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                         fontWeight: 'bold',
                                                         color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
                                                     }}>
-                                                        {getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
+                                                        {displayName.charAt(0).toUpperCase()}
                                                     </span>
                                                 )}
                                             </div>
@@ -884,17 +1011,18 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 }}>
                     {allUsers.filter(u => u.inVoice).map(user => {
                         const charImg = getCharacterImage(user.id, user.characterId);
+                        const displayName = getDisplayName(user.id, user.characterId);
                         return (
                             <div
                                 key={`indicator-${user.id}`}
-                                title={getDisplayName(user.id, user.characterId)}
+                                title={displayName}
                                 style={{
                                     position: 'relative',
                                     width: '48px',
                                     height: '48px',
                                     borderRadius: '50%',
                                     background: charImg
-                                        ? `url(${charImg}) center/cover no-repeat`
+                                        ? 'transparent'
                                         : (user.speaking
                                             ? 'rgba(80, 200, 120, 0.25)'
                                             : 'rgba(30, 30, 30, 0.6)'),
@@ -906,18 +1034,22 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '1.15rem',
-                                    fontFamily: 'var(--font-header)',
-                                    fontWeight: 'bold',
-                                    color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0',
+                                    overflow: 'hidden',
                                     transition: 'all 0.2s ease',
                                     pointerEvents: 'auto',
                                     cursor: 'default',
                                 }}
                             >
-                                {!charImg && getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
+                                {charImg
+                                    ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    : <span style={{
+                                        fontSize: '1.15rem',
+                                        fontFamily: 'var(--font-header)',
+                                        fontWeight: 'bold',
+                                        color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
+                                    }}>{displayName.charAt(0).toUpperCase()}</span>
+                                }
+                                
                                 {charImg && (
                                     <span style={{
                                         position: 'absolute',
@@ -934,8 +1066,9 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                         fontSize: '0.75rem',
                                         fontWeight: 'bold',
                                         color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
+                                        zIndex: 2,
                                     }}>
-                                        {getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
+                                        {displayName.charAt(0).toUpperCase()}
                                     </span>
                                 )}
                             </div>
