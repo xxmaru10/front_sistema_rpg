@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-06 (selecao-dispositivos-audio-story-27)
+last_updated: 2026-04-06 (voice-avatar-compact-story-28)
 status: ativo
 ---
 
@@ -72,6 +72,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Sincronização Fallback de Eventos (Broadcast RT) | Inclusão de escuta direta a pacotes `'broadcast'` (`sync_event`) no `EventStore` como rota alternativa lateral no canal WS. Contorna inoperâncias temporárias no banco/trigger nativo `postgres_changes`. Envio espelhado ocorre via `channel.send()` otimista e confirmado, mitigando saltos cronológicos sem reload (commit: `fix_problemas_semsom`). | 2026-04-05 |
 | Transmissão WebRTC sem HTML Muted Lock | Remoção da tag fixa `muted` no render do comp. principal de vídeo `<video>` (`page.tsx`), transferindo gerência imperativa pura (`videoEl.muted = false`) atrelada ao `try/catch` de Autoplay do browser. Recupera propagação original do Web Audio Track aos jogadores sob uso do banner fallback de intervenção UI (commit: `test_4_transmissao_som`). | 2026-04-05 |
 | Seleção de Dispositivos WebRTC (Story 27) | Adição de seletor independente de entrada/saída de áudio. `setSinkId` aplicado globalmente em todos os elementos de áudio. Bypass ativo do perfil Bluetooth HFP nativo de SOs para manter qualidade A2DP com fones BT e microfone distinto. Fallback gracioso implementado para browsers sem suporte a `setSinkId` (ex: Firefox). | 2026-04-06 |
+| Avatar Compacto no Voice Chat (Story 28) | Refatoração da lista de participantes para layout vertical em grid (`flex-wrap`): foto do personagem no círculo + inicial em texto abaixo (sem badge sobreposto). GM sem foto mantém emoji de status. Indicadores flutuantes laterais (quando painel fechado) seguem o mesmo padrão: círculo + inicial abaixo, sem badge. | 2026-04-06 |
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

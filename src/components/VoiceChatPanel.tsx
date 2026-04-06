@@ -702,11 +702,17 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         )}
                     </div>
 
-                    {/* Lista de TODOS os participantes */}
+                    {/* Lista de TODOS os participantes em GRID COMPACTO */}
                     <div style={{
                         overflowY: 'auto',
                         flex: 1,
-                        position: 'relative' as const, // Para o overlay de refresh
+                        position: 'relative' as const, 
+                        padding: '16px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '20px',
+                        justifyContent: 'flex-start',
+                        alignContent: 'flex-start',
                     }}>
                         {/* Overlay de carregamento durante o refresh */}
                         {isRefreshing && (
@@ -745,6 +751,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
                         {allUsers.length === 0 && !isRefreshing && (
                             <div style={{
+                                width: '100%',
                                 padding: '20px 16px',
                                 textAlign: 'center',
                                 color: 'var(--text-secondary)',
@@ -755,214 +762,180 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                             </div>
                         )}
 
-                        {allUsers.map(user => (
-                            <div
-                                key={user.id}
-                                style={{
-                                    padding: '12px 16px',
-                                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                                    background: user.isMe ? 'rgba(var(--accent-rgb), 0.03)' : 'transparent',
-                                }}
-                            >
-                                {/* Linha 1: Avatar + Nome + Status */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    marginBottom: '6px',
-                                }}>
-                                    {/* Indicador de fala / status */}
-                                    {(() => {
-                                        const charImg = getCharacterImage(user.id, user.characterId);
-                                        return (
-                                            <div style={{ position: 'relative', flexShrink: 0 }}>
-                                                <div style={{
-                                                    width: '45px',
-                                                    height: '45px',
-                                                    borderRadius: '50%',
-                                                    background: charImg
-                                                        ? `url(${charImg}) center/cover no-repeat`
-                                                        : (user.inVoice
-                                                            ? (user.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
-                                                            : 'rgba(255,255,255,0.04)'),
-                                                    border: `2px solid ${user.inVoice
-                                                        ? (user.speaking ? '#50c878' : 'rgba(80, 200, 120, 0.3)')
-                                                        : 'rgba(255,255,255,0.08)'}`,
-                                                    boxShadow: user.speaking
-                                                        ? '0 0 10px rgba(80, 200, 120, 0.6), 0 0 20px rgba(80, 200, 120, 0.3)'
-                                                        : 'none',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '1.2rem',
-                                                    transition: 'all 0.2s ease',
-                                                }}>
-                                                    {!charImg && (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))}
-                                                </div>
-                                                {charImg && (
-                                                    <span style={{
-                                                        position: 'absolute',
-                                                        bottom: '-2px',
-                                                        right: '-6px',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        borderRadius: '50%',
-                                                        background: user.inVoice
-                                                            ? (user.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)')
-                                                            : 'rgba(30, 30, 30, 0.95)',
-                                                        border: `1px solid ${user.inVoice ? (user.speaking ? '#50c878' : 'rgba(80,200,120,0.3)') : 'rgba(255,255,255,0.1)'}`,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '0.85rem',
-                                                        fontFamily: 'var(--font-header)',
-                                                        fontWeight: 'bold',
-                                                        color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
-                                                    }}>
-                                                        {getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Nome */}
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{
-                                            fontSize: '0.75rem',
-                                            color: 'var(--text-primary)',
-                                            fontFamily: 'var(--font-header)',
-                                            letterSpacing: '0.05em',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                        }}>
-                                            {getDisplayName(user.id, user.characterId)} {user.isMe && <span style={{ color: 'var(--accent-color)', fontSize: '0.6rem' }}>(EU)</span>}
-                                        </div>
-                                        <div style={{
-                                            fontSize: '0.6rem',
-                                            color: user.inVoice ? '#50c878' : 'var(--text-secondary)',
-                                            marginTop: '1px',
-                                        }}>
-                                            {user.inVoice
-                                                ? (user.isMe ? (user.muted ? 'Mic desligado' : 'No voice') : 'No voice')
-                                                : 'Online'
-                                            }
-                                        </div>
-                                    </div>
-
-                                    {/* Botão mute (para eu ou para peers conectados) */}
-                                    {user.inVoice && user.isMe && (
-                                        <button
-                                            onClick={handleToggleMic}
-                                            style={{
-                                                background: micMuted ? 'rgba(255, 77, 77, 0.15)' : 'rgba(80, 200, 120, 0.15)',
-                                                border: `1px solid ${micMuted ? 'rgba(255, 77, 77, 0.3)' : 'rgba(80, 200, 120, 0.3)'}`,
-                                                color: micMuted ? '#ff6666' : '#50c878',
-                                                padding: '4px 8px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.6rem',
-                                                fontFamily: 'var(--font-header)',
-                                                letterSpacing: '0.1em',
-                                                transition: 'all 0.2s',
-                                                flexShrink: 0,
-                                            }}
-                                            title={micMuted ? 'Ativar Mic' : 'Desativar Mic'}
-                                        >
-                                            {micMuted ? 'ATIVAR' : 'MUDO'}
-                                        </button>
-                                    )}
-
-                                    {user.inVoice && !user.isMe && user.hasPeer && (
-                                        <button
-                                            onClick={() => handlePeerMute(user.id)}
-                                            style={{
-                                                background: user.muted ? 'rgba(255, 77, 77, 0.15)' : 'transparent',
-                                                border: `1px solid ${user.muted ? 'rgba(255, 77, 77, 0.3)' : 'rgba(255,255,255,0.1)'}`,
-                                                color: user.muted ? '#ff6666' : 'var(--text-secondary)',
-                                                padding: '4px 6px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.7rem',
-                                                transition: 'all 0.2s',
-                                                borderRadius: '2px',
-                                                flexShrink: 0,
-                                            }}
-                                            title={user.muted ? 'Desmutar' : 'Mutar'}
-                                        >
-                                            {user.muted ? '🔇' : '🔈'}
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Linha 2: Barra de volume (para eu = mic volume, para peers = volume de reprodução) */}
-                                {user.inVoice && user.isMe && (
-                                    <div style={{
+                        {allUsers.map(user => {
+                            const charImg = getCharacterImage(user.id, user.characterId);
+                            const displayName = getDisplayName(user.id, user.characterId);
+                            const shortName = displayName.length > 8 ? displayName.substring(0, 7) + ".." : displayName;
+                            
+                            return (
+                                <div
+                                    key={user.id}
+                                    className="participant-card"
+                                    title={displayName}
+                                    style={{
                                         display: 'flex',
+                                        flexDirection: 'column',
                                         alignItems: 'center',
-                                        gap: '8px',
-                                        paddingLeft: '40px',
-                                    }}>
-                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0 }}>🎤</span>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="200"
-                                            value={micVolume}
-                                            onChange={e => handleMicVolume(parseInt(e.target.value))}
-                                            style={sliderTrackStyle}
-                                            title={`Volume do Mic: ${micVolume}%`}
-                                        />
-                                        <span style={volNumStyle}>{micVolume}%</span>
-                                    </div>
-                                )}
-
-                                {/* Barra de nível de áudio (indicador visual) */}
-                                {user.inVoice && (user.isMe ? isConnected : user.hasPeer) && (
-                                    <div style={{
-                                        paddingLeft: '40px',
-                                        marginTop: '4px',
-                                        marginBottom: '6px'
-                                    }}>
+                                        width: '75px', // Tamanho fixo para o grid responder bem
+                                        gap: '6px',
+                                        padding: '4px',
+                                        borderRadius: '8px',
+                                        background: user.isMe ? 'rgba(var(--accent-rgb), 0.05)' : 'transparent',
+                                        position: 'relative' as const,
+                                    }}
+                                >
+                                    {/* Círculo do Avatar */}
+                                    <div style={{ position: 'relative', flexShrink: 0 }}>
                                         <div style={{
-                                            height: '3px',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            borderRadius: '2px',
-                                            overflow: 'hidden',
+                                            width: '50px',
+                                            height: '50px',
+                                            borderRadius: '50%',
+                                            background: charImg
+                                                ? `url(${charImg}) center/cover no-repeat`
+                                                : (user.inVoice
+                                                    ? (user.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
+                                                    : 'rgba(255,255,255,0.04)'),
+                                            border: `2px solid ${user.inVoice
+                                                ? (user.speaking ? '#50c878' : 'rgba(80, 200, 120, 0.3)')
+                                                : 'rgba(255,255,255,0.08)'}`,
+                                            boxShadow: user.speaking
+                                                ? '0 0 10px rgba(80, 200, 120, 0.6), 0 0 20px rgba(80, 200, 120, 0.3)'
+                                                : 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '1.2rem',
+                                            transition: 'all 0.2s ease',
                                         }}>
+                                            {!charImg && (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))}
+                                        </div>
+
+                                        {/* Badge de Mudo em cima do avatar se necessário */}
+                                        {user.inVoice && user.muted && (
                                             <div style={{
-                                                height: '100%',
-                                                width: `${Math.round(user.audioLevel * 100)}%`,
-                                                background: user.audioLevel > 0.6 ? '#50c878' : (user.audioLevel > 0.3 ? 'var(--accent-color)' : 'rgba(var(--accent-rgb), 0.4)'),
-                                                transition: 'width 0.1s ease-out, background 0.3s',
+                                                position: 'absolute',
+                                                bottom: '-2px',
+                                                right: '-2px',
+                                                width: '18px',
+                                                height: '18px',
+                                                background: '#ff4d4d',
+                                                borderRadius: '50%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '0.6rem',
+                                                border: '1px solid #111',
+                                                zIndex: 2,
+                                            }}>
+                                                🔇
+                                            </div>
+                                        )}
+                                        
+                                        {/* Pequena barra lateral de áudio level para feedback visual sutil */}
+                                        {user.inVoice && (user.speaking || user.audioLevel > 0.05) && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                left: '-5px',
+                                                bottom: '0',
+                                                width: '3px',
+                                                height: '20px',
+                                                background: 'rgba(255,255,255,0.1)',
                                                 borderRadius: '2px',
-                                            }} />
-                                        </div>
+                                                overflow: 'hidden'
+                                            }}>
+                                                <div style={{
+                                                    width: '100%',
+                                                    height: `${Math.round(user.audioLevel * 100)}%`,
+                                                    position: 'absolute',
+                                                    bottom: 0,
+                                                    background: user.audioLevel > 0.6 ? '#50c878' : 'var(--accent-color)',
+                                                    transition: 'height 0.1s ease-out'
+                                                }} />
+                                            </div>
+                                        )}
                                     </div>
-                                )}
 
-                                {/* Volume do peer */}
-                                {user.inVoice && !user.isMe && user.hasPeer && (
+                                    {/* Nome Curto Abaixo */}
                                     <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        paddingLeft: '40px',
+                                        fontSize: '0.65rem',
+                                        color: user.inVoice ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                        fontFamily: 'var(--font-header)',
+                                        textAlign: 'center',
+                                        lineHeight: '1.1',
+                                        width: '100%',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
                                     }}>
-                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', flexShrink: 0 }}>🔊</span>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="200"
-                                            value={user.volume}
-                                            onChange={e => handlePeerVolume(user.id, parseInt(e.target.value))}
-                                            style={sliderTrackStyle}
-                                            title={`Volume: ${user.volume}%`}
-                                        />
-                                        <span style={volNumStyle}>{user.volume}%</span>
+                                        {shortName}
+                                        {user.isMe && <div style={{ color: 'var(--accent-color)', fontSize: '0.55rem', opacity: 0.8 }}>EU</div>}
                                     </div>
-                                )}
-                            </div>
-                        ))}
+
+                                    {/* Botões e Sliders compactos (visíveis em hover ou sutilmente) */}
+                                    <div className="participant-controls" style={{
+                                        width: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '4px',
+                                        alignItems: 'center',
+                                        marginTop: '2px'
+                                    }}>
+                                        {user.inVoice && user.isMe && (
+                                            <button
+                                                onClick={handleToggleMic}
+                                                style={{
+                                                    background: micMuted ? 'rgba(255, 77, 77, 0.2)' : 'rgba(80, 200, 120, 0.1)',
+                                                    border: 'none',
+                                                    color: micMuted ? '#ff6666' : '#50c878',
+                                                    padding: '2px 6px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.55rem',
+                                                    fontFamily: 'var(--font-header)',
+                                                    borderRadius: '4px',
+                                                }}
+                                            >
+                                                {micMuted ? 'OFF' : 'ON'}
+                                            </button>
+                                        )}
+                                        {user.inVoice && !user.isMe && user.hasPeer && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}>
+                                                <button
+                                                    onClick={() => handlePeerMute(user.id)}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: user.muted ? '#ff6666' : 'rgba(255,255,255,0.4)',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.65rem',
+                                                        padding: '0',
+                                                    }}
+                                                >
+                                                    {user.muted ? '🔇' : '🔈'}
+                                                </button>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="200"
+                                                    value={user.volume}
+                                                    onChange={e => handlePeerVolume(user.id, parseInt(e.target.value))}
+                                                    style={{ width: '35px', accentColor: 'var(--accent-color)', height: '12px' }}
+                                                />
+                                            </div>
+                                        )}
+                                        {user.inVoice && user.isMe && (
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="200"
+                                                value={micVolume}
+                                                onChange={e => handleMicVolume(parseInt(e.target.value))}
+                                                style={{ width: '45px', accentColor: 'var(--accent-color)', height: '12px' }}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* Footer com status */}
@@ -995,12 +968,21 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 }}>
                     {allUsers.filter(u => u.inVoice).map(user => {
                         const charImg = getCharacterImage(user.id, user.characterId);
+                        const initial = getDisplayName(user.id, user.characterId).charAt(0).toUpperCase();
                         return (
                             <div
                                 key={`indicator-${user.id}`}
                                 title={getDisplayName(user.id, user.characterId)}
                                 style={{
-                                    position: 'relative',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    pointerEvents: 'auto',
+                                    cursor: 'default',
+                                }}
+                            >
+                                <div style={{
                                     width: '48px',
                                     height: '48px',
                                     borderRadius: '50%',
@@ -1021,34 +1003,20 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     fontFamily: 'var(--font-header)',
                                     fontWeight: 'bold',
                                     color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0',
                                     transition: 'all 0.2s ease',
-                                    pointerEvents: 'auto',
-                                    cursor: 'default',
-                                }}
-                            >
-                                {!charImg && getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
-                                {charImg && (
-                                    <span style={{
-                                        position: 'absolute',
-                                        bottom: '-3px',
-                                        right: '-5px',
-                                        width: '21px',
-                                        height: '21px',
-                                        borderRadius: '50%',
-                                        background: user.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)',
-                                        border: `1px solid ${user.speaking ? '#50c878' : 'rgba(255,255,255,0.15)'}`,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
-                                    }}>
-                                        {getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
-                                    </span>
-                                )}
+                                }}>
+                                    {!charImg && initial}
+                                </div>
+                                <div style={{
+                                    fontSize: '0.55rem',
+                                    color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
+                                    fontFamily: 'var(--font-header)',
+                                    textAlign: 'center',
+                                    letterSpacing: '0.05em',
+                                    textTransform: 'uppercase',
+                                }}>
+                                    {initial}
+                                </div>
                             </div>
                         );
                     })}
