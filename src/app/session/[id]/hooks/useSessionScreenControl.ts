@@ -5,8 +5,9 @@
  */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { ScreenShareManager } from "@/lib/screen-share-manager";
+import { screenShareStore } from "@/lib/screenShareStore";
 
 interface UseSessionScreenControlParams {
     sessionId: string;
@@ -19,8 +20,6 @@ interface UseSessionScreenControlParams {
     transmissionVolume: number;
     setTransmissionVolume: (v: number) => void;
 }
-
-import { screenShareStore } from "@/lib/screenShareStore";
 
 export function useSessionScreenControl({
     sessionId,
@@ -37,8 +36,9 @@ export function useSessionScreenControl({
     const screenVideoRef = useRef<HTMLVideoElement | null>(null);
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
     const [videoNoSignal, setVideoNoSignal] = useState(false);
+    const [videoMuted, setVideoMuted] = useState(false);
 
-    // Screen share manager lifecycle
+    // ── Screen share manager lifecycle ──────────────────────────
     useEffect(() => {
         if (!sessionId || !actorUserId) return;
         const timer = setTimeout(() => {
@@ -65,7 +65,18 @@ export function useSessionScreenControl({
         };
     }, [sessionId, actorUserId, setVideoStream]);
 
-    // Listen to global reconnect trigger
+    useEffect(() => {
+        const videoEl = screenVideoRef.current;
+        if (!videoEl || !videoStream) return;
+
+        const isBroadcasting = screenShareManagerRef.current?.broadcasting ?? false;
+        if (isBroadcasting) {
+            videoEl.muted = true;
+            console.log("[ScreenShare] Broadcaster — own audio muted to prevent feedback");
+        }
+    }, [videoStream]);
+
+    // ── Global reconnect trigger ─────────────────────────────────
     useEffect(() => {
         const unsubscribe = screenShareStore.subscribe(() => {
             if (screenShareStore.reconnectVersion > 0) {
@@ -76,51 +87,94 @@ export function useSessionScreenControl({
         return unsubscribe;
     }, []);
 
-    // Auto-exit spectator mode when stream ends
+    // ── Auto-exit spectator mode when stream ends ────────────────
     useEffect(() => {
         if (!videoStream && spectatorMode) setSpectatorMode(false);
     }, [videoStream, spectatorMode]);
 
-    // Assign video srcObject when stream or tab changes.
-    // Autoplay muted fallback: iOS Safari bloqueia play() em vídeo não-silenciado sem
-    // gesto de usuário. Se play() falhar, silencia e retenta — o stream continua, só sem áudio.
+    // ── Unmute helper — callable from UI ────────────────────────
+    const unmuteVideo = useCallback(() => {
+        const videoEl = screenVideoRef.current;
+        if (!videoEl) return;
+        videoEl.muted = false;
+        videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+        setVideoMuted(false);
+        console.log("[ScreenShare] Manually unmuted by user");
+    }, [transmissionVolume]);
+
+    // ── Assign video srcObject + smart play with unmute ──────────
     useEffect(() => {
         const videoEl = screenVideoRef.current;
         if (!videoEl) return;
+
         if (videoStream) {
-            if (videoEl.srcObject !== videoStream) videoEl.srcObject = videoStream;
+            if (videoEl.srcObject !== videoStream) {
+                videoEl.srcObject = videoStream;
+                // Always start unmuted — browser will throw if autoplay policy
+                // blocks it, then we fall back to muted
+                videoEl.muted = false;
+                videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+            }
 
             const tryPlay = async () => {
                 try {
-                    // Tenta play() normal (pode ter áudio se o usuário já interagiu com a página)
+                    videoEl.muted = false;
                     await videoEl.play();
-                    console.log("[ScreenShare] Play success with audio");
+                    // If we are the broadcaster, mute our own audio to avoid feedback
+                    const isBroadcasting = screenShareManagerRef.current?.broadcasting ?? false;
+                    if (isBroadcasting) {
+                        videoEl.muted = true;
+                        console.log("[ScreenShare] Broadcaster — muted own audio to prevent feedback");
+                    } else {
+                        setVideoMuted(false);
+                        console.log("[ScreenShare] Play success with audio");
+                    }
                 } catch (err) {
-                    console.warn("[ScreenShare] Autoplay with audio failed, retrying muted...", err);
-                    // Falha comum em mobile (Brave/iOS) se não houver interação prévia.
-                    // Silenciamos forçadamente e tentamos novamente.
+                    console.warn("[ScreenShare] Autoplay with audio blocked, retrying muted...", err);
                     videoEl.muted = true;
+                    setVideoMuted(true);
                     try {
                         await videoEl.play();
-                        console.log("[ScreenShare] Play success (muted fallback)");
+                        console.log("[ScreenShare] Play success (muted fallback) — user must click unmute");
+
+                        // Attempt auto-unmute after 500ms — works if user has
+                        // already interacted with the page (clicked join, etc.)
+                        setTimeout(() => {
+                            if (!videoEl || videoEl.paused) return;
+                            videoEl.muted = false;
+                            videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                            setVideoMuted(false);
+                            console.log("[ScreenShare] Auto-unmuted successfully");
+                        }, 500);
                     } catch (mutedErr) {
-                        console.error("[ScreenShare] Muted play also failed. Browser may be blocking WebRTC/Video or requires user gesture:", mutedErr);
+                        console.error("[ScreenShare] Muted play also failed:", mutedErr);
+                        setVideoNoSignal(true);
                     }
                 }
             };
             tryPlay();
 
-            // Limpa badge "sem sinal" assim que o vídeo conseguir decodificar frames
-            const clearNoSignal = () => setVideoNoSignal(false);
+            const clearNoSignal = () => {
+                setVideoNoSignal(false);
+                // Also try to unmute when video starts decoding frames —
+                // this is a reliable signal that the user has interacted
+                const el = screenVideoRef.current;
+                if (el && el.muted) {
+                    el.muted = false;
+                    el.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                    setVideoMuted(false);
+                    console.log("[ScreenShare] Unmuted on canplay event");
+                }
+            };
             videoEl.addEventListener('canplay', clearNoSignal, { once: true });
             return () => videoEl.removeEventListener('canplay', clearNoSignal);
         } else {
             videoEl.srcObject = null;
+            setVideoMuted(false);
         }
     }, [videoStream, activeTab, spectatorMode]);
 
-    // Watchdog: se stream chegou mas vídeo não avança em 10s, tenta play() uma última
-    // vez (cobre casos de race entre srcObject e play) antes de exibir o badge.
+    // ── Watchdog: show badge if video stalls for 10s ─────────────
     useEffect(() => {
         if (!videoStream) {
             setVideoNoSignal(false);
@@ -130,29 +184,33 @@ export function useSessionScreenControl({
         const timeout = setTimeout(() => {
             const el = screenVideoRef.current;
             if (!el || el.readyState >= 3) return;
-            // Última tentativa com muted antes de mostrar o badge
             el.muted = true;
             el.play()
-                .then(() => { /* play ok, canplay vai limpar o badge */ })
-                .catch(() => {
-                    // Mesmo com muted falhou — mostra badge para o usuário usar o botão
-                    setVideoNoSignal(true);
-                });
+                .then(() => {
+                    setVideoMuted(true);
+                    // Try auto-unmute
+                    setTimeout(() => {
+                        if (el && !el.paused) {
+                            el.muted = false;
+                            setVideoMuted(false);
+                        }
+                    }, 500);
+                })
+                .catch(() => setVideoNoSignal(true));
         }, 10000);
         return () => clearTimeout(timeout);
     }, [videoStream]);
 
-    // Visibilidade e Diagnósticos para Brave/Mobile
+    // ── Diagnostics (Brave / HTTP) ───────────────────────────────
     useEffect(() => {
         const checkDiagnostics = async () => {
             const isSecure = window.isSecureContext;
             const isBrave = !!(navigator as any).brave && await (navigator as any).brave.isBrave();
-            
             if (!isSecure) {
-                console.error("[WebRTC Diagnosis] AMBIENTE NÃO SEGURO (HTTP). WebRTC será bloqueado no celular.");
+                console.error("[WebRTC Diagnosis] INSECURE CONTEXT (HTTP). WebRTC will be blocked on mobile.");
             }
             if (isBrave) {
-                console.info("[WebRTC Diagnosis] Navegador Brave detectado. Se a tela estiver preta, desative o 'Brave Shields' ou verifique as permissões de WebRTC.");
+                console.info("[WebRTC Diagnosis] Brave detected. Disable Shields if screen is black.");
             }
         };
         checkDiagnostics();
@@ -161,13 +219,21 @@ export function useSessionScreenControl({
             if (document.visibilityState === 'visible') {
                 console.log("[ScreenShare] Visibility visible, checking connection...");
                 screenShareManagerRef.current?.checkAndReconnect();
+
+                // Also try to unmute on tab refocus — user gesture may now be available
+                const el = screenVideoRef.current;
+                if (el && el.muted && !el.paused) {
+                    el.muted = false;
+                    setVideoMuted(false);
+                    console.log("[ScreenShare] Unmuted on visibility change");
+                }
             }
         };
         document.addEventListener('visibilitychange', handleVisibility);
         return () => document.removeEventListener('visibilitychange', handleVisibility);
     }, []);
 
-    // Transmission audio volume sync
+    // ── Volume sync via localStorage / BroadcastChannel ──────────
     useEffect(() => {
         if (typeof window === "undefined") return;
         const handleVolumeSync = () => {
@@ -188,20 +254,29 @@ export function useSessionScreenControl({
         };
     }, []);
 
-    // Apply volume to video element
+    // ── Apply volume to video element ────────────────────────────
     useEffect(() => {
-        if (screenVideoRef.current) screenVideoRef.current.volume = transmissionVolume;
+        const el = screenVideoRef.current;
+        if (!el) return;
+        el.volume = transmissionVolume;
+        // If user raised volume while muted, take that as intent to unmute
+        if (transmissionVolume > 0 && el.muted) {
+            el.muted = false;
+            setVideoMuted(false);
+            console.log("[ScreenShare] Unmuted because volume was raised");
+        }
     }, [transmissionVolume, videoStream]);
 
+    // ── Reconnect stream (called from UI badge button) ───────────
     const reconnectStream = async () => {
         setVideoNoSignal(false);
         const videoEl = screenVideoRef.current;
         if (videoEl) {
-            // Tenta primeiro só com play() — se falhar, silencia e retenta.
-            // Cobre o caso de vídeo já conectado mas pausado por autoplay policy.
+            videoEl.muted = false;
             videoEl.play().catch(() => {
                 videoEl.muted = true;
-                videoEl.play().catch(() => {});
+                setVideoMuted(true);
+                videoEl.play().catch(() => { });
             });
         }
         await screenShareManagerRef.current?.reconnect();
@@ -212,5 +287,7 @@ export function useSessionScreenControl({
         screenShareManagerRef,
         reconnectStream,
         videoNoSignal,
+        videoMuted,
+        unmuteVideo,
     };
 }

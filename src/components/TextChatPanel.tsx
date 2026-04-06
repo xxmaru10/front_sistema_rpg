@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageSquare, Send } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSocket } from "@/lib/socketClient";
 import { globalEventStore } from "@/lib/eventStore";
 import { computeState } from "@/lib/projections";
 import { ActionEvent } from "@/types/domain";
@@ -25,11 +25,11 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
     const [messages, setMessages] = useState<TextChatMessage[]>([]);
     const [inputText, setInputText] = useState("");
     const [unreadCount, setUnreadCount] = useState(0);
-    const channelRef = useRef<any>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [events, setEvents] = useState<ActionEvent[]>([]);
     const messagesRef = useRef<TextChatMessage[]>([]);
+    const isOpenRef = useRef(false);
 
     useEffect(() => {
         messagesRef.current = messages;
@@ -50,86 +50,57 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
 
     const state = useMemo(() => computeState(events), [events]);
     const getDisplayName = useCallback((uid: string) => {
-        const ownedPc = Object.values(state.characters).find(c => c.ownerUserId === uid && !c.isNPC);
-        return ownedPc ? ownedPc.name : uid;
+        const ownedPc = Object.values(state.characters || {}).find(
+            (c: any) => c.ownerUserId === uid && !c.isNPC
+        );
+        return ownedPc ? (ownedPc as any).name : uid;
     }, [state.characters]);
 
     useEffect(() => {
-        const channel = supabase.channel(`text-chat-db-${sessionId}`)
-            .on(
-                'postgres_changes' as any,
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'webrtc_signals',
-                    filter: `session_id=eq.${sessionId}`
-                },
-                (payload: any) => {
-                    const row = payload.new;
-                    const type = row.signal_type;
-                    if (!type || !type.startsWith('text-chat-')) return;
-                    if (row.to_user && row.to_user !== userId) return;
+        const socket = getSocket(userId);
 
-                    if (type === 'text-chat-msg') {
-                        if (row.from_user === userId) return; // my own already optimistic
-                        const newMsg = row.payload.message;
-                        setMessages(prev => {
-                            const exists = prev.find(m => m.id === newMsg.id);
-                            if (exists) return prev;
-                            const next = [...prev, newMsg];
-                            if (next.length > 100) return next.slice(next.length - 100);
-                            return next;
-                        });
-
-                        if (!isOpenRef.current) {
-                            setUnreadCount(prev => prev + 1);
-                        }
-                    } else if (type === 'text-chat-history-req') {
-                        const currentMsgs = messagesRef.current;
-                        if (currentMsgs.length > 0 && row.from_user !== userId) {
-                            supabase.from('webrtc_signals').insert({
-                                session_id: sessionId,
-                                from_user: userId,
-                                to_user: row.from_user,
-                                signal_type: 'text-chat-history-res',
-                                payload: { messages: currentMsgs }
-                            }).then();
-                        }
-                    } else if (type === 'text-chat-history-res') {
-                        if (row.to_user === userId) {
-                            setMessages(prev => {
-                                if (prev.length < row.payload.messages.length) {
-                                    return row.payload.messages;
-                                }
-                                return prev;
-                            });
-                        }
-                    }
-                }
-            )
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    setTimeout(() => {
-                        supabase.from('webrtc_signals').insert({
-                            session_id: sessionId,
-                            from_user: userId,
-                            to_user: null,
-                            signal_type: 'text-chat-history-req',
-                            payload: {}
-                        }).then();
-                    }, 500);
-                }
+        const handleNewMsg = (msg: TextChatMessage) => {
+            if (msg.userId === userId) return;
+            setMessages(prev => {
+                const exists = prev.find(m => m.id === msg.id);
+                if (exists) return prev;
+                const next = [...prev, msg];
+                return next.length > 100 ? next.slice(next.length - 100) : next;
             });
+            if (!isOpenRef.current) setUnreadCount(prev => prev + 1);
+        };
 
-        channelRef.current = channel;
+        const handleHistoryReq = (data: { from: string; socketId: string }) => {
+            const currentMsgs = messagesRef.current;
+            if (currentMsgs.length > 0 && data.from !== userId) {
+                socket.emit('text-chat-history-res', {
+                    toSocketId: data.socketId,
+                    messages: currentMsgs,
+                });
+            }
+        };
+
+        const handleHistoryRes = (msgs: TextChatMessage[]) => {
+            setMessages(prev => prev.length < msgs.length ? msgs : prev);
+        };
+
+        socket.on('text-chat-msg', handleNewMsg);
+        socket.on('text-chat-history-req', handleHistoryReq);
+        socket.on('text-chat-history-res', handleHistoryRes);
+
+        // Request history from other participants
+        const historyTimer = setTimeout(() => {
+            socket.emit('text-chat-history-req', { sessionId, from: userId });
+        }, 500);
 
         return () => {
-            supabase.removeChannel(channel);
+            clearTimeout(historyTimer);
+            socket.off('text-chat-msg', handleNewMsg);
+            socket.off('text-chat-history-req', handleHistoryReq);
+            socket.off('text-chat-history-res', handleHistoryRes);
         };
     }, [sessionId, userId]);
 
-    // Track isOpen ref for unread count logic
-    const isOpenRef = useRef(false);
     useEffect(() => {
         isOpenRef.current = isOpen;
         if (isOpen) {
@@ -154,10 +125,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                 setIsOpen(false);
             }
         };
-
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
+        if (isOpen) document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isOpen]);
 
@@ -168,25 +136,17 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
             id: uuidv4(),
             userId,
             text: inputText.trim(),
-            timestamp: Date.now()
+            timestamp: Date.now(),
         };
 
-        // Optimistically update
         setMessages(prev => {
             const next = [...prev, newMsg];
-            if (next.length > 100) return next.slice(next.length - 100);
-            return next;
+            return next.length > 100 ? next.slice(next.length - 100) : next;
         });
-
         setInputText("");
 
-        await supabase.from('webrtc_signals').insert({
-            session_id: sessionId,
-            from_user: userId,
-            to_user: null,
-            signal_type: 'text-chat-msg',
-            payload: { message: newMsg }
-        });
+        const socket = getSocket(userId);
+        socket.emit('text-chat-send', { sessionId, message: newMsg });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -229,7 +189,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                         padding: '2px 4px',
                         borderRadius: '8px',
                         minWidth: '16px',
-                        textAlign: 'center'
+                        textAlign: 'center',
                     }}>
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
@@ -242,13 +202,13 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                     style={{
                         position: 'fixed',
                         top: '70px',
-                        right: '76px', // adjust so it's not strictly on top of voice chat
+                        right: '76px',
                         width: '300px',
                         height: '400px',
                         background: 'rgba(15, 15, 15, 0.97)',
                         backdropFilter: 'blur(20px)',
                         border: '1px solid rgba(var(--accent-rgb), 0.25)',
-                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(var(--accent-rgb), 0.1)',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(var(--accent-rgb), 0.1)',
                         zIndex: 2000,
                         display: 'flex',
                         flexDirection: 'column',
@@ -269,7 +229,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                             textTransform: 'uppercase',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            gap: '6px',
                         }}>
                             <MessageSquare size={14} /> CHAT
                         </span>
@@ -297,7 +257,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                         padding: '12px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '10px'
+                        gap: '10px',
                     }}>
                         {messages.length === 0 ? (
                             <div style={{
@@ -305,7 +265,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                                 color: 'var(--text-secondary)',
                                 fontSize: '0.75rem',
                                 marginTop: '16px',
-                                fontStyle: 'italic'
+                                fontStyle: 'italic',
                             }}>
                                 O chat está vazio. As mensagens desaparecem quando todos saem.
                             </div>
@@ -318,7 +278,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                                         maxWidth: '85%',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        alignItems: isMe ? 'flex-end' : 'flex-start'
+                                        alignItems: isMe ? 'flex-end' : 'flex-start',
                                     }}>
                                         {!isMe && (
                                             <span style={{
@@ -326,21 +286,21 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                                                 color: 'var(--text-secondary)',
                                                 marginBottom: '2px',
                                                 fontFamily: 'var(--font-header)',
-                                                paddingLeft: '4px'
+                                                paddingLeft: '4px',
                                             }}>
                                                 {getDisplayName(msg.userId)}
                                             </span>
                                         )}
                                         <div style={{
-                                            background: isMe ? 'rgba(var(--accent-rgb), 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                                            border: `1px solid ${isMe ? 'rgba(var(--accent-rgb), 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+                                            background: isMe ? 'rgba(var(--accent-rgb), 0.2)' : 'rgba(255,255,255,0.05)',
+                                            border: `1px solid ${isMe ? 'rgba(var(--accent-rgb), 0.4)' : 'rgba(255,255,255,0.1)'}`,
                                             padding: '8px 10px',
                                             borderRadius: '6px',
                                             fontSize: '0.8rem',
                                             color: 'var(--text-primary)',
                                             wordBreak: 'break-word',
                                             whiteSpace: 'pre-wrap',
-                                            lineHeight: 1.4
+                                            lineHeight: 1.4,
                                         }}>
                                             {msg.text}
                                         </div>
@@ -355,7 +315,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                         padding: '10px',
                         borderTop: '1px solid rgba(var(--accent-rgb), 0.15)',
                         display: 'flex',
-                        gap: '8px'
+                        gap: '8px',
                     }}>
                         <textarea
                             value={inputText}
@@ -373,7 +333,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                                 resize: 'none',
                                 height: '36px',
                                 fontFamily: 'inherit',
-                                overflow: 'hidden'
+                                overflow: 'hidden',
                             }}
                         />
                         <button
@@ -390,7 +350,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: inputText.trim() ? 'pointer' : 'default',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.2s',
                             }}
                         >
                             <Send size={14} />
@@ -401,4 +361,3 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
         </>
     );
 }
-
