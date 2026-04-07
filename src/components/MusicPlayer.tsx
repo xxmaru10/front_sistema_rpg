@@ -237,7 +237,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             console.log("[MusicPlayer] YT_NATIVE_READY");
                             ytReadyRef.current = true;
                             try {
-                                ytPlayerRef.current?.setPlaybackQuality?.("small");
                                 const targetVol = Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100);
                                 ytPlayerRef.current?.setVolume?.(targetVol);
                                 if (isMutedRef.current || !ytAutoplayUnlocked) {
@@ -284,7 +283,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     useEffect(() => {
         if (!isYouTubeUrl(currentTrack) || !ytReadyRef.current || !ytPlayerRef.current) return;
         try {
-            ytPlayerRef.current?.setPlaybackQuality?.("small");
             ytPlayerRef.current?.setVolume?.(Math.round((isMuted ? 0 : volume) * 100));
             if (isMuted || !ytAutoplayUnlocked) {
                 ytPlayerRef.current?.mute?.();
@@ -490,7 +488,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             player.unMute?.();
             player.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
             player.playVideo?.();
-            player.setPlaybackQuality?.("small");
         } catch (_) { }
 
         setIsMuted(false);

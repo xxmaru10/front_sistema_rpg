@@ -68,6 +68,8 @@ export class VoiceChatManager {
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
     private characterId?: string;
     private signalHandler: ((signal: VoiceSignal) => void) | null = null;
+    private lastVoiceSeenAt: Map<string, number> = new Map();
+    private static readonly PRESENCE_STALE_MS = 30000;
 
     private rtcConfig: RTCConfiguration = {
         iceServers: [
@@ -102,6 +104,62 @@ export class VoiceChatManager {
     get sessionParticipants() { return this._sessionParticipants; }
     get audioContextState() { return this.localAudioContext?.state || 'closed'; }
 
+    private normUserId(id: string): string {
+        return (id || '').trim().toLowerCase().normalize('NFC');
+    }
+
+    private touchVoiceSeen(userId: string) {
+        this.lastVoiceSeenAt.set(this.normUserId(userId), Date.now());
+    }
+
+    private getLastVoiceSeen(userId: string): number {
+        return this.lastVoiceSeenAt.get(this.normUserId(userId)) || 0;
+    }
+
+    private hasLivePeerConnectionForUser(userId: string): boolean {
+        const target = this.normUserId(userId);
+        for (const [peerId, pc] of this.peerConnections.entries()) {
+            if (this.normUserId(peerId) !== target) continue;
+            if (pc.connectionState === 'new' || pc.connectionState === 'connecting' || pc.connectionState === 'connected') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private sanitizePresence(participants: SessionParticipant[]): SessionParticipant[] {
+        const now = Date.now();
+        const dedup = new Map<string, SessionParticipant>();
+
+        for (const p of participants) {
+            const key = this.normUserId(p.userId);
+            const prev = dedup.get(key);
+            if (!prev) {
+                dedup.set(key, p);
+                continue;
+            }
+            dedup.set(key, {
+                userId: prev.userId.length >= p.userId.length ? prev.userId : p.userId,
+                inVoice: prev.inVoice || p.inVoice,
+                characterId: prev.characterId || p.characterId,
+            });
+        }
+
+        return Array.from(dedup.values()).map((p) => {
+            if (this.normUserId(p.userId) === this.normUserId(this.userId)) {
+                return { ...p, inVoice: this._isConnected, characterId: p.characterId || this.characterId };
+            }
+            if (!p.inVoice) return p;
+
+            const recentlySeen = (now - this.getLastVoiceSeen(p.userId)) <= VoiceChatManager.PRESENCE_STALE_MS;
+            const hasLivePc = this.hasLivePeerConnectionForUser(p.userId);
+            if (!recentlySeen && !hasLivePc) {
+                return { ...p, inVoice: false };
+            }
+            return p;
+        });
+    }
+
     // ─── Audio helpers ─────────────────────────────────────────
 
     private getLocalAudioContext(): AudioContext {
@@ -133,9 +191,9 @@ export class VoiceChatManager {
 
         this.signalHandler = (signal: VoiceSignal) => {
             // Ignore own signals
-            if (signal.from === this.userId) return;
+            if (this.normUserId(signal.from) === this.normUserId(this.userId)) return;
             // Ignore signals directed to someone else
-            if (signal.to && signal.to !== this.userId) return;
+            if (signal.to && this.normUserId(signal.to) !== this.normUserId(this.userId)) return;
             // Ignore non-voice signals
             if (!signal.type?.startsWith('voice-')) return;
 
@@ -148,8 +206,9 @@ export class VoiceChatManager {
         // Handle presence updates from server
         socket.off('voice-presence-update');
         socket.on('voice-presence-update', (participants: SessionParticipant[]) => {
-            this._sessionParticipants = participants;
-            this.onPresenceUpdate(participants);
+            const sanitized = this.sanitizePresence(participants);
+            this._sessionParticipants = sanitized;
+            this.onPresenceUpdate(sanitized);
         });
 
         // Announce presence
@@ -159,6 +218,7 @@ export class VoiceChatManager {
             characterId: this.characterId,
             inVoice: this._isConnected,
         });
+        this.touchVoiceSeen(this.userId);
     }
 
     // ─── Signal sending ────────────────────────────────────────
@@ -182,9 +242,9 @@ export class VoiceChatManager {
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
-                    echoCancellation: true,
-                    noiseSuppression: false,
-                    autoGainControl: false,
+                    echoCancellation: { ideal: true },
+                    noiseSuppression: { ideal: true },
+                    autoGainControl: { ideal: true },
                     channelCount: { ideal: 1 },
                 }
             });
@@ -206,6 +266,7 @@ export class VoiceChatManager {
                 characterId: this.characterId,
                 inVoice: true,
             });
+            this.touchVoiceSeen(this.userId);
 
             this.startLocalSpeakingDetection();
 
@@ -291,9 +352,9 @@ export class VoiceChatManager {
             const newStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: { exact: deviceId },
-                    echoCancellation: true,
-                    noiseSuppression: false,
-                    autoGainControl: false,
+                    echoCancellation: { ideal: true },
+                    noiseSuppression: { ideal: true },
+                    autoGainControl: { ideal: true },
                     channelCount: { ideal: 1 },
                 }
             });
@@ -322,6 +383,7 @@ export class VoiceChatManager {
             }
             this.startLocalSpeakingDetection();
             this.setMicMuted(this._micMuted);
+            this.touchVoiceSeen(this.userId);
 
             console.log(`[VoiceChat - ${this.userId}] Mic device changed to:`, deviceId);
         } catch (e) {
@@ -551,6 +613,7 @@ export class VoiceChatManager {
         if (type === 'voice-leave') {
             if (from === this.userId) return;
             this.voicePeerIds.delete(from);
+            this.lastVoiceSeenAt.delete(this.normUserId(from));
             this.removePeer(from);
             return;
         }
@@ -579,6 +642,7 @@ export class VoiceChatManager {
 
             this.removePeer(from);
             this.voicePeerIds.add(from);
+            this.touchVoiceSeen(from);
 
             if (!this._isConnected || !this.localStream) return;
 
@@ -599,16 +663,19 @@ export class VoiceChatManager {
                 console.warn(`[VoiceChat - ${this.userId}] Offer from ${from} dropped — not connected`);
                 return;
             }
+            this.touchVoiceSeen(from);
             await this.handleOffer(signal);
             return;
         }
 
         if (type === 'voice-answer' && signal.answer) {
+            this.touchVoiceSeen(from);
             await this.handleAnswer(signal);
             return;
         }
 
         if (type === 'voice-ice-candidate' && signal.candidate) {
+            this.touchVoiceSeen(from);
             const pc = this.peerConnections.get(from);
             if (pc) {
                 if (pc.remoteDescription) {
@@ -659,6 +726,7 @@ export class VoiceChatManager {
 
             const stream = event.streams?.[0] || new MediaStream([event.track]);
             this.peerStreams.set(peerId, stream);
+            this.touchVoiceSeen(peerId);
 
             let audioEl = this.peerAudioElements.get(peerId);
             if (!audioEl) {
@@ -694,6 +762,7 @@ export class VoiceChatManager {
                 }
             } else if (pc.connectionState === 'connected') {
                 this.reconnectAttempts.delete(peerId);
+                this.touchVoiceSeen(peerId);
                 console.log(`[VoiceChat] Successfully connected to ${peerId}`);
             }
         };

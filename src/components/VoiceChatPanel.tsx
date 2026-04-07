@@ -410,14 +410,31 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
     // Juntar participantes e peers: todos aparecem, com status de voice
     const allUsers = useMemo(() => {
-        const users = participants.map(p => {
-            const peer = peers.find(vp => vp.peerId === p.userId);
-            const isMe = p.userId === userId;
+        const norm = (s: string) => (s || '').trim().toLowerCase().normalize('NFC');
+        const dedupParticipants = Array.from(
+            participants.reduce((acc, p) => {
+                const key = norm(p.userId);
+                const prev = acc.get(key);
+                if (!prev) {
+                    acc.set(key, p);
+                } else {
+                    acc.set(key, {
+                        userId: prev.userId.length >= p.userId.length ? prev.userId : p.userId,
+                        inVoice: prev.inVoice || p.inVoice,
+                        characterId: prev.characterId || p.characterId,
+                    });
+                }
+                return acc;
+            }, new Map<string, SessionParticipant>()).values()
+        );
+
+        const users = dedupParticipants.map(p => {
+            const peer = peers.find(vp => norm(vp.peerId) === norm(p.userId));
+            const isMe = norm(p.userId) === norm(userId);
 
             // Resolver characterId: 1) prop local (eu), 2) presença, 3) fallback por ownerUserId/name no state atual
             let resolvedCharId = isMe ? characterId : p.characterId;
             if (!resolvedCharId) {
-                const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
                 const uidNorm = norm(p.userId);
                 const matched = Object.values(state.characters).find(c =>
                     norm(c.ownerUserId) === uidNorm ||
