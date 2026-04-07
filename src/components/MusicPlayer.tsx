@@ -2,9 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import dynamic from "next/dynamic";
-// Carregamento dinâmico do ReactPlayer para evitar erros de SSR e types em tempo de compilação
-const ReactPlayer = dynamic(() => import("@/components/ReactPlayerWrapper"), { ssr: false });
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
@@ -12,6 +9,11 @@ import { supabase } from "@/lib/supabaseClient";
 
 const isYouTubeUrl = (url: string) =>
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
+
+const getYouTubeVideoId = (url: string): string | null => {
+    const match = url.match(/(?:youtube\.com\/watch\?.*?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
+};
 
 // Extrai apenas o videoId e retorna URL canônica watch?v=ID
 // Remove parâmetros de playlist/mix (list=RD..., start_radio=1) que interferem
@@ -34,11 +36,19 @@ interface Playlist {
     tracks: string[];
 }
 
+declare global {
+    interface Window {
+        YT?: any;
+        onYouTubeIframeAPIReady?: () => void;
+    }
+}
+
 const BUCKET_NAME = "campaign-uploads";
 
 export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const reactPlayerRef = useRef<any>(null);
+    const ytPlayerRef = useRef<any>(null);
+    const ytContainerIdRef = useRef(`yt-audio-${Math.random().toString(36).slice(2)}`);
     const pendingSeekRef = useRef<number | null>(null);
     const isTemporaryRef = useRef(false);
     const restoreUrlRef = useRef("");
@@ -67,6 +77,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
     const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
     const [ytNeedsManualUnlock, setYtNeedsManualUnlock] = useState(false);
+    const [ytManualNonce, setYtManualNonce] = useState(0);
 
     useEffect(() => {
         setIsMounted(true);
@@ -77,6 +88,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         if (isYouTubeUrl(currentTrack)) {
             setYtAutoplayUnlocked(false);
             setYtNeedsManualUnlock(false);
+            setYtManualNonce(0);
             ytPlayedRef.current = false;
         }
     }, [currentTrack]);
@@ -188,8 +200,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     
                     if (playing && event.payload.startedAt) {
                         const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
-                        if (reactPlayerRef.current && typeof reactPlayerRef.current.seekTo === 'function') {
-                            reactPlayerRef.current.seekTo(elapsed, 'seconds');
+                        if (ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+                            ytPlayerRef.current.seekTo(elapsed, true);
                         } else {
                             pendingSeekRef.current = elapsed;
                         }
@@ -327,8 +339,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         if (playing) {
             const now = Date.now();
             const currentSec = isYouTubeUrl(url)
-                ? (reactPlayerRef.current && typeof reactPlayerRef.current.getCurrentTime === 'function'
-                    ? (reactPlayerRef.current.getCurrentTime() || 0)
+                ? (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function'
+                    ? (ytPlayerRef.current.getCurrentTime() || 0)
                     : 0)
                 : (audioRef.current?.currentTime || 0);
             startedAt = new Date(now - (currentSec * 1000)).toISOString();
@@ -368,6 +380,9 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         setIsMuted(false);
         setYtAutoplayUnlocked(true);
         setYtNeedsManualUnlock(false);
+        if (reason.startsWith("manual-button")) {
+            setYtManualNonce((n) => n + 1);
+        }
         console.log(`[MusicPlayer] YT_UNLOCK_APPLIED — reason=${reason} internal=${internal ? "ok" : "missing"}`);
     }, []);
 
@@ -586,6 +601,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 return createPortal(
                     <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '1px', height: '1px', pointerEvents: 'none' }}>
                         <ReactPlayer
+                            key={`${currentTrack}-${ytManualNonce}`}
                             ref={reactPlayerRef}
                             width="1px"
                             height="1px"
