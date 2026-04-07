@@ -45,6 +45,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const restoreLoopRef = useRef(true);
     const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
     const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
+    const ytUnlockTimerRef = useRef<number | null>(null);
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -66,6 +67,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // Controla muted-start do YouTube: começa mudo para garantir autoplay
     // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
     const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
+    const [ytNeedsManualUnlock, setYtNeedsManualUnlock] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -75,9 +77,19 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     useEffect(() => {
         if (isYouTubeUrl(currentTrack)) {
             setYtAutoplayUnlocked(false);
+            setYtNeedsManualUnlock(false);
             ytPlayedRef.current = false;
         }
     }, [currentTrack]);
+
+    useEffect(() => {
+        return () => {
+            if (ytUnlockTimerRef.current !== null) {
+                clearTimeout(ytUnlockTimerRef.current);
+                ytUnlockTimerRef.current = null;
+            }
+        };
+    }, []);
 
     const fetchPlaylists = async () => {
         setLoading(true);
@@ -344,6 +356,50 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         } as any);
     };
 
+    const forceYouTubeAudioUnlock = useCallback((reason: string) => {
+        const maxAttempts = 5;
+        const tryUnlock = (attempt: number) => {
+            const internal = reactPlayerRef.current?.getInternalPlayer?.();
+            if (!internal) {
+                console.warn(`[MusicPlayer] YT_STATE — reason=${reason} attempt=${attempt} internal=missing`);
+            } else {
+                try {
+                    internal.unMute?.();
+                    internal.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
+                    internal.playVideo?.();
+                } catch (e) {
+                    console.warn("[MusicPlayer] YT_UNLOCK_CALL_ERROR:", e);
+                }
+
+                const muted = typeof internal.isMuted === "function" ? internal.isMuted() : undefined;
+                const playerVol = typeof internal.getVolume === "function" ? internal.getVolume() : undefined;
+                const playerState = typeof internal.getPlayerState === "function" ? internal.getPlayerState() : undefined;
+                const unlocked = muted === false && ((typeof playerVol !== "number") || playerVol > 0) && (playerState === 1 || typeof playerState === "undefined");
+
+                console.log(`[MusicPlayer] YT_STATE — reason=${reason} attempt=${attempt} state=${String(playerState)} muted=${String(muted)} vol=${String(playerVol)} unlocked=${String(unlocked)}`);
+
+                if (unlocked) {
+                    setYtAutoplayUnlocked(true);
+                    setYtNeedsManualUnlock(false);
+                    return;
+                }
+            }
+
+            if (attempt < maxAttempts) {
+                ytUnlockTimerRef.current = window.setTimeout(() => tryUnlock(attempt + 1), 250);
+            } else {
+                setYtNeedsManualUnlock(true);
+                console.warn("[MusicPlayer] YT_UNLOCK_FAILED — exibindo botão manual");
+            }
+        };
+
+        if (ytUnlockTimerRef.current !== null) {
+            clearTimeout(ytUnlockTimerRef.current);
+            ytUnlockTimerRef.current = null;
+        }
+        tryUnlock(1);
+    }, []);
+
     useEffect(() => {
         if (audioRef.current) {
             audioRef.current.volume = isMuted ? 0 : volume;
@@ -453,6 +509,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     <Link size={12} />
                 </button>
             </div>
+            {isYouTubeUrl(currentTrack) && ytNeedsManualUnlock && (
+                <div className="control-row">
+                    <button
+                        className="control-btn"
+                        style={{ width: "100%", color: "#e0bb6b", borderColor: "rgba(197,160,89,0.5)" }}
+                        onClick={() => forceYouTubeAudioUnlock("manual-button")}
+                        title="Forçar áudio do YouTube"
+                    >
+                        Ativar áudio YouTube
+                    </button>
+                </div>
+            )}
             <div className="control-row">
                 <select
                     className="track-select"
@@ -520,8 +588,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
             pendingSeekRef.current = null;
         }
-        // Unmute acontece em onPlay (que comprovadamente dispara)
-        // Este timeout serve apenas como alerta de diagnóstico se onPlay não vier
+        // Se estiver tocando e onPlay atrasar/suprimir, tenta destravar via API interna
+        if (isPlayingRef.current) {
+            forceYouTubeAudioUnlock("onReady");
+        }
         ytPlayedRef.current = false;
         setTimeout(() => {
             if (!ytPlayedRef.current) {
@@ -558,17 +628,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 onReady: handleYouTubeReady,
                                 onPlay: () => {
                                     ytPlayedRef.current = true;
-                                    setYtAutoplayUnlocked(true);
-                                    // Força unmute direto no IFrame API — o prop muted:false via re-render
-                                    // pode não ser processado pelo iframe em todos os browsers
-                                    try {
-                                        const internal = reactPlayerRef.current?.getInternalPlayer();
-                                        if (internal) {
-                                            internal.unMute?.();
-                                            internal.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
-                                        }
-                                    } catch (_) { /* ignore */ }
-                                    console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso → áudio desbloqueado');
+                                    forceYouTubeAudioUnlock("onPlay");
+                                    console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso');
                                 },
                                 onError: (e: any) => console.warn('[MusicPlayer] YT_ERROR:', e),
                             } as any}
@@ -660,6 +721,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             <Link size={12} />
                         </button>
                     </div>
+                    {isYouTubeUrl(currentTrack) && ytNeedsManualUnlock && (
+                        <div className="control-row">
+                            <button
+                                className="control-btn"
+                                style={{ width: "100%", color: "#e0bb6b", borderColor: "rgba(197,160,89,0.5)" }}
+                                onClick={() => forceYouTubeAudioUnlock("manual-button-unified")}
+                                title="Forçar áudio do YouTube"
+                            >
+                                Ativar áudio YouTube
+                            </button>
+                        </div>
+                    )}
                     <div className="control-row">
                         <select
                             className="track-select"
