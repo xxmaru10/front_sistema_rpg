@@ -26,6 +26,9 @@ export class ScreenShareManager {
     private _receivedTracks: Map<string, MediaStreamTrack> = new Map();
     private signalHandler: ((signal: WebRTCSignal) => void) | null = null;
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+    private isHealthyConnectionState(state: RTCPeerConnectionState): boolean {
+        return state === 'new' || state === 'connecting' || state === 'connected';
+    }
 
     private rtcConfig: RTCConfiguration = {
         iceServers: [
@@ -243,6 +246,11 @@ export class ScreenShareManager {
             if (!peerId || peerId === this.userId) return;
 
             if (this.isBroadcaster) {
+                const existingPc = this.peerConnections.get(peerId);
+                if (existingPc && this.isHealthyConnectionState(existingPc.connectionState)) {
+                    console.log(`[WebRTC - ${this.userId}] Peer ${peerId} already has healthy connection (${existingPc.connectionState}), skipping recreate`);
+                    return;
+                }
                 console.log(`[WebRTC - ${this.userId}] Peer joined: ${peerId} — creating connection`);
                 this.createPeerConnection(peerId);
             } else {
@@ -292,8 +300,12 @@ export class ScreenShareManager {
 
     private async createPeerConnection(peerId: string) {
         console.log(`[WebRTC - ${this.userId}] Creating peer connection for:`, peerId);
-        if (this.peerConnections.has(peerId)) {
-            this.peerConnections.get(peerId)?.close();
+        const existingPc = this.peerConnections.get(peerId);
+        if (existingPc && this.isHealthyConnectionState(existingPc.connectionState)) {
+            return existingPc;
+        }
+        if (existingPc) {
+            existingPc.close();
         }
 
         const pc = new RTCPeerConnection(this.rtcConfig);
@@ -301,6 +313,7 @@ export class ScreenShareManager {
 
         // Safety timeout: close stuck connections after 15s
         const safetyTimeout = setTimeout(() => {
+            if (this.peerConnections.get(peerId) !== pc) return;
             if (pc.connectionState === 'new' || pc.connectionState === 'connecting') {
                 console.warn(`[WebRTC] Safety timeout: closing stuck connection for ${peerId}`);
                 pc.close();
@@ -458,6 +471,10 @@ export class ScreenShareManager {
         console.log(`[WebRTC - ${this.userId}] Handling answer from:`, sourceId);
         const pc = this.peerConnections.get(sourceId);
         if (pc) {
+            if (pc.signalingState !== 'have-local-offer') {
+                console.warn(`[WebRTC - ${this.userId}] Ignoring stale answer from ${sourceId} (state: ${pc.signalingState})`);
+                return;
+            }
             try {
                 await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
                 const queued = this.pendingCandidates.get(sourceId);

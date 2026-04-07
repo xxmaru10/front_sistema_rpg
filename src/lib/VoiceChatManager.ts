@@ -64,6 +64,7 @@ export class VoiceChatManager {
     private voicePeerIds: Set<string> = new Set();
     private reconnectAttempts: Map<string, number> = new Map();
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+    private static readonly SCREEN_SHARE_PEER_DUCK_FACTOR = 0.35;
     private characterId?: string;
     private signalHandler: ((signal: VoiceSignal) => void) | null = null;
     private lastVoiceSeenAt: Map<string, number> = new Map();
@@ -183,8 +184,8 @@ export class VoiceChatManager {
         return {
             deviceId: deviceId ? { exact: deviceId } : undefined,
             echoCancellation: true,
-            noiseSuppression: false,
-            autoGainControl: false,
+            noiseSuppression: true,
+            autoGainControl: true,
             channelCount: { ideal: 1 },
         };
     }
@@ -283,15 +284,13 @@ export class VoiceChatManager {
         this.peerAudioElements.forEach((audioEl, peerId) => {
             const userMuted = this.peerMuted.get(peerId) ?? false;
             const desiredVolume = Math.max(0, Math.min(1, this.peerVolumes.get(peerId) ?? 1));
-
-            if (this.suppressPeerPlaybackForScreenShare) {
-                audioEl.muted = true;
-                audioEl.volume = 0;
-                return;
-            }
+            const duckingMultiplier = this.suppressPeerPlaybackForScreenShare
+                ? VoiceChatManager.SCREEN_SHARE_PEER_DUCK_FACTOR
+                : 1;
+            const finalVolume = Math.max(0, Math.min(1, desiredVolume * duckingMultiplier));
 
             audioEl.muted = userMuted;
-            audioEl.volume = desiredVolume;
+            audioEl.volume = userMuted ? 0 : finalVolume;
             if (audioEl.srcObject && audioEl.paused) {
                 audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
             }
@@ -350,7 +349,9 @@ export class VoiceChatManager {
                 if (!params.encodings || params.encodings.length === 0) {
                     params.encodings = [{}];
                 }
-                params.encodings[0].maxBitrate = 32000;
+                const peersInMesh = Math.max(1, this.peerConnections.size);
+                const targetBitrate = peersInMesh >= 9 ? 40000 : 48000;
+                params.encodings[0].maxBitrate = targetBitrate;
                 (params.encodings[0] as any).dtx = "enabled";
                 (params.encodings[0] as any).ptime = 20;
                 await sender.setParameters(params);

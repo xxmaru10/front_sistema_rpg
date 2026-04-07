@@ -512,7 +512,82 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 .filter((e: any) => e.type === "MUSIC_PLAYBACK_CHANGED" && !e.payload?.isTemporary)
                 .pop() as any;
 
-            if (lastDeltaMusic) return;
+            if (lastDeltaMusic) {
+                const eventSeq = Number(lastDeltaMusic.seq || 0);
+                if (eventSeq > 0) {
+                    lastMusicSeqRef.current = eventSeq;
+                }
+                const eventTs = new Date(lastDeltaMusic.createdAt || 0).getTime();
+                if (Number.isFinite(eventTs) && eventTs > 0) {
+                    lastMusicEventTsRef.current = eventTs;
+                }
+
+                const payload = lastDeltaMusic.payload || {};
+                const url = normalizeYouTubeUrl(payload.url || "");
+                const playing = !!payload.playing;
+                const loop = payload.loop ?? true;
+
+                if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
+                    console.warn("[MusicPlayer] Ignoring non-playable YouTube URL from bulk:", url);
+                    return;
+                }
+
+                if (isPlayableYouTubeUrl(url)) {
+                    if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current.currentTime = 0;
+                        audioRef.current.removeAttribute("src");
+                    }
+                    setCurrentTrack(url);
+                    setIsPlaying(playing);
+                    setIsLooping(loop);
+
+                    if (playing && payload.startedAt) {
+                        const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
+                        if (isYouTubePlayerAttached() && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+                            ytPlayerRef.current.seekTo(elapsed, true);
+                        } else {
+                            pendingSeekRef.current = elapsed;
+                        }
+                    }
+                } else {
+                    setCurrentTrack(url);
+                    setIsPlaying(playing);
+                    setIsLooping(loop);
+                    if (audioRef.current) {
+                        try {
+                            if (isYouTubePlayerAttached()) {
+                                ytPlayerRef.current?.pauseVideo?.();
+                                ytPlayerRef.current?.stopVideo?.();
+                            }
+                        } catch (_) { }
+
+                        const fullUrl = getSupabaseUrl(url);
+                        if (audioRef.current.src !== fullUrl && url) {
+                            audioRef.current.src = fullUrl;
+                            audioRef.current.load();
+                        }
+
+                        if (playing) {
+                            if (payload.startedAt) {
+                                const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
+                                if (Math.abs(audioRef.current.currentTime - elapsed) > 2) {
+                                    audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+                                }
+                            }
+                            audioRef.current.play().catch((e) => console.warn("Autoplay blocked on bulk music restore:", e));
+                        } else {
+                            audioRef.current.pause();
+                        }
+                        audioRef.current.loop = loop;
+                    }
+                }
+
+                isTemporaryRef.current = !!payload.isTemporary;
+                restoreUrlRef.current = payload.restoreUrl || "";
+                restoreLoopRef.current = payload.restoreLoop ?? true;
+                return;
+            }
 
             const snap = globalEventStore.getSnapshotState() as any;
             const snapMusic = snap?.currentMusic;
