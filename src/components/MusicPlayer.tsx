@@ -52,10 +52,20 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const [showControls, setShowControls] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    // Controla muted-start do YouTube: começa mudo para garantir autoplay
+    // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
+    const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    // Resetar unlock a cada nova faixa YouTube (cada troca de URL começa muda)
+    useEffect(() => {
+        if (isYouTubeUrl(currentTrack)) {
+            setYtAutoplayUnlocked(false);
+        }
+    }, [currentTrack]);
 
     const fetchPlaylists = async () => {
         setLoading(true);
@@ -468,21 +478,15 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [isLooping, userRole, playNext, userId, sessionId, currentTrack]);
 
     const handleYouTubeReady = () => {
+        console.log('[MusicPlayer] YT_READY — isPlaying:', isPlayingRef.current, 'pendingSeek:', pendingSeekRef.current);
         if (pendingSeekRef.current !== null && reactPlayerRef.current && typeof reactPlayerRef.current.seekTo === 'function') {
             reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
             pendingSeekRef.current = null;
         }
-        // Autoplay unlock para players que receberam evento via WebSocket sem user gesture
-        if (isPlayingRef.current) {
-            const unlock = () => {
-                // Forçar re-render reactivo: setar isPlaying para false e true aciona
-                // o YouTube IFrame API a chamar playVideo() dentro de um gesture
-                setIsPlaying(false);
-                requestAnimationFrame(() => setIsPlaying(true));
-            };
-            document.addEventListener('pointerdown', unlock, { once: true });
-            document.addEventListener('keydown', unlock, { once: true });
-        }
+        // Desmutar após player pronto — o player iniciou mudo (ytAutoplayUnlocked=false)
+        // para garantir autoplay sem user gesture; agora habilita o áudio
+        setYtAutoplayUnlocked(true);
+        console.log('[MusicPlayer] YT_UNLOCKED — áudio ativado');
     };
 
     return (
@@ -492,25 +496,33 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         >
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
-            {isMounted && isYouTubeUrl(currentTrack) && createPortal(
-                <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '320px', height: '180px', pointerEvents: 'none' }}>
-                    <ReactPlayer
-                        ref={reactPlayerRef}
-                        width="320px"
-                        height="180px"
-                        {...{
-                            url: currentTrack,
-                            playing: isPlaying,
-                            loop: isLooping,
-                            volume: isMuted ? 0 : volume,
-                            muted: isMuted,
-                            onEnded: handleTrackEnded,
-                            onReady: handleYouTubeReady
-                        } as any}
-                    />
-                </div>,
-                document.body
-            )}
+            {isMounted && isYouTubeUrl(currentTrack) && (() => {
+                console.log('[MusicPlayer] YT_MOUNT — url:', currentTrack, 'playing:', isPlaying, 'unlocked:', ytAutoplayUnlocked);
+                return createPortal(
+                    <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '320px', height: '180px', pointerEvents: 'none' }}>
+                        <ReactPlayer
+                            ref={reactPlayerRef}
+                            width="320px"
+                            height="180px"
+                            {...{
+                                url: currentTrack,
+                                playing: isPlaying,
+                                loop: isLooping,
+                                // muted=true enquanto não confirmamos que o player está pronto
+                                // Isso garante autoplay sem user gesture (browsers permitem muted autoplay)
+                                // handleYouTubeReady define ytAutoplayUnlocked=true e isso desmuta
+                                volume: isMuted ? 0 : volume,
+                                muted: isMuted || !ytAutoplayUnlocked,
+                                onEnded: handleTrackEnded,
+                                onReady: handleYouTubeReady,
+                                onPlay: () => console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso'),
+                                onError: (e: any) => console.warn('[MusicPlayer] YT_ERROR:', e),
+                            } as any}
+                        />
+                    </div>,
+                    document.body
+                );
+            })()}
 
             {!unifiedMode && (
                 <button

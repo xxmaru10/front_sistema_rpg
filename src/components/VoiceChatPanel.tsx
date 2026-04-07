@@ -199,7 +199,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         setPeers([...updatedPeers]);
                     },
                     (updatedParticipants) => {
-                        console.log('[VoiceChat] Presence Update (Raw):', updatedParticipants.map(u => ({ userId: u.userId, char: u.characterId })));
+                        // Log inline (não colapsável) para diagnóstico de characterId
+                        console.log('[VoiceChat] Presence Update:', JSON.stringify(
+                            updatedParticipants.map(u => ({ uid: u.userId, charId: u.characterId ?? 'MISSING' }))
+                        ));
 
                         // Persistir characterId válido no Map e restaurar quando vier undefined
                         // Evita flicker e cobre race condition do mount inicial sem ?c=
@@ -209,7 +212,11 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                 return p;
                             }
                             const known = lastKnownCharacterIdRef.current.get(p.userId);
-                            return known ? { ...p, characterId: known } : p;
+                            if (known) {
+                                console.log(`[VoiceChat] Restoring charId from cache: ${p.userId} → ${known}`);
+                                return { ...p, characterId: known };
+                            }
+                            return p;
                         });
 
                         setParticipants(withKnownIds);
@@ -420,6 +427,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 );
                 if (matched) resolvedCharId = matched.id;
             }
+
+            // Diagnóstico: mostrar o que foi resolvido para cada participante
+            const charForLog = resolvedCharId ? state.characters[resolvedCharId] : null;
+            console.log(`[VoiceChat] allUsers resolve: ${p.userId} → charId=${resolvedCharId ?? 'none'} imgUrl=${charForLog?.imageUrl ? 'OK' : 'EMPTY'}`);
 
             return {
                 id: p.userId,
