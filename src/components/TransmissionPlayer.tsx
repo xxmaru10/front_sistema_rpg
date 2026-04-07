@@ -126,11 +126,6 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
                         </span>
                     </div>
                     {volumeControls}
-                    {!isActive && (
-                        <div style={{ fontSize: '0.6rem', color: '#666', textAlign: 'center', marginTop: '4px', fontStyle: 'italic' }}>
-                            Sem transmissão ativa
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -141,9 +136,6 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
                         {isActive && <div className="pulse-mini" />}
                     </div>
                     {volumeControls}
-                    {!isActive && (
-                        <div className="inactive-hint">Sem transmissão ativa</div>
-                    )}
                 </div>
             )}
 
@@ -287,12 +279,6 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
                     border-radius: 50%;
                     animation: pulse-trans 2s infinite;
                     flex-shrink: 0;
-                }
-                .inactive-hint {
-                    font-size: 0.58rem;
-                    color: #555;
-                    font-style: italic;
-                    margin-top: -2px;
                 }
             `}</style>
         </div>

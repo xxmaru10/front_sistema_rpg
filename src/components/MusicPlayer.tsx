@@ -722,7 +722,19 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
             {unifiedMode && (
                 <div className="unified-vol-row" style={{ order: 2 }}>
-                    <div className="unified-ch-label" style={{ color: '#c5a059' }}>
+                    <div
+                        className="unified-ch-label"
+                        style={{
+                            color: '#c5a059',
+                            fontSize: '0.6rem',
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                        }}
+                    >
                         <span>MÚSICA</span>
                         {isPlaying && <div className="pulse-mini gold" />}
                     </div>
