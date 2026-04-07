@@ -277,8 +277,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         let startedAt: string | undefined = undefined;
         if (playing) {
             const now = Date.now();
-            const currentSec = isYouTubeUrl(url) 
-                ? (reactPlayerRef.current?.getCurrentTime() || 0) 
+            const currentSec = isYouTubeUrl(url)
+                ? (reactPlayerRef.current && typeof reactPlayerRef.current.getCurrentTime === 'function'
+                    ? (reactPlayerRef.current.getCurrentTime() || 0)
+                    : 0)
                 : (audioRef.current?.currentTime || 0);
             startedAt = new Date(now - (currentSec * 1000)).toISOString();
         }
@@ -470,6 +472,17 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
             pendingSeekRef.current = null;
         }
+        // Autoplay unlock para players que receberam evento via WebSocket sem user gesture
+        if (isPlayingRef.current) {
+            const unlock = () => {
+                // Forçar re-render reactivo: setar isPlaying para false e true aciona
+                // o YouTube IFrame API a chamar playVideo() dentro de um gesture
+                setIsPlaying(false);
+                requestAnimationFrame(() => setIsPlaying(true));
+            };
+            document.addEventListener('pointerdown', unlock, { once: true });
+            document.addEventListener('keydown', unlock, { once: true });
+        }
     };
 
     return (
@@ -480,7 +493,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
             {isMounted && isYouTubeUrl(currentTrack) && createPortal(
-                <div style={{ position: 'fixed', bottom: 0, right: 0, width: '320px', height: '180px', opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
+                <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '320px', height: '180px', pointerEvents: 'none' }}>
                     <ReactPlayer
                         ref={reactPlayerRef}
                         width="320px"

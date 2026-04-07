@@ -1366,3 +1366,287 @@ A degradação causada pelo HFP mode do OS (que afeta a saída) só é resolvida
 - **G quarto**: AudioContext 48kHz + sampleRate constraints + aviso Bluetooth — melhora qualidade geral
 - **A quinto**: Unlock de autoplay para música Supabase
 - **E por último**: Requer investigação do backend antes de aplicar
+
+---
+
+## Segunda Tentativa de Fix — Sessão 2026-04-07
+
+> Resultado de teste real com bugs persistentes pós-primeira implementação.
+> YouTube continuava sem som; imagens de personagem não apareciam para nenhum usuário.
+> Novo erro no console: `TypeError: c.current.seekTo is not a function`.
+
+---
+
+### Fix Aplicado — YouTube: Portal para escapar `display:none` do pai
+
+#### Problema identificado
+
+O `UnifiedSoundPanel` (componente pai do MusicPlayer) usa:
+```css
+.unified-sound-panel { display: none; }
+.unified-sound-panel.show { display: flex; }
+```
+
+O fix anterior colocou o ReactPlayer em `display: none` dentro deste pai. O problema é que
+**`position: fixed` em filho NÃO escapa de `display: none` no pai** — regra de CSS: um
+elemento com `display: none` não renderiza nenhum descendente, independente de `position`.
+
+O YouTube iframe nunca era renderizado → nenhum som, nenhum evento `onReady`.
+
+#### Correção aplicada
+
+**Arquivo**: `src/components/MusicPlayer.tsx`
+
+Substituído o bloco condicional do ReactPlayer por `createPortal(document.body)`:
+
+```tsx
+// Antes (dentro do JSX normal — filho de UnifiedSoundPanel com display:none):
+{isYouTubeUrl(currentTrack) && (
+    <div style={{ display: 'none' }}>
+        <ReactPlayer ref={reactPlayerRef} width="320px" height="180px" ... />
+    </div>
+)}
+
+// Depois (portal para document.body — escapa de qualquer pai com display:none):
+{isMounted && isYouTubeUrl(currentTrack) && createPortal(
+    <div style={{
+        position: 'fixed',
+        bottom: 0,
+        right: 0,
+        width: '320px',
+        height: '180px',
+        opacity: 0,
+        pointerEvents: 'none',
+        zIndex: -1,
+    }}>
+        <ReactPlayer
+            ref={reactPlayerRef}
+            width="320px"
+            height="180px"
+            {...{
+                url: currentTrack,
+                playing: isPlaying,
+                loop: isLooping,
+                volume: isMuted ? 0 : volume,
+                muted: isMuted,
+                onEnded: handleTrackEnded,
+                onReady: handleYouTubeReady,
+            } as any}
+        />
+    </div>,
+    document.body
+)}
+```
+
+Também adicionado `import { createPortal } from "react-dom"` no topo do arquivo.
+
+O estado `isMounted` (useState → true em useEffect) garante que `document.body` existe
+antes de renderizar o portal (evita SSR crash).
+
+---
+
+### Fix Aplicado — YouTube: guard `typeof seekTo === 'function'`
+
+#### Problema identificado
+
+`TypeError: c.current.seekTo is not a function` no subscriber de `MUSIC_PLAYBACK_CHANGED`.
+
+`reactPlayerRef.current` pode ser não-nulo (o wrapper do `dynamic()` montou) mas ainda não
+ter exposto `seekTo` — o player interno inicializa de forma assíncrona. Chamar `seekTo`
+antes do `onReady` lança TypeError.
+
+#### Correção aplicada
+
+**Arquivo**: `src/components/MusicPlayer.tsx`
+
+Guard `typeof` adicionado em todos os pontos que chamam `seekTo`:
+
+```ts
+// No subscriber MUSIC_PLAYBACK_CHANGED (seek após receber evento):
+if (reactPlayerRef.current && typeof reactPlayerRef.current.seekTo === 'function') {
+    reactPlayerRef.current.seekTo(elapsed, 'seconds');
+} else {
+    pendingSeekRef.current = elapsed;  // seek aplicado quando onReady disparar
+}
+
+// No handleYouTubeReady:
+const handleYouTubeReady = () => {
+    if (
+        pendingSeekRef.current !== null &&
+        reactPlayerRef.current &&
+        typeof reactPlayerRef.current.seekTo === 'function'
+    ) {
+        reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
+        pendingSeekRef.current = null;
+    }
+};
+```
+
+---
+
+### Fix Aplicado — VoiceChat: `characterId` stale closure no VoiceChatManager
+
+#### Problema identificado
+
+`VoiceChatManager` é criado num `useEffect` com deps `[sessionId, userId, refreshKey]` com
+delay de 300ms. O `characterId` chega de `useHeaderLogic` num `useEffect` separado que lê
+`searchParams.get("c")` — ele chega DEPOIS do primeiro render. O manager captura
+`characterId = undefined` por closure stale ao ser criado.
+
+O manager emite `voice-presence` com `characterId: undefined`, o backend armazena `undefined`,
+e outros clientes nunca recebem o `characterId` correto → imagens não aparecem.
+
+#### Correção aplicada — `updateCharacterId()` em VoiceChatManager.ts
+
+**Arquivo**: `src/lib/VoiceChatManager.ts`
+
+Novo método público adicionado:
+
+```ts
+public updateCharacterId(characterId: string) {
+    if (this.characterId === characterId) return;
+    this.characterId = characterId;
+    const socket = getSocket(this.userId);
+    socket.emit('voice-presence', {
+        sessionId: this.sessionId,
+        userId: this.userId,
+        characterId: this.characterId,
+        inVoice: this._isConnected,
+    });
+}
+```
+
+#### Correção aplicada — `useEffect([characterId])` em VoiceChatPanel.tsx
+
+**Arquivo**: `src/components/VoiceChatPanel.tsx`
+
+`useEffect` adicionado para chamar `updateCharacterId` assim que o prop chega:
+
+```ts
+useEffect(() => {
+    if (characterId && managerRef.current) {
+        managerRef.current.updateCharacterId(characterId);
+    }
+}, [characterId]);
+```
+
+---
+
+### Fix Aplicado — VoiceChat: resolução de `characterId` com 3 etapas + Unicode NFC
+
+#### Problema identificado
+
+Mesmo com `characterId` chegando pelo backend, o `allUsers` useMemo usava apenas `p.characterId`
+para peers remotos. Se `p.characterId` fosse `undefined` (stale closure ainda não resolvido),
+o fallback tentava buscar por `userId`, mas sem `.normalize('NFC')`. Nomes com acentos (ex:
+"Elizárova") têm representações Unicode diferentes (NFC vs NFD), e a comparação com `===`
+falhava silenciosamente.
+
+#### Correção aplicada
+
+**Arquivo**: `src/components/VoiceChatPanel.tsx`
+
+`allUsers` useMemo com resolução em 3 etapas:
+
+```ts
+// Etapa 1: usar characterId do presence (remoto) ou prop (eu)
+let resolvedCharId = isMe ? characterId : p.characterId;
+
+// Etapa 2: fallback — buscar por ownerUserId ou name normalizado (NFC)
+if (!resolvedCharId) {
+    const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
+    const uidNorm = norm(p.userId);
+    const matched = Object.values(state.characters).find(c =>
+        norm(c.ownerUserId) === uidNorm ||
+        norm(c.name) === uidNorm
+    );
+    if (matched) resolvedCharId = matched.id;
+}
+
+// Etapa 3: usar resolvedCharId no objeto do usuário
+return { ...p, characterId: resolvedCharId };
+```
+
+`state.characters` adicionado como dependência do `allUsers` useMemo.
+
+`.normalize('NFC')` também aplicado nos helpers `getDisplayName` e `getCharacterImage`
+em todas as comparações de string.
+
+---
+
+### Fix Aplicado — VoiceChat: botão X no aviso Bluetooth
+
+#### Correção aplicada
+
+**Arquivo**: `src/components/VoiceChatPanel.tsx`
+
+Estado adicionado:
+```ts
+const [showBluetoothWarning, setShowBluetoothWarning] = useState(true);
+```
+
+Botão X adicionado no bloco do aviso Bluetooth:
+```tsx
+{isConnected && showBluetoothWarning && (
+    <div style={{ /* estilos existentes */ position: 'relative' }}>
+        ⚠ Usando fone Bluetooth? ...
+        <button
+            onClick={() => setShowBluetoothWarning(false)}
+            style={{
+                position: 'absolute', top: '4px', right: '4px',
+                background: 'none', border: 'none', color: 'rgba(255,200,80,0.7)',
+                cursor: 'pointer', fontSize: '0.7rem', padding: '0 2px',
+                lineHeight: 1,
+            }}
+            title="Fechar aviso"
+        >×</button>
+    </div>
+)}
+```
+
+---
+
+### Fix Aplicado — VoiceChat: qualidade de áudio — `latencyHint: 'interactive'`
+
+#### Problema identificado
+
+O fix anterior (Bug G) adicionou `{ sampleRate: 48000 }` nos AudioContexts do
+VoiceChatManager. Porém, forçar `sampleRate: 48000` quando o hardware nativo usa outra taxa
+(ex: 44100Hz) causa resampling pelo browser — que pode introduzir artefatos de qualidade.
+
+#### Correção aplicada
+
+**Arquivo**: `src/lib/VoiceChatManager.ts`
+
+AudioContexts alterados para usar `latencyHint: 'interactive'` em vez de `sampleRate` fixo:
+
+```ts
+// Antes:
+new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000 })
+
+// Depois:
+new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' })
+```
+
+`{ latencyHint: 'interactive' }` pede ao browser baixa latência sem forçar resampling —
+o browser usa a taxa nativa do hardware, eliminando artefatos de conversão.
+
+`sampleRate: { ideal: 48000 }` também removido das constraints do `getUserMedia` em
+`joinVoice()` e `setMicDevice()` pelo mesmo motivo.
+
+---
+
+### Sumário da Segunda Tentativa (2026-04-07)
+
+| Fix | Arquivo | Status |
+|-----|---------|--------|
+| YouTube: portal para escapar `display:none` pai | `MusicPlayer.tsx` | ✅ Aplicado |
+| YouTube: guard `typeof seekTo === 'function'` | `MusicPlayer.tsx` | ✅ Aplicado |
+| VoiceChat: `updateCharacterId()` para stale closure | `VoiceChatManager.ts` | ✅ Aplicado |
+| VoiceChat: `useEffect([characterId])` → `updateCharacterId` | `VoiceChatPanel.tsx` | ✅ Aplicado |
+| VoiceChat: resolução 3 etapas + `.normalize('NFC')` | `VoiceChatPanel.tsx` | ✅ Aplicado |
+| VoiceChat: botão X no aviso Bluetooth | `VoiceChatPanel.tsx` | ✅ Aplicado |
+| VoiceChat: `latencyHint: 'interactive'` nos AudioContexts | `VoiceChatManager.ts` | ✅ Aplicado |
+
+**Pendente de verificação em sessão real**: imagens de personagem (depende de `characterId`
+chegar corretamente via backend após `updateCharacterId` re-emitir) e YouTube com portal.

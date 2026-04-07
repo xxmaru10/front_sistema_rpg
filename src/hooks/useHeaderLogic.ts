@@ -93,6 +93,34 @@ export function useHeaderLogic(
         }
     }, [searchParams]);
 
+    // ── Auto-detect characterId quando ausente (apenas match único) ────────
+    useEffect(() => {
+        if (characterId) return;                     // já temos — não sobrescrever
+        if (!userId) return;                          // userId ainda não resolvido
+        if (!sessionId) return;                       // sem sessão
+        const storedRole = localStorage.getItem("userRole");
+        if (storedRole === "GM") return;              // GM não tem personagem
+
+        const snapshot = globalEventStore.getSnapshotState();
+        if (!snapshot?.characters) return;
+
+        const norm = (s: string) => (s || "").trim().toLowerCase().normalize("NFC");
+        const uidNorm = norm(userId);
+
+        const matches = Object.values(snapshot.characters).filter(c =>
+            norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
+        );
+
+        if (matches.length === 1) {
+            // Match único: seguro para auto-associar
+            const detectedId = matches[0].id;
+            setCharacterId(detectedId);
+            localStorage.setItem("characterId", detectedId);
+            console.info(`[useHeaderLogic] Auto-detect characterId: ${matches[0].name} (${detectedId})`);
+        }
+        // 0 ou 2+ matches: não fazer nada — depender de ?c= explícito
+    }, [userId, characterId, sessionId]);
+
     // ── Event store subscriptions ──────────────────────────────────────────
     useEffect(() => {
         if (!sessionId) return;

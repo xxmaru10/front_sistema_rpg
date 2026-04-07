@@ -39,6 +39,9 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const panelRef = useRef<HTMLDivElement>(null);
     const speakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const wasConnectedBeforeRefresh = useRef(false);
+    // Persiste o último characterId conhecido por userId para evitar flicker
+    // quando a presença chega com update parcial (sem characterId)
+    const lastKnownCharacterIdRef = useRef<Map<string, string>>(new Map());
 
     const [events, setEvents] = useState<ActionEvent[]>([]);
 
@@ -197,23 +200,19 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                     },
                     (updatedParticipants) => {
                         console.log('[VoiceChat] Presence Update (Raw):', updatedParticipants.map(u => ({ userId: u.userId, char: u.characterId })));
-                        
-                        // Map missing characterIds from local character state if possible
-                        // Isto ajuda se o backend não retransmitir o characterId no broadcast
-                        const enriched = updatedParticipants.map(p => {
-                            if (p.characterId) return p;
-                            const char = Object.values(state.characters).find(c => 
-                                (c.ownerUserId || "").toLowerCase() === p.userId.toLowerCase() ||
-                                (c.name || "").toLowerCase() === p.userId.toLowerCase()
-                            );
-                            if (char) {
-                                console.log(`[VoiceChat] Enriched missing characterId for ${p.userId} -> ${char.id}`);
-                                return { ...p, characterId: char.id };
+
+                        // Persistir characterId válido no Map e restaurar quando vier undefined
+                        // Evita flicker e cobre race condition do mount inicial sem ?c=
+                        const withKnownIds = updatedParticipants.map(p => {
+                            if (p.characterId) {
+                                lastKnownCharacterIdRef.current.set(p.userId, p.characterId);
+                                return p;
                             }
-                            return p;
+                            const known = lastKnownCharacterIdRef.current.get(p.userId);
+                            return known ? { ...p, characterId: known } : p;
                         });
-                        
-                        setParticipants(enriched);
+
+                        setParticipants(withKnownIds);
                     },
                     characterId
                 );
