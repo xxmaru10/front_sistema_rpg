@@ -479,7 +479,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
             {isYouTubeUrl(currentTrack) && (
-                <div style={{ display: 'none' }}>
+                <div style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden', pointerEvents: 'none' }}>
                     <ReactPlayer
                         ref={reactPlayerRef}
                         width="320px"

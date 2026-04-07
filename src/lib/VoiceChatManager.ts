@@ -107,7 +107,7 @@ export class VoiceChatManager {
     private getLocalAudioContext(): AudioContext {
         if (typeof window === 'undefined') return {} as AudioContext;
         if (!this.localAudioContext) {
-            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000 });
+            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
         }
         return this.localAudioContext!;
     }
@@ -115,7 +115,7 @@ export class VoiceChatManager {
     private getPeerAudioContext(peerId: string): AudioContext {
         let ctx = this.peerAudioContexts.get(peerId);
         if (!ctx) {
-            ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000 });
+            ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
             this.peerAudioContexts.set(peerId, ctx);
         }
         return ctx;
@@ -185,7 +185,6 @@ export class VoiceChatManager {
                     echoCancellation: true,
                     noiseSuppression: false,
                     autoGainControl: false,
-                    sampleRate: { ideal: 48000 },
                     channelCount: { ideal: 1 },
                 }
             });
@@ -295,7 +294,6 @@ export class VoiceChatManager {
                     echoCancellation: true,
                     noiseSuppression: false,
                     autoGainControl: false,
-                    sampleRate: { ideal: 48000 },
                     channelCount: { ideal: 1 },
                 }
             });

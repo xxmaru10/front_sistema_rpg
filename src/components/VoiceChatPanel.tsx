@@ -27,6 +27,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [isManagerReady, setIsManagerReady] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [audioStatus, setAudioStatus] = useState<any>('closed');
+    const [showBluetoothWarning, setShowBluetoothWarning] = useState(true);
     const [audioInputDeviceId, setAudioInputDeviceId] = useState<string>('');
     const [audioOutputDeviceId, setAudioOutputDeviceId] = useState<string>('');
     const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
@@ -402,9 +403,21 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         const users = participants.map(p => {
             const peer = peers.find(vp => vp.peerId === p.userId);
             const isMe = p.userId === userId;
+
+            // Resolver characterId: 1) prop local (eu), 2) presença, 3) fallback por ownerUserId/name no state atual
+            let resolvedCharId = isMe ? characterId : p.characterId;
+            if (!resolvedCharId) {
+                const uidLower = p.userId.trim().toLowerCase();
+                const matched = Object.values(state.characters).find(c =>
+                    (c.ownerUserId || "").trim().toLowerCase() === uidLower ||
+                    (c.name || "").trim().toLowerCase() === uidLower
+                );
+                if (matched) resolvedCharId = matched.id;
+            }
+
             return {
                 id: p.userId,
-                characterId: isMe ? characterId : p.characterId,
+                characterId: resolvedCharId,
                 isMe,
                 inVoice: isMe ? isConnected : (peer?.inVoice || p.inVoice),
                 speaking: isMe ? localSpeaking : (peer?.speaking || false),
@@ -436,7 +449,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (b.isMe) return 1;
             return 0;
         });
-    }, [participants, peers, userId, characterId, isConnected, localSpeaking, localAudioLevel, micVolume, micMuted]);
+    }, [participants, peers, userId, characterId, isConnected, localSpeaking, localAudioLevel, micVolume, micMuted, state.characters]);
 
     const voiceCount = allUsers.filter(u => u.inVoice).length;
 
@@ -711,7 +724,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         )}
 
                         {/* Aviso Bluetooth — mostrar sempre que voice estiver conectado */}
-                        {isConnected && (
+                        {isConnected && showBluetoothWarning && (
                             <div style={{
                                 fontSize: '0.58rem',
                                 color: 'rgba(255, 200, 80, 0.85)',
@@ -721,10 +734,27 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                 padding: '5px 7px',
                                 lineHeight: '1.4',
                                 marginTop: '6px',
+                                position: 'relative' as const,
                             }}>
                                 ⚠ Usando fone Bluetooth? Selecione o <strong>microfone do computador</strong> como
                                 entrada para manter a qualidade de áudio. Fones Bluetooth no mic degradam toda a
                                 saída de áudio (incluindo música).
+                                <button
+                                    onClick={() => setShowBluetoothWarning(false)}
+                                    title="Fechar aviso"
+                                    style={{
+                                        position: 'absolute' as const,
+                                        top: '3px',
+                                        right: '4px',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'rgba(255, 200, 80, 0.6)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                        lineHeight: 1,
+                                        padding: '0 2px',
+                                    }}
+                                >✕</button>
                             </div>
                         )}
                     </div>
