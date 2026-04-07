@@ -162,12 +162,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
     const getCharacterImage = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
-        const storedRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : 'PLAYER';
 
         if (uidLower.includes('mestre') || uidLower === 'gm' || uidLower === 'narrador' || uidLower === 'narradora') {
             return null;
         }
-        if (storedRole === 'GM' && uid === userId) return null;
 
         const allChars = Object.values(state.characters);
 

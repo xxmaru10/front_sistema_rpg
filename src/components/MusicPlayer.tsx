@@ -559,6 +559,15 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 onPlay: () => {
                                     ytPlayedRef.current = true;
                                     setYtAutoplayUnlocked(true);
+                                    // Força unmute direto no IFrame API — o prop muted:false via re-render
+                                    // pode não ser processado pelo iframe em todos os browsers
+                                    try {
+                                        const internal = reactPlayerRef.current?.getInternalPlayer();
+                                        if (internal) {
+                                            internal.unMute?.();
+                                            internal.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
+                                        }
+                                    } catch (_) { /* ignore */ }
                                     console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso → áudio desbloqueado');
                                 },
                                 onError: (e: any) => console.warn('[MusicPlayer] YT_ERROR:', e),
