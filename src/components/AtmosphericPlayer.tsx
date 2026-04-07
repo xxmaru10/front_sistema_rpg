@@ -18,6 +18,14 @@ const ATMOSPHERIC_FOLDER = "Atmosferico";
 
 export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: AtmosphericPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const snapshotInitRef = useRef(false);
+    const sawLiveAtmosEventRef = useRef(false);
+    const lastAtmosSeqRef = useRef(0);
+    const lastAtmosEventTsRef = useRef(0);
+    const playOperationRef = useRef(0);
+    const autoplayUnlockPendingRef = useRef(false);
+    const autoplayUnlockHandlerRef = useRef<(() => void) | null>(null);
+    const audioPlayDesiredRef = useRef(false);
     const [tracks, setTracks] = useState<string[]>([]);
     const [currentTrack, setCurrentTrack] = useState<string>("");
     const [isPlaying, setIsPlaying] = useState(false);
@@ -80,6 +88,134 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
         return data.publicUrl;
     }, []);
 
+    const scheduleAutoplayUnlock = useCallback(() => {
+        if (autoplayUnlockPendingRef.current) return;
+        autoplayUnlockPendingRef.current = true;
+
+        const unlock = async () => {
+            autoplayUnlockPendingRef.current = false;
+            autoplayUnlockHandlerRef.current = null;
+            const audio = audioRef.current;
+            if (!audio || !audio.src || !audioPlayDesiredRef.current) return;
+
+            try {
+                await audio.play();
+                console.log("[AtmosphericPlayer] Autoplay unlocked by interaction");
+            } catch (err) {
+                console.warn("[AtmosphericPlayer] Autoplay still blocked after interaction:", err);
+            }
+        };
+
+        autoplayUnlockHandlerRef.current = unlock;
+        window.addEventListener("pointerdown", unlock, { once: true });
+        window.addEventListener("keydown", unlock, { once: true });
+        window.addEventListener("click", unlock, { once: true });
+        window.addEventListener("touchstart", unlock, { once: true });
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            const unlock = autoplayUnlockHandlerRef.current;
+            if (!unlock) return;
+
+            window.removeEventListener("pointerdown", unlock);
+            window.removeEventListener("keydown", unlock);
+            window.removeEventListener("click", unlock);
+            window.removeEventListener("touchstart", unlock);
+            autoplayUnlockHandlerRef.current = null;
+            autoplayUnlockPendingRef.current = false;
+        };
+    }, []);
+
+    const syncCurrentTimeFromStartedAt = useCallback((startedAt?: string) => {
+        if (!startedAt || !audioRef.current) return;
+        const audio = audioRef.current;
+        const startedAtTime = new Date(startedAt).getTime();
+        if (!Number.isFinite(startedAtTime) || startedAtTime <= 0) return;
+
+        const elapsed = Math.max(0, (Date.now() - startedAtTime) / 1000);
+        const applySeek = () => {
+            if (!audioRef.current) return;
+            const duration = audioRef.current.duration;
+            if (!Number.isFinite(duration) || duration <= 0) return;
+            const nextTime = elapsed % duration;
+            if (Math.abs(audioRef.current.currentTime - nextTime) > 2) {
+                audioRef.current.currentTime = nextTime;
+            }
+        };
+
+        if (audio.readyState >= 1) {
+            applySeek();
+        } else {
+            audio.addEventListener("loadedmetadata", applySeek, { once: true });
+        }
+    }, []);
+
+    const applyAtmosphericPlayback = useCallback((payload: any) => {
+        if (!audioRef.current || !payload) return;
+        const audio = audioRef.current;
+        const url = typeof payload.url === "string" ? payload.url : "";
+        const playing = !!payload.playing;
+        const loop = !!payload.loop;
+        const startedAt = payload.startedAt as string | undefined;
+
+        const targetFullUrl = url ? getSupabaseUrl(url) : "";
+        const isNewTrack = !!url && audio.src !== targetFullUrl;
+
+        if (isNewTrack) {
+            audio.pause();
+            audio.src = targetFullUrl;
+            audio.load();
+            setCurrentTrack(url);
+        } else if (!url) {
+            audio.pause();
+            audio.removeAttribute("src");
+            setCurrentTrack("");
+        }
+
+        setIsPlaying(playing);
+        setIsLooping(loop);
+        audio.loop = loop;
+        audioPlayDesiredRef.current = playing;
+
+        if (!playing) {
+            playOperationRef.current += 1;
+            audio.pause();
+            return;
+        }
+
+        if (!audio.src) return;
+
+        const operationId = ++playOperationRef.current;
+        syncCurrentTimeFromStartedAt(startedAt);
+
+        const playAudio = async () => {
+            try {
+                await audio.play();
+            } catch (e) {
+                if (operationId !== playOperationRef.current) return;
+
+                const errObj = e as any;
+                const noSupportedSource =
+                    errObj?.name === "NotSupportedError" ||
+                    /no supported source/i.test(String(errObj?.message || ""));
+                if (noSupportedSource || !audio.src) {
+                    console.warn("[AtmosphericPlayer] Unsupported source, skipping autoplay retry:", e);
+                    return;
+                }
+
+                if (errObj?.name === "AbortError") {
+                    // Normal race between play/pause during rapid event updates.
+                    return;
+                }
+
+                console.warn("[AtmosphericPlayer] Autoplay blocked, scheduling retry on interaction:", e);
+                scheduleAutoplayUnlock();
+            }
+        };
+        playAudio();
+    }, [getSupabaseUrl, scheduleAutoplayUnlock, syncCurrentTimeFromStartedAt]);
+
     useEffect(() => {
         fetchTracks();
     }, []);
@@ -96,53 +232,65 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
     }, [volume, isMuted]);
 
     useEffect(() => {
-        const unsubscribe = globalEventStore.subscribe((event: any) => {
-            if (event.type === "ATMOSPHERIC_PLAYBACK_CHANGED") {
-                if (!event.payload) return;
-                const { url, playing, loop, startedAt } = event.payload;
+        snapshotInitRef.current = false;
+        sawLiveAtmosEventRef.current = false;
 
-                if (audioRef.current) {
-                    const targetFullUrl = getSupabaseUrl(url);
-                    const currentSrc = audioRef.current.src;
-                    const isNewTrack = url && currentSrc !== targetFullUrl;
+        const applyFromEvent = (event: any, source: "live" | "bulk") => {
+            if (event.type !== "ATMOSPHERIC_PLAYBACK_CHANGED" || !event.payload) return;
 
-                    if (isNewTrack) {
-                        audioRef.current.src = targetFullUrl;
-                        audioRef.current.load();
-                        setCurrentTrack(url);
-                    }
+            const eventSeq = Number(event.seq || 0);
+            const eventTs = new Date(event.createdAt || 0).getTime();
 
-                    setIsPlaying(playing);
-                    setIsLooping(loop);
-                    audioRef.current.loop = loop;
-
-                    if (playing) {
-                        const playAudio = async () => {
-                            try {
-                                if (startedAt && audioRef.current) {
-                                    const startedAtTime = new Date(startedAt).getTime();
-                                    const now = Date.now();
-                                    const elapsed = (now - startedAtTime) / 1000;
-
-                                    if (audioRef.current.duration && Math.abs(audioRef.current.currentTime - elapsed) > 2) {
-                                        audioRef.current.currentTime = elapsed % audioRef.current.duration;
-                                    }
-                                }
-                                await audioRef.current?.play();
-                            } catch (e) {
-                                console.warn("Atmospheric Autoplay blocked:", e);
-                            }
-                        };
-                        playAudio();
-                    } else {
-                        audioRef.current.pause();
-                    }
+            if (source === "live") {
+                if (eventSeq > 0 && lastAtmosSeqRef.current > 0 && eventSeq < lastAtmosSeqRef.current) {
+                    console.log("[AtmosphericPlayer] Ignoring stale ATMOSPHERIC_PLAYBACK_CHANGED seq");
+                    return;
                 }
+
+                if (
+                    Number.isFinite(eventTs) &&
+                    eventTs > 0 &&
+                    lastAtmosEventTsRef.current > 0 &&
+                    eventTs < lastAtmosEventTsRef.current
+                ) {
+                    console.log("[AtmosphericPlayer] Ignoring stale ATMOSPHERIC_PLAYBACK_CHANGED event");
+                    return;
+                }
+
+                sawLiveAtmosEventRef.current = true;
             }
-        });
+
+            if (eventSeq > 0) {
+                lastAtmosSeqRef.current = eventSeq;
+            }
+
+            if (Number.isFinite(eventTs) && eventTs > 0) {
+                lastAtmosEventTsRef.current = eventTs;
+            } else {
+                lastAtmosEventTsRef.current = Date.now();
+            }
+
+            applyAtmosphericPlayback(event.payload);
+        };
+
+        const unsubscribe = globalEventStore.subscribe(
+            (event: any) => applyFromEvent(event, "live"),
+            (bulkEvents: any[]) => {
+                if (snapshotInitRef.current) return;
+                snapshotInitRef.current = true;
+                if (sawLiveAtmosEventRef.current) return;
+
+                const lastAtmosEvent = [...bulkEvents]
+                    .filter((e: any) => e.type === "ATMOSPHERIC_PLAYBACK_CHANGED")
+                    .pop();
+                if (!lastAtmosEvent) return;
+
+                applyFromEvent(lastAtmosEvent, "bulk");
+            }
+        );
 
         return unsubscribe;
-    }, [sessionId, userId, userRole, getSupabaseUrl]);
+    }, [sessionId, userId, userRole, applyAtmosphericPlayback]);
 
     const handleTrackChange = (track: string) => {
         setCurrentTrack(track);

@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-07 (story-30/audio-stability)
+last_updated: 2026-04-07 (story-30/atmospheric-stability)
 status: ativo
 ---
 
@@ -65,6 +65,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Rebranding Global (Cronos Vtt) | Renomeação completa de "Fate Companion / Project GM" para **Cronos Vtt** em layouts, metadados e documentação para alinhar com a nova identidade visual. | 2026-04-04 |
 | Padronização de Segurança e Eventos | Normalização obrigatória de `userId` (`.trim().toLowerCase()`) em todos os hooks e remoção total de chamadas nativas bloqueantes (`alert`/`confirm`) em favor de Portals/UI states. | 2026-04-04 |
 | Blindagem de Áudio (Story 30) | `MusicPlayer` agora aceita apenas URL YouTube com `videoId` válido (bloqueia links de busca/resultados que causavam `NotSupportedError` e estado falso de "tocando"), e o retry de autoplay ignora fontes inválidas. `VoiceChatManager` passou a usar constraints sem `noiseSuppression/autoGainControl` para reduzir artefatos de voz e adicionou guarda de loopback: durante screen share com áudio, o broadcaster suprime playback remoto local para evitar eco "caverna" recapturado pela aba. | 2026-04-07 |
+| Robustez de Áudio Atmosférico (Story 30) | `AtmosphericPlayer` agora aplica bootstrap por `bulkEvents` (último `ATMOSPHERIC_PLAYBACK_CHANGED`) para jogadores que entram após o início do ambiente, adiciona guarda de stale event por `seq/createdAt`, serializa operações de `play/pause` com token para eliminar corrida `AbortError` e inclui retry de autoplay por gesto de usuário quando bloqueado pelo navegador. | 2026-04-07 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
