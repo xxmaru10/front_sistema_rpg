@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-04 (story-23/image-cropper)
+last_updated: 2026-04-07 (story-30/audio-stability)
 status: ativo
 ---
 
@@ -64,6 +64,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Responsividade e Iconografia da Ficha (Story 22) | Fix de overflow da coluna Lore/Aspectos via `minmax(0, 1fr)` no `.top-layout-grid` + `min-width: 0` em `.info-tower-column`. "RESERVA DESTINO" → "PONTOS DE DESTINO". Componente ~20% menor (padding 24→14px, font 3rem→2.4rem). Abas PowerTabs migradas para Lucide icons (`Zap`, `Briefcase`, `Wand2`) sem texto, com `title` tooltip. Barra mágica realocada para o topo do container de atributos e background unificado com o tema escuro global. | 2026-04-04 |
 | Rebranding Global (Cronos Vtt) | Renomeação completa de "Fate Companion / Project GM" para **Cronos Vtt** em layouts, metadados e documentação para alinhar com a nova identidade visual. | 2026-04-04 |
 | Padronização de Segurança e Eventos | Normalização obrigatória de `userId` (`.trim().toLowerCase()`) em todos os hooks e remoção total de chamadas nativas bloqueantes (`alert`/`confirm`) em favor de Portals/UI states. | 2026-04-04 |
+| Blindagem de Áudio (Story 30) | `MusicPlayer` agora aceita apenas URL YouTube com `videoId` válido (bloqueia links de busca/resultados que causavam `NotSupportedError` e estado falso de "tocando"), e o retry de autoplay ignora fontes inválidas. `VoiceChatManager` passou a usar constraints sem `noiseSuppression/autoGainControl` para reduzir artefatos de voz e adicionou guarda de loopback: durante screen share com áudio, o broadcaster suprime playback remoto local para evitar eco "caverna" recapturado pela aba. | 2026-04-07 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 

@@ -84,6 +84,24 @@ export function useSessionScreenControl({
         }
     }, [videoStream]);
 
+    // ── Broadcast flag: local user sharing tab audio (loopback guard) ───────
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const isBroadcasting = screenShareManagerRef.current?.broadcasting ?? false;
+        const hasAudioTrack = !!videoStream?.getAudioTracks?.().length;
+        const active = isBroadcasting && hasAudioTrack;
+
+        window.dispatchEvent(
+            new CustomEvent('screenshare:broadcast-audio', { detail: { active } })
+        );
+
+        return () => {
+            window.dispatchEvent(
+                new CustomEvent('screenshare:broadcast-audio', { detail: { active: false } })
+            );
+        };
+    }, [videoStream, sessionId, actorUserId]);
+
     // ── Global reconnect trigger ─────────────────────────────────
     useEffect(() => {
         const unsubscribe = screenShareStore.subscribe(() => {

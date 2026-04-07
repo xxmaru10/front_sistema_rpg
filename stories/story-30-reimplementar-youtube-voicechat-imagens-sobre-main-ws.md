@@ -10,77 +10,83 @@ last_updated: 2026-04-07
 
 # Story-30: Reimplementar YouTube + VoiceChat Melhorado (sobre main com WebSocket)
 
-## Atualização de Execução (2026-04-07)
+## Atualização de Execução (2026-04-07 — caso consolidado)
 
-Esta story deixou de ser apenas plano e passou para execução incremental com testes reais
-em desktop e celular. Abaixo está o estado consolidado do que foi feito, do que funciona e
-do que ainda está em validação.
+Esta seção consolida o caso mais recente em produção/homologação, com logs reais de
+desktop + mobile (jogadora em Bluetooth), incluindo o que já foi resolvido e o que segue
+com falha.
 
-### O que foi implementado (resumo objetivo)
+### Resumo do cenário atual
 
-1. **MusicPlayer (YouTube)**
-- Migração para player nativo do YouTube (`YT.Player`) com container oculto em portal.
-- Normalização de URLs de YouTube para formato canônico `watch?v=...`.
-- Restauração de faixa via snapshot do `EventStore` quando não há delta de `MUSIC_PLAYBACK_CHANGED`.
-- Remoção do botão manual `Ativar áudio YouTube`.
-- Reordenação da UI: campo de URL do YouTube abaixo de `Escolha sua trilha sonora`.
-- Remoção do forçamento de qualidade `setPlaybackQuality("small")` para evitar degradação no mobile.
-- Remoção do texto `Sem transmissão ativa` no painel unificado e ajuste visual do rótulo `MÚSICA`.
+- Sessões testadas com delta/snapshot em ordem (`EventStore` OK), mas com problemas
+funcionais no áudio final do cliente jogador.
+- Imagens de personagem no voice voltaram a funcionar (mestre e jogador com `img=OK`).
+- YouTube no mestre passou a iniciar sem botão manual em desktop.
+- Persistem falhas de reprodução para jogadora: YouTube, música local e transmissão.
 
-2. **VoiceChatPanel / VoiceChatManager (imagem e voz)**
-- Correção de uso de snapshot na projeção local (`computeState(..., snapshotState)`), evitando `CHAR_NOT_FOUND`.
-- Correção de lógica de avatar para não depender de `localStorage.userRole` compartilhado entre abas.
-- Dedupe de participantes por `userId` normalizado (`trim/lowercase/NFC`) no painel.
-- Dedupe/match de peers também com normalização de `userId`.
-- Cache de `lastKnownCharacterId` por usuário para reduzir flicker de presença sem `characterId`.
-- Reforço das constraints de captura de microfone para celular:
-  - `echoCancellation: { ideal: true }`
-  - `noiseSuppression: { ideal: true }`
-  - `autoGainControl: { ideal: true }`
-- Sanitização de presença no `VoiceChatManager` para reduzir “usuário fantasma”:
-  - dedupe de presença por `userId` normalizado,
-  - invalidação de `inVoice=true` stale sem sinal recente e sem conexão viva.
+### O que já funciona (confirmado)
 
-### O que está funcionando (confirmado)
+1. **Avatar de personagem no VoiceChat**
+- Correções de `characterId`, snapshot e resolução de imagem aplicadas.
+- Logs recentes mostram `allUsers resolve ... img=OK`.
 
-- **Imagem de personagem no voice chat**: passou a funcionar para os casos testados em desktop.
-- **Build do frontend**: compilando com sucesso após as mudanças.
-- **YouTube desktop**: fluxo principal voltou a tocar sem necessidade do botão manual.
-- **Layout solicitado**: botão removido e campo de URL reposicionado conforme pedido.
+2. **Build e estabilidade de compilação**
+- Build frontend/back passou após ajuste de tipos (`latency` removido de `MediaTrackConstraints`).
 
-### O que ainda apresentou problema (testes recentes)
+3. **UX do painel unificado**
+- Removido texto `Sem transmissão ativa`.
+- Botão `Ativar áudio YouTube` removido.
+- Campo de URL YouTube reposicionado abaixo de `Escolha sua trilha sonora`.
 
-1. **Mobile — áudio de voz “em caverna” ao falar no microfone**
-- Sintoma relatado: ao falar no celular, a voz remota fica reverberada/metalizada.
-- Hipótese forte: combinação de processamento de captura + condições de roteamento/dispositivo no navegador mobile.
-- Mitigação já aplicada: reconfiguração de constraints de áudio (AEC/NS/AGC em `ideal`).
+### O que ainda está falhando (caso atual)
 
-2. **Presença fantasma no voice (usuário aparece em voice sem estar)**
-- Sintoma relatado: quando o mestre entra, um jogador aparece como se estivesse no voice.
-- Mitigação já aplicada:
-  - dedupe por `userId` normalizado,
-  - saneamento de presença stale com janela temporal e checagem de PC vivo.
+1. **Jogadora não ouve YouTube/música/transmissão**
+- Relato recorrente: ouve ruído/reverberação (“galão de água”), sem conteúdo inteligível.
+- Logs cliente mostram YouTube chegando a `YT_NATIVE_STATE: 1` (playing), mas depois
+entrando em pausa (`YT_NATIVE_STATE: 2`) e `YT_MOUNT ... playing: false`.
+- Também há warning repetido de origem/DOM no widget YouTube:
+  - `Failed to execute 'postMessage' ... target origin ... does not match recipient window's origin`
+  - `The YouTube player is not attached to the DOM...`
 
-### Estado atual (checkpoint)
+2. **Presença/voice com “fantasma”**
+- Painel mostra usuários que não estão efetivamente no voice.
+- `Presence Update` inclui toda a sessão (`Meliorn`, `Eli`, `Margot`, `Mestre`) mesmo
+quando o voice ativo deveria listar só parte.
+- Spam de sinais `voice-join` e mensagens `ignored — already connected/new`.
 
-- **Status geral**: `em-validacao`.
-- **Bloqueadores críticos abertos**: nenhum de build/compilação.
-- **Pontos pendentes de validação funcional**:
-  1. confirmar em teste móvel real se o efeito “caverna” foi eliminado,
-  2. confirmar que presença fantasma não reaparece na entrada/saída de mestre e jogador.
+3. **Reconexões em loop**
+- Eventos repetidos de reconnect (`peer-join`, `stream-started`, múltiplos `offer/answer`)
+geram churn de conexão e troca de estado (`connected -> disconnected -> failed -> reconnecting`).
+- Esse churn impacta diretamente continuidade de áudio remoto no mobile.
 
-### Próximo passo recomendado de teste
+### Diagnóstico técnico atual (hipóteses fortes)
 
-Executar cenário controlado com 2 dispositivos (desktop + celular):
-1. ambos fora do voice,
-2. jogador entra no voice,
-3. mestre entra no voice,
-4. jogador sai do voice,
-5. mestre permanece.
+1. **Ciclo de montagem do player YouTube ainda instável no cliente remoto**
+- Player muda de estado rapidamente por eventos conflitantes (snapshot/live/reconnect),
+causando pausa involuntária e perda de áudio.
 
-Critério de aceite desta rodada:
-- nenhum usuário “offline de voice” aparece como `inVoice=true`,
-- sem artefato de reverberação na voz ao falar pelo celular.
+2. **Mistura de “presença da sessão” com “presença no voice” na renderização**
+- A lista do painel não está estritamente derivada de `inVoice + conexão viva`, permitindo
+usuário “fantasma” na UI.
+
+3. **Ambiente mobile + Bluetooth continua sendo fator crítico**
+- Mesmo com mitigação de constraints, cenário com mic Bluetooth ainda tende a degradar
+saída/entrada (perfil HFP e roteamento agressivo do SO/browser).
+
+### Estado real desta story agora
+
+- **Status funcional**: parcialmente resolvida.
+- **Resolvido**: imagem de personagem, ajustes visuais solicitados, fluxo base YouTube no desktop.
+- **Não resolvido**: qualidade/entrega de áudio no cliente jogador (mobile), presença fantasma
+e estabilidade de reconexão no voice/screen.
+- **Status da story**: mantém `em-validacao` com foco em correção funcional final.
+
+### Próxima rodada de correção (alvo objetivo)
+
+1. Separar definitivamente roster de voice da presença geral da sessão.
+2. Bloquear spam de `voice-join` e duplicidade de reconnect.
+3. Blindar lifecycle do player YouTube no remoto (não pausar por evento stale/churn).
+4. Fechar teste E2E com matriz: desktop-desktop, desktop-mobile Bluetooth, desktop-mobile sem Bluetooth.
 
 ## Contexto
 

@@ -15,6 +15,8 @@ const getYouTubeVideoId = (url: string): string | null => {
     return match ? match[1] : null;
 };
 
+const isPlayableYouTubeUrl = (url: string) => !!getYouTubeVideoId(url);
+
 // Extrai apenas o videoId e retorna URL canônica watch?v=ID
 // Remove parâmetros de playlist/mix (list=RD..., start_radio=1) que interferem
 // com o ciclo de onReady do YouTube IFrame API
@@ -122,7 +124,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     // Resetar unlock a cada nova faixa YouTube (cada troca de URL começa muda)
     useEffect(() => {
-        if (isYouTubeUrl(currentTrack)) {
+        if (isPlayableYouTubeUrl(currentTrack)) {
             if (!ytLocalGestureUnlockRef.current) {
                 setYtAutoplayUnlocked(false);
             }
@@ -134,7 +136,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     useEffect(() => {
         if (!isMounted) return;
-        if (isYouTubeUrl(currentTrack)) return;
+        if (isPlayableYouTubeUrl(currentTrack)) return;
         if (ytPlayerRef.current) {
             try {
                 ytPlayerRef.current.destroy?.();
@@ -255,7 +257,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, []);
 
     useEffect(() => {
-        if (!isMounted || !isYouTubeUrl(currentTrack)) return;
+        if (!isMounted || !isPlayableYouTubeUrl(currentTrack)) return;
         let cancelled = false;
         const videoId = getYouTubeVideoId(currentTrack);
         if (!videoId) return;
@@ -345,7 +347,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [isMounted, currentTrack, isPlaying, ensureYouTubeApi, ytAutoplayUnlocked]);
 
     useEffect(() => {
-        if (!isYouTubeUrl(currentTrack) || !isYouTubePlayerAttached()) return;
+        if (!isPlayableYouTubeUrl(currentTrack) || !isYouTubePlayerAttached()) return;
         try {
             ytPlayerRef.current?.setVolume?.(Math.round((isMuted ? 0 : volume) * 100));
             if (isMuted || !ytAutoplayUnlocked) {
@@ -396,7 +398,12 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 const { url: rawUrl, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
                 const url = normalizeYouTubeUrl(rawUrl);
 
-                if (isYouTubeUrl(url)) {
+                if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
+                    console.warn("[MusicPlayer] Ignoring non-playable YouTube URL:", url);
+                    return;
+                }
+
+                if (isPlayableYouTubeUrl(url)) {
                     if (audioRef.current) {
                         audioRef.current.pause();
                         audioRef.current.currentTime = 0;
@@ -450,8 +457,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 }
                                 await audioRef.current?.play();
                             } catch (e) {
-                                console.warn("Autoplay blocked, scheduling retry on click:", e);
+                                const errObj = e as any;
+                                const noSupportedSource =
+                                    errObj?.name === "NotSupportedError" ||
+                                    /no supported source/i.test(String(errObj?.message || ""));
+                                if (noSupportedSource || !audioRef.current?.src) {
+                                    console.warn("[MusicPlayer] Unsupported source, skipping autoplay retry:", e);
+                                    return;
+                                }
+
+                                console.warn("Autoplay blocked, scheduling retry on interaction:", e);
                                 const unlock = async () => {
+                                    if (!audioRef.current?.src) return;
                                     try {
                                         await audioRef.current?.play();
                                         console.log("Autoplay unlocked by interaction");
@@ -461,6 +478,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 };
                                 document.addEventListener('pointerdown', unlock, { once: true });
                                 document.addEventListener('keydown', unlock, { once: true });
+                                document.addEventListener('click', unlock, { once: true });
+                                document.addEventListener('touchstart', unlock, { once: true });
                             }
                         };
                         playAudio();
@@ -512,7 +531,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const handleTrackChange = (track: string) => {
         const normalized = normalizeYouTubeUrl(track);
-        if (isYouTubeUrl(normalized)) {
+        if (isYouTubeUrl(normalized) && !isPlayableYouTubeUrl(normalized)) {
+            console.warn("[MusicPlayer] Invalid YouTube URL (videoId ausente):", track);
+            return;
+        }
+        if (isPlayableYouTubeUrl(normalized)) {
             if (audioRef.current) {
                 audioRef.current.pause();
                 audioRef.current.currentTime = 0;
@@ -571,11 +594,15 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const broadcastUpdate = (url: string, playing: boolean, loop: boolean) => {
         if (!sessionId || !userId) return;
+        if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
+            console.warn("[MusicPlayer] Blocking MUSIC_PLAYBACK_CHANGED for invalid YouTube URL:", url);
+            return;
+        }
 
         let startedAt: string | undefined = undefined;
         if (playing) {
             const now = Date.now();
-            const currentSec = isYouTubeUrl(url)
+            const currentSec = isPlayableYouTubeUrl(url)
                 ? (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function'
                     ? (ytPlayerRef.current.getCurrentTime() || 0)
                     : 0)
@@ -612,7 +639,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [isYouTubePlayerAttached]);
 
     useEffect(() => {
-        if (!isYouTubeUrl(currentTrack) || ytAutoplayUnlocked) return;
+        if (!isPlayableYouTubeUrl(currentTrack) || ytAutoplayUnlocked) return;
         const unlock = () => forceYouTubeAudioUnlock("first-user-gesture");
         window.addEventListener("pointerdown", unlock, { once: true });
         window.addEventListener("touchstart", unlock, { once: true });
@@ -726,7 +753,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     value={youtubeInputUrl}
                     onChange={(e) => setYoutubeInputUrl(e.target.value)}
                     onKeyDown={(e) => {
-                        if (e.key === "Enter" && isYouTubeUrl(youtubeInputUrl.trim())) {
+                        if (e.key === "Enter" && isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
                             handleTrackChange(youtubeInputUrl.trim());
                             setYoutubeInputUrl("");
                         }
@@ -736,12 +763,12 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 <button
                     className="control-btn"
                     onClick={() => {
-                        if (isYouTubeUrl(youtubeInputUrl.trim())) {
+                        if (isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
                             handleTrackChange(youtubeInputUrl.trim());
                             setYoutubeInputUrl("");
                         }
                     }}
-                    disabled={!isYouTubeUrl(youtubeInputUrl.trim())}
+                    disabled={!isPlayableYouTubeUrl(youtubeInputUrl.trim())}
                     title="Tocar Link do YouTube"
                 >
                     <Link size={12} />
@@ -766,7 +793,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         <div className="now-playing">
             <span className="scrolling-text">
                 {isPlaying
-                    ? (isYouTubeUrl(currentTrack)
+                    ? (isPlayableYouTubeUrl(currentTrack)
                         ? "YouTube ▶"
                         : (currentTrack.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '') || "Reproduzindo..."))
                     : "Pausado"}
@@ -776,7 +803,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const handleTrackEnded = useCallback(() => {
         if (isLooping) {
-            if (!isYouTubeUrl(currentTrack) && audioRef.current) {
+            if (!isPlayableYouTubeUrl(currentTrack) && audioRef.current) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(e => console.warn("[MusicPlayer] Retry play (Loop):", e));
             }
@@ -805,7 +832,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         >
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
-            {isMounted && isYouTubeUrl(currentTrack) && (() => {
+            {isMounted && isPlayableYouTubeUrl(currentTrack) && (() => {
                 console.log('[MusicPlayer] YT_MOUNT — url:', currentTrack, 'playing:', isPlaying, 'unlocked:', ytAutoplayUnlocked);
                 return createPortal(
                     <div style={{
@@ -912,7 +939,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             value={youtubeInputUrl}
                             onChange={(e) => setYoutubeInputUrl(e.target.value)}
                             onKeyDown={(e) => {
-                                if (e.key === "Enter" && isYouTubeUrl(youtubeInputUrl.trim())) {
+                                if (e.key === "Enter" && isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
                                     handleTrackChange(youtubeInputUrl.trim());
                                     setYoutubeInputUrl("");
                                 }
@@ -922,12 +949,12 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         <button
                             className="control-btn"
                             onClick={() => {
-                                if (isYouTubeUrl(youtubeInputUrl.trim())) {
+                                if (isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
                                     handleTrackChange(youtubeInputUrl.trim());
                                     setYoutubeInputUrl("");
                                 }
                             }}
-                            disabled={!isYouTubeUrl(youtubeInputUrl.trim())}
+                            disabled={!isPlayableYouTubeUrl(youtubeInputUrl.trim())}
                             title="Tocar Link do YouTube"
                         >
                             <Link size={12} />

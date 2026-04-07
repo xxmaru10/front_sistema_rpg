@@ -68,6 +68,8 @@ export class VoiceChatManager {
     private signalHandler: ((signal: VoiceSignal) => void) | null = null;
     private lastVoiceSeenAt: Map<string, number> = new Map();
     private static readonly PRESENCE_STALE_MS = 30000;
+    private suppressPeerPlaybackForScreenShare: boolean = false;
+    private screenShareAudioStateHandler: ((event: Event) => void) | null = null;
 
     private rtcConfig: RTCConfiguration = {
         iceServers: [
@@ -181,11 +183,9 @@ export class VoiceChatManager {
         return {
             deviceId: deviceId ? { exact: deviceId } : undefined,
             echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
+            noiseSuppression: false,
+            autoGainControl: false,
             channelCount: { ideal: 1 },
-            sampleRate: { ideal: 48000 },
-            sampleSize: { ideal: 16 },
         };
     }
 
@@ -193,8 +193,8 @@ export class VoiceChatManager {
         return {
             deviceId: deviceId ? { exact: deviceId } : undefined,
             echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
+            noiseSuppression: false,
+            autoGainControl: false,
             channelCount: { ideal: 1 },
         };
     }
@@ -279,6 +279,47 @@ export class VoiceChatManager {
         return this.normUserId(this.userId) < this.normUserId(peerId);
     }
 
+    private updatePeerAudioOutputState() {
+        this.peerAudioElements.forEach((audioEl, peerId) => {
+            const userMuted = this.peerMuted.get(peerId) ?? false;
+            const desiredVolume = Math.max(0, Math.min(1, this.peerVolumes.get(peerId) ?? 1));
+
+            if (this.suppressPeerPlaybackForScreenShare) {
+                audioEl.muted = true;
+                audioEl.volume = 0;
+                return;
+            }
+
+            audioEl.muted = userMuted;
+            audioEl.volume = desiredVolume;
+            if (audioEl.srcObject && audioEl.paused) {
+                audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
+            }
+        });
+    }
+
+    private attachScreenShareLoopbackGuard() {
+        if (typeof window === 'undefined') return;
+        if (this.screenShareAudioStateHandler) return;
+
+        this.screenShareAudioStateHandler = (event: Event) => {
+            const custom = event as CustomEvent<{ active?: boolean }>;
+            this.suppressPeerPlaybackForScreenShare = !!custom.detail?.active;
+            this.updatePeerAudioOutputState();
+        };
+
+        window.addEventListener('screenshare:broadcast-audio', this.screenShareAudioStateHandler);
+    }
+
+    private detachScreenShareLoopbackGuard() {
+        if (typeof window === 'undefined') return;
+        if (!this.screenShareAudioStateHandler) return;
+
+        window.removeEventListener('screenshare:broadcast-audio', this.screenShareAudioStateHandler);
+        this.screenShareAudioStateHandler = null;
+        this.suppressPeerPlaybackForScreenShare = false;
+    }
+
     private async getBestEffortMicStream(deviceId?: string, respectRequested: boolean = false): Promise<MediaStream> {
         const resolvedDeviceId = await this.resolveInputDeviceId(deviceId, respectRequested);
         try {
@@ -323,6 +364,7 @@ export class VoiceChatManager {
 
     public async initialize() {
         const socket = getSocket(this.userId);
+        this.attachScreenShareLoopbackGuard();
 
         // Remove previous handler if reinitializing
         if (this.signalHandler) {
@@ -551,15 +593,13 @@ export class VoiceChatManager {
             const ctx = this.getPeerAudioContext(peerId);
             gainNode.gain.setTargetAtTime(clampedVol, ctx.currentTime, 0.1);
         }
-        const audioEl = this.peerAudioElements.get(peerId);
-        if (audioEl) audioEl.volume = Math.max(0, Math.min(1, clampedVol));
+        this.updatePeerAudioOutputState();
         this.notifyPeerUpdate();
     }
 
     public setPeerMuted(peerId: string, muted: boolean) {
         this.peerMuted.set(peerId, muted);
-        const audioEl = this.peerAudioElements.get(peerId);
-        if (audioEl) audioEl.muted = muted;
+        this.updatePeerAudioOutputState();
         this.notifyPeerUpdate();
     }
 
@@ -595,6 +635,7 @@ export class VoiceChatManager {
             this.signalHandler = null;
         }
         socket.off('voice-presence-update');
+        this.detachScreenShareLoopbackGuard();
     }
 
     // ─── Cleanup ───────────────────────────────────────────────
@@ -709,8 +750,7 @@ export class VoiceChatManager {
                 // Reproduz diretamente o stream remoto para evitar artefatos de resampling
                 // observados em alguns celulares quando a trilha passa por destino processado.
                 audioEl.srcObject = stream;
-                audioEl.volume = Math.max(0, Math.min(1, currentVolume));
-                audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
+                this.updatePeerAudioOutputState();
             }
 
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -864,8 +904,7 @@ export class VoiceChatManager {
                 audioEl.autoplay = true;
                 this.peerAudioElements.set(peerId, audioEl);
             }
-            audioEl.muted = this.peerMuted.get(peerId) ?? false;
-            audioEl.volume = Math.max(0, Math.min(1, this.peerVolumes.get(peerId) ?? 1));
+            this.updatePeerAudioOutputState();
 
             this.startPeerSpeakingDetection(peerId, stream);
             this.notifyPeerUpdate();
