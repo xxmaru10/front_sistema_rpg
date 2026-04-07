@@ -242,9 +242,9 @@ export class VoiceChatManager {
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
-                    echoCancellation: { ideal: true },
-                    noiseSuppression: { ideal: true },
-                    autoGainControl: { ideal: true },
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
                     channelCount: { ideal: 1 },
                 }
             });
@@ -352,9 +352,9 @@ export class VoiceChatManager {
             const newStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: { exact: deviceId },
-                    echoCancellation: { ideal: true },
-                    noiseSuppression: { ideal: true },
-                    autoGainControl: { ideal: true },
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
                     channelCount: { ideal: 1 },
                 }
             });

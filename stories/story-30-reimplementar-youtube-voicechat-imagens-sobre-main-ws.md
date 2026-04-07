@@ -1,13 +1,86 @@
 ---
 story: story-30
 title: "Reimplementar YouTube no MusicPlayer + Imagem/Dispositivos no VoiceChatPanel (sobre main WebSocket)"
-status: pronto-para-implementar
+status: em-validacao
 priority: alta
 tags: [ui, voicechat, music, webrtc, feature]
 created: 2026-04-06
+last_updated: 2026-04-07
 ---
 
 # Story-30: Reimplementar YouTube + VoiceChat Melhorado (sobre main com WebSocket)
+
+## Atualização de Execução (2026-04-07)
+
+Esta story deixou de ser apenas plano e passou para execução incremental com testes reais
+em desktop e celular. Abaixo está o estado consolidado do que foi feito, do que funciona e
+do que ainda está em validação.
+
+### O que foi implementado (resumo objetivo)
+
+1. **MusicPlayer (YouTube)**
+- Migração para player nativo do YouTube (`YT.Player`) com container oculto em portal.
+- Normalização de URLs de YouTube para formato canônico `watch?v=...`.
+- Restauração de faixa via snapshot do `EventStore` quando não há delta de `MUSIC_PLAYBACK_CHANGED`.
+- Remoção do botão manual `Ativar áudio YouTube`.
+- Reordenação da UI: campo de URL do YouTube abaixo de `Escolha sua trilha sonora`.
+- Remoção do forçamento de qualidade `setPlaybackQuality("small")` para evitar degradação no mobile.
+- Remoção do texto `Sem transmissão ativa` no painel unificado e ajuste visual do rótulo `MÚSICA`.
+
+2. **VoiceChatPanel / VoiceChatManager (imagem e voz)**
+- Correção de uso de snapshot na projeção local (`computeState(..., snapshotState)`), evitando `CHAR_NOT_FOUND`.
+- Correção de lógica de avatar para não depender de `localStorage.userRole` compartilhado entre abas.
+- Dedupe de participantes por `userId` normalizado (`trim/lowercase/NFC`) no painel.
+- Dedupe/match de peers também com normalização de `userId`.
+- Cache de `lastKnownCharacterId` por usuário para reduzir flicker de presença sem `characterId`.
+- Reforço das constraints de captura de microfone para celular:
+  - `echoCancellation: { ideal: true }`
+  - `noiseSuppression: { ideal: true }`
+  - `autoGainControl: { ideal: true }`
+- Sanitização de presença no `VoiceChatManager` para reduzir “usuário fantasma”:
+  - dedupe de presença por `userId` normalizado,
+  - invalidação de `inVoice=true` stale sem sinal recente e sem conexão viva.
+
+### O que está funcionando (confirmado)
+
+- **Imagem de personagem no voice chat**: passou a funcionar para os casos testados em desktop.
+- **Build do frontend**: compilando com sucesso após as mudanças.
+- **YouTube desktop**: fluxo principal voltou a tocar sem necessidade do botão manual.
+- **Layout solicitado**: botão removido e campo de URL reposicionado conforme pedido.
+
+### O que ainda apresentou problema (testes recentes)
+
+1. **Mobile — áudio de voz “em caverna” ao falar no microfone**
+- Sintoma relatado: ao falar no celular, a voz remota fica reverberada/metalizada.
+- Hipótese forte: combinação de processamento de captura + condições de roteamento/dispositivo no navegador mobile.
+- Mitigação já aplicada: reconfiguração de constraints de áudio (AEC/NS/AGC em `ideal`).
+
+2. **Presença fantasma no voice (usuário aparece em voice sem estar)**
+- Sintoma relatado: quando o mestre entra, um jogador aparece como se estivesse no voice.
+- Mitigação já aplicada:
+  - dedupe por `userId` normalizado,
+  - saneamento de presença stale com janela temporal e checagem de PC vivo.
+
+### Estado atual (checkpoint)
+
+- **Status geral**: `em-validacao`.
+- **Bloqueadores críticos abertos**: nenhum de build/compilação.
+- **Pontos pendentes de validação funcional**:
+  1. confirmar em teste móvel real se o efeito “caverna” foi eliminado,
+  2. confirmar que presença fantasma não reaparece na entrada/saída de mestre e jogador.
+
+### Próximo passo recomendado de teste
+
+Executar cenário controlado com 2 dispositivos (desktop + celular):
+1. ambos fora do voice,
+2. jogador entra no voice,
+3. mestre entra no voice,
+4. jogador sai do voice,
+5. mestre permanece.
+
+Critério de aceite desta rodada:
+- nenhum usuário “offline de voice” aparece como `inVoice=true`,
+- sem artefato de reverberação na voz ao falar pelo celular.
 
 ## Contexto
 

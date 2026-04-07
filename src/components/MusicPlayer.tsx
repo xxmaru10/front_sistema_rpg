@@ -255,6 +255,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             console.log("[MusicPlayer] YT_NATIVE_STATE:", ev?.data);
                             if (ev?.data === YT.PlayerState.PLAYING) {
                                 ytPlayedRef.current = true;
+                                try {
+                                    ytPlayerRef.current?.unMute?.();
+                                    ytPlayerRef.current?.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
+                                } catch (_) { }
+                                setYtAutoplayUnlocked(true);
                             } else if (ev?.data === YT.PlayerState.ENDED) {
                                 handleTrackEndedRef.current?.();
                             }
@@ -281,7 +286,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [isMounted, currentTrack, isPlaying, ensureYouTubeApi, ytAutoplayUnlocked]);
 
     useEffect(() => {
-        if (!isYouTubeUrl(currentTrack) || !ytReadyRef.current || !ytPlayerRef.current) return;
+        if (!isYouTubeUrl(currentTrack) || !ytPlayerRef.current) return;
         try {
             ytPlayerRef.current?.setVolume?.(Math.round((isMuted ? 0 : volume) * 100));
             if (isMuted || !ytAutoplayUnlocked) {
@@ -312,6 +317,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 const url = normalizeYouTubeUrl(rawUrl);
 
                 if (isYouTubeUrl(url)) {
+                    if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current.currentTime = 0;
+                        audioRef.current.removeAttribute("src");
+                    }
                     setCurrentTrack(url);
                     setIsPlaying(playing);
                     setIsLooping(loop);
@@ -331,6 +341,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 }
 
                 if (audioRef.current) {
+                    try {
+                        ytPlayerRef.current?.pauseVideo?.();
+                        ytPlayerRef.current?.stopVideo?.();
+                    } catch (_) { }
+
                     const fullUrl = getSupabaseUrl(url);
 
                     if (audioRef.current.src !== fullUrl && url) {
@@ -411,9 +426,19 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const handleTrackChange = (track: string) => {
         const normalized = normalizeYouTubeUrl(track);
         if (isYouTubeUrl(normalized)) {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                audioRef.current.removeAttribute("src");
+            }
             ytLocalGestureUnlockRef.current = true;
             setYtAutoplayUnlocked(true);
             setYtNeedsManualUnlock(false);
+        } else {
+            try {
+                ytPlayerRef.current?.pauseVideo?.();
+                ytPlayerRef.current?.stopVideo?.();
+            } catch (_) { }
         }
         setCurrentTrack(normalized);
         broadcastUpdate(normalized, true, isLooping);
@@ -495,6 +520,19 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         setYtNeedsManualUnlock(false);
         console.log(`[MusicPlayer] YT_UNLOCK_APPLIED — reason=${reason}`);
     }, []);
+
+    useEffect(() => {
+        if (!isYouTubeUrl(currentTrack) || ytAutoplayUnlocked) return;
+        const unlock = () => forceYouTubeAudioUnlock("first-user-gesture");
+        window.addEventListener("pointerdown", unlock, { once: true });
+        window.addEventListener("touchstart", unlock, { once: true });
+        window.addEventListener("keydown", unlock, { once: true });
+        return () => {
+            window.removeEventListener("pointerdown", unlock);
+            window.removeEventListener("touchstart", unlock);
+            window.removeEventListener("keydown", unlock);
+        };
+    }, [currentTrack, ytAutoplayUnlocked, forceYouTubeAudioUnlock]);
 
     useEffect(() => {
         if (audioRef.current) {
