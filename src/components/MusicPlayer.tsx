@@ -45,7 +45,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const restoreLoopRef = useRef(true);
     const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
     const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
-    const ytUnlockTimerRef = useRef<number | null>(null);
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -68,7 +67,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
     const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
     const [ytNeedsManualUnlock, setYtNeedsManualUnlock] = useState(false);
-    const [ytRemountKey, setYtRemountKey] = useState(0);
 
     useEffect(() => {
         setIsMounted(true);
@@ -79,19 +77,9 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         if (isYouTubeUrl(currentTrack)) {
             setYtAutoplayUnlocked(false);
             setYtNeedsManualUnlock(false);
-            setYtRemountKey(0);
             ytPlayedRef.current = false;
         }
     }, [currentTrack]);
-
-    useEffect(() => {
-        return () => {
-            if (ytUnlockTimerRef.current !== null) {
-                clearTimeout(ytUnlockTimerRef.current);
-                ytUnlockTimerRef.current = null;
-            }
-        };
-    }, []);
 
     const fetchPlaylists = async () => {
         setLoading(true);
@@ -359,61 +347,28 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     };
 
     const forceYouTubeAudioUnlock = useCallback((reason: string) => {
-        const maxAttempts = 5;
-        const tryUnlock = (attempt: number) => {
-            const internal = reactPlayerRef.current?.getInternalPlayer?.();
-            if (!internal) {
-                console.warn(`[MusicPlayer] YT_STATE — reason=${reason} attempt=${attempt} internal=missing`);
-                // react-player v3 pode não expor getInternalPlayer().
-                // Fallback: destrava por estado e, se for ação manual, remonta o player
-                // com muted=false logo após gesture explícita do usuário.
-                if (reason === "onPlay") {
-                    setYtAutoplayUnlocked(true);
-                    setYtNeedsManualUnlock(false);
-                    return;
-                }
-                if (reason.startsWith("manual-button")) {
-                    setYtAutoplayUnlocked(true);
-                    setYtNeedsManualUnlock(false);
-                    setYtRemountKey((k) => k + 1);
-                    return;
-                }
-            } else {
-                try {
-                    internal.unMute?.();
-                    internal.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
-                    internal.playVideo?.();
-                } catch (e) {
-                    console.warn("[MusicPlayer] YT_UNLOCK_CALL_ERROR:", e);
-                }
+        const player: any = reactPlayerRef.current;
+        const internal = player?.getInternalPlayer?.();
 
-                const muted = typeof internal.isMuted === "function" ? internal.isMuted() : undefined;
-                const playerVol = typeof internal.getVolume === "function" ? internal.getVolume() : undefined;
-                const playerState = typeof internal.getPlayerState === "function" ? internal.getPlayerState() : undefined;
-                const unlocked = muted === false && ((typeof playerVol !== "number") || playerVol > 0) && (playerState === 1 || typeof playerState === "undefined");
-
-                console.log(`[MusicPlayer] YT_STATE — reason=${reason} attempt=${attempt} state=${String(playerState)} muted=${String(muted)} vol=${String(playerVol)} unlocked=${String(unlocked)}`);
-
-                if (unlocked) {
-                    setYtAutoplayUnlocked(true);
-                    setYtNeedsManualUnlock(false);
-                    return;
-                }
+        try {
+            player.muted = false;
+            player.volume = isMutedRef.current ? 0 : volumeRef.current;
+            if (typeof player.play === "function") {
+                player.play().catch(() => {});
             }
+        } catch (_) {}
 
-            if (attempt < maxAttempts) {
-                ytUnlockTimerRef.current = window.setTimeout(() => tryUnlock(attempt + 1), 250);
-            } else {
-                setYtNeedsManualUnlock(true);
-                console.warn("[MusicPlayer] YT_UNLOCK_FAILED — exibindo botão manual");
-            }
-        };
+        try {
+            internal?.unMute?.();
+            internal?.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
+            internal?.playVideo?.();
+            internal?.setPlaybackQuality?.("small");
+        } catch (_) {}
 
-        if (ytUnlockTimerRef.current !== null) {
-            clearTimeout(ytUnlockTimerRef.current);
-            ytUnlockTimerRef.current = null;
-        }
-        tryUnlock(1);
+        setIsMuted(false);
+        setYtAutoplayUnlocked(true);
+        setYtNeedsManualUnlock(false);
+        console.log(`[MusicPlayer] YT_UNLOCK_APPLIED — reason=${reason} internal=${internal ? "ok" : "missing"}`);
     }, []);
 
     useEffect(() => {
@@ -604,14 +559,17 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
             pendingSeekRef.current = null;
         }
-        // Se estiver tocando e onPlay atrasar/suprimir, tenta destravar via API interna
-        if (isPlayingRef.current) {
-            forceYouTubeAudioUnlock("onReady");
-        }
+        try {
+            const internal = reactPlayerRef.current?.getInternalPlayer?.();
+            internal?.setPlaybackQuality?.("small");
+        } catch (_) {}
         ytPlayedRef.current = false;
         setTimeout(() => {
             if (!ytPlayedRef.current) {
                 console.warn('[MusicPlayer] YT_UNLOCK_TIMEOUT — onPlay não disparou em 3s após onReady');
+            } else if (isPlayingRef.current && !ytAutoplayUnlocked) {
+                setYtNeedsManualUnlock(true);
+                console.warn('[MusicPlayer] YT_UNLOCK_MANUAL_REQUIRED');
             }
         }, 3000);
     };
@@ -626,12 +584,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             {isMounted && isYouTubeUrl(currentTrack) && (() => {
                 console.log('[MusicPlayer] YT_MOUNT — url:', currentTrack, 'playing:', isPlaying, 'unlocked:', ytAutoplayUnlocked);
                 return createPortal(
-                    <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '320px', height: '180px', pointerEvents: 'none' }}>
+                    <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '1px', height: '1px', pointerEvents: 'none' }}>
                         <ReactPlayer
-                            key={`${currentTrack}-${ytAutoplayUnlocked ? 1 : 0}-${ytRemountKey}`}
                             ref={reactPlayerRef}
-                            width="320px"
-                            height="180px"
+                            width="1px"
+                            height="1px"
                             {...{
                                 url: currentTrack,
                                 playing: isPlaying,
@@ -647,6 +604,20 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                     ytPlayedRef.current = true;
                                     forceYouTubeAudioUnlock("onPlay");
                                     console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso');
+                                },
+                                config: {
+                                    youtube: {
+                                        playerVars: {
+                                            autoplay: 1,
+                                            controls: 0,
+                                            disablekb: 1,
+                                            fs: 0,
+                                            iv_load_policy: 3,
+                                            modestbranding: 1,
+                                            playsinline: 1,
+                                            rel: 0
+                                        }
+                                    }
                                 },
                                 onError: (e: any) => console.warn('[MusicPlayer] YT_ERROR:', e),
                             } as any}
