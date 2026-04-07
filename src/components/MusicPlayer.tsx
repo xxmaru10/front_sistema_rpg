@@ -13,6 +13,15 @@ import { supabase } from "@/lib/supabaseClient";
 const isYouTubeUrl = (url: string) =>
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
 
+// Extrai apenas o videoId e retorna URL canônica watch?v=ID
+// Remove parâmetros de playlist/mix (list=RD..., start_radio=1) que interferem
+// com o ciclo de onReady do YouTube IFrame API
+const normalizeYouTubeUrl = (url: string): string => {
+    if (!isYouTubeUrl(url)) return url;
+    const match = url.match(/(?:youtube\.com\/watch\?.*?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/watch?v=${match[1]}` : url;
+};
+
 interface MusicPlayerProps {
     sessionId?: string;
     userId?: string;
@@ -34,6 +43,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const isTemporaryRef = useRef(false);
     const restoreUrlRef = useRef("");
     const restoreLoopRef = useRef(true);
+    const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -64,6 +74,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     useEffect(() => {
         if (isYouTubeUrl(currentTrack)) {
             setYtAutoplayUnlocked(false);
+            ytPlayedRef.current = false;
         }
     }, [currentTrack]);
 
@@ -163,7 +174,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     sfx.play().catch(e => console.warn("SFX blocked:", e));
                 }
             } else if (event.type === "MUSIC_PLAYBACK_CHANGED") {
-                const { url, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
+                const { url: rawUrl, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
+                const url = normalizeYouTubeUrl(rawUrl);
 
                 if (isYouTubeUrl(url)) {
                     setCurrentTrack(url);
@@ -241,8 +253,9 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [sessionId, userId, userRole, getSupabaseUrl]);
 
     const handleTrackChange = (track: string) => {
-        setCurrentTrack(track);
-        broadcastUpdate(track, true, isLooping);
+        const normalized = normalizeYouTubeUrl(track);
+        setCurrentTrack(normalized);
+        broadcastUpdate(normalized, true, isLooping);
     };
 
     const togglePlay = () => {
@@ -483,10 +496,14 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
             pendingSeekRef.current = null;
         }
-        // Desmutar após player pronto — o player iniciou mudo (ytAutoplayUnlocked=false)
-        // para garantir autoplay sem user gesture; agora habilita o áudio
-        setYtAutoplayUnlocked(true);
-        console.log('[MusicPlayer] YT_UNLOCKED — áudio ativado');
+        // Unmute acontece em onPlay (que comprovadamente dispara)
+        // Este timeout serve apenas como alerta de diagnóstico se onPlay não vier
+        ytPlayedRef.current = false;
+        setTimeout(() => {
+            if (!ytPlayedRef.current) {
+                console.warn('[MusicPlayer] YT_UNLOCK_TIMEOUT — onPlay não disparou em 3s após onReady');
+            }
+        }, 3000);
     };
 
     return (
@@ -515,7 +532,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 muted: isMuted || !ytAutoplayUnlocked,
                                 onEnded: handleTrackEnded,
                                 onReady: handleYouTubeReady,
-                                onPlay: () => console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso'),
+                                onPlay: () => {
+                                    ytPlayedRef.current = true;
+                                    setYtAutoplayUnlocked(true);
+                                    console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso → áudio desbloqueado');
+                                },
                                 onError: (e: any) => console.warn('[MusicPlayer] YT_ERROR:', e),
                             } as any}
                         />

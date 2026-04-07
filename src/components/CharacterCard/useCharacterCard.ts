@@ -135,30 +135,44 @@ export function useCharacterCard({
             if (img.width > 600 || img.height > 600) {
                 setTempCropSrc(blobUrl);
                 setIsCropping(true);
-                // isImageProcessing stays true until modal confirmation
+                // isImageProcessing stays true until modal confirmation + upload
             } else {
-                // Image small enough - process directly without blocking UI
-                const compressAndSave = () => {
+                // Image small enough — compress to canvas then upload to storage
+                // isImageProcessing stays true until upload resolves
+                const compressAndUpload = () => {
                     const canvas = document.createElement("canvas");
                     canvas.width = img.width;
                     canvas.height = img.height;
                     const ctx = canvas.getContext("2d");
-                    if (ctx) {
-                        ctx.drawImage(img, 0, 0);
-                        globalEventStore.append({
-                            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
-                            createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                            payload: { characterId: character.id, imageUrl: canvas.toDataURL("image/jpeg", 0.7) }
-                        } as any);
+                    if (!ctx) {
+                        URL.revokeObjectURL(blobUrl);
+                        setIsImageProcessing(false);
+                        return;
                     }
-                    URL.revokeObjectURL(blobUrl);
-                    setIsImageProcessing(false);
+                    ctx.drawImage(img, 0, 0);
+                    // Use toBlob (async) → upload to storage → store permanent URL in event
+                    canvas.toBlob(async (blob) => {
+                        URL.revokeObjectURL(blobUrl);
+                        if (!blob) { setIsImageProcessing(false); return; }
+                        try {
+                            const publicUrl = await uploadImage(blob, 'image/jpeg');
+                            globalEventStore.append({
+                                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+                                createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                                payload: { characterId: character.id, imageUrl: publicUrl }
+                            } as any);
+                        } catch (err) {
+                            console.error('[CharacterCard] Falha no upload da imagem:', err);
+                        } finally {
+                            setIsImageProcessing(false);
+                        }
+                    }, 'image/jpeg', 0.7);
                 };
 
                 if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-                   (window as any).requestIdleCallback(compressAndSave);
+                   (window as any).requestIdleCallback(compressAndUpload);
                 } else {
-                    setTimeout(compressAndSave, 1);
+                    setTimeout(compressAndUpload, 1);
                 }
             }
         };
@@ -170,16 +184,25 @@ export function useCharacterCard({
         img.src = blobUrl;
     };
 
-    const handleCropConfirm = (base64: string) => {
+    const handleCropConfirm = async (base64: string) => {
         if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
-        setIsImageProcessing(false);
-        globalEventStore.append({
-            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
-            createdAt: new Date().toISOString(), visibility: "PUBLIC",
-            payload: { characterId: character.id, imageUrl: base64 }
-        } as any);
+        // isImageProcessing stays true until upload completes
+        try {
+            // Convert base64 data URL to Blob then upload to storage
+            const blob = await fetch(base64).then(r => r.blob());
+            const publicUrl = await uploadImage(blob, 'image/jpeg');
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+                createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: character.id, imageUrl: publicUrl }
+            } as any);
+        } catch (err) {
+            console.error('[CharacterCard] Falha no upload da imagem (crop):', err);
+        } finally {
+            setIsImageProcessing(false);
+        }
     };
 
     const handleCropCancel = () => {

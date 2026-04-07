@@ -428,9 +428,14 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 if (matched) resolvedCharId = matched.id;
             }
 
-            // Diagnóstico: mostrar o que foi resolvido para cada participante
-            const charForLog = resolvedCharId ? state.characters[resolvedCharId] : null;
-            console.log(`[VoiceChat] allUsers resolve: ${p.userId} → charId=${resolvedCharId ?? 'none'} imgUrl=${charForLog?.imageUrl ? 'OK' : 'EMPTY'}`);
+            // Diagnóstico: distinguir CHAR_NOT_FOUND / NO_IMG / OK
+            const imgStatus = (() => {
+                if (!resolvedCharId) return 'NO_CHAR_ID';
+                const char = state.characters[resolvedCharId];
+                if (!char) return 'CHAR_NOT_FOUND';   // charId chegou mas não existe nesta sessão
+                return char.imageUrl ? 'OK' : 'NO_IMG'; // personagem existe mas sem imageUrl
+            })();
+            console.log(`[VoiceChat] allUsers resolve: ${p.userId} → charId=${resolvedCharId ?? 'none'} img=${imgStatus}`);
 
             return {
                 id: p.userId,
