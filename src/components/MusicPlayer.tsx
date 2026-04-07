@@ -82,6 +82,12 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
     const [, setYtNeedsManualUnlock] = useState(false);
 
+    const isYouTubePlayerAttached = useCallback(() => {
+        const player = ytPlayerRef.current;
+        const iframe = player?.getIframe?.();
+        return !!player && !!iframe && !!iframe.isConnected && ytReadyRef.current;
+    }, []);
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
@@ -113,6 +119,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             ytLocalGestureUnlockRef.current = false;
         }
     }, [currentTrack]);
+
+    useEffect(() => {
+        if (!isMounted) return;
+        if (isYouTubeUrl(currentTrack)) return;
+        if (ytPlayerRef.current) {
+            try {
+                ytPlayerRef.current.destroy?.();
+            } catch (_) { }
+            ytPlayerRef.current = null;
+            ytReadyRef.current = false;
+        }
+    }, [isMounted, currentTrack]);
 
     const fetchPlaylists = async () => {
         setLoading(true);
@@ -232,6 +250,17 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
         ensureYouTubeApi().then((YT) => {
             if (cancelled || !YT?.Player) return;
+            const container = document.getElementById(ytContainerIdRef.current);
+            if (!container || !container.isConnected) return;
+
+            const existingIframe = ytPlayerRef.current?.getIframe?.();
+            if (ytPlayerRef.current && (!existingIframe || !existingIframe.isConnected)) {
+                try {
+                    ytPlayerRef.current.destroy?.();
+                } catch (_) { }
+                ytPlayerRef.current = null;
+                ytReadyRef.current = false;
+            }
 
             if (!ytPlayerRef.current) {
                 ytPlayerRef.current = new YT.Player(ytContainerIdRef.current, {
@@ -302,7 +331,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [isMounted, currentTrack, isPlaying, ensureYouTubeApi, ytAutoplayUnlocked]);
 
     useEffect(() => {
-        if (!isYouTubeUrl(currentTrack) || !ytPlayerRef.current) return;
+        if (!isYouTubeUrl(currentTrack) || !isYouTubePlayerAttached()) return;
         try {
             ytPlayerRef.current?.setVolume?.(Math.round((isMuted ? 0 : volume) * 100));
             if (isMuted || !ytAutoplayUnlocked) {
@@ -316,7 +345,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 ytPlayerRef.current?.pauseVideo?.();
             }
         } catch (_) { }
-    }, [currentTrack, isMuted, volume, isPlaying, ytAutoplayUnlocked]);
+    }, [currentTrack, isMuted, volume, isPlaying, ytAutoplayUnlocked, isYouTubePlayerAttached]);
 
     useEffect(() => {
         snapshotInitRef.current = false;
@@ -344,7 +373,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     
                     if (playing && event.payload.startedAt) {
                         const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
-                        if (ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+                        if (isYouTubePlayerAttached() && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
                             ytPlayerRef.current.seekTo(elapsed, true);
                         } else {
                             pendingSeekRef.current = elapsed;
@@ -358,8 +387,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
                 if (audioRef.current) {
                     try {
-                        ytPlayerRef.current?.pauseVideo?.();
-                        ytPlayerRef.current?.stopVideo?.();
+                        if (isYouTubePlayerAttached()) {
+                            ytPlayerRef.current?.pauseVideo?.();
+                            ytPlayerRef.current?.stopVideo?.();
+                        }
                     } catch (_) { }
 
                     const fullUrl = getSupabaseUrl(url);
@@ -438,7 +469,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         );
 
         return unsubscribe;
-    }, [sessionId, userId, userRole, getSupabaseUrl]);
+    }, [sessionId, userId, userRole, getSupabaseUrl, isYouTubePlayerAttached]);
 
     const handleTrackChange = (track: string) => {
         const normalized = normalizeYouTubeUrl(track);
@@ -453,8 +484,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             setYtNeedsManualUnlock(false);
         } else {
             try {
-                ytPlayerRef.current?.pauseVideo?.();
-                ytPlayerRef.current?.stopVideo?.();
+                if (isYouTubePlayerAttached()) {
+                    ytPlayerRef.current?.pauseVideo?.();
+                    ytPlayerRef.current?.stopVideo?.();
+                }
             } catch (_) { }
         }
         setCurrentTrack(normalized);
@@ -524,6 +557,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     };
 
     const forceYouTubeAudioUnlock = useCallback((reason: string) => {
+        if (!isYouTubePlayerAttached()) return;
         const player: any = ytPlayerRef.current;
         if (!player) return;
         try {
@@ -536,7 +570,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         setYtAutoplayUnlocked(true);
         setYtNeedsManualUnlock(false);
         console.log(`[MusicPlayer] YT_UNLOCK_APPLIED — reason=${reason}`);
-    }, []);
+    }, [isYouTubePlayerAttached]);
 
     useEffect(() => {
         if (!isYouTubeUrl(currentTrack) || ytAutoplayUnlocked) return;

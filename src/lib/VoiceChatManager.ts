@@ -51,9 +51,7 @@ export class VoiceChatManager {
         source: MediaStreamAudioSourceNode;
         gain: GainNode;
         analyser: AnalyserNode;
-        destination: MediaStreamAudioDestinationNode;
     }> = new Map();
-    private dummyAudioElements: Map<string, HTMLAudioElement> = new Map();
     private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
     private speakingAnalysers: Map<string, { analyser: AnalyserNode; interval: ReturnType<typeof setInterval> }> = new Map();
     private localSpeakingInterval: ReturnType<typeof setInterval> | null = null;
@@ -297,6 +295,9 @@ export class VoiceChatManager {
     // ─── Join / Leave ──────────────────────────────────────────
 
     public async joinVoice(deviceId?: string): Promise<boolean> {
+        if (this._isConnected && this.localStream) {
+            return true;
+        }
         try {
             this.localStream = await this.getBestEffortMicStream(deviceId);
 
@@ -325,6 +326,9 @@ export class VoiceChatManager {
             await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
 
             // Heartbeat so late-joiners see us
+            if (this.heartbeatInterval) {
+                clearInterval(this.heartbeatInterval);
+            }
             this.heartbeatInterval = setInterval(() => {
                 if (this._isConnected) {
                     this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
@@ -465,7 +469,7 @@ export class VoiceChatManager {
             gainNode.gain.setTargetAtTime(clampedVol, ctx.currentTime, 0.1);
         }
         const audioEl = this.peerAudioElements.get(peerId);
-        if (audioEl) audioEl.volume = 1;
+        if (audioEl) audioEl.volume = Math.max(0, Math.min(1, clampedVol));
         this.notifyPeerUpdate();
     }
 
@@ -519,9 +523,6 @@ export class VoiceChatManager {
         this.peerAudioElements.forEach(el => { el.pause(); el.srcObject = null; });
         this.peerAudioElements.clear();
 
-        this.dummyAudioElements.forEach(el => { el.pause(); el.srcObject = null; });
-        this.dummyAudioElements.clear();
-
         this.audioNodes.forEach(nodes => {
             nodes.source.disconnect();
             nodes.gain.disconnect();
@@ -548,9 +549,6 @@ export class VoiceChatManager {
 
         const audioEl = this.peerAudioElements.get(peerId);
         if (audioEl) { audioEl.pause(); audioEl.srcObject = null; this.peerAudioElements.delete(peerId); }
-
-        const dummyEl = this.dummyAudioElements.get(peerId);
-        if (dummyEl) { dummyEl.pause(); dummyEl.srcObject = null; this.dummyAudioElements.delete(peerId); }
 
         const nodes = this.audioNodes.get(peerId);
         if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); this.audioNodes.delete(peerId); }
@@ -607,8 +605,6 @@ export class VoiceChatManager {
             }
             const existingAnalyser = this.speakingAnalysers.get(peerId);
             if (existingAnalyser) { clearInterval(existingAnalyser.interval); this.speakingAnalysers.delete(peerId); }
-            const existingDummy = this.dummyAudioElements.get(peerId);
-            if (existingDummy) { existingDummy.pause(); existingDummy.srcObject = null; this.dummyAudioElements.delete(peerId); }
 
             const audioCtx = this.getPeerAudioContext(peerId);
             if (audioCtx.state === 'suspended') {
@@ -623,19 +619,14 @@ export class VoiceChatManager {
             analyser.fftSize = 512;
             source.connect(gainNode);
             gainNode.connect(analyser);
-            const dst = audioCtx.createMediaStreamDestination();
-            analyser.connect(dst);
-            this.audioNodes.set(peerId, { source, gain: gainNode, analyser, destination: dst });
+            this.audioNodes.set(peerId, { source, gain: gainNode, analyser });
 
             const audioEl = this.peerAudioElements.get(peerId);
             if (audioEl) {
-                const dummyAudio = new Audio();
-                dummyAudio.srcObject = stream;
-                dummyAudio.muted = true;
-                dummyAudio.autoplay = true;
-                dummyAudio.play().catch(() => {});
-                this.dummyAudioElements.set(peerId, dummyAudio);
-                audioEl.srcObject = dst.stream;
+                // Reproduz diretamente o stream remoto para evitar artefatos de resampling
+                // observados em alguns celulares quando a trilha passa por destino processado.
+                audioEl.srcObject = stream;
+                audioEl.volume = Math.max(0, Math.min(1, currentVolume));
                 audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
             }
 
@@ -791,7 +782,7 @@ export class VoiceChatManager {
                 this.peerAudioElements.set(peerId, audioEl);
             }
             audioEl.muted = this.peerMuted.get(peerId) ?? false;
-            audioEl.volume = 1;
+            audioEl.volume = Math.max(0, Math.min(1, this.peerVolumes.get(peerId) ?? 1));
 
             this.startPeerSpeakingDetection(peerId, stream);
             this.notifyPeerUpdate();

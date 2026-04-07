@@ -443,15 +443,6 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 if (matched) resolvedCharId = matched.id;
             }
 
-            // Diagnóstico: distinguir CHAR_NOT_FOUND / NO_IMG / OK
-            const imgStatus = (() => {
-                if (!resolvedCharId) return 'NO_CHAR_ID';
-                const char = state.characters[resolvedCharId];
-                if (!char) return 'CHAR_NOT_FOUND';   // charId chegou mas não existe nesta sessão
-                return char.imageUrl ? 'OK' : 'NO_IMG'; // personagem existe mas sem imageUrl
-            })();
-            console.log(`[VoiceChat] allUsers resolve: ${p.userId} → charId=${resolvedCharId ?? 'none'} img=${imgStatus}`);
-
             const remoteInVoice = !!peer;
 
             return {
@@ -482,8 +473,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             });
         }
 
+        // Mostrar apenas usuários realmente ligados ao voice (ou eu local),
+        // evitando "fantasmas" offline no painel.
+        const visibleUsers = users.filter(u => u.isMe || u.inVoice || u.hasPeer);
+
         // Mover "eu" para o topo
-        return users.sort((a, b) => {
+        return visibleUsers.sort((a, b) => {
             if (a.isMe) return -1;
             if (b.isMe) return 1;
             return 0;
