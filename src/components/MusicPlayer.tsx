@@ -58,6 +58,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const restoreLoopRef = useRef(true);
     const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
     const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
+    const ytLocalGestureUnlockRef = useRef(false);
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -89,10 +90,13 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // Resetar unlock a cada nova faixa YouTube (cada troca de URL começa muda)
     useEffect(() => {
         if (isYouTubeUrl(currentTrack)) {
-            setYtAutoplayUnlocked(false);
+            if (!ytLocalGestureUnlockRef.current) {
+                setYtAutoplayUnlocked(false);
+            }
             setYtNeedsManualUnlock(false);
             setYtManualNonce(0);
             ytPlayedRef.current = false;
+            ytLocalGestureUnlockRef.current = false;
         }
     }, [currentTrack]);
 
@@ -295,6 +299,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const handleTrackChange = (track: string) => {
         const normalized = normalizeYouTubeUrl(track);
+        if (isYouTubeUrl(normalized)) {
+            ytLocalGestureUnlockRef.current = true;
+            setYtAutoplayUnlocked(true);
+            setYtNeedsManualUnlock(false);
+        }
         setCurrentTrack(normalized);
         broadcastUpdate(normalized, true, isLooping);
     };
@@ -498,7 +507,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     <Link size={12} />
                 </button>
             </div>
-            {isYouTubeUrl(currentTrack) && ytNeedsManualUnlock && (
+            {isYouTubeUrl(currentTrack) && (!ytAutoplayUnlocked || ytNeedsManualUnlock) && (
                 <div className="control-row">
                     <button
                         className="control-btn"
@@ -728,7 +737,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             <Link size={12} />
                         </button>
                     </div>
-                    {isYouTubeUrl(currentTrack) && ytNeedsManualUnlock && (
+                    {isYouTubeUrl(currentTrack) && (!ytAutoplayUnlocked || ytNeedsManualUnlock) && (
                         <div className="control-row">
                             <button
                                 className="control-btn"
