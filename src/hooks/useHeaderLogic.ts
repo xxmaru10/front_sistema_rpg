@@ -88,8 +88,12 @@ export function useHeaderLogic(
             localStorage.setItem("characterId", urlCharId);
             setCharacterId(urlCharId);
         } else {
-            const stored = localStorage.getItem("characterId");
-            if (stored) setCharacterId(stored);
+            // GM não tem personagem — nunca restaurar charId do localStorage para GM
+            const currentRole = localStorage.getItem("userRole");
+            if (currentRole !== "GM") {
+                const stored = localStorage.getItem("characterId");
+                if (stored) setCharacterId(stored);
+            }
         }
     }, [searchParams]);
 

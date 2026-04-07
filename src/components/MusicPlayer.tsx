@@ -44,6 +44,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const restoreUrlRef = useRef("");
     const restoreLoopRef = useRef(true);
     const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
+    const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -165,6 +166,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [volume, isMuted]);
 
     useEffect(() => {
+        snapshotInitRef.current = false;
         const unsubscribe = globalEventStore.subscribe((event: any) => {
             if (event.type === "SFX_TRIGGERED") {
                 const sfxUrl = getSupabaseUrl(event.payload.url);
@@ -249,26 +251,25 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             }
         },
         (bulkEvents) => {
-            // Carga histórica concluída — restaurar música do snapshot se nenhuma faixa ativa
+            // O bulk listener é chamado a cada novo evento do jogo — só restaurar snapshot UMA vez por sessão
+            if (snapshotInitRef.current) return;
+            snapshotInitRef.current = true;
+
+            // Evento delta tem prioridade sobre snapshot (inclui startedAt para sync)
             const lastDeltaMusic = [...bulkEvents]
                 .filter((e: any) => e.type === "MUSIC_PLAYBACK_CHANGED" && !e.payload?.isTemporary)
                 .pop() as any;
 
-            if (lastDeltaMusic) {
-                // Evento delta tem prioridade (inclui startedAt para sync)
-                return;
-            }
+            if (lastDeltaMusic) return;
 
             const snap = globalEventStore.getSnapshotState() as any;
             const snapMusic = snap?.currentMusic;
             if (!snapMusic?.url) return;
 
-            setCurrentTrack(prev => {
-                if (prev) return prev; // evento ao-vivo já definiu a faixa
-                setIsPlaying(snapMusic.playing ?? false);
-                setIsLooping(snapMusic.loop ?? true);
-                return normalizeYouTubeUrl(snapMusic.url);
-            });
+            // React 18 batcha os três setters na mesma renderização (sem setter aninhado)
+            setCurrentTrack(prev => prev || normalizeYouTubeUrl(snapMusic.url));
+            setIsPlaying(snapMusic.playing ?? false);
+            setIsLooping(snapMusic.loop ?? true);
         }
         );
 
