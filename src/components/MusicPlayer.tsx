@@ -2,13 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import dynamic from "next/dynamic";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-
-const ReactPlayer = dynamic(() => import("@/components/ReactPlayerWrapper"), { ssr: false });
 
 const isYouTubeUrl = (url: string) =>
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
@@ -52,10 +49,13 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const ytPlayerRef = useRef<any>(null);
     const ytContainerIdRef = useRef(`yt-audio-${Math.random().toString(36).slice(2)}`);
+    const ytApiPromiseRef = useRef<Promise<any> | null>(null);
+    const ytReadyRef = useRef(false);
     const pendingSeekRef = useRef<number | null>(null);
     const isTemporaryRef = useRef(false);
     const restoreUrlRef = useRef("");
     const restoreLoopRef = useRef(true);
+    const handleTrackEndedRef = useRef<(() => void) | null>(null);
     const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
     const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
     const ytLocalGestureUnlockRef = useRef(false);
@@ -80,8 +80,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // Controla muted-start do YouTube: começa mudo para garantir autoplay
     // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
     const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
-    const [ytNeedsManualUnlock, setYtNeedsManualUnlock] = useState(false);
-    const [ytManualNonce, setYtManualNonce] = useState(0);
+    const [, setYtNeedsManualUnlock] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -94,7 +93,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 setYtAutoplayUnlocked(false);
             }
             setYtNeedsManualUnlock(false);
-            setYtManualNonce(0);
             ytPlayedRef.current = false;
             ytLocalGestureUnlockRef.current = false;
         }
@@ -185,6 +183,121 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             audioRef.current.volume = isMuted ? 0 : volume;
         }
     }, [volume, isMuted]);
+
+    const ensureYouTubeApi = useCallback((): Promise<any> => {
+        if (window.YT?.Player) {
+            return Promise.resolve(window.YT);
+        }
+        if (ytApiPromiseRef.current) {
+            return ytApiPromiseRef.current;
+        }
+        ytApiPromiseRef.current = new Promise((resolve) => {
+            const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+            if (!existing) {
+                const script = document.createElement("script");
+                script.src = "https://www.youtube.com/iframe_api";
+                script.async = true;
+                document.head.appendChild(script);
+            }
+            const previous = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = () => {
+                previous?.();
+                resolve(window.YT);
+            };
+        });
+        return ytApiPromiseRef.current;
+    }, []);
+
+    useEffect(() => {
+        if (!isMounted || !isYouTubeUrl(currentTrack)) return;
+        let cancelled = false;
+        const videoId = getYouTubeVideoId(currentTrack);
+        if (!videoId) return;
+
+        ensureYouTubeApi().then((YT) => {
+            if (cancelled || !YT?.Player) return;
+
+            if (!ytPlayerRef.current) {
+                ytPlayerRef.current = new YT.Player(ytContainerIdRef.current, {
+                    width: "1",
+                    height: "1",
+                    videoId,
+                    playerVars: {
+                        autoplay: isPlaying ? 1 : 0,
+                        controls: 0,
+                        disablekb: 1,
+                        fs: 0,
+                        iv_load_policy: 3,
+                        modestbranding: 1,
+                        playsinline: 1,
+                        rel: 0,
+                    },
+                    events: {
+                        onReady: () => {
+                            console.log("[MusicPlayer] YT_NATIVE_READY");
+                            ytReadyRef.current = true;
+                            try {
+                                ytPlayerRef.current?.setPlaybackQuality?.("small");
+                                const targetVol = Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100);
+                                ytPlayerRef.current?.setVolume?.(targetVol);
+                                if (isMutedRef.current || !ytAutoplayUnlocked) {
+                                    ytPlayerRef.current?.mute?.();
+                                } else {
+                                    ytPlayerRef.current?.unMute?.();
+                                }
+                                if (pendingSeekRef.current !== null) {
+                                    ytPlayerRef.current?.seekTo?.(pendingSeekRef.current, true);
+                                    pendingSeekRef.current = null;
+                                }
+                                if (isPlayingRef.current) ytPlayerRef.current?.playVideo?.();
+                            } catch (_) { }
+                        },
+                        onStateChange: (ev: any) => {
+                            console.log("[MusicPlayer] YT_NATIVE_STATE:", ev?.data);
+                            if (ev?.data === YT.PlayerState.PLAYING) {
+                                ytPlayedRef.current = true;
+                            } else if (ev?.data === YT.PlayerState.ENDED) {
+                                handleTrackEndedRef.current?.();
+                            }
+                        },
+                        onError: (e: any) => {
+                            console.warn("[MusicPlayer] YT_ERROR:", e);
+                        }
+                    }
+                });
+                return;
+            }
+
+            try {
+                const currentId = ytPlayerRef.current?.getVideoData?.()?.video_id;
+                if (currentId !== videoId) {
+                    ytPlayerRef.current?.loadVideoById?.(videoId);
+                }
+            } catch (_) { }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isMounted, currentTrack, isPlaying, ensureYouTubeApi, ytAutoplayUnlocked]);
+
+    useEffect(() => {
+        if (!isYouTubeUrl(currentTrack) || !ytReadyRef.current || !ytPlayerRef.current) return;
+        try {
+            ytPlayerRef.current?.setPlaybackQuality?.("small");
+            ytPlayerRef.current?.setVolume?.(Math.round((isMuted ? 0 : volume) * 100));
+            if (isMuted || !ytAutoplayUnlocked) {
+                ytPlayerRef.current?.mute?.();
+            } else {
+                ytPlayerRef.current?.unMute?.();
+            }
+            if (isPlaying) {
+                ytPlayerRef.current?.playVideo?.();
+            } else {
+                ytPlayerRef.current?.pauseVideo?.();
+            }
+        } catch (_) { }
+    }, [currentTrack, isMuted, volume, isPlaying, ytAutoplayUnlocked]);
 
     useEffect(() => {
         snapshotInitRef.current = false;
@@ -372,30 +485,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const forceYouTubeAudioUnlock = useCallback((reason: string) => {
         const player: any = ytPlayerRef.current;
-        const internal = player?.getInternalPlayer?.();
-
+        if (!player) return;
         try {
-            player.muted = false;
-            player.volume = isMutedRef.current ? 0 : volumeRef.current;
-            if (typeof player.play === "function") {
-                player.play().catch(() => {});
-            }
-        } catch (_) {}
-
-        try {
-            internal?.unMute?.();
-            internal?.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
-            internal?.playVideo?.();
-            internal?.setPlaybackQuality?.("small");
-        } catch (_) {}
+            player.unMute?.();
+            player.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
+            player.playVideo?.();
+            player.setPlaybackQuality?.("small");
+        } catch (_) { }
 
         setIsMuted(false);
         setYtAutoplayUnlocked(true);
         setYtNeedsManualUnlock(false);
-        if (reason.startsWith("manual-button")) {
-            setYtManualNonce((n) => n + 1);
-        }
-        console.log(`[MusicPlayer] YT_UNLOCK_APPLIED — reason=${reason} internal=${internal ? "ok" : "missing"}`);
+        console.log(`[MusicPlayer] YT_UNLOCK_APPLIED — reason=${reason}`);
     }, []);
 
     useEffect(() => {
@@ -580,26 +681,9 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         }
     }, [isLooping, userRole, playNext, userId, sessionId, currentTrack]);
 
-    const handleYouTubeReady = () => {
-        console.log('[MusicPlayer] YT_READY — isPlaying:', isPlayingRef.current, 'pendingSeek:', pendingSeekRef.current);
-        if (pendingSeekRef.current !== null && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
-            ytPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
-            pendingSeekRef.current = null;
-        }
-        try {
-            const internal = ytPlayerRef.current?.getInternalPlayer?.();
-            internal?.setPlaybackQuality?.("small");
-        } catch (_) {}
-        ytPlayedRef.current = false;
-        setTimeout(() => {
-            if (!ytPlayedRef.current) {
-                console.warn('[MusicPlayer] YT_UNLOCK_TIMEOUT — onPlay não disparou em 3s após onReady');
-            } else if (isPlayingRef.current && !ytAutoplayUnlocked) {
-                setYtNeedsManualUnlock(true);
-                console.warn('[MusicPlayer] YT_UNLOCK_MANUAL_REQUIRED');
-            }
-        }, 3000);
-    };
+    useEffect(() => {
+        handleTrackEndedRef.current = handleTrackEnded;
+    }, [handleTrackEnded]);
 
     return (
         <div
@@ -612,44 +696,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 console.log('[MusicPlayer] YT_MOUNT — url:', currentTrack, 'playing:', isPlaying, 'unlocked:', ytAutoplayUnlocked);
                 return createPortal(
                     <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '1px', height: '1px', pointerEvents: 'none' }}>
-                        <ReactPlayer
-                            key={`${currentTrack}-${ytManualNonce}`}
-                            ref={ytPlayerRef}
-                            width="1px"
-                            height="1px"
-                            {...{
-                                url: currentTrack,
-                                playing: isPlaying,
-                                loop: isLooping,
-                                // muted=true enquanto não confirmamos que o player está pronto
-                                // Isso garante autoplay sem user gesture (browsers permitem muted autoplay)
-                                // handleYouTubeReady define ytAutoplayUnlocked=true e isso desmuta
-                                volume: isMuted ? 0 : volume,
-                                muted: isMuted || !ytAutoplayUnlocked,
-                                onEnded: handleTrackEnded,
-                                onReady: handleYouTubeReady,
-                                onPlay: () => {
-                                    ytPlayedRef.current = true;
-                                    forceYouTubeAudioUnlock("onPlay");
-                                    console.log('[MusicPlayer] YT_PLAY_ATTEMPT — sucesso');
-                                },
-                                config: {
-                                    youtube: {
-                                        playerVars: {
-                                            autoplay: 1,
-                                            controls: 0,
-                                            disablekb: 1,
-                                            fs: 0,
-                                            iv_load_policy: 3,
-                                            modestbranding: 1,
-                                            playsinline: 1,
-                                            rel: 0
-                                        }
-                                    }
-                                },
-                                onError: (e: any) => console.warn('[MusicPlayer] YT_ERROR:', e),
-                            } as any}
-                        />
+                        <div id={ytContainerIdRef.current} style={{ width: "1px", height: "1px" }} />
                     </div>,
                     document.body
                 );
