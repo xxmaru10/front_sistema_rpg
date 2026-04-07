@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+
+const ReactPlayer = dynamic(() => import("@/components/ReactPlayerWrapper"), { ssr: false });
 
 const isYouTubeUrl = (url: string) =>
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
