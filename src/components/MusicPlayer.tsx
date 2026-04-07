@@ -507,7 +507,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     <Link size={12} />
                 </button>
             </div>
-            {isYouTubeUrl(currentTrack) && (!ytAutoplayUnlocked || ytNeedsManualUnlock) && (
+            {isYouTubeUrl(currentTrack) && (
                 <div className="control-row">
                     <button
                         className="control-btn"
@@ -737,7 +737,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             <Link size={12} />
                         </button>
                     </div>
-                    {isYouTubeUrl(currentTrack) && (!ytAutoplayUnlocked || ytNeedsManualUnlock) && (
+                    {isYouTubeUrl(currentTrack) && (
                         <div className="control-row">
                             <button
                                 className="control-btn"
