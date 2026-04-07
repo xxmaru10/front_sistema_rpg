@@ -63,8 +63,16 @@ export class VoiceChatManager {
     private _sessionParticipants: SessionParticipant[] = [];
     private voicePeerIds: Set<string> = new Set();
     private reconnectAttempts: Map<string, number> = new Map();
+    private pendingOfferFallbackTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+    private connectionSafetyTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+    private lastVoiceJoinBroadcastAt: number = 0;
+    private lastDirectedVoiceJoinAt: Map<string, number> = new Map();
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
     private static readonly SCREEN_SHARE_PEER_DUCK_FACTOR = 0.35;
+    private static readonly VOICE_JOIN_HEARTBEAT_MS = 30000;
+    private static readonly VOICE_JOIN_THROTTLE_MS = 4000;
+    private static readonly OFFER_FALLBACK_DELAY_MS = 5000;
+    private static readonly CONNECTION_SAFETY_TIMEOUT_MS = 15000;
     private characterId?: string;
     private signalHandler: ((signal: VoiceSignal) => void) | null = null;
     private lastVoiceSeenAt: Map<string, number> = new Map();
@@ -280,6 +288,107 @@ export class VoiceChatManager {
         return this.normUserId(this.userId) < this.normUserId(peerId);
     }
 
+    private clearPendingOfferFallback(peerId: string) {
+        const key = this.normUserId(peerId);
+        const timer = this.pendingOfferFallbackTimers.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            this.pendingOfferFallbackTimers.delete(key);
+        }
+    }
+
+    private clearConnectionSafetyTimer(peerId: string) {
+        const key = this.normUserId(peerId);
+        const timer = this.connectionSafetyTimers.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            this.connectionSafetyTimers.delete(key);
+        }
+    }
+
+    private scheduleConnectionSafety(peerId: string, pc: RTCPeerConnection) {
+        const key = this.normUserId(peerId);
+        this.clearConnectionSafetyTimer(key);
+        const timer = setTimeout(() => {
+            if (this.peerConnections.get(key) !== pc) return;
+            if (pc.connectionState === 'new' || pc.connectionState === 'connecting') {
+                console.warn(`[VoiceChat] Safety timeout: closing stuck connection for ${key}`);
+                pc.close();
+                this.peerConnections.delete(key);
+                this.scheduleReconnect(key, 'safety-timeout');
+            }
+        }, VoiceChatManager.CONNECTION_SAFETY_TIMEOUT_MS);
+        this.connectionSafetyTimers.set(key, timer);
+    }
+
+    private async sendVoiceJoin(targetPeerId?: string, force: boolean = false) {
+        const now = Date.now();
+        const selfPeerId = this.normUserId(this.userId);
+
+        if (targetPeerId) {
+            const key = this.normUserId(targetPeerId);
+            const last = this.lastDirectedVoiceJoinAt.get(key) || 0;
+            if (!force && now - last < VoiceChatManager.VOICE_JOIN_THROTTLE_MS) {
+                return;
+            }
+            this.lastDirectedVoiceJoinAt.set(key, now);
+            await this.sendSignal({ type: 'voice-join', from: this.userId, to: key, peerId: selfPeerId });
+            return;
+        }
+
+        if (!force && now - this.lastVoiceJoinBroadcastAt < VoiceChatManager.VOICE_JOIN_THROTTLE_MS) {
+            return;
+        }
+        this.lastVoiceJoinBroadcastAt = now;
+        await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: selfPeerId });
+    }
+
+    private scheduleAnswererFallbackJoin(peerId: string) {
+        const key = this.normUserId(peerId);
+        if (this.pendingOfferFallbackTimers.has(key)) return;
+
+        const timer = setTimeout(() => {
+            this.pendingOfferFallbackTimers.delete(key);
+            if (!this._isConnected || !this.localStream) return;
+
+            const pc = this.peerConnections.get(key);
+            const alreadyHealthy = !!pc && (pc.connectionState === 'connected' || pc.connectionState === 'connecting');
+            if (!alreadyHealthy) {
+                this.sendVoiceJoin(key).catch(() => { });
+            }
+        }, VoiceChatManager.OFFER_FALLBACK_DELAY_MS);
+
+        this.pendingOfferFallbackTimers.set(key, timer);
+    }
+
+    private scheduleReconnect(peerId: string, reason: string) {
+        const key = this.normUserId(peerId);
+        const attempts = this.reconnectAttempts.get(key) || 0;
+        if (attempts >= VoiceChatManager.MAX_RECONNECT_ATTEMPTS) {
+            console.warn(`[VoiceChat] Max reconnect attempts reached for ${key} (${reason})`);
+            return;
+        }
+        if (!this._isConnected || !this.localStream) return;
+
+        this.reconnectAttempts.set(key, attempts + 1);
+        const delay = Math.min(8000, 2000 * (attempts + 1));
+
+        console.log(`[VoiceChat] Reconnecting to ${key} (${reason}) attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS}`);
+        setTimeout(() => {
+            if (!this._isConnected || !this.localStream) return;
+            const current = this.peerConnections.get(key);
+            if (current && (current.connectionState === 'connected' || current.connectionState === 'connecting')) {
+                return;
+            }
+
+            if (this.isOffererAgainst(key)) {
+                this.createPeerConnection(key, true).catch(console.error);
+            } else {
+                this.sendVoiceJoin(key).catch(() => { });
+            }
+        }, delay);
+    }
+
     private updatePeerAudioOutputState() {
         this.peerAudioElements.forEach((audioEl, peerId) => {
             const userMuted = this.peerMuted.get(peerId) ?? false;
@@ -350,9 +459,11 @@ export class VoiceChatManager {
                     params.encodings = [{}];
                 }
                 const peersInMesh = Math.max(1, this.peerConnections.size);
-                const targetBitrate = peersInMesh >= 9 ? 40000 : 48000;
+                const targetBitrate = peersInMesh >= 10 ? 52000 : peersInMesh >= 6 ? 56000 : 64000;
                 params.encodings[0].maxBitrate = targetBitrate;
-                (params.encodings[0] as any).dtx = "enabled";
+                params.encodings[0].priority = 'high';
+                (params.encodings[0] as any).networkPriority = 'high';
+                (params.encodings[0] as any).dtx = "disabled";
                 (params.encodings[0] as any).ptime = 20;
                 await sender.setParameters(params);
             } catch (e) {
@@ -434,7 +545,7 @@ export class VoiceChatManager {
 
             this._isConnected = true;
             this._micMuted = false;
-            this.voicePeerIds.add(this.userId);
+            this.voicePeerIds.add(this.normUserId(this.userId));
 
             // Update presence to inVoice: true
             const socket = getSocket(this.userId);
@@ -449,7 +560,7 @@ export class VoiceChatManager {
             this.startLocalSpeakingDetection();
 
             // Announce to peers
-            await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
+            await this.sendVoiceJoin(undefined, true);
 
             // Heartbeat so late-joiners see us
             if (this.heartbeatInterval) {
@@ -457,9 +568,9 @@ export class VoiceChatManager {
             }
             this.heartbeatInterval = setInterval(() => {
                 if (this._isConnected) {
-                    this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
+                    this.sendVoiceJoin().catch(() => { });
                 }
-            }, 15000);
+            }, VoiceChatManager.VOICE_JOIN_HEARTBEAT_MS);
 
             this.notifyPeerUpdate();
             return true;
@@ -493,7 +604,13 @@ export class VoiceChatManager {
         this._micMuted = false;
         this._localSpeaking = false;
         this._localAudioLevel = 0;
-        this.voicePeerIds.delete(this.userId);
+        this.voicePeerIds.delete(this.normUserId(this.userId));
+        this.pendingOfferFallbackTimers.forEach((timer) => clearTimeout(timer));
+        this.pendingOfferFallbackTimers.clear();
+        this.connectionSafetyTimers.forEach((timer) => clearTimeout(timer));
+        this.connectionSafetyTimers.clear();
+        this.lastDirectedVoiceJoinAt.clear();
+        this.lastVoiceJoinBroadcastAt = 0;
 
         const socket = getSocket(this.userId);
         socket.emit('voice-presence', {
@@ -530,7 +647,8 @@ export class VoiceChatManager {
         if (!this._isConnected) return;
 
         try {
-            const newStream = await this.getBestEffortMicStream(deviceId, true);
+            // Mesmo em troca manual de device, tenta evitar HFP/Bluetooth quando houver alternativa.
+            const newStream = await this.getBestEffortMicStream(deviceId, false);
 
             if (this.localStream) {
                 this.localStream.getTracks().forEach(t => t.stop());
@@ -587,6 +705,7 @@ export class VoiceChatManager {
     }
 
     public setPeerVolume(peerId: string, volume: number) {
+        peerId = this.normUserId(peerId);
         const clampedVol = Math.max(0, Math.min(2, volume));
         this.peerVolumes.set(peerId, clampedVol);
         const gainNode = this.audioNodes.get(peerId)?.gain;
@@ -599,6 +718,7 @@ export class VoiceChatManager {
     }
 
     public setPeerMuted(peerId: string, muted: boolean) {
+        peerId = this.normUserId(peerId);
         this.peerMuted.set(peerId, muted);
         this.updatePeerAudioOutputState();
         this.notifyPeerUpdate();
@@ -644,6 +764,10 @@ export class VoiceChatManager {
     private cleanupAllPeers() {
         this.speakingAnalysers.forEach(({ interval }) => clearInterval(interval));
         this.speakingAnalysers.clear();
+        this.pendingOfferFallbackTimers.forEach((timer) => clearTimeout(timer));
+        this.pendingOfferFallbackTimers.clear();
+        this.connectionSafetyTimers.forEach((timer) => clearTimeout(timer));
+        this.connectionSafetyTimers.clear();
 
         this.peerAudioElements.forEach(el => { el.pause(); el.srcObject = null; });
         this.peerAudioElements.clear();
@@ -669,25 +793,28 @@ export class VoiceChatManager {
     }
 
     private removePeer(peerId: string) {
-        const analyser = this.speakingAnalysers.get(peerId);
-        if (analyser) { clearInterval(analyser.interval); this.speakingAnalysers.delete(peerId); }
+        const key = this.normUserId(peerId);
+        this.clearPendingOfferFallback(key);
+        this.clearConnectionSafetyTimer(key);
+        const analyser = this.speakingAnalysers.get(key);
+        if (analyser) { clearInterval(analyser.interval); this.speakingAnalysers.delete(key); }
 
-        const audioEl = this.peerAudioElements.get(peerId);
-        if (audioEl) { audioEl.pause(); audioEl.srcObject = null; this.peerAudioElements.delete(peerId); }
+        const audioEl = this.peerAudioElements.get(key);
+        if (audioEl) { audioEl.pause(); audioEl.srcObject = null; this.peerAudioElements.delete(key); }
 
-        const nodes = this.audioNodes.get(peerId);
-        if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); this.audioNodes.delete(peerId); }
+        const nodes = this.audioNodes.get(key);
+        if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); this.audioNodes.delete(key); }
 
-        const pc = this.peerConnections.get(peerId);
-        if (pc) { pc.close(); this.peerConnections.delete(peerId); }
+        const pc = this.peerConnections.get(key);
+        if (pc) { pc.close(); this.peerConnections.delete(key); }
 
-        const ctx = this.peerAudioContexts.get(peerId);
-        if (ctx) { ctx.close().catch(() => {}); this.peerAudioContexts.delete(peerId); }
+        const ctx = this.peerAudioContexts.get(key);
+        if (ctx) { ctx.close().catch(() => {}); this.peerAudioContexts.delete(key); }
 
-        this.peerStreams.delete(peerId);
-        this.peerVolumes.delete(peerId);
-        this.peerMuted.delete(peerId);
-        this.pendingCandidates.delete(peerId);
+        this.peerStreams.delete(key);
+        this.peerVolumes.delete(key);
+        this.peerMuted.delete(key);
+        this.pendingCandidates.delete(key);
         this.notifyPeerUpdate();
     }
 
@@ -774,24 +901,27 @@ export class VoiceChatManager {
     // ─── Signal handling ───────────────────────────────────────
 
     private async handleSignal(signal: VoiceSignal) {
-        const { type, from } = signal;
+        const type = signal.type;
+        const from = this.normUserId(signal.from);
 
         if (type === 'voice-leave') {
-            if (from === this.userId) return;
+            if (from === this.normUserId(this.userId)) return;
             this.voicePeerIds.delete(from);
             this.lastVoiceSeenAt.delete(this.normUserId(from));
+            this.clearPendingOfferFallback(from);
             this.removePeer(from);
             return;
         }
 
         if (type === 'voice-join') {
-            if (from === this.userId) return;
+            if (from === this.normUserId(this.userId)) return;
 
             // Guard: don't reconnect to already-connected peers
             const existingPc = this.peerConnections.get(from);
             if (existingPc
-                && existingPc.connectionState !== 'failed'
-                && existingPc.connectionState !== 'closed') {
+                && (existingPc.connectionState === 'new'
+                    || existingPc.connectionState === 'connecting'
+                    || existingPc.connectionState === 'connected')) {
                 console.log(`[VoiceChat - ${this.userId}] voice-join from ${from} ignored — already ${existingPc.connectionState}`);
                 return;
             }
@@ -817,9 +947,9 @@ export class VoiceChatManager {
                 console.log(`[VoiceChat - ${this.userId}] I am offerer → creating offer for:`, from);
                 await this.createPeerConnection(from, true);
             } else {
-                // Answerer: ping back so offerer knows we're here
-                console.log(`[VoiceChat - ${this.userId}] I am answerer → pinging back to:`, from);
-                await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
+                // Answerer: espera passiva para evitar loop ping-pong de voice-join.
+                console.log(`[VoiceChat - ${this.userId}] I am answerer → waiting offer from:`, from);
+                this.scheduleAnswererFallbackJoin(from);
             }
             return;
         }
@@ -829,6 +959,16 @@ export class VoiceChatManager {
                 console.warn(`[VoiceChat - ${this.userId}] Offer from ${from} dropped — not connected`);
                 return;
             }
+            const existing = this.peerConnections.get(from);
+            if (
+                existing &&
+                (existing.connectionState === 'connected' || existing.connectionState === 'connecting') &&
+                existing.signalingState === 'stable'
+            ) {
+                console.log(`[VoiceChat - ${this.userId}] Duplicate offer ignored — ${from} connection already healthy`);
+                return;
+            }
+            this.clearPendingOfferFallback(from);
             this.touchVoiceSeen(from);
             await this.handleOffer(signal);
             return;
@@ -857,7 +997,8 @@ export class VoiceChatManager {
     // ─── Peer connection ───────────────────────────────────────
 
     private async createPeerConnection(peerId: string, createOffer: boolean) {
-        if (peerId === this.userId) {
+        peerId = this.normUserId(peerId);
+        if (peerId === this.normUserId(this.userId)) {
             console.warn('[VoiceChat] Blocked self-connection attempt');
             return new RTCPeerConnection(this.rtcConfig);
         }
@@ -865,9 +1006,11 @@ export class VoiceChatManager {
         if (this.peerConnections.has(peerId)) {
             this.peerConnections.get(peerId)?.close();
         }
+        this.clearConnectionSafetyTimer(peerId);
 
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(peerId, pc);
+        this.scheduleConnectionSafety(peerId, pc);
 
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => {
@@ -913,27 +1056,20 @@ export class VoiceChatManager {
 
         pc.onconnectionstatechange = () => {
             console.log(`[VoiceChat] Connection state for ${peerId}:`, pc.connectionState);
-            if (pc.connectionState === 'failed') {
-                const attempts = this.reconnectAttempts.get(peerId) || 0;
-                if (attempts < VoiceChatManager.MAX_RECONNECT_ATTEMPTS && this._isConnected && this.localStream) {
-                    this.reconnectAttempts.set(peerId, attempts + 1);
-                    console.log(`[VoiceChat] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
-                    setTimeout(() => {
-                        if (this._isConnected && this.localStream) {
-                            if (this.isOffererAgainst(peerId)) {
-                                this.createPeerConnection(peerId, true);
-                            } else {
-                                this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
-                            }
-                        }
-                    }, 3000 * (attempts + 1));
-                } else {
-                    console.warn(`[VoiceChat] Max reconnect attempts reached for ${peerId}`);
+            if (pc.connectionState !== 'new' && pc.connectionState !== 'connecting') {
+                this.clearConnectionSafetyTimer(peerId);
+            }
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                if (this.peerConnections.get(peerId) === pc) {
+                    this.scheduleReconnect(peerId, pc.connectionState);
                 }
             } else if (pc.connectionState === 'connected') {
                 this.reconnectAttempts.delete(peerId);
+                this.clearPendingOfferFallback(peerId);
                 this.touchVoiceSeen(peerId);
                 console.log(`[VoiceChat] Successfully connected to ${peerId}`);
+            } else if (pc.connectionState === 'closed') {
+                this.clearPendingOfferFallback(peerId);
             }
         };
 
@@ -958,7 +1094,7 @@ export class VoiceChatManager {
 
     private async handleOffer(signal: VoiceSignal) {
         if (!signal.offer) return;
-        const peerId = signal.from;
+        const peerId = this.normUserId(signal.from);
         console.log(`[VoiceChat - ${this.userId}] Handling offer from:`, peerId);
 
         const pc = await this.createPeerConnection(peerId, false);
@@ -987,20 +1123,21 @@ export class VoiceChatManager {
 
     private async handleAnswer(signal: VoiceSignal) {
         if (!signal.answer) return;
-        const pc = this.peerConnections.get(signal.from);
+        const from = this.normUserId(signal.from);
+        const pc = this.peerConnections.get(from);
         if (!pc) return;
 
         if (pc.signalingState !== 'have-local-offer') {
-            console.warn(`[VoiceChat] Ignoring stale answer from ${signal.from} (state: ${pc.signalingState})`);
+            console.warn(`[VoiceChat] Ignoring stale answer from ${from} (state: ${pc.signalingState})`);
             return;
         }
 
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
-            const queued = this.pendingCandidates.get(signal.from);
+            const queued = this.pendingCandidates.get(from);
             if (queued) {
                 queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
-                this.pendingCandidates.delete(signal.from);
+                this.pendingCandidates.delete(from);
             }
         } catch (error) {
             console.error("[VoiceChat] Error handling answer:", error);
@@ -1022,11 +1159,13 @@ export class VoiceChatManager {
     }
 
     public isPeerSpeaking(peerId: string): boolean {
+        peerId = this.normUserId(peerId);
         const data = this.speakingAnalysers.get(peerId);
         return data ? (data as any).speaking === true : false;
     }
 
     public getPeerAudioLevel(peerId: string): number {
+        peerId = this.normUserId(peerId);
         const data = this.speakingAnalysers.get(peerId);
         return data ? ((data as any).audioLevel || 0) : 0;
     }

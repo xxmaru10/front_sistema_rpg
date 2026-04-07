@@ -124,7 +124,7 @@ export function useSessionScreenControl({
         const videoEl = screenVideoRef.current;
         if (!videoEl) return;
         videoEl.muted = false;
-        videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+        videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 1;
         setVideoMuted(false);
         console.log("[ScreenShare] Manually unmuted by user");
     }, [transmissionVolume]);
@@ -140,7 +140,7 @@ export function useSessionScreenControl({
                 // Always start unmuted — browser will throw if autoplay policy
                 // blocks it, then we fall back to muted
                 videoEl.muted = false;
-                videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 1;
             }
 
             const tryPlay = async () => {
@@ -169,7 +169,7 @@ export function useSessionScreenControl({
                         setTimeout(() => {
                             if (!videoEl || videoEl.paused) return;
                             videoEl.muted = false;
-                            videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                            videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 1;
                             setVideoMuted(false);
                             console.log("[ScreenShare] Auto-unmuted successfully");
                         }, 500);
@@ -188,7 +188,7 @@ export function useSessionScreenControl({
                 const el = screenVideoRef.current;
                 if (el && el.muted) {
                     el.muted = false;
-                    el.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                    el.volume = transmissionVolume > 0 ? transmissionVolume : 1;
                     setVideoMuted(false);
                     console.log("[ScreenShare] Unmuted on canplay event");
                 }
@@ -249,6 +249,10 @@ export function useSessionScreenControl({
                 if (now - lastVisibilityReconnectAtRef.current > 8000) {
                     lastVisibilityReconnectAtRef.current = now;
                     const el = screenVideoRef.current;
+                    const expectsPlayableStream = !!videoStreamRef.current;
+                    if (!expectsPlayableStream) {
+                        return;
+                    }
                     const hasPlayableStream = !!videoStreamRef.current && !!el?.srcObject && !el.paused && el.readyState >= 2;
                     if (!hasPlayableStream) {
                         screenShareManagerRef.current?.checkAndReconnect();

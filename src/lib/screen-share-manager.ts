@@ -377,16 +377,20 @@ export class ScreenShareManager {
                 if (this.localStream) pc.addTrack(track, this.localStream);
             });
 
-            // Set encoding params for video only — leave audio at browser defaults
+            // Set encoding params for video + audio.
+            // Vídeo é limitado agressivamente para preservar uplink da call de voz.
+            // Áudio recebe prioridade para manter inteligibilidade da transmissão.
             try {
                 const senders = pc.getSenders();
+                const adaptiveVideoBitrate = this.getAdaptiveBitrate();
+                const adaptiveAudioBitrate = this.getAdaptiveAudioBitrate();
                 for (const sender of senders) {
                     if (sender.track?.kind === 'video') {
                         const params = sender.getParameters();
                         if (!params.encodings || params.encodings.length === 0) {
                             params.encodings = [{}];
                         }
-                        params.encodings[0].maxBitrate = this.getAdaptiveBitrate();
+                        params.encodings[0].maxBitrate = adaptiveVideoBitrate;
                         params.encodings[0].priority = 'high';
                         params.encodings[0].networkPriority = 'high';
                         try {
@@ -396,8 +400,17 @@ export class ScreenShareManager {
                         } catch (e) { /* ignore */ }
                         delete (params.encodings[0] as any).maxFramerate;
                         await sender.setParameters(params);
+                    } else if (sender.track?.kind === 'audio') {
+                        const params = sender.getParameters();
+                        if (!params.encodings || params.encodings.length === 0) {
+                            params.encodings = [{}];
+                        }
+                        params.encodings[0].maxBitrate = adaptiveAudioBitrate;
+                        params.encodings[0].priority = 'high';
+                        (params.encodings[0] as any).networkPriority = 'high';
+                        (params.encodings[0] as any).dtx = 'disabled';
+                        await sender.setParameters(params);
                     }
-                    // Audio sender — leave at browser defaults, no bitrate restriction
                 }
             } catch (e) {
                 console.warn('[WebRTC] Could not set encoding params:', e);
@@ -529,9 +542,17 @@ export class ScreenShareManager {
 
     private getAdaptiveBitrate(): number {
         const peerCount = this.peerConnections.size;
-        if (peerCount <= 2) return 2_500_000;
-        if (peerCount <= 5) return 2_000_000;
-        if (peerCount <= 8) return 1_200_000;
-        return 800_000;
+        if (peerCount <= 2) return 1_800_000;
+        if (peerCount <= 5) return 1_200_000;
+        if (peerCount <= 8) return 900_000;
+        return 600_000;
+    }
+
+    private getAdaptiveAudioBitrate(): number {
+        const peerCount = this.peerConnections.size;
+        if (peerCount <= 2) return 128_000;
+        if (peerCount <= 5) return 96_000;
+        if (peerCount <= 8) return 80_000;
+        return 64_000;
     }
 }

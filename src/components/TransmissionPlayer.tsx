@@ -12,7 +12,7 @@ interface TransmissionPlayerProps {
 }
 
 export function TransmissionPlayer({ sessionId, userId, unifiedMode }: TransmissionPlayerProps) {
-    const [volume, setVolume] = useState(0.7);
+    const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isActive, setIsActive] = useState(false);
     const [showControls, setShowControls] = useState(false);
@@ -20,7 +20,8 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
 
     useEffect(() => {
         const stored = localStorage.getItem('transmissionVolume');
-        if (stored) setVolume(parseFloat(stored));
+        const parsed = stored ? parseFloat(stored) : NaN;
+        if (Number.isFinite(parsed)) setVolume(Math.min(1, Math.max(0, parsed)));
         setIsMounted(true);
     }, []);
 
@@ -81,7 +82,7 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
                 style={{
                     background: isMounted
                         ? `linear-gradient(to right, var(--accent-color) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.1) ${(isMuted ? 0 : volume) * 100}%)`
-                        : `linear-gradient(to right, var(--accent-color) 70%, rgba(255,255,255,0.1) 70%)`
+                        : `linear-gradient(to right, var(--accent-color) 100%, rgba(255,255,255,0.1) 100%)`
                 }}
                 suppressHydrationWarning
             />
