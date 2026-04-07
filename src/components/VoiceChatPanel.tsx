@@ -131,7 +131,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (seqA !== 0 && seqB === 0) return -1;
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
-        return computeState(sorted);
+        return computeState(sorted, globalEventStore.getSnapshotState() ?? undefined);
     }, [events]);
 
     const getDisplayName = useCallback((uid: string, charId?: string) => {

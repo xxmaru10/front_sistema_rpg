@@ -247,7 +247,30 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     setIsLooping(loop);
                 }
             }
-        });
+        },
+        (bulkEvents) => {
+            // Carga histórica concluída — restaurar música do snapshot se nenhuma faixa ativa
+            const lastDeltaMusic = [...bulkEvents]
+                .filter((e: any) => e.type === "MUSIC_PLAYBACK_CHANGED" && !e.payload?.isTemporary)
+                .pop() as any;
+
+            if (lastDeltaMusic) {
+                // Evento delta tem prioridade (inclui startedAt para sync)
+                return;
+            }
+
+            const snap = globalEventStore.getSnapshotState() as any;
+            const snapMusic = snap?.currentMusic;
+            if (!snapMusic?.url) return;
+
+            setCurrentTrack(prev => {
+                if (prev) return prev; // evento ao-vivo já definiu a faixa
+                setIsPlaying(snapMusic.playing ?? false);
+                setIsLooping(snapMusic.loop ?? true);
+                return normalizeYouTubeUrl(snapMusic.url);
+            });
+        }
+        );
 
         return unsubscribe;
     }, [sessionId, userId, userRole, getSupabaseUrl]);
