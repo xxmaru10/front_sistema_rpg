@@ -581,6 +581,20 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </button>
             </div>
             <div className="control-row">
+                <select
+                    className="track-select"
+                    value={currentTrack}
+                    onChange={(e) => handleTrackChange(e.target.value)}
+                >
+                    <option value="">Escolha sua trilha sonora! 🎵</option>
+                    {currentPlaylistTracks.map((track: string) => (
+                        <option key={track} value={track}>
+                            {track.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '')}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <div className="control-row">
                 <input
                     type="text"
                     placeholder="URL do YouTube..."
@@ -607,32 +621,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 >
                     <Link size={12} />
                 </button>
-            </div>
-            {isYouTubeUrl(currentTrack) && (
-                <div className="control-row">
-                    <button
-                        className="control-btn"
-                        style={{ width: "100%", color: "#e0bb6b", borderColor: "rgba(197,160,89,0.5)" }}
-                        onClick={() => forceYouTubeAudioUnlock("manual-button")}
-                        title="Forçar áudio do YouTube"
-                    >
-                        Ativar áudio YouTube
-                    </button>
-                </div>
-            )}
-            <div className="control-row">
-                <select
-                    className="track-select"
-                    value={currentTrack}
-                    onChange={(e) => handleTrackChange(e.target.value)}
-                >
-                    <option value="">Escolha sua trilha sonora! 🎵</option>
-                    {currentPlaylistTracks.map((track: string) => (
-                        <option key={track} value={track}>
-                            {track.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '')}
-                        </option>
-                    ))}
-                </select>
             </div>
             <div className="control-row actions">
                 <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0} title="Anterior">
@@ -769,6 +757,20 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         </button>
                     </div>
                     <div className="control-row">
+                        <select
+                            className="track-select"
+                            value={currentTrack}
+                            onChange={(e) => handleTrackChange(e.target.value)}
+                        >
+                            <option value="">Escolha sua trilha sonora! 🎵</option>
+                            {currentPlaylistTracks.map((track: string) => (
+                                <option key={track} value={track}>
+                                    {track.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '')}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="control-row">
                         <input
                             type="text"
                             placeholder="URL do YouTube..."
@@ -795,32 +797,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         >
                             <Link size={12} />
                         </button>
-                    </div>
-                    {isYouTubeUrl(currentTrack) && (
-                        <div className="control-row">
-                            <button
-                                className="control-btn"
-                                style={{ width: "100%", color: "#e0bb6b", borderColor: "rgba(197,160,89,0.5)" }}
-                                onClick={() => forceYouTubeAudioUnlock("manual-button-unified")}
-                                title="Forçar áudio do YouTube"
-                            >
-                                Ativar áudio YouTube
-                            </button>
-                        </div>
-                    )}
-                    <div className="control-row">
-                        <select
-                            className="track-select"
-                            value={currentTrack}
-                            onChange={(e) => handleTrackChange(e.target.value)}
-                        >
-                            <option value="">Escolha sua trilha sonora! 🎵</option>
-                            {currentPlaylistTracks.map((track: string) => (
-                                <option key={track} value={track}>
-                                    {track.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '')}
-                                </option>
-                            ))}
-                        </select>
                     </div>
                     <div className="control-row actions">
                         <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0}>
