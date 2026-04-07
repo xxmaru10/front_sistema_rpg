@@ -179,6 +179,66 @@ export class VoiceChatManager {
         return ctx;
     }
 
+    private getPreferredAudioConstraints(deviceId?: string): MediaTrackConstraints {
+        return {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: { ideal: 1 },
+            sampleRate: { ideal: 48000 },
+            sampleSize: { ideal: 16 },
+            latency: { ideal: 0.02 },
+        };
+    }
+
+    private getFallbackAudioConstraints(deviceId?: string): MediaTrackConstraints {
+        return {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: { ideal: 1 },
+        };
+    }
+
+    private async getBestEffortMicStream(deviceId?: string): Promise<MediaStream> {
+        try {
+            return await navigator.mediaDevices.getUserMedia({
+                audio: this.getPreferredAudioConstraints(deviceId),
+            });
+        } catch (preferredError) {
+            console.warn("[VoiceChat] Preferred mic constraints failed, trying fallback:", preferredError);
+            return await navigator.mediaDevices.getUserMedia({
+                audio: this.getFallbackAudioConstraints(deviceId),
+            });
+        }
+    }
+
+    private async tuneAudioSenders(pc: RTCPeerConnection) {
+        const senders = pc.getSenders().filter(s => s.track?.kind === 'audio');
+        for (const sender of senders) {
+            const track = sender.track;
+            if (track) {
+                try {
+                    track.contentHint = 'speech';
+                } catch (_) { }
+            }
+            try {
+                const params = sender.getParameters();
+                if (!params.encodings || params.encodings.length === 0) {
+                    params.encodings = [{}];
+                }
+                params.encodings[0].maxBitrate = 32000;
+                (params.encodings[0] as any).dtx = "enabled";
+                (params.encodings[0] as any).ptime = 20;
+                await sender.setParameters(params);
+            } catch (e) {
+                console.warn("[VoiceChat] Could not tune audio sender params:", e);
+            }
+        }
+    }
+
     // ─── Initialize ────────────────────────────────────────────
 
     public async initialize() {
@@ -239,15 +299,7 @@ export class VoiceChatManager {
 
     public async joinVoice(deviceId?: string): Promise<boolean> {
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    deviceId: deviceId ? { exact: deviceId } : undefined,
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    channelCount: { ideal: 1 },
-                }
-            });
+            this.localStream = await this.getBestEffortMicStream(deviceId);
 
             const audioCtx = this.getLocalAudioContext();
             if (audioCtx.state === 'suspended') {
@@ -349,21 +401,18 @@ export class VoiceChatManager {
         if (!this._isConnected) return;
 
         try {
-            const newStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    deviceId: { exact: deviceId },
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    channelCount: { ideal: 1 },
-                }
-            });
+            const newStream = await this.getBestEffortMicStream(deviceId);
 
             if (this.localStream) {
                 this.localStream.getTracks().forEach(t => t.stop());
             }
 
             const newTrack = newStream.getAudioTracks()[0];
+            if (newTrack) {
+                try {
+                    newTrack.contentHint = 'speech';
+                } catch (_) { }
+            }
             this.localStream = newStream;
 
             // Replace track in all peer connections
@@ -375,6 +424,9 @@ export class VoiceChatManager {
             });
 
             await Promise.all(replacements);
+
+            const tunePromises = Array.from(this.peerConnections.values()).map(pc => this.tuneAudioSenders(pc));
+            await Promise.all(tunePromises);
 
             // Re-setup local analysis
             if (this.localSpeakingInterval) {
@@ -705,9 +757,14 @@ export class VoiceChatManager {
 
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => {
+                try {
+                    if (track.kind === 'audio') track.contentHint = 'speech';
+                } catch (_) { }
                 if (this.localStream) pc.addTrack(track, this.localStream);
             });
         }
+
+        this.tuneAudioSenders(pc).catch(() => {});
 
         pc.onicecandidate = (event) => {
             if (event.candidate) {
