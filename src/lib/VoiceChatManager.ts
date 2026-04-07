@@ -199,16 +199,99 @@ export class VoiceChatManager {
         };
     }
 
-    private async getBestEffortMicStream(deviceId?: string): Promise<MediaStream> {
+    private isBluetoothDeviceLabel(label: string): boolean {
+        const v = (label || '').toLowerCase();
+        return v.includes('bluetooth') || v.includes('hands-free') || v.includes('hands free') || v.includes('hfp') || v.includes('airpods');
+    }
+
+    private async resolveInputDeviceId(deviceId?: string, respectRequested: boolean = false): Promise<string | undefined> {
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+            return deviceId;
+        }
+
         try {
-            return await navigator.mediaDevices.getUserMedia({
-                audio: this.getPreferredAudioConstraints(deviceId),
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const inputs = devices.filter(d => d.kind === 'audioinput' && !!d.deviceId);
+            if (inputs.length === 0) return deviceId;
+
+            if (deviceId) {
+                const requested = inputs.find(d => d.deviceId === deviceId);
+                if (!requested) return deviceId;
+                if (respectRequested || !this.isBluetoothDeviceLabel(requested.label)) {
+                    return requested.deviceId;
+                }
+
+                const fallback = inputs.find(d => !this.isBluetoothDeviceLabel(d.label));
+                if (fallback?.deviceId) {
+                    console.warn(`[VoiceChat] Bluetooth mic auto-avoided for quality. Requested "${requested.label}", using "${fallback.label}"`);
+                    return fallback.deviceId;
+                }
+                return requested.deviceId;
+            }
+
+            const preferred = inputs.find(d => !this.isBluetoothDeviceLabel(d.label));
+            return preferred?.deviceId || inputs[0]?.deviceId;
+        } catch {
+            return deviceId;
+        }
+    }
+
+    private async tryUpgradeFromBluetoothStream(
+        stream: MediaStream,
+        respectRequested: boolean = false
+    ): Promise<MediaStream> {
+        if (respectRequested) return stream;
+        const track = stream.getAudioTracks()[0];
+        const currentLabel = track?.label || "";
+        if (!track || !this.isBluetoothDeviceLabel(currentLabel)) return stream;
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return stream;
+
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const fallback = devices.find(
+                d => d.kind === 'audioinput' && !!d.deviceId && !this.isBluetoothDeviceLabel(d.label)
+            );
+            if (!fallback?.deviceId) return stream;
+
+            let upgraded: MediaStream | null = null;
+            try {
+                upgraded = await navigator.mediaDevices.getUserMedia({
+                    audio: this.getPreferredAudioConstraints(fallback.deviceId),
+                });
+            } catch {
+                upgraded = await navigator.mediaDevices.getUserMedia({
+                    audio: this.getFallbackAudioConstraints(fallback.deviceId),
+                });
+            }
+
+            if (upgraded) {
+                stream.getTracks().forEach(t => t.stop());
+                console.warn(`[VoiceChat] Bluetooth mic auto-avoided after permission. Using "${fallback.label}" instead of "${currentLabel}"`);
+                return upgraded;
+            }
+            return stream;
+        } catch {
+            return stream;
+        }
+    }
+
+    private isOffererAgainst(peerId: string): boolean {
+        return this.normUserId(this.userId) < this.normUserId(peerId);
+    }
+
+    private async getBestEffortMicStream(deviceId?: string, respectRequested: boolean = false): Promise<MediaStream> {
+        const resolvedDeviceId = await this.resolveInputDeviceId(deviceId, respectRequested);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: this.getPreferredAudioConstraints(resolvedDeviceId),
             });
+            return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
         } catch (preferredError) {
             console.warn("[VoiceChat] Preferred mic constraints failed, trying fallback:", preferredError);
-            return await navigator.mediaDevices.getUserMedia({
-                audio: this.getFallbackAudioConstraints(deviceId),
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: this.getFallbackAudioConstraints(resolvedDeviceId),
             });
+            return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
         }
     }
 
@@ -404,7 +487,7 @@ export class VoiceChatManager {
         if (!this._isConnected) return;
 
         try {
-            const newStream = await this.getBestEffortMicStream(deviceId);
+            const newStream = await this.getBestEffortMicStream(deviceId, true);
 
             if (this.localStream) {
                 this.localStream.getTracks().forEach(t => t.stop());
@@ -675,7 +758,7 @@ export class VoiceChatManager {
             // Guard: if already tracking this peer and we're the answerer,
             // don't keep ping-ponging — only the offerer drives reconnection
             if (this.voicePeerIds.has(from) && this._isConnected && this.localStream) {
-                const isOfferer = this.userId < from;
+                const isOfferer = this.isOffererAgainst(from);
                 if (!isOfferer) {
                     console.log(`[VoiceChat - ${this.userId}] voice-join from ${from} — already tracking, answerer skipping re-ping`);
                     return;
@@ -688,7 +771,7 @@ export class VoiceChatManager {
 
             if (!this._isConnected || !this.localStream) return;
 
-            if (this.userId < from) {
+            if (this.isOffererAgainst(from)) {
                 // Deterministic: smaller userId is always the offerer
                 console.log(`[VoiceChat - ${this.userId}] I am offerer → creating offer for:`, from);
                 await this.createPeerConnection(from, true);
@@ -797,7 +880,7 @@ export class VoiceChatManager {
                     console.log(`[VoiceChat] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
                     setTimeout(() => {
                         if (this._isConnected && this.localStream) {
-                            if (this.userId < peerId) {
+                            if (this.isOffererAgainst(peerId)) {
                                 this.createPeerConnection(peerId, true);
                             } else {
                                 this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });

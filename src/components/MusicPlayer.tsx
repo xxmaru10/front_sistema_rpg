@@ -59,6 +59,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
     const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
     const ytLocalGestureUnlockRef = useRef(false);
+    const currentTrackRef = useRef("");
+    const sawLiveMusicEventRef = useRef(false);
+    const lastMusicEventTsRef = useRef(0);
+    const lastMusicSeqRef = useRef(0);
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -70,6 +74,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     useEffect(() => {
         isPlayingRef.current = isPlaying;
     }, [isPlaying]);
+
+    useEffect(() => {
+        currentTrackRef.current = currentTrack;
+    }, [currentTrack]);
 
     const [isLooping, setIsLooping] = useState(true);
     const [volume, setVolume] = useState(0.5);
@@ -97,6 +105,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         setCurrentTrack("");
         setIsPlaying(false);
         setYtAutoplayUnlocked(false);
+        currentTrackRef.current = "";
+        sawLiveMusicEventRef.current = false;
+        lastMusicEventTsRef.current = 0;
+        lastMusicSeqRef.current = 0;
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
@@ -264,11 +276,13 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
             if (!ytPlayerRef.current) {
                 ytPlayerRef.current = new YT.Player(ytContainerIdRef.current, {
-                    width: "1",
-                    height: "1",
+                    width: "200",
+                    height: "112",
                     videoId,
+                    host: "https://www.youtube.com",
                     playerVars: {
                         autoplay: isPlaying ? 1 : 0,
+                        origin: window.location.origin,
                         controls: 0,
                         disablekb: 1,
                         fs: 0,
@@ -358,6 +372,27 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     sfx.play().catch(e => console.warn("SFX blocked:", e));
                 }
             } else if (event.type === "MUSIC_PLAYBACK_CHANGED") {
+                const eventSeq = Number(event.seq || 0);
+                if (eventSeq > 0 && lastMusicSeqRef.current > 0 && eventSeq < lastMusicSeqRef.current) {
+                    console.log("[MusicPlayer] Ignoring stale MUSIC_PLAYBACK_CHANGED seq");
+                    return;
+                }
+                const eventTs = new Date(event.createdAt || 0).getTime();
+                if (
+                    Number.isFinite(eventTs) &&
+                    eventTs > 0 &&
+                    lastMusicEventTsRef.current > 0 &&
+                    eventTs < lastMusicEventTsRef.current
+                ) {
+                    console.log("[MusicPlayer] Ignoring stale MUSIC_PLAYBACK_CHANGED event");
+                    return;
+                }
+                if (eventSeq > 0) {
+                    lastMusicSeqRef.current = eventSeq;
+                }
+                lastMusicEventTsRef.current = eventTs > 0 ? eventTs : Date.now();
+                sawLiveMusicEventRef.current = true;
+
                 const { url: rawUrl, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
                 const url = normalizeYouTubeUrl(rawUrl);
 
@@ -448,6 +483,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             // O bulk listener é chamado a cada novo evento do jogo — só restaurar snapshot UMA vez por sessão
             if (snapshotInitRef.current) return;
             snapshotInitRef.current = true;
+
+            // Se já recebemos estado ao-vivo, nunca sobrepor com snapshot.
+            if (sawLiveMusicEventRef.current) return;
+            if (currentTrackRef.current) return;
 
             // Evento delta tem prioridade sobre snapshot (inclui startedAt para sync)
             const lastDeltaMusic = [...bulkEvents]
@@ -769,8 +808,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             {isMounted && isYouTubeUrl(currentTrack) && (() => {
                 console.log('[MusicPlayer] YT_MOUNT — url:', currentTrack, 'playing:', isPlaying, 'unlocked:', ytAutoplayUnlocked);
                 return createPortal(
-                    <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '1px', height: '1px', pointerEvents: 'none' }}>
-                        <div id={ytContainerIdRef.current} style={{ width: "1px", height: "1px" }} />
+                    <div style={{
+                        position: 'fixed',
+                        left: '0',
+                        top: '0',
+                        width: '1px',
+                        height: '1px',
+                        overflow: 'hidden',
+                        opacity: 0.01,
+                        pointerEvents: 'none',
+                        zIndex: 1
+                    }}>
+                        <div id={ytContainerIdRef.current} style={{ width: "200px", height: "112px" }} />
                     </div>,
                     document.body
                 );

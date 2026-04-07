@@ -253,6 +253,15 @@ export class ScreenShareManager {
         }
 
         if (type === 'offer' && !this.isBroadcaster && signal.offer) {
+            const existing = this.peerConnections.get('broadcaster');
+            if (
+                existing &&
+                (existing.connectionState === 'connected' || existing.connectionState === 'connecting') &&
+                existing.signalingState === 'stable'
+            ) {
+                console.log(`[WebRTC - ${this.userId}] Duplicate offer ignored — broadcaster connection already healthy`);
+                return;
+            }
             setTimeout(() => this.handleOffer(signal), 0);
             return;
         }

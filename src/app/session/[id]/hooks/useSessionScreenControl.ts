@@ -36,8 +36,14 @@ export function useSessionScreenControl({
     const screenVideoRef = useRef<HTMLVideoElement | null>(null);
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
     const lastHandledReconnectVersionRef = useRef(0);
+    const lastVisibilityReconnectAtRef = useRef(0);
+    const videoStreamRef = useRef<MediaStream | null>(videoStream);
     const [videoNoSignal, setVideoNoSignal] = useState(false);
     const [videoMuted, setVideoMuted] = useState(false);
+
+    useEffect(() => {
+        videoStreamRef.current = videoStream;
+    }, [videoStream]);
 
     // ── Screen share manager lifecycle ──────────────────────────
     useEffect(() => {
@@ -221,7 +227,15 @@ export function useSessionScreenControl({
         const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
                 console.log("[ScreenShare] Visibility visible, checking connection...");
-                screenShareManagerRef.current?.checkAndReconnect();
+                const now = Date.now();
+                if (now - lastVisibilityReconnectAtRef.current > 8000) {
+                    lastVisibilityReconnectAtRef.current = now;
+                    const el = screenVideoRef.current;
+                    const hasPlayableStream = !!videoStreamRef.current && !!el?.srcObject && !el.paused && el.readyState >= 2;
+                    if (!hasPlayableStream) {
+                        screenShareManagerRef.current?.checkAndReconnect();
+                    }
+                }
 
                 // Also try to unmute on tab refocus — user gesture may now be available
                 const el = screenVideoRef.current;

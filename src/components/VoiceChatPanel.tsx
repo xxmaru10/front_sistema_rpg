@@ -14,6 +14,11 @@ interface VoiceChatPanelProps {
 }
 
 export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPanelProps) {
+    const isBluetoothLabel = useCallback((label: string) => {
+        const v = (label || "").toLowerCase();
+        return v.includes("bluetooth") || v.includes("hands-free") || v.includes("hands free") || v.includes("hfp") || v.includes("airpods");
+    }, []);
+
     const [isOpen, setIsOpen] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [micMuted, setMicMuted] = useState(false);
@@ -55,13 +60,26 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const loadDevices = useCallback(async () => {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            setInputDevices(devices.filter(d => d.kind === 'audioinput' && d.deviceId));
-            setOutputDevices(devices.filter(d => d.kind === 'audiooutput' && d.deviceId));
+            const inputs = devices.filter(d => d.kind === 'audioinput' && d.deviceId);
+            const outputs = devices.filter(d => d.kind === 'audiooutput' && d.deviceId);
+            setInputDevices(inputs);
+            setOutputDevices(outputs);
             setDevicesLoaded(true);
+
+            // Evita manter device Bluetooth Hands-Free como entrada quando houver alternativa.
+            const selected = inputs.find(d => d.deviceId === audioInputDeviceId);
+            const nonBt = inputs.find(d => !isBluetoothLabel(d.label));
+            if (nonBt && (!audioInputDeviceId || (selected && isBluetoothLabel(selected.label)))) {
+                setAudioInputDeviceId(nonBt.deviceId);
+                localStorage.setItem('voice_input_device', nonBt.deviceId);
+                if (managerRef.current && isConnected) {
+                    await managerRef.current.setMicDevice(nonBt.deviceId);
+                }
+            }
         } catch (e) {
             console.warn('[VoiceChatPanel] Error enumerating devices', e);
         }
-    }, []);
+    }, [audioInputDeviceId, isBluetoothLabel, isConnected]);
 
     useEffect(() => {
         if (isConnected) {
@@ -73,12 +91,16 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
     const handleInputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const deviceId = e.target.value;
+        const selected = inputDevices.find(d => d.deviceId === deviceId);
+        if (selected?.label && isBluetoothLabel(selected.label)) {
+            setShowBluetoothWarning(true);
+        }
         setAudioInputDeviceId(deviceId);
         localStorage.setItem('voice_input_device', deviceId);
         if (managerRef.current && isConnected) {
             await managerRef.current.setMicDevice(deviceId);
         }
-    }, [isConnected]);
+    }, [inputDevices, isBluetoothLabel, isConnected]);
 
     const handleOutputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const deviceId = e.target.value;
