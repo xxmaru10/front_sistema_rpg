@@ -147,13 +147,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (byId) return byId.name;
         }
 
-        // 2. Fallback por display name (uid) ou ownerUserId
-        const matchedChar = allChars.find(c => {
-            const uidLower = uid.trim().toLowerCase();
-            const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
-            const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch);
-        });
+        // 2. Fallback por display name (uid) ou ownerUserId (normalização Unicode)
+        const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
+        const uidNorm = norm(uid);
+        const matchedChar = allChars.find(c =>
+            norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
+        );
 
         return matchedChar ? matchedChar.name : uid;
     }, [state.characters]);
@@ -176,12 +175,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (byId) return null; // personagem encontrado mas sem imagem — não tentar fallback por nome
         }
 
-        // 2. Fallback robusto por ownerUserId ou nome
-        const matchedChar = allChars.find(c => {
-            const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
-            const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch);
-        });
+        // 2. Fallback robusto por ownerUserId ou nome (normalização Unicode para acentos)
+        const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
+        const uidNorm = norm(uid);
+        const matchedChar = allChars.find(c =>
+            norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
+        );
 
         return matchedChar?.imageUrl || null;
     }, [state.characters, userId]);
@@ -365,6 +364,13 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         }
     }, [sessionId, isConnected, isJoining, isManagerReady, handleJoin]);
 
+    // Quando characterId chega depois do manager ser criado (useHeaderLogic lê ?c= assincronamente)
+    useEffect(() => {
+        if (characterId && managerRef.current) {
+            managerRef.current.updateCharacterId(characterId);
+        }
+    }, [characterId]);
+
     const handleToggleMic = useCallback(() => {
         const mgr = managerRef.current;
         if (!mgr) return;
@@ -407,10 +413,11 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             // Resolver characterId: 1) prop local (eu), 2) presença, 3) fallback por ownerUserId/name no state atual
             let resolvedCharId = isMe ? characterId : p.characterId;
             if (!resolvedCharId) {
-                const uidLower = p.userId.trim().toLowerCase();
+                const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
+                const uidNorm = norm(p.userId);
                 const matched = Object.values(state.characters).find(c =>
-                    (c.ownerUserId || "").trim().toLowerCase() === uidLower ||
-                    (c.name || "").trim().toLowerCase() === uidLower
+                    norm(c.ownerUserId) === uidNorm ||
+                    norm(c.name) === uidNorm
                 );
                 if (matched) resolvedCharId = matched.id;
             }

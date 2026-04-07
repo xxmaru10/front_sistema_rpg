@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 // Carregamento dinâmico do ReactPlayer para evitar erros de SSR e types em tempo de compilação
 const ReactPlayer = dynamic(() => import("@/components/ReactPlayerWrapper"), { ssr: false });
@@ -161,7 +162,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     
                     if (playing && event.payload.startedAt) {
                         const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
-                        if (reactPlayerRef.current) {
+                        if (reactPlayerRef.current && typeof reactPlayerRef.current.seekTo === 'function') {
                             reactPlayerRef.current.seekTo(elapsed, 'seconds');
                         } else {
                             pendingSeekRef.current = elapsed;
@@ -465,7 +466,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     }, [isLooping, userRole, playNext, userId, sessionId, currentTrack]);
 
     const handleYouTubeReady = () => {
-        if (pendingSeekRef.current !== null && reactPlayerRef.current) {
+        if (pendingSeekRef.current !== null && reactPlayerRef.current && typeof reactPlayerRef.current.seekTo === 'function') {
             reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
             pendingSeekRef.current = null;
         }
@@ -478,8 +479,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         >
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
-            {isYouTubeUrl(currentTrack) && (
-                <div style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden', pointerEvents: 'none' }}>
+            {isMounted && isYouTubeUrl(currentTrack) && createPortal(
+                <div style={{ position: 'fixed', bottom: 0, right: 0, width: '320px', height: '180px', opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
                     <ReactPlayer
                         ref={reactPlayerRef}
                         width="320px"
@@ -494,7 +495,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                             onReady: handleYouTubeReady
                         } as any}
                     />
-                </div>
+                </div>,
+                document.body
             )}
 
             {!unifiedMode && (

@@ -770,6 +770,18 @@ export class VoiceChatManager {
 
     // ─── Public helpers ────────────────────────────────────────
 
+    public updateCharacterId(characterId: string) {
+        if (this.characterId === characterId) return;
+        this.characterId = characterId;
+        const socket = getSocket(this.userId);
+        socket.emit('voice-presence', {
+            sessionId: this.sessionId,
+            userId: this.userId,
+            characterId: this.characterId,
+            inVoice: this._isConnected,
+        });
+    }
+
     public isPeerSpeaking(peerId: string): boolean {
         const data = this.speakingAnalysers.get(peerId);
         return data ? (data as any).speaking === true : false;
