@@ -359,7 +359,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     };
 
     const forceYouTubeAudioUnlock = useCallback((reason: string) => {
-        const player: any = reactPlayerRef.current;
+        const player: any = ytPlayerRef.current;
         const internal = player?.getInternalPlayer?.();
 
         try {
@@ -570,12 +570,12 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const handleYouTubeReady = () => {
         console.log('[MusicPlayer] YT_READY — isPlaying:', isPlayingRef.current, 'pendingSeek:', pendingSeekRef.current);
-        if (pendingSeekRef.current !== null && reactPlayerRef.current && typeof reactPlayerRef.current.seekTo === 'function') {
-            reactPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
+        if (pendingSeekRef.current !== null && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+            ytPlayerRef.current.seekTo(pendingSeekRef.current, 'seconds');
             pendingSeekRef.current = null;
         }
         try {
-            const internal = reactPlayerRef.current?.getInternalPlayer?.();
+            const internal = ytPlayerRef.current?.getInternalPlayer?.();
             internal?.setPlaybackQuality?.("small");
         } catch (_) {}
         ytPlayedRef.current = false;
@@ -602,7 +602,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '1px', height: '1px', pointerEvents: 'none' }}>
                         <ReactPlayer
                             key={`${currentTrack}-${ytManualNonce}`}
-                            ref={reactPlayerRef}
+                            ref={ytPlayerRef}
                             width="1px"
                             height="1px"
                             {...{
