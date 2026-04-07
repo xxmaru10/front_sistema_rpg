@@ -68,6 +68,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
     const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
     const [ytNeedsManualUnlock, setYtNeedsManualUnlock] = useState(false);
+    const [ytRemountKey, setYtRemountKey] = useState(0);
 
     useEffect(() => {
         setIsMounted(true);
@@ -78,6 +79,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         if (isYouTubeUrl(currentTrack)) {
             setYtAutoplayUnlocked(false);
             setYtNeedsManualUnlock(false);
+            setYtRemountKey(0);
             ytPlayedRef.current = false;
         }
     }, [currentTrack]);
@@ -362,6 +364,20 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             const internal = reactPlayerRef.current?.getInternalPlayer?.();
             if (!internal) {
                 console.warn(`[MusicPlayer] YT_STATE — reason=${reason} attempt=${attempt} internal=missing`);
+                // react-player v3 pode não expor getInternalPlayer().
+                // Fallback: destrava por estado e, se for ação manual, remonta o player
+                // com muted=false logo após gesture explícita do usuário.
+                if (reason === "onPlay") {
+                    setYtAutoplayUnlocked(true);
+                    setYtNeedsManualUnlock(false);
+                    return;
+                }
+                if (reason.startsWith("manual-button")) {
+                    setYtAutoplayUnlocked(true);
+                    setYtNeedsManualUnlock(false);
+                    setYtRemountKey((k) => k + 1);
+                    return;
+                }
             } else {
                 try {
                     internal.unMute?.();
@@ -612,6 +628,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 return createPortal(
                     <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '320px', height: '180px', pointerEvents: 'none' }}>
                         <ReactPlayer
+                            key={`${currentTrack}-${ytAutoplayUnlocked ? 1 : 0}-${ytRemountKey}`}
                             ref={reactPlayerRef}
                             width="320px"
                             height="180px"
