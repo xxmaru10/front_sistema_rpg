@@ -51,9 +51,7 @@ export class VoiceChatManager {
         source: MediaStreamAudioSourceNode;
         gain: GainNode;
         analyser: AnalyserNode;
-        destination: MediaStreamAudioDestinationNode;
     }> = new Map();
-    private dummyAudioElements: Map<string, HTMLAudioElement> = new Map();
     private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
     private speakingAnalysers: Map<string, { analyser: AnalyserNode; interval: ReturnType<typeof setInterval> }> = new Map();
     private localSpeakingInterval: ReturnType<typeof setInterval> | null = null;
@@ -65,9 +63,22 @@ export class VoiceChatManager {
     private _sessionParticipants: SessionParticipant[] = [];
     private voicePeerIds: Set<string> = new Set();
     private reconnectAttempts: Map<string, number> = new Map();
+    private pendingOfferFallbackTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+    private connectionSafetyTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+    private lastVoiceJoinBroadcastAt: number = 0;
+    private lastDirectedVoiceJoinAt: Map<string, number> = new Map();
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+    private static readonly SCREEN_SHARE_PEER_DUCK_FACTOR = 0.35;
+    private static readonly VOICE_JOIN_HEARTBEAT_MS = 30000;
+    private static readonly VOICE_JOIN_THROTTLE_MS = 4000;
+    private static readonly OFFER_FALLBACK_DELAY_MS = 5000;
+    private static readonly CONNECTION_SAFETY_TIMEOUT_MS = 15000;
     private characterId?: string;
     private signalHandler: ((signal: VoiceSignal) => void) | null = null;
+    private lastVoiceSeenAt: Map<string, number> = new Map();
+    private static readonly PRESENCE_STALE_MS = 30000;
+    private suppressPeerPlaybackForScreenShare: boolean = false;
+    private screenShareAudioStateHandler: ((event: Event) => void) | null = null;
 
     private rtcConfig: RTCConfiguration = {
         iceServers: [
@@ -102,12 +113,68 @@ export class VoiceChatManager {
     get sessionParticipants() { return this._sessionParticipants; }
     get audioContextState() { return this.localAudioContext?.state || 'closed'; }
 
+    private normUserId(id: string): string {
+        return (id || '').trim().toLowerCase().normalize('NFC');
+    }
+
+    private touchVoiceSeen(userId: string) {
+        this.lastVoiceSeenAt.set(this.normUserId(userId), Date.now());
+    }
+
+    private getLastVoiceSeen(userId: string): number {
+        return this.lastVoiceSeenAt.get(this.normUserId(userId)) || 0;
+    }
+
+    private hasLivePeerConnectionForUser(userId: string): boolean {
+        const target = this.normUserId(userId);
+        for (const [peerId, pc] of this.peerConnections.entries()) {
+            if (this.normUserId(peerId) !== target) continue;
+            if (pc.connectionState === 'new' || pc.connectionState === 'connecting' || pc.connectionState === 'connected') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private sanitizePresence(participants: SessionParticipant[]): SessionParticipant[] {
+        const now = Date.now();
+        const dedup = new Map<string, SessionParticipant>();
+
+        for (const p of participants) {
+            const key = this.normUserId(p.userId);
+            const prev = dedup.get(key);
+            if (!prev) {
+                dedup.set(key, p);
+                continue;
+            }
+            dedup.set(key, {
+                userId: prev.userId.length >= p.userId.length ? prev.userId : p.userId,
+                inVoice: prev.inVoice || p.inVoice,
+                characterId: prev.characterId || p.characterId,
+            });
+        }
+
+        return Array.from(dedup.values()).map((p) => {
+            if (this.normUserId(p.userId) === this.normUserId(this.userId)) {
+                return { ...p, inVoice: this._isConnected, characterId: p.characterId || this.characterId };
+            }
+            if (!p.inVoice) return p;
+
+            const recentlySeen = (now - this.getLastVoiceSeen(p.userId)) <= VoiceChatManager.PRESENCE_STALE_MS;
+            const hasLivePc = this.hasLivePeerConnectionForUser(p.userId);
+            if (!recentlySeen && !hasLivePc) {
+                return { ...p, inVoice: false };
+            }
+            return p;
+        });
+    }
+
     // ─── Audio helpers ─────────────────────────────────────────
 
     private getLocalAudioContext(): AudioContext {
         if (typeof window === 'undefined') return {} as AudioContext;
         if (!this.localAudioContext) {
-            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.localAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
         }
         return this.localAudioContext!;
     }
@@ -115,16 +182,301 @@ export class VoiceChatManager {
     private getPeerAudioContext(peerId: string): AudioContext {
         let ctx = this.peerAudioContexts.get(peerId);
         if (!ctx) {
-            ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
             this.peerAudioContexts.set(peerId, ctx);
         }
         return ctx;
+    }
+
+    private getPreferredAudioConstraints(deviceId?: string): MediaTrackConstraints {
+        return {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: { ideal: 1 },
+        };
+    }
+
+    private getFallbackAudioConstraints(deviceId?: string): MediaTrackConstraints {
+        return {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            echoCancellation: true,
+            noiseSuppression: false,
+            autoGainControl: false,
+            channelCount: { ideal: 1 },
+        };
+    }
+
+    private isBluetoothDeviceLabel(label: string): boolean {
+        const v = (label || '').toLowerCase();
+        return v.includes('bluetooth') || v.includes('hands-free') || v.includes('hands free') || v.includes('hfp') || v.includes('airpods');
+    }
+
+    private async resolveInputDeviceId(deviceId?: string, respectRequested: boolean = false): Promise<string | undefined> {
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+            return deviceId;
+        }
+
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const inputs = devices.filter(d => d.kind === 'audioinput' && !!d.deviceId);
+            if (inputs.length === 0) return deviceId;
+
+            if (deviceId) {
+                const requested = inputs.find(d => d.deviceId === deviceId);
+                if (!requested) return deviceId;
+                if (respectRequested || !this.isBluetoothDeviceLabel(requested.label)) {
+                    return requested.deviceId;
+                }
+
+                const fallback = inputs.find(d => !this.isBluetoothDeviceLabel(d.label));
+                if (fallback?.deviceId) {
+                    console.warn(`[VoiceChat] Bluetooth mic auto-avoided for quality. Requested "${requested.label}", using "${fallback.label}"`);
+                    return fallback.deviceId;
+                }
+                return requested.deviceId;
+            }
+
+            const preferred = inputs.find(d => !this.isBluetoothDeviceLabel(d.label));
+            return preferred?.deviceId || inputs[0]?.deviceId;
+        } catch {
+            return deviceId;
+        }
+    }
+
+    private async tryUpgradeFromBluetoothStream(
+        stream: MediaStream,
+        respectRequested: boolean = false
+    ): Promise<MediaStream> {
+        if (respectRequested) return stream;
+        const track = stream.getAudioTracks()[0];
+        const currentLabel = track?.label || "";
+        if (!track || !this.isBluetoothDeviceLabel(currentLabel)) return stream;
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return stream;
+
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const fallback = devices.find(
+                d => d.kind === 'audioinput' && !!d.deviceId && !this.isBluetoothDeviceLabel(d.label)
+            );
+            if (!fallback?.deviceId) return stream;
+
+            let upgraded: MediaStream | null = null;
+            try {
+                upgraded = await navigator.mediaDevices.getUserMedia({
+                    audio: this.getPreferredAudioConstraints(fallback.deviceId),
+                });
+            } catch {
+                upgraded = await navigator.mediaDevices.getUserMedia({
+                    audio: this.getFallbackAudioConstraints(fallback.deviceId),
+                });
+            }
+
+            if (upgraded) {
+                stream.getTracks().forEach(t => t.stop());
+                console.warn(`[VoiceChat] Bluetooth mic auto-avoided after permission. Using "${fallback.label}" instead of "${currentLabel}"`);
+                return upgraded;
+            }
+            return stream;
+        } catch {
+            return stream;
+        }
+    }
+
+    private isOffererAgainst(peerId: string): boolean {
+        return this.normUserId(this.userId) < this.normUserId(peerId);
+    }
+
+    private clearPendingOfferFallback(peerId: string) {
+        const key = this.normUserId(peerId);
+        const timer = this.pendingOfferFallbackTimers.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            this.pendingOfferFallbackTimers.delete(key);
+        }
+    }
+
+    private clearConnectionSafetyTimer(peerId: string) {
+        const key = this.normUserId(peerId);
+        const timer = this.connectionSafetyTimers.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            this.connectionSafetyTimers.delete(key);
+        }
+    }
+
+    private scheduleConnectionSafety(peerId: string, pc: RTCPeerConnection) {
+        const key = this.normUserId(peerId);
+        this.clearConnectionSafetyTimer(key);
+        const timer = setTimeout(() => {
+            if (this.peerConnections.get(key) !== pc) return;
+            if (pc.connectionState === 'new' || pc.connectionState === 'connecting') {
+                console.warn(`[VoiceChat] Safety timeout: closing stuck connection for ${key}`);
+                pc.close();
+                this.peerConnections.delete(key);
+                this.scheduleReconnect(key, 'safety-timeout');
+            }
+        }, VoiceChatManager.CONNECTION_SAFETY_TIMEOUT_MS);
+        this.connectionSafetyTimers.set(key, timer);
+    }
+
+    private async sendVoiceJoin(targetPeerId?: string, force: boolean = false) {
+        const now = Date.now();
+        const selfPeerId = this.normUserId(this.userId);
+
+        if (targetPeerId) {
+            const key = this.normUserId(targetPeerId);
+            const last = this.lastDirectedVoiceJoinAt.get(key) || 0;
+            if (!force && now - last < VoiceChatManager.VOICE_JOIN_THROTTLE_MS) {
+                return;
+            }
+            this.lastDirectedVoiceJoinAt.set(key, now);
+            await this.sendSignal({ type: 'voice-join', from: this.userId, to: key, peerId: selfPeerId });
+            return;
+        }
+
+        if (!force && now - this.lastVoiceJoinBroadcastAt < VoiceChatManager.VOICE_JOIN_THROTTLE_MS) {
+            return;
+        }
+        this.lastVoiceJoinBroadcastAt = now;
+        await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: selfPeerId });
+    }
+
+    private scheduleAnswererFallbackJoin(peerId: string) {
+        const key = this.normUserId(peerId);
+        if (this.pendingOfferFallbackTimers.has(key)) return;
+
+        const timer = setTimeout(() => {
+            this.pendingOfferFallbackTimers.delete(key);
+            if (!this._isConnected || !this.localStream) return;
+
+            const pc = this.peerConnections.get(key);
+            const alreadyHealthy = !!pc && (pc.connectionState === 'connected' || pc.connectionState === 'connecting');
+            if (!alreadyHealthy) {
+                this.sendVoiceJoin(key).catch(() => { });
+            }
+        }, VoiceChatManager.OFFER_FALLBACK_DELAY_MS);
+
+        this.pendingOfferFallbackTimers.set(key, timer);
+    }
+
+    private scheduleReconnect(peerId: string, reason: string) {
+        const key = this.normUserId(peerId);
+        const attempts = this.reconnectAttempts.get(key) || 0;
+        if (attempts >= VoiceChatManager.MAX_RECONNECT_ATTEMPTS) {
+            console.warn(`[VoiceChat] Max reconnect attempts reached for ${key} (${reason})`);
+            return;
+        }
+        if (!this._isConnected || !this.localStream) return;
+
+        this.reconnectAttempts.set(key, attempts + 1);
+        const delay = Math.min(8000, 2000 * (attempts + 1));
+
+        console.log(`[VoiceChat] Reconnecting to ${key} (${reason}) attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS}`);
+        setTimeout(() => {
+            if (!this._isConnected || !this.localStream) return;
+            const current = this.peerConnections.get(key);
+            if (current && (current.connectionState === 'connected' || current.connectionState === 'connecting')) {
+                return;
+            }
+
+            if (this.isOffererAgainst(key)) {
+                this.createPeerConnection(key, true).catch(console.error);
+            } else {
+                this.sendVoiceJoin(key).catch(() => { });
+            }
+        }, delay);
+    }
+
+    private updatePeerAudioOutputState() {
+        this.peerAudioElements.forEach((audioEl, peerId) => {
+            const userMuted = this.peerMuted.get(peerId) ?? false;
+            const desiredVolume = Math.max(0, Math.min(1, this.peerVolumes.get(peerId) ?? 1));
+            const duckingMultiplier = this.suppressPeerPlaybackForScreenShare
+                ? VoiceChatManager.SCREEN_SHARE_PEER_DUCK_FACTOR
+                : 1;
+            const finalVolume = Math.max(0, Math.min(1, desiredVolume * duckingMultiplier));
+
+            audioEl.muted = userMuted;
+            audioEl.volume = userMuted ? 0 : finalVolume;
+            if (audioEl.srcObject && audioEl.paused) {
+                audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
+            }
+        });
+    }
+
+    private attachScreenShareLoopbackGuard() {
+        if (typeof window === 'undefined') return;
+        if (this.screenShareAudioStateHandler) return;
+
+        this.screenShareAudioStateHandler = (event: Event) => {
+            const custom = event as CustomEvent<{ active?: boolean }>;
+            this.suppressPeerPlaybackForScreenShare = !!custom.detail?.active;
+            this.updatePeerAudioOutputState();
+        };
+
+        window.addEventListener('screenshare:broadcast-audio', this.screenShareAudioStateHandler);
+    }
+
+    private detachScreenShareLoopbackGuard() {
+        if (typeof window === 'undefined') return;
+        if (!this.screenShareAudioStateHandler) return;
+
+        window.removeEventListener('screenshare:broadcast-audio', this.screenShareAudioStateHandler);
+        this.screenShareAudioStateHandler = null;
+        this.suppressPeerPlaybackForScreenShare = false;
+    }
+
+    private async getBestEffortMicStream(deviceId?: string, respectRequested: boolean = false): Promise<MediaStream> {
+        const resolvedDeviceId = await this.resolveInputDeviceId(deviceId, respectRequested);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: this.getPreferredAudioConstraints(resolvedDeviceId),
+            });
+            return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+        } catch (preferredError) {
+            console.warn("[VoiceChat] Preferred mic constraints failed, trying fallback:", preferredError);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: this.getFallbackAudioConstraints(resolvedDeviceId),
+            });
+            return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+        }
+    }
+
+    private async tuneAudioSenders(pc: RTCPeerConnection) {
+        const senders = pc.getSenders().filter(s => s.track?.kind === 'audio');
+        for (const sender of senders) {
+            const track = sender.track;
+            if (track) {
+                try {
+                    track.contentHint = 'speech';
+                } catch (_) { }
+            }
+            try {
+                const params = sender.getParameters();
+                if (!params.encodings || params.encodings.length === 0) {
+                    params.encodings = [{}];
+                }
+                const peersInMesh = Math.max(1, this.peerConnections.size);
+                const targetBitrate = peersInMesh >= 10 ? 52000 : peersInMesh >= 6 ? 56000 : 64000;
+                params.encodings[0].maxBitrate = targetBitrate;
+                params.encodings[0].priority = 'high';
+                (params.encodings[0] as any).networkPriority = 'high';
+                (params.encodings[0] as any).dtx = "disabled";
+                (params.encodings[0] as any).ptime = 20;
+                await sender.setParameters(params);
+            } catch (e) {
+                console.warn("[VoiceChat] Could not tune audio sender params:", e);
+            }
+        }
     }
 
     // ─── Initialize ────────────────────────────────────────────
 
     public async initialize() {
         const socket = getSocket(this.userId);
+        this.attachScreenShareLoopbackGuard();
 
         // Remove previous handler if reinitializing
         if (this.signalHandler) {
@@ -133,9 +485,9 @@ export class VoiceChatManager {
 
         this.signalHandler = (signal: VoiceSignal) => {
             // Ignore own signals
-            if (signal.from === this.userId) return;
+            if (this.normUserId(signal.from) === this.normUserId(this.userId)) return;
             // Ignore signals directed to someone else
-            if (signal.to && signal.to !== this.userId) return;
+            if (signal.to && this.normUserId(signal.to) !== this.normUserId(this.userId)) return;
             // Ignore non-voice signals
             if (!signal.type?.startsWith('voice-')) return;
 
@@ -148,8 +500,9 @@ export class VoiceChatManager {
         // Handle presence updates from server
         socket.off('voice-presence-update');
         socket.on('voice-presence-update', (participants: SessionParticipant[]) => {
-            this._sessionParticipants = participants;
-            this.onPresenceUpdate(participants);
+            const sanitized = this.sanitizePresence(participants);
+            this._sessionParticipants = sanitized;
+            this.onPresenceUpdate(sanitized);
         });
 
         // Announce presence
@@ -159,6 +512,7 @@ export class VoiceChatManager {
             characterId: this.characterId,
             inVoice: this._isConnected,
         });
+        this.touchVoiceSeen(this.userId);
     }
 
     // ─── Signal sending ────────────────────────────────────────
@@ -177,15 +531,12 @@ export class VoiceChatManager {
 
     // ─── Join / Leave ──────────────────────────────────────────
 
-    public async joinVoice(): Promise<boolean> {
+    public async joinVoice(deviceId?: string): Promise<boolean> {
+        if (this._isConnected && this.localStream) {
+            return true;
+        }
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                }
-            });
+            this.localStream = await this.getBestEffortMicStream(deviceId);
 
             const audioCtx = this.getLocalAudioContext();
             if (audioCtx.state === 'suspended') {
@@ -194,7 +545,7 @@ export class VoiceChatManager {
 
             this._isConnected = true;
             this._micMuted = false;
-            this.voicePeerIds.add(this.userId);
+            this.voicePeerIds.add(this.normUserId(this.userId));
 
             // Update presence to inVoice: true
             const socket = getSocket(this.userId);
@@ -204,18 +555,22 @@ export class VoiceChatManager {
                 characterId: this.characterId,
                 inVoice: true,
             });
+            this.touchVoiceSeen(this.userId);
 
             this.startLocalSpeakingDetection();
 
             // Announce to peers
-            await this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
+            await this.sendVoiceJoin(undefined, true);
 
             // Heartbeat so late-joiners see us
+            if (this.heartbeatInterval) {
+                clearInterval(this.heartbeatInterval);
+            }
             this.heartbeatInterval = setInterval(() => {
                 if (this._isConnected) {
-                    this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
+                    this.sendVoiceJoin().catch(() => { });
                 }
-            }, 15000);
+            }, VoiceChatManager.VOICE_JOIN_HEARTBEAT_MS);
 
             this.notifyPeerUpdate();
             return true;
@@ -249,7 +604,13 @@ export class VoiceChatManager {
         this._micMuted = false;
         this._localSpeaking = false;
         this._localAudioLevel = 0;
-        this.voicePeerIds.delete(this.userId);
+        this.voicePeerIds.delete(this.normUserId(this.userId));
+        this.pendingOfferFallbackTimers.forEach((timer) => clearTimeout(timer));
+        this.pendingOfferFallbackTimers.clear();
+        this.connectionSafetyTimers.forEach((timer) => clearTimeout(timer));
+        this.connectionSafetyTimers.clear();
+        this.lastDirectedVoiceJoinAt.clear();
+        this.lastVoiceJoinBroadcastAt = 0;
 
         const socket = getSocket(this.userId);
         socket.emit('voice-presence', {
@@ -282,7 +643,69 @@ export class VoiceChatManager {
         this.notifyPeerUpdate();
     }
 
+    public async setMicDevice(deviceId: string) {
+        if (!this._isConnected) return;
+
+        try {
+            // Mesmo em troca manual de device, tenta evitar HFP/Bluetooth quando houver alternativa.
+            const newStream = await this.getBestEffortMicStream(deviceId, false);
+
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(t => t.stop());
+            }
+
+            const newTrack = newStream.getAudioTracks()[0];
+            if (newTrack) {
+                try {
+                    newTrack.contentHint = 'speech';
+                } catch (_) { }
+            }
+            this.localStream = newStream;
+
+            // Replace track in all peer connections
+            const replacements = Array.from(this.peerConnections.entries()).map(async ([peerId, pc]) => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                if (sender) {
+                    await sender.replaceTrack(newTrack);
+                }
+            });
+
+            await Promise.all(replacements);
+
+            const tunePromises = Array.from(this.peerConnections.values()).map(pc => this.tuneAudioSenders(pc));
+            await Promise.all(tunePromises);
+
+            // Re-setup local analysis
+            if (this.localSpeakingInterval) {
+                clearInterval(this.localSpeakingInterval);
+                this.localSpeakingInterval = null;
+            }
+            this.startLocalSpeakingDetection();
+            this.setMicMuted(this._micMuted);
+            this.touchVoiceSeen(this.userId);
+
+            console.log(`[VoiceChat - ${this.userId}] Mic device changed to:`, deviceId);
+        } catch (e) {
+            console.error('[VoiceChat] Failed to change mic device:', e);
+        }
+    }
+
+    public async setOutputDevice(deviceId: string) {
+        try {
+            const promises = Array.from(this.peerAudioElements.values()).map(async (el) => {
+                if ((el as any).setSinkId) {
+                    await (el as any).setSinkId(deviceId);
+                }
+            });
+            await Promise.all(promises);
+            console.log(`[VoiceChat - ${this.userId}] Output device changed to:`, deviceId);
+        } catch (e) {
+            console.error('[VoiceChat] Failed to set sinkId on audio elements:', e);
+        }
+    }
+
     public setPeerVolume(peerId: string, volume: number) {
+        peerId = this.normUserId(peerId);
         const clampedVol = Math.max(0, Math.min(2, volume));
         this.peerVolumes.set(peerId, clampedVol);
         const gainNode = this.audioNodes.get(peerId)?.gain;
@@ -290,15 +713,14 @@ export class VoiceChatManager {
             const ctx = this.getPeerAudioContext(peerId);
             gainNode.gain.setTargetAtTime(clampedVol, ctx.currentTime, 0.1);
         }
-        const audioEl = this.peerAudioElements.get(peerId);
-        if (audioEl) audioEl.volume = 1;
+        this.updatePeerAudioOutputState();
         this.notifyPeerUpdate();
     }
 
     public setPeerMuted(peerId: string, muted: boolean) {
+        peerId = this.normUserId(peerId);
         this.peerMuted.set(peerId, muted);
-        const audioEl = this.peerAudioElements.get(peerId);
-        if (audioEl) audioEl.muted = muted;
+        this.updatePeerAudioOutputState();
         this.notifyPeerUpdate();
     }
 
@@ -334,6 +756,7 @@ export class VoiceChatManager {
             this.signalHandler = null;
         }
         socket.off('voice-presence-update');
+        this.detachScreenShareLoopbackGuard();
     }
 
     // ─── Cleanup ───────────────────────────────────────────────
@@ -341,12 +764,13 @@ export class VoiceChatManager {
     private cleanupAllPeers() {
         this.speakingAnalysers.forEach(({ interval }) => clearInterval(interval));
         this.speakingAnalysers.clear();
+        this.pendingOfferFallbackTimers.forEach((timer) => clearTimeout(timer));
+        this.pendingOfferFallbackTimers.clear();
+        this.connectionSafetyTimers.forEach((timer) => clearTimeout(timer));
+        this.connectionSafetyTimers.clear();
 
         this.peerAudioElements.forEach(el => { el.pause(); el.srcObject = null; });
         this.peerAudioElements.clear();
-
-        this.dummyAudioElements.forEach(el => { el.pause(); el.srcObject = null; });
-        this.dummyAudioElements.clear();
 
         this.audioNodes.forEach(nodes => {
             nodes.source.disconnect();
@@ -369,28 +793,28 @@ export class VoiceChatManager {
     }
 
     private removePeer(peerId: string) {
-        const analyser = this.speakingAnalysers.get(peerId);
-        if (analyser) { clearInterval(analyser.interval); this.speakingAnalysers.delete(peerId); }
+        const key = this.normUserId(peerId);
+        this.clearPendingOfferFallback(key);
+        this.clearConnectionSafetyTimer(key);
+        const analyser = this.speakingAnalysers.get(key);
+        if (analyser) { clearInterval(analyser.interval); this.speakingAnalysers.delete(key); }
 
-        const audioEl = this.peerAudioElements.get(peerId);
-        if (audioEl) { audioEl.pause(); audioEl.srcObject = null; this.peerAudioElements.delete(peerId); }
+        const audioEl = this.peerAudioElements.get(key);
+        if (audioEl) { audioEl.pause(); audioEl.srcObject = null; this.peerAudioElements.delete(key); }
 
-        const dummyEl = this.dummyAudioElements.get(peerId);
-        if (dummyEl) { dummyEl.pause(); dummyEl.srcObject = null; this.dummyAudioElements.delete(peerId); }
+        const nodes = this.audioNodes.get(key);
+        if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); this.audioNodes.delete(key); }
 
-        const nodes = this.audioNodes.get(peerId);
-        if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); this.audioNodes.delete(peerId); }
+        const pc = this.peerConnections.get(key);
+        if (pc) { pc.close(); this.peerConnections.delete(key); }
 
-        const pc = this.peerConnections.get(peerId);
-        if (pc) { pc.close(); this.peerConnections.delete(peerId); }
+        const ctx = this.peerAudioContexts.get(key);
+        if (ctx) { ctx.close().catch(() => {}); this.peerAudioContexts.delete(key); }
 
-        const ctx = this.peerAudioContexts.get(peerId);
-        if (ctx) { ctx.close().catch(() => {}); this.peerAudioContexts.delete(peerId); }
-
-        this.peerStreams.delete(peerId);
-        this.peerVolumes.delete(peerId);
-        this.peerMuted.delete(peerId);
-        this.pendingCandidates.delete(peerId);
+        this.peerStreams.delete(key);
+        this.peerVolumes.delete(key);
+        this.peerMuted.delete(key);
+        this.pendingCandidates.delete(key);
         this.notifyPeerUpdate();
     }
 
@@ -433,8 +857,6 @@ export class VoiceChatManager {
             }
             const existingAnalyser = this.speakingAnalysers.get(peerId);
             if (existingAnalyser) { clearInterval(existingAnalyser.interval); this.speakingAnalysers.delete(peerId); }
-            const existingDummy = this.dummyAudioElements.get(peerId);
-            if (existingDummy) { existingDummy.pause(); existingDummy.srcObject = null; this.dummyAudioElements.delete(peerId); }
 
             const audioCtx = this.getPeerAudioContext(peerId);
             if (audioCtx.state === 'suspended') {
@@ -449,20 +871,14 @@ export class VoiceChatManager {
             analyser.fftSize = 512;
             source.connect(gainNode);
             gainNode.connect(analyser);
-            const dst = audioCtx.createMediaStreamDestination();
-            analyser.connect(dst);
-            this.audioNodes.set(peerId, { source, gain: gainNode, analyser, destination: dst });
+            this.audioNodes.set(peerId, { source, gain: gainNode, analyser });
 
             const audioEl = this.peerAudioElements.get(peerId);
             if (audioEl) {
-                const dummyAudio = new Audio();
-                dummyAudio.srcObject = stream;
-                dummyAudio.muted = true;
-                dummyAudio.autoplay = true;
-                dummyAudio.play().catch(() => {});
-                this.dummyAudioElements.set(peerId, dummyAudio);
-                audioEl.srcObject = dst.stream;
-                audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
+                // Reproduz diretamente o stream remoto para evitar artefatos de resampling
+                // observados em alguns celulares quando a trilha passa por destino processado.
+                audioEl.srcObject = stream;
+                this.updatePeerAudioOutputState();
             }
 
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -485,23 +901,27 @@ export class VoiceChatManager {
     // ─── Signal handling ───────────────────────────────────────
 
     private async handleSignal(signal: VoiceSignal) {
-        const { type, from } = signal;
+        const type = signal.type;
+        const from = this.normUserId(signal.from);
 
         if (type === 'voice-leave') {
-            if (from === this.userId) return;
+            if (from === this.normUserId(this.userId)) return;
             this.voicePeerIds.delete(from);
+            this.lastVoiceSeenAt.delete(this.normUserId(from));
+            this.clearPendingOfferFallback(from);
             this.removePeer(from);
             return;
         }
 
         if (type === 'voice-join') {
-            if (from === this.userId) return;
+            if (from === this.normUserId(this.userId)) return;
 
             // Guard: don't reconnect to already-connected peers
             const existingPc = this.peerConnections.get(from);
             if (existingPc
-                && existingPc.connectionState !== 'failed'
-                && existingPc.connectionState !== 'closed') {
+                && (existingPc.connectionState === 'new'
+                    || existingPc.connectionState === 'connecting'
+                    || existingPc.connectionState === 'connected')) {
                 console.log(`[VoiceChat - ${this.userId}] voice-join from ${from} ignored — already ${existingPc.connectionState}`);
                 return;
             }
@@ -509,7 +929,7 @@ export class VoiceChatManager {
             // Guard: if already tracking this peer and we're the answerer,
             // don't keep ping-ponging — only the offerer drives reconnection
             if (this.voicePeerIds.has(from) && this._isConnected && this.localStream) {
-                const isOfferer = this.userId < from;
+                const isOfferer = this.isOffererAgainst(from);
                 if (!isOfferer) {
                     console.log(`[VoiceChat - ${this.userId}] voice-join from ${from} — already tracking, answerer skipping re-ping`);
                     return;
@@ -518,17 +938,18 @@ export class VoiceChatManager {
 
             this.removePeer(from);
             this.voicePeerIds.add(from);
+            this.touchVoiceSeen(from);
 
             if (!this._isConnected || !this.localStream) return;
 
-            if (this.userId < from) {
+            if (this.isOffererAgainst(from)) {
                 // Deterministic: smaller userId is always the offerer
                 console.log(`[VoiceChat - ${this.userId}] I am offerer → creating offer for:`, from);
                 await this.createPeerConnection(from, true);
             } else {
-                // Answerer: ping back so offerer knows we're here
-                console.log(`[VoiceChat - ${this.userId}] I am answerer → pinging back to:`, from);
-                await this.sendSignal({ type: 'voice-join', from: this.userId, to: from, peerId: this.userId });
+                // Answerer: espera passiva para evitar loop ping-pong de voice-join.
+                console.log(`[VoiceChat - ${this.userId}] I am answerer → waiting offer from:`, from);
+                this.scheduleAnswererFallbackJoin(from);
             }
             return;
         }
@@ -538,16 +959,29 @@ export class VoiceChatManager {
                 console.warn(`[VoiceChat - ${this.userId}] Offer from ${from} dropped — not connected`);
                 return;
             }
+            const existing = this.peerConnections.get(from);
+            if (
+                existing &&
+                (existing.connectionState === 'connected' || existing.connectionState === 'connecting') &&
+                existing.signalingState === 'stable'
+            ) {
+                console.log(`[VoiceChat - ${this.userId}] Duplicate offer ignored — ${from} connection already healthy`);
+                return;
+            }
+            this.clearPendingOfferFallback(from);
+            this.touchVoiceSeen(from);
             await this.handleOffer(signal);
             return;
         }
 
         if (type === 'voice-answer' && signal.answer) {
+            this.touchVoiceSeen(from);
             await this.handleAnswer(signal);
             return;
         }
 
         if (type === 'voice-ice-candidate' && signal.candidate) {
+            this.touchVoiceSeen(from);
             const pc = this.peerConnections.get(from);
             if (pc) {
                 if (pc.remoteDescription) {
@@ -563,7 +997,8 @@ export class VoiceChatManager {
     // ─── Peer connection ───────────────────────────────────────
 
     private async createPeerConnection(peerId: string, createOffer: boolean) {
-        if (peerId === this.userId) {
+        peerId = this.normUserId(peerId);
+        if (peerId === this.normUserId(this.userId)) {
             console.warn('[VoiceChat] Blocked self-connection attempt');
             return new RTCPeerConnection(this.rtcConfig);
         }
@@ -571,15 +1006,22 @@ export class VoiceChatManager {
         if (this.peerConnections.has(peerId)) {
             this.peerConnections.get(peerId)?.close();
         }
+        this.clearConnectionSafetyTimer(peerId);
 
         const pc = new RTCPeerConnection(this.rtcConfig);
         this.peerConnections.set(peerId, pc);
+        this.scheduleConnectionSafety(peerId, pc);
 
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => {
+                try {
+                    if (track.kind === 'audio') track.contentHint = 'speech';
+                } catch (_) { }
                 if (this.localStream) pc.addTrack(track, this.localStream);
             });
         }
+
+        this.tuneAudioSenders(pc).catch(() => {});
 
         pc.onicecandidate = (event) => {
             if (event.candidate) {
@@ -598,6 +1040,7 @@ export class VoiceChatManager {
 
             const stream = event.streams?.[0] || new MediaStream([event.track]);
             this.peerStreams.set(peerId, stream);
+            this.touchVoiceSeen(peerId);
 
             let audioEl = this.peerAudioElements.get(peerId);
             if (!audioEl) {
@@ -605,8 +1048,7 @@ export class VoiceChatManager {
                 audioEl.autoplay = true;
                 this.peerAudioElements.set(peerId, audioEl);
             }
-            audioEl.muted = this.peerMuted.get(peerId) ?? false;
-            audioEl.volume = 1;
+            this.updatePeerAudioOutputState();
 
             this.startPeerSpeakingDetection(peerId, stream);
             this.notifyPeerUpdate();
@@ -614,26 +1056,20 @@ export class VoiceChatManager {
 
         pc.onconnectionstatechange = () => {
             console.log(`[VoiceChat] Connection state for ${peerId}:`, pc.connectionState);
-            if (pc.connectionState === 'failed') {
-                const attempts = this.reconnectAttempts.get(peerId) || 0;
-                if (attempts < VoiceChatManager.MAX_RECONNECT_ATTEMPTS && this._isConnected && this.localStream) {
-                    this.reconnectAttempts.set(peerId, attempts + 1);
-                    console.log(`[VoiceChat] Reconnecting to ${peerId} (attempt ${attempts + 1}/${VoiceChatManager.MAX_RECONNECT_ATTEMPTS})`);
-                    setTimeout(() => {
-                        if (this._isConnected && this.localStream) {
-                            if (this.userId < peerId) {
-                                this.createPeerConnection(peerId, true);
-                            } else {
-                                this.sendSignal({ type: 'voice-join', from: this.userId, peerId: this.userId });
-                            }
-                        }
-                    }, 3000 * (attempts + 1));
-                } else {
-                    console.warn(`[VoiceChat] Max reconnect attempts reached for ${peerId}`);
+            if (pc.connectionState !== 'new' && pc.connectionState !== 'connecting') {
+                this.clearConnectionSafetyTimer(peerId);
+            }
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                if (this.peerConnections.get(peerId) === pc) {
+                    this.scheduleReconnect(peerId, pc.connectionState);
                 }
             } else if (pc.connectionState === 'connected') {
                 this.reconnectAttempts.delete(peerId);
+                this.clearPendingOfferFallback(peerId);
+                this.touchVoiceSeen(peerId);
                 console.log(`[VoiceChat] Successfully connected to ${peerId}`);
+            } else if (pc.connectionState === 'closed') {
+                this.clearPendingOfferFallback(peerId);
             }
         };
 
@@ -658,7 +1094,7 @@ export class VoiceChatManager {
 
     private async handleOffer(signal: VoiceSignal) {
         if (!signal.offer) return;
-        const peerId = signal.from;
+        const peerId = this.normUserId(signal.from);
         console.log(`[VoiceChat - ${this.userId}] Handling offer from:`, peerId);
 
         const pc = await this.createPeerConnection(peerId, false);
@@ -687,20 +1123,21 @@ export class VoiceChatManager {
 
     private async handleAnswer(signal: VoiceSignal) {
         if (!signal.answer) return;
-        const pc = this.peerConnections.get(signal.from);
+        const from = this.normUserId(signal.from);
+        const pc = this.peerConnections.get(from);
         if (!pc) return;
 
         if (pc.signalingState !== 'have-local-offer') {
-            console.warn(`[VoiceChat] Ignoring stale answer from ${signal.from} (state: ${pc.signalingState})`);
+            console.warn(`[VoiceChat] Ignoring stale answer from ${from} (state: ${pc.signalingState})`);
             return;
         }
 
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
-            const queued = this.pendingCandidates.get(signal.from);
+            const queued = this.pendingCandidates.get(from);
             if (queued) {
                 queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
-                this.pendingCandidates.delete(signal.from);
+                this.pendingCandidates.delete(from);
             }
         } catch (error) {
             console.error("[VoiceChat] Error handling answer:", error);
@@ -709,12 +1146,26 @@ export class VoiceChatManager {
 
     // ─── Public helpers ────────────────────────────────────────
 
+    public updateCharacterId(characterId: string) {
+        if (this.characterId === characterId) return;
+        this.characterId = characterId;
+        const socket = getSocket(this.userId);
+        socket.emit('voice-presence', {
+            sessionId: this.sessionId,
+            userId: this.userId,
+            characterId: this.characterId,
+            inVoice: this._isConnected,
+        });
+    }
+
     public isPeerSpeaking(peerId: string): boolean {
+        peerId = this.normUserId(peerId);
         const data = this.speakingAnalysers.get(peerId);
         return data ? (data as any).speaking === true : false;
     }
 
     public getPeerAudioLevel(peerId: string): number {
+        peerId = this.normUserId(peerId);
         const data = this.speakingAnalysers.get(peerId);
         return data ? ((data as any).audioLevel || 0) : 0;
     }

@@ -26,6 +26,9 @@ export class ScreenShareManager {
     private _receivedTracks: Map<string, MediaStreamTrack> = new Map();
     private signalHandler: ((signal: WebRTCSignal) => void) | null = null;
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+    private isHealthyConnectionState(state: RTCPeerConnectionState): boolean {
+        return state === 'new' || state === 'connecting' || state === 'connected';
+    }
 
     private rtcConfig: RTCConfiguration = {
         iceServers: [
@@ -158,16 +161,13 @@ export class ScreenShareManager {
                 payload: { type: 'stream-started' },
             });
 
-            // Update heartbeat to also emit transmission-sync
+            // Heartbeat de descoberta — apenas para quem ainda não conectou
             this.heartbeatInterval = setInterval(() => {
                 if (this.isBroadcaster && this.localStream) {
+                    // Só enviar o sinal WebRTC, sem forçar o socket 'transmission-sync' que reseta viewers
                     this.sendSignal({ type: 'stream-started', from: this.userId });
-                    socket.emit('transmission-sync', {
-                        sessionId: this.sessionId,
-                        payload: { type: 'stream-started' },
-                    });
                 }
-            }, 30000);
+            }, 60000); // Aumentado para 60s
 
             this.localStream.getVideoTracks()[0].onended = () => this.stopSharing();
 
@@ -246,6 +246,11 @@ export class ScreenShareManager {
             if (!peerId || peerId === this.userId) return;
 
             if (this.isBroadcaster) {
+                const existingPc = this.peerConnections.get(peerId);
+                if (existingPc && this.isHealthyConnectionState(existingPc.connectionState)) {
+                    console.log(`[WebRTC - ${this.userId}] Peer ${peerId} already has healthy connection (${existingPc.connectionState}), skipping recreate`);
+                    return;
+                }
                 console.log(`[WebRTC - ${this.userId}] Peer joined: ${peerId} — creating connection`);
                 this.createPeerConnection(peerId);
             } else {
@@ -256,6 +261,15 @@ export class ScreenShareManager {
         }
 
         if (type === 'offer' && !this.isBroadcaster && signal.offer) {
+            const existing = this.peerConnections.get('broadcaster');
+            if (
+                existing &&
+                (existing.connectionState === 'connected' || existing.connectionState === 'connecting') &&
+                existing.signalingState === 'stable'
+            ) {
+                console.log(`[WebRTC - ${this.userId}] Duplicate offer ignored — broadcaster connection already healthy`);
+                return;
+            }
             setTimeout(() => this.handleOffer(signal), 0);
             return;
         }
@@ -286,8 +300,12 @@ export class ScreenShareManager {
 
     private async createPeerConnection(peerId: string) {
         console.log(`[WebRTC - ${this.userId}] Creating peer connection for:`, peerId);
-        if (this.peerConnections.has(peerId)) {
-            this.peerConnections.get(peerId)?.close();
+        const existingPc = this.peerConnections.get(peerId);
+        if (existingPc && this.isHealthyConnectionState(existingPc.connectionState)) {
+            return existingPc;
+        }
+        if (existingPc) {
+            existingPc.close();
         }
 
         const pc = new RTCPeerConnection(this.rtcConfig);
@@ -295,6 +313,7 @@ export class ScreenShareManager {
 
         // Safety timeout: close stuck connections after 15s
         const safetyTimeout = setTimeout(() => {
+            if (this.peerConnections.get(peerId) !== pc) return;
             if (pc.connectionState === 'new' || pc.connectionState === 'connecting') {
                 console.warn(`[WebRTC] Safety timeout: closing stuck connection for ${peerId}`);
                 pc.close();
@@ -358,16 +377,20 @@ export class ScreenShareManager {
                 if (this.localStream) pc.addTrack(track, this.localStream);
             });
 
-            // Set encoding params for video only — leave audio at browser defaults
+            // Set encoding params for video + audio.
+            // Vídeo é limitado agressivamente para preservar uplink da call de voz.
+            // Áudio recebe prioridade para manter inteligibilidade da transmissão.
             try {
                 const senders = pc.getSenders();
+                const adaptiveVideoBitrate = this.getAdaptiveBitrate();
+                const adaptiveAudioBitrate = this.getAdaptiveAudioBitrate();
                 for (const sender of senders) {
                     if (sender.track?.kind === 'video') {
                         const params = sender.getParameters();
                         if (!params.encodings || params.encodings.length === 0) {
                             params.encodings = [{}];
                         }
-                        params.encodings[0].maxBitrate = this.getAdaptiveBitrate();
+                        params.encodings[0].maxBitrate = adaptiveVideoBitrate;
                         params.encodings[0].priority = 'high';
                         params.encodings[0].networkPriority = 'high';
                         try {
@@ -377,8 +400,17 @@ export class ScreenShareManager {
                         } catch (e) { /* ignore */ }
                         delete (params.encodings[0] as any).maxFramerate;
                         await sender.setParameters(params);
+                    } else if (sender.track?.kind === 'audio') {
+                        const params = sender.getParameters();
+                        if (!params.encodings || params.encodings.length === 0) {
+                            params.encodings = [{}];
+                        }
+                        params.encodings[0].maxBitrate = adaptiveAudioBitrate;
+                        params.encodings[0].priority = 'high';
+                        (params.encodings[0] as any).networkPriority = 'high';
+                        (params.encodings[0] as any).dtx = 'disabled';
+                        await sender.setParameters(params);
                     }
-                    // Audio sender — leave at browser defaults, no bitrate restriction
                 }
             } catch (e) {
                 console.warn('[WebRTC] Could not set encoding params:', e);
@@ -452,6 +484,10 @@ export class ScreenShareManager {
         console.log(`[WebRTC - ${this.userId}] Handling answer from:`, sourceId);
         const pc = this.peerConnections.get(sourceId);
         if (pc) {
+            if (pc.signalingState !== 'have-local-offer') {
+                console.warn(`[WebRTC - ${this.userId}] Ignoring stale answer from ${sourceId} (state: ${pc.signalingState})`);
+                return;
+            }
             try {
                 await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
                 const queued = this.pendingCandidates.get(sourceId);
@@ -506,9 +542,17 @@ export class ScreenShareManager {
 
     private getAdaptiveBitrate(): number {
         const peerCount = this.peerConnections.size;
-        if (peerCount <= 2) return 2_500_000;
-        if (peerCount <= 5) return 2_000_000;
-        if (peerCount <= 8) return 1_200_000;
-        return 800_000;
+        if (peerCount <= 2) return 1_800_000;
+        if (peerCount <= 5) return 1_200_000;
+        if (peerCount <= 8) return 900_000;
+        return 600_000;
+    }
+
+    private getAdaptiveAudioBitrate(): number {
+        const peerCount = this.peerConnections.size;
+        if (peerCount <= 2) return 128_000;
+        if (peerCount <= 5) return 96_000;
+        if (peerCount <= 8) return 80_000;
+        return 64_000;
     }
 }

@@ -35,8 +35,15 @@ export function useSessionScreenControl({
 
     const screenVideoRef = useRef<HTMLVideoElement | null>(null);
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
+    const lastHandledReconnectVersionRef = useRef(0);
+    const lastVisibilityReconnectAtRef = useRef(0);
+    const videoStreamRef = useRef<MediaStream | null>(videoStream);
     const [videoNoSignal, setVideoNoSignal] = useState(false);
     const [videoMuted, setVideoMuted] = useState(false);
+
+    useEffect(() => {
+        videoStreamRef.current = videoStream;
+    }, [videoStream]);
 
     // ── Screen share manager lifecycle ──────────────────────────
     useEffect(() => {
@@ -62,6 +69,7 @@ export function useSessionScreenControl({
                 screenShareManagerRef.current = null;
                 setTimeout(() => mgr.disconnect(), 200);
             }
+            screenShareStore.setHasStream(false);
         };
     }, [sessionId, actorUserId, setVideoStream]);
 
@@ -76,10 +84,29 @@ export function useSessionScreenControl({
         }
     }, [videoStream]);
 
+    // ── Broadcast flag: local user sharing tab audio (loopback guard) ───────
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const isBroadcasting = screenShareManagerRef.current?.broadcasting ?? false;
+        const hasAudioTrack = !!videoStream?.getAudioTracks?.().length;
+        const active = isBroadcasting && hasAudioTrack;
+
+        window.dispatchEvent(
+            new CustomEvent('screenshare:broadcast-audio', { detail: { active } })
+        );
+
+        return () => {
+            window.dispatchEvent(
+                new CustomEvent('screenshare:broadcast-audio', { detail: { active: false } })
+            );
+        };
+    }, [videoStream, sessionId, actorUserId]);
+
     // ── Global reconnect trigger ─────────────────────────────────
     useEffect(() => {
         const unsubscribe = screenShareStore.subscribe(() => {
-            if (screenShareStore.reconnectVersion > 0) {
+            if (screenShareStore.reconnectVersion > lastHandledReconnectVersionRef.current) {
+                lastHandledReconnectVersionRef.current = screenShareStore.reconnectVersion;
                 console.log("[WebRTC] Reconnect triggered from Header.");
                 screenShareManagerRef.current?.reconnect();
             }
@@ -97,7 +124,7 @@ export function useSessionScreenControl({
         const videoEl = screenVideoRef.current;
         if (!videoEl) return;
         videoEl.muted = false;
-        videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+        videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 1;
         setVideoMuted(false);
         console.log("[ScreenShare] Manually unmuted by user");
     }, [transmissionVolume]);
@@ -113,7 +140,7 @@ export function useSessionScreenControl({
                 // Always start unmuted — browser will throw if autoplay policy
                 // blocks it, then we fall back to muted
                 videoEl.muted = false;
-                videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 1;
             }
 
             const tryPlay = async () => {
@@ -142,7 +169,7 @@ export function useSessionScreenControl({
                         setTimeout(() => {
                             if (!videoEl || videoEl.paused) return;
                             videoEl.muted = false;
-                            videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                            videoEl.volume = transmissionVolume > 0 ? transmissionVolume : 1;
                             setVideoMuted(false);
                             console.log("[ScreenShare] Auto-unmuted successfully");
                         }, 500);
@@ -161,7 +188,7 @@ export function useSessionScreenControl({
                 const el = screenVideoRef.current;
                 if (el && el.muted) {
                     el.muted = false;
-                    el.volume = transmissionVolume > 0 ? transmissionVolume : 0.7;
+                    el.volume = transmissionVolume > 0 ? transmissionVolume : 1;
                     setVideoMuted(false);
                     console.log("[ScreenShare] Unmuted on canplay event");
                 }
@@ -218,7 +245,19 @@ export function useSessionScreenControl({
         const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
                 console.log("[ScreenShare] Visibility visible, checking connection...");
-                screenShareManagerRef.current?.checkAndReconnect();
+                const now = Date.now();
+                if (now - lastVisibilityReconnectAtRef.current > 8000) {
+                    lastVisibilityReconnectAtRef.current = now;
+                    const el = screenVideoRef.current;
+                    const expectsPlayableStream = !!videoStreamRef.current;
+                    if (!expectsPlayableStream) {
+                        return;
+                    }
+                    const hasPlayableStream = !!videoStreamRef.current && !!el?.srcObject && !el.paused && el.readyState >= 2;
+                    if (!hasPlayableStream) {
+                        screenShareManagerRef.current?.checkAndReconnect();
+                    }
+                }
 
                 // Also try to unmute on tab refocus — user gesture may now be available
                 const el = screenVideoRef.current;

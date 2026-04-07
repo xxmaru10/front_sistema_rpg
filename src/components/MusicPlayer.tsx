@@ -1,11 +1,30 @@
-
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
-import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw } from "lucide-react";
+import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+
+const isYouTubeUrl = (url: string) =>
+    /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
+
+const getYouTubeVideoId = (url: string): string | null => {
+    const match = url.match(/(?:youtube\.com\/watch\?.*?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
+};
+
+const isPlayableYouTubeUrl = (url: string) => !!getYouTubeVideoId(url);
+
+// Extrai apenas o videoId e retorna URL canônica watch?v=ID
+// Remove parâmetros de playlist/mix (list=RD..., start_radio=1) que interferem
+// com o ciclo de onReady do YouTube IFrame API
+const normalizeYouTubeUrl = (url: string): string => {
+    if (!isYouTubeUrl(url)) return url;
+    const match = url.match(/(?:youtube\.com\/watch\?.*?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/watch?v=${match[1]}` : url;
+};
 
 interface MusicPlayerProps {
     sessionId?: string;
@@ -19,24 +38,113 @@ interface Playlist {
     tracks: string[];
 }
 
+declare global {
+    interface Window {
+        YT?: any;
+        onYouTubeIframeAPIReady?: () => void;
+    }
+}
+
 const BUCKET_NAME = "campaign-uploads";
 
 export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const ytPlayerRef = useRef<any>(null);
+    const ytContainerIdRef = useRef(`yt-audio-${Math.random().toString(36).slice(2)}`);
+    const ytApiPromiseRef = useRef<Promise<any> | null>(null);
+    const ytReadyRef = useRef(false);
+    const pendingSeekRef = useRef<number | null>(null);
+    const isTemporaryRef = useRef(false);
+    const restoreUrlRef = useRef("");
+    const restoreLoopRef = useRef(true);
+    const handleTrackEndedRef = useRef<(() => void) | null>(null);
+    const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
+    const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
+    const ytLocalGestureUnlockRef = useRef(false);
+    const currentTrackRef = useRef("");
+    const sawLiveMusicEventRef = useRef(false);
+    const lastMusicEventTsRef = useRef(0);
+    const lastMusicSeqRef = useRef(0);
+
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
     const [currentTrack, setCurrentTrack] = useState<string>("");
+    const [youtubeInputUrl, setYoutubeInputUrl] = useState("");
     const [isPlaying, setIsPlaying] = useState(false);
+    const isPlayingRef = useRef(isPlaying);
+
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+    }, [isPlaying]);
+
+    useEffect(() => {
+        currentTrackRef.current = currentTrack;
+    }, [currentTrack]);
+
     const [isLooping, setIsLooping] = useState(true);
     const [volume, setVolume] = useState(0.5);
     const [isMuted, setIsMuted] = useState(false);
     const [showControls, setShowControls] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    // Controla muted-start do YouTube: começa mudo para garantir autoplay
+    // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
+    const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
+    const [, setYtNeedsManualUnlock] = useState(false);
+
+    const isYouTubePlayerAttached = useCallback(() => {
+        const player = ytPlayerRef.current;
+        const iframe = player?.getIframe?.();
+        return !!player && !!iframe && !!iframe.isConnected && ytReadyRef.current;
+    }, []);
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    // Evita herança de estado entre entradas/reloads de sessão.
+    useEffect(() => {
+        setCurrentTrack("");
+        setIsPlaying(false);
+        setYtAutoplayUnlocked(false);
+        currentTrackRef.current = "";
+        sawLiveMusicEventRef.current = false;
+        lastMusicEventTsRef.current = 0;
+        lastMusicSeqRef.current = 0;
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current.removeAttribute("src");
+        }
+        try {
+            ytPlayerRef.current?.pauseVideo?.();
+            ytPlayerRef.current?.stopVideo?.();
+        } catch (_) { }
+    }, [sessionId]);
+
+    // Resetar unlock a cada nova faixa YouTube (cada troca de URL começa muda)
+    useEffect(() => {
+        if (isPlayableYouTubeUrl(currentTrack)) {
+            if (!ytLocalGestureUnlockRef.current) {
+                setYtAutoplayUnlocked(false);
+            }
+            setYtNeedsManualUnlock(false);
+            ytPlayedRef.current = false;
+            ytLocalGestureUnlockRef.current = false;
+        }
+    }, [currentTrack]);
+
+    useEffect(() => {
+        if (!isMounted) return;
+        if (isPlayableYouTubeUrl(currentTrack)) return;
+        if (ytPlayerRef.current) {
+            try {
+                ytPlayerRef.current.destroy?.();
+            } catch (_) { }
+            ytPlayerRef.current = null;
+            ytReadyRef.current = false;
+        }
+    }, [isMounted, currentTrack]);
 
     const fetchPlaylists = async () => {
         setLoading(true);
@@ -65,14 +173,11 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     }
                 }
 
-                // Get tracks from subfolders and merge them into THIS folder's tracker
-                // (This makes parent folders include all subfolder tracks, as requested before)
                 const subFolderResults = await Promise.all(subFolders.map(scanFoldersRecursive));
                 for (const subTracks of subFolderResults) {
                     allTracksInThisPath = [...allTracksInThisPath, ...subTracks];
                 }
 
-                // If this folder (or its children) has tracks, add it as a playlist
                 if (allTracksInThisPath.length > 0) {
                     newPlaylists[path || "Geral"] = allTracksInThisPath;
                 }
@@ -127,7 +232,139 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         }
     }, [volume, isMuted]);
 
+    const ensureYouTubeApi = useCallback((): Promise<any> => {
+        if (window.YT?.Player) {
+            return Promise.resolve(window.YT);
+        }
+        if (ytApiPromiseRef.current) {
+            return ytApiPromiseRef.current;
+        }
+        ytApiPromiseRef.current = new Promise((resolve) => {
+            const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+            if (!existing) {
+                const script = document.createElement("script");
+                script.src = "https://www.youtube.com/iframe_api";
+                script.async = true;
+                document.head.appendChild(script);
+            }
+            const previous = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = () => {
+                previous?.();
+                resolve(window.YT);
+            };
+        });
+        return ytApiPromiseRef.current;
+    }, []);
+
     useEffect(() => {
+        if (!isMounted || !isPlayableYouTubeUrl(currentTrack)) return;
+        let cancelled = false;
+        const videoId = getYouTubeVideoId(currentTrack);
+        if (!videoId) return;
+
+        ensureYouTubeApi().then((YT) => {
+            if (cancelled || !YT?.Player) return;
+            const container = document.getElementById(ytContainerIdRef.current);
+            if (!container || !container.isConnected) return;
+
+            const existingIframe = ytPlayerRef.current?.getIframe?.();
+            if (ytPlayerRef.current && (!existingIframe || !existingIframe.isConnected)) {
+                try {
+                    ytPlayerRef.current.destroy?.();
+                } catch (_) { }
+                ytPlayerRef.current = null;
+                ytReadyRef.current = false;
+            }
+
+            if (!ytPlayerRef.current) {
+                ytPlayerRef.current = new YT.Player(ytContainerIdRef.current, {
+                    width: "200",
+                    height: "112",
+                    videoId,
+                    host: "https://www.youtube.com",
+                    playerVars: {
+                        autoplay: isPlaying ? 1 : 0,
+                        origin: window.location.origin,
+                        controls: 0,
+                        disablekb: 1,
+                        fs: 0,
+                        iv_load_policy: 3,
+                        modestbranding: 1,
+                        playsinline: 1,
+                        rel: 0,
+                    },
+                    events: {
+                        onReady: () => {
+                            console.log("[MusicPlayer] YT_NATIVE_READY");
+                            ytReadyRef.current = true;
+                            try {
+                                const targetVol = Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100);
+                                ytPlayerRef.current?.setVolume?.(targetVol);
+                                if (isMutedRef.current || !ytAutoplayUnlocked) {
+                                    ytPlayerRef.current?.mute?.();
+                                } else {
+                                    ytPlayerRef.current?.unMute?.();
+                                }
+                                if (pendingSeekRef.current !== null) {
+                                    ytPlayerRef.current?.seekTo?.(pendingSeekRef.current, true);
+                                    pendingSeekRef.current = null;
+                                }
+                                if (isPlayingRef.current) ytPlayerRef.current?.playVideo?.();
+                            } catch (_) { }
+                        },
+                        onStateChange: (ev: any) => {
+                            console.log("[MusicPlayer] YT_NATIVE_STATE:", ev?.data);
+                            if (ev?.data === YT.PlayerState.PLAYING) {
+                                ytPlayedRef.current = true;
+                                try {
+                                    ytPlayerRef.current?.unMute?.();
+                                    ytPlayerRef.current?.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
+                                } catch (_) { }
+                                setYtAutoplayUnlocked(true);
+                            } else if (ev?.data === YT.PlayerState.ENDED) {
+                                handleTrackEndedRef.current?.();
+                            }
+                        },
+                        onError: (e: any) => {
+                            console.warn("[MusicPlayer] YT_ERROR:", e);
+                        }
+                    }
+                });
+                return;
+            }
+
+            try {
+                const currentId = ytPlayerRef.current?.getVideoData?.()?.video_id;
+                if (currentId !== videoId) {
+                    ytPlayerRef.current?.loadVideoById?.(videoId);
+                }
+            } catch (_) { }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isMounted, currentTrack, isPlaying, ensureYouTubeApi, ytAutoplayUnlocked]);
+
+    useEffect(() => {
+        if (!isPlayableYouTubeUrl(currentTrack) || !isYouTubePlayerAttached()) return;
+        try {
+            ytPlayerRef.current?.setVolume?.(Math.round((isMuted ? 0 : volume) * 100));
+            if (isMuted || !ytAutoplayUnlocked) {
+                ytPlayerRef.current?.mute?.();
+            } else {
+                ytPlayerRef.current?.unMute?.();
+            }
+            if (isPlaying) {
+                ytPlayerRef.current?.playVideo?.();
+            } else {
+                ytPlayerRef.current?.pauseVideo?.();
+            }
+        } catch (_) { }
+    }, [currentTrack, isMuted, volume, isPlaying, ytAutoplayUnlocked, isYouTubePlayerAttached]);
+
+    useEffect(() => {
+        snapshotInitRef.current = false;
         const unsubscribe = globalEventStore.subscribe((event: any) => {
             if (event.type === "SFX_TRIGGERED") {
                 const sfxUrl = getSupabaseUrl(event.payload.url);
@@ -137,9 +374,67 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     sfx.play().catch(e => console.warn("SFX blocked:", e));
                 }
             } else if (event.type === "MUSIC_PLAYBACK_CHANGED") {
-                const { url, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
+                const eventSeq = Number(event.seq || 0);
+                if (eventSeq > 0 && lastMusicSeqRef.current > 0 && eventSeq < lastMusicSeqRef.current) {
+                    console.log("[MusicPlayer] Ignoring stale MUSIC_PLAYBACK_CHANGED seq");
+                    return;
+                }
+                const eventTs = new Date(event.createdAt || 0).getTime();
+                if (
+                    Number.isFinite(eventTs) &&
+                    eventTs > 0 &&
+                    lastMusicEventTsRef.current > 0 &&
+                    eventTs < lastMusicEventTsRef.current
+                ) {
+                    console.log("[MusicPlayer] Ignoring stale MUSIC_PLAYBACK_CHANGED event");
+                    return;
+                }
+                if (eventSeq > 0) {
+                    lastMusicSeqRef.current = eventSeq;
+                }
+                lastMusicEventTsRef.current = eventTs > 0 ? eventTs : Date.now();
+                sawLiveMusicEventRef.current = true;
+
+                const { url: rawUrl, playing, loop, isTemporary, restoreUrl, restoreLoop } = event.payload;
+                const url = normalizeYouTubeUrl(rawUrl);
+
+                if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
+                    console.warn("[MusicPlayer] Ignoring non-playable YouTube URL:", url);
+                    return;
+                }
+
+                if (isPlayableYouTubeUrl(url)) {
+                    if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current.currentTime = 0;
+                        audioRef.current.removeAttribute("src");
+                    }
+                    setCurrentTrack(url);
+                    setIsPlaying(playing);
+                    setIsLooping(loop);
+                    
+                    if (playing && event.payload.startedAt) {
+                        const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
+                        if (isYouTubePlayerAttached() && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+                            ytPlayerRef.current.seekTo(elapsed, true);
+                        } else {
+                            pendingSeekRef.current = elapsed;
+                        }
+                    }
+                    isTemporaryRef.current = !!isTemporary;
+                    restoreUrlRef.current = restoreUrl || "";
+                    restoreLoopRef.current = restoreLoop ?? true;
+                    return;
+                }
 
                 if (audioRef.current) {
+                    try {
+                        if (isYouTubePlayerAttached()) {
+                            ytPlayerRef.current?.pauseVideo?.();
+                            ytPlayerRef.current?.stopVideo?.();
+                        }
+                    } catch (_) { }
+
                     const fullUrl = getSupabaseUrl(url);
 
                     if (audioRef.current.src !== fullUrl && url) {
@@ -162,7 +457,29 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 }
                                 await audioRef.current?.play();
                             } catch (e) {
-                                console.warn("Autoplay blocked:", e);
+                                const errObj = e as any;
+                                const noSupportedSource =
+                                    errObj?.name === "NotSupportedError" ||
+                                    /no supported source/i.test(String(errObj?.message || ""));
+                                if (noSupportedSource || !audioRef.current?.src) {
+                                    console.warn("[MusicPlayer] Unsupported source, skipping autoplay retry:", e);
+                                    return;
+                                }
+
+                                console.warn("Autoplay blocked, scheduling retry on interaction:", e);
+                                const unlock = async () => {
+                                    if (!audioRef.current?.src) return;
+                                    try {
+                                        await audioRef.current?.play();
+                                        console.log("Autoplay unlocked by interaction");
+                                    } catch (err) {
+                                        console.warn("Autoplay still blocked after interaction:", err);
+                                    }
+                                };
+                                document.addEventListener('pointerdown', unlock, { once: true });
+                                document.addEventListener('keydown', unlock, { once: true });
+                                document.addEventListener('click', unlock, { once: true });
+                                document.addEventListener('touchstart', unlock, { once: true });
                             }
                         };
                         playAudio();
@@ -172,29 +489,146 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
                     audioRef.current.loop = loop;
 
-                    if (isTemporary && userRole === "GM") {
-                        audioRef.current.onended = () => {
-                            if (restoreUrl) {
-                                broadcastUpdate(restoreUrl, true, restoreLoop || true);
-                            }
-                            if (audioRef.current) audioRef.current.onended = null;
-                        };
-                    } else {
-                        if (audioRef.current) audioRef.current.onended = null;
-                    }
+                    isTemporaryRef.current = !!isTemporary;
+                    restoreUrlRef.current = restoreUrl || "";
+                    restoreLoopRef.current = restoreLoop ?? true;
 
                     setIsPlaying(playing);
                     setIsLooping(loop);
                 }
             }
-        });
+        },
+        (bulkEvents) => {
+            // O bulk listener é chamado a cada novo evento do jogo — só restaurar snapshot UMA vez por sessão
+            if (snapshotInitRef.current) return;
+            snapshotInitRef.current = true;
+
+            // Se já recebemos estado ao-vivo, nunca sobrepor com snapshot.
+            if (sawLiveMusicEventRef.current) return;
+            if (currentTrackRef.current) return;
+
+            // Evento delta tem prioridade sobre snapshot (inclui startedAt para sync)
+            const lastDeltaMusic = [...bulkEvents]
+                .filter((e: any) => e.type === "MUSIC_PLAYBACK_CHANGED" && !e.payload?.isTemporary)
+                .pop() as any;
+
+            if (lastDeltaMusic) {
+                const eventSeq = Number(lastDeltaMusic.seq || 0);
+                if (eventSeq > 0) {
+                    lastMusicSeqRef.current = eventSeq;
+                }
+                const eventTs = new Date(lastDeltaMusic.createdAt || 0).getTime();
+                if (Number.isFinite(eventTs) && eventTs > 0) {
+                    lastMusicEventTsRef.current = eventTs;
+                }
+
+                const payload = lastDeltaMusic.payload || {};
+                const url = normalizeYouTubeUrl(payload.url || "");
+                const playing = !!payload.playing;
+                const loop = payload.loop ?? true;
+
+                if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
+                    console.warn("[MusicPlayer] Ignoring non-playable YouTube URL from bulk:", url);
+                    return;
+                }
+
+                if (isPlayableYouTubeUrl(url)) {
+                    if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current.currentTime = 0;
+                        audioRef.current.removeAttribute("src");
+                    }
+                    setCurrentTrack(url);
+                    setIsPlaying(playing);
+                    setIsLooping(loop);
+
+                    if (playing && payload.startedAt) {
+                        const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
+                        if (isYouTubePlayerAttached() && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+                            ytPlayerRef.current.seekTo(elapsed, true);
+                        } else {
+                            pendingSeekRef.current = elapsed;
+                        }
+                    }
+                } else {
+                    setCurrentTrack(url);
+                    setIsPlaying(playing);
+                    setIsLooping(loop);
+                    if (audioRef.current) {
+                        try {
+                            if (isYouTubePlayerAttached()) {
+                                ytPlayerRef.current?.pauseVideo?.();
+                                ytPlayerRef.current?.stopVideo?.();
+                            }
+                        } catch (_) { }
+
+                        const fullUrl = getSupabaseUrl(url);
+                        if (audioRef.current.src !== fullUrl && url) {
+                            audioRef.current.src = fullUrl;
+                            audioRef.current.load();
+                        }
+
+                        if (playing) {
+                            if (payload.startedAt) {
+                                const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
+                                if (Math.abs(audioRef.current.currentTime - elapsed) > 2) {
+                                    audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+                                }
+                            }
+                            audioRef.current.play().catch((e) => console.warn("Autoplay blocked on bulk music restore:", e));
+                        } else {
+                            audioRef.current.pause();
+                        }
+                        audioRef.current.loop = loop;
+                    }
+                }
+
+                isTemporaryRef.current = !!payload.isTemporary;
+                restoreUrlRef.current = payload.restoreUrl || "";
+                restoreLoopRef.current = payload.restoreLoop ?? true;
+                return;
+            }
+
+            const snap = globalEventStore.getSnapshotState() as any;
+            const snapMusic = snap?.currentMusic;
+            if (!snapMusic?.url) return;
+
+            // Snapshot deve prevalecer no primeiro bootstrap da sessão para evitar
+            // reaproveitar faixa antiga local (fenômeno de autoplay "fantasma").
+            setCurrentTrack(normalizeYouTubeUrl(snapMusic.url));
+            setIsPlaying(snapMusic.playing ?? false);
+            setIsLooping(snapMusic.loop ?? true);
+        }
+        );
 
         return unsubscribe;
-    }, [sessionId, userId, userRole, getSupabaseUrl]);
+    }, [sessionId, userId, userRole, getSupabaseUrl, isYouTubePlayerAttached]);
 
     const handleTrackChange = (track: string) => {
-        setCurrentTrack(track);
-        broadcastUpdate(track, true, isLooping);
+        const normalized = normalizeYouTubeUrl(track);
+        if (isYouTubeUrl(normalized) && !isPlayableYouTubeUrl(normalized)) {
+            console.warn("[MusicPlayer] Invalid YouTube URL (videoId ausente):", track);
+            return;
+        }
+        if (isPlayableYouTubeUrl(normalized)) {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                audioRef.current.removeAttribute("src");
+            }
+            ytLocalGestureUnlockRef.current = true;
+            setYtAutoplayUnlocked(true);
+            setYtNeedsManualUnlock(false);
+        } else {
+            try {
+                if (isYouTubePlayerAttached()) {
+                    ytPlayerRef.current?.pauseVideo?.();
+                    ytPlayerRef.current?.stopVideo?.();
+                }
+            } catch (_) { }
+        }
+        setCurrentTrack(normalized);
+        broadcastUpdate(normalized, true, isLooping);
     };
 
     const togglePlay = () => {
@@ -235,11 +669,19 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const broadcastUpdate = (url: string, playing: boolean, loop: boolean) => {
         if (!sessionId || !userId) return;
+        if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
+            console.warn("[MusicPlayer] Blocking MUSIC_PLAYBACK_CHANGED for invalid YouTube URL:", url);
+            return;
+        }
 
         let startedAt: string | undefined = undefined;
-        if (playing && audioRef.current) {
+        if (playing) {
             const now = Date.now();
-            const currentSec = audioRef.current.currentTime;
+            const currentSec = isPlayableYouTubeUrl(url)
+                ? (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function'
+                    ? (ytPlayerRef.current.getCurrentTime() || 0)
+                    : 0)
+                : (audioRef.current?.currentTime || 0);
             startedAt = new Date(now - (currentSec * 1000)).toISOString();
         }
 
@@ -254,6 +696,35 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             payload: { url, playing, loop, startedAt }
         } as any);
     };
+
+    const forceYouTubeAudioUnlock = useCallback((reason: string) => {
+        if (!isYouTubePlayerAttached()) return;
+        const player: any = ytPlayerRef.current;
+        if (!player) return;
+        try {
+            player.unMute?.();
+            player.setVolume?.(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
+            player.playVideo?.();
+        } catch (_) { }
+
+        setIsMuted(false);
+        setYtAutoplayUnlocked(true);
+        setYtNeedsManualUnlock(false);
+        console.log(`[MusicPlayer] YT_UNLOCK_APPLIED — reason=${reason}`);
+    }, [isYouTubePlayerAttached]);
+
+    useEffect(() => {
+        if (!isPlayableYouTubeUrl(currentTrack) || ytAutoplayUnlocked) return;
+        const unlock = () => forceYouTubeAudioUnlock("first-user-gesture");
+        window.addEventListener("pointerdown", unlock, { once: true });
+        window.addEventListener("touchstart", unlock, { once: true });
+        window.addEventListener("keydown", unlock, { once: true });
+        return () => {
+            window.removeEventListener("pointerdown", unlock);
+            window.removeEventListener("touchstart", unlock);
+            window.removeEventListener("keydown", unlock);
+        };
+    }, [currentTrack, ytAutoplayUnlocked, forceYouTubeAudioUnlock]);
 
     useEffect(() => {
         if (audioRef.current) {
@@ -322,7 +793,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         const parts = pl.name.split('/');
                         const depth = parts.length - 1;
                         const displayName = pl.name === "Geral" ? "Geral" : parts[parts.length - 1];
-                        // Using non-breaking spaces for indentation in standard select
                         const indent = "\u00A0".repeat(depth * 3);
                         
                         return (
@@ -351,6 +821,34 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     ))}
                 </select>
             </div>
+            <div className="control-row">
+                <input
+                    type="text"
+                    placeholder="URL do YouTube..."
+                    value={youtubeInputUrl}
+                    onChange={(e) => setYoutubeInputUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
+                            handleTrackChange(youtubeInputUrl.trim());
+                            setYoutubeInputUrl("");
+                        }
+                    }}
+                    className="track-select youtube-url-input"
+                />
+                <button
+                    className="control-btn"
+                    onClick={() => {
+                        if (isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
+                            handleTrackChange(youtubeInputUrl.trim());
+                            setYoutubeInputUrl("");
+                        }
+                    }}
+                    disabled={!isPlayableYouTubeUrl(youtubeInputUrl.trim())}
+                    title="Tocar Link do YouTube"
+                >
+                    <Link size={12} />
+                </button>
+            </div>
             <div className="control-row actions">
                 <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0} title="Anterior">
                     <SkipBack size={14} />
@@ -369,24 +867,38 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     ) : (
         <div className="now-playing">
             <span className="scrolling-text">
-                {isPlaying ? (currentTrack.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '') || "Reproduzindo...") : "Pausado"}
+                {isPlaying
+                    ? (isPlayableYouTubeUrl(currentTrack)
+                        ? "YouTube ▶"
+                        : (currentTrack.split('/').pop()?.replace(/\.(mp3|wav|ogg)$/i, '') || "Reproduzindo..."))
+                    : "Pausado"}
             </span>
         </div>
     );
 
     const handleTrackEnded = useCallback(() => {
         if (isLooping) {
-            // Loop de faixa individual: comportamento local controlado por cada cliente
-            if (audioRef.current) {
+            if (!isPlayableYouTubeUrl(currentTrack) && audioRef.current) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(e => console.warn("[MusicPlayer] Retry play (Loop):", e));
             }
-        } else if (userRole === "GM") {
-            // Avanço de playlist: gerenciado pelo Mestre para manter Event Sourcing íntegro
-            console.log(`[MusicPlayer - ${userId}] Track ended. Orchestrating next track for session: ${sessionId}`);
+            return;
+        }
+
+        if (isTemporaryRef.current && restoreUrlRef.current && userRole === "GM") {
+            broadcastUpdate(restoreUrlRef.current, true, restoreLoopRef.current);
+            isTemporaryRef.current = false;
+            return;
+        }
+
+        if (userRole === "GM") {
             playNext();
         }
-    }, [isLooping, userRole, playNext, userId, sessionId]);
+    }, [isLooping, userRole, playNext, userId, sessionId, currentTrack]);
+
+    useEffect(() => {
+        handleTrackEndedRef.current = handleTrackEnded;
+    }, [handleTrackEnded]);
 
     return (
         <div
@@ -395,7 +907,26 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         >
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
-            {/* Non-unified: toggle button */}
+            {isMounted && isPlayableYouTubeUrl(currentTrack) && (() => {
+                console.log('[MusicPlayer] YT_MOUNT — url:', currentTrack, 'playing:', isPlaying, 'unlocked:', ytAutoplayUnlocked);
+                return createPortal(
+                    <div style={{
+                        position: 'fixed',
+                        left: '0',
+                        top: '0',
+                        width: '1px',
+                        height: '1px',
+                        overflow: 'hidden',
+                        opacity: 0.01,
+                        pointerEvents: 'none',
+                        zIndex: 1
+                    }}>
+                        <div id={ytContainerIdRef.current} style={{ width: "200px", height: "112px" }} />
+                    </div>,
+                    document.body
+                );
+            })()}
+
             {!unifiedMode && (
                 <button
                     className={`player-toggle ${isPlaying ? "playing" : ""}`}
@@ -407,7 +938,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </button>
             )}
 
-            {/* Non-unified: controls panel */}
             {!unifiedMode && showControls && (
                 <div className="player-controls-panel animate-reveal">
                     {gmControls}
@@ -415,10 +945,21 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </div>
             )}
 
-            {/* Unified: volume section */}
             {unifiedMode && (
                 <div className="unified-vol-row" style={{ order: 2 }}>
-                    <div className="unified-ch-label" style={{ color: '#c5a059' }}>
+                    <div
+                        className="unified-ch-label"
+                        style={{
+                            color: '#c5a059',
+                            fontSize: '0.6rem',
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                        }}
+                    >
                         <span>MÚSICA</span>
                         {isPlaying && <div className="pulse-mini gold" />}
                     </div>
@@ -426,7 +967,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 </div>
             )}
 
-            {/* Unified: controls section */}
             {unifiedMode && userRole === "GM" && (
                 <div className="unified-ctrl-row" style={{ order: 5 }}>
                     <div className="control-row">
@@ -466,6 +1006,34 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 </option>
                             ))}
                         </select>
+                    </div>
+                    <div className="control-row">
+                        <input
+                            type="text"
+                            placeholder="URL do YouTube..."
+                            value={youtubeInputUrl}
+                            onChange={(e) => setYoutubeInputUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
+                                    handleTrackChange(youtubeInputUrl.trim());
+                                    setYoutubeInputUrl("");
+                                }
+                            }}
+                            className="track-select youtube-url-input"
+                        />
+                        <button
+                            className="control-btn"
+                            onClick={() => {
+                                if (isPlayableYouTubeUrl(youtubeInputUrl.trim())) {
+                                    handleTrackChange(youtubeInputUrl.trim());
+                                    setYoutubeInputUrl("");
+                                }
+                            }}
+                            disabled={!isPlayableYouTubeUrl(youtubeInputUrl.trim())}
+                            title="Tocar Link do YouTube"
+                        >
+                            <Link size={12} />
+                        </button>
                     </div>
                     <div className="control-row actions">
                         <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0}>
@@ -606,6 +1174,18 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     width: auto;
                 }
 
+                .youtube-url-input {
+                    background-image: none !important;
+                    padding: 6px 8px !important;
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .youtube-url-input::placeholder {
+                    color: rgba(197, 160, 89, 0.4);
+                    font-style: italic;
+                }
+
                 .control-btn {
                     background: rgba(255,255,255,0.05);
                     border: 1px solid rgba(255,255,255,0.1);
@@ -659,117 +1239,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     border-radius: 50%;
                     cursor: pointer;
                     margin-top: -4px;
-                }
-
-                .mute-btn {
-                    background: none;
-                    border: none;
-                    color: #666;
-                    cursor: pointer;
-                    padding: 0;
-                    display: flex;
-                    align-items: center;
-                }
-                .mute-btn:hover { color: #ccc; }
-
-                .now-playing {
-                    font-size: 0.7rem;
-                    color: #c5a059;
-                    text-align: center;
-                }
-
-                .volume-input {
-                    background: #050505;
-                    border: 1px solid #333;
-                    color: #c5a059;
-                    width: 40px;
-                    font-size: 0.75rem;
-                    padding: 2px;
-                    text-align: center;
-                    -moz-appearance: textfield;
-                }
-
-                .volume-input::-webkit-outer-spin-button,
-                .volume-input::-webkit-inner-spin-button {
-                    -webkit-appearance: none;
-                    margin: 0;
-                }
-
-                .volume-horizontal {
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    gap: 16px;
-                    width: 100%;
-                }
-
-                .mute-btn-premium {
-                    background: rgba(197, 160, 89, 0.05);
-                    border: 1px solid rgba(197, 160, 89, 0.2);
-                    color: #c5a059;
-                    width: 26px;
-                    height: 26px;
-                    border-radius: 4px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    flex-shrink: 0;
-                }
-
-                .mute-btn-premium:hover {
-                    background: rgba(197, 160, 89, 0.15);
-                    border-color: #c5a059;
-                }
-
-                .volume-slider.dynamic-fill {
-                    background: none; /* Controlled by inline style */
-                }
-
-                .volume-val-badge {
-                    color: #c5a059;
-                    border-color: rgba(197, 160, 89, 0.3) !important;
-                }
-
-                /* Unified mode */
-                .unified-vol-row {
-                    width: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    padding: 8px 0;
-                    border-bottom: 1px solid rgba(197, 160, 89, 0.1);
-                }
-
-                .unified-ctrl-row {
-                    width: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    padding: 8px 0;
-                }
-
-                .unified-ch-label {
-                    font-size: 0.6rem;
-                    font-weight: 800;
-                    text-transform: uppercase;
-                    letter-spacing: 0.1em;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-
-                .pulse-mini {
-                    width: 4px;
-                    height: 4px;
-                    border-radius: 50%;
-                }
-
-                .pulse-mini.gold {
-                    background: #c5a059;
-                    box-shadow: 0 0 5px #c5a059;
-                    animation: pulse 2s infinite;
                 }
             `}</style>
         </div>

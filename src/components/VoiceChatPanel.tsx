@@ -14,6 +14,11 @@ interface VoiceChatPanelProps {
 }
 
 export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPanelProps) {
+    const isBluetoothLabel = useCallback((label: string) => {
+        const v = (label || "").toLowerCase();
+        return v.includes("bluetooth") || v.includes("hands-free") || v.includes("hands free") || v.includes("hfp") || v.includes("airpods");
+    }, []);
+
     const [isOpen, setIsOpen] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [micMuted, setMicMuted] = useState(false);
@@ -26,14 +31,85 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isManagerReady, setIsManagerReady] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [audioStatus, setAudioStatus] = useState<AudioContextState>('closed');
+    const [audioStatus, setAudioStatus] = useState<any>('closed');
+    const [showBluetoothWarning, setShowBluetoothWarning] = useState(true);
+    const [audioInputDeviceId, setAudioInputDeviceId] = useState<string>('');
+    const [audioOutputDeviceId, setAudioOutputDeviceId] = useState<string>('');
+    const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
+    const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
+    const [devicesLoaded, setDevicesLoaded] = useState(false);
+    const supportsSinkId = typeof (new Audio() as any).setSinkId === 'function';
     const hasAttemptedAutoJoin = useRef(false);
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const speakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const wasConnectedBeforeRefresh = useRef(false);
+    // Persiste o último characterId conhecido por userId para evitar flicker
+    // quando a presença chega com update parcial (sem characterId)
+    const lastKnownCharacterIdRef = useRef<Map<string, string>>(new Map());
 
     const [events, setEvents] = useState<ActionEvent[]>([]);
+
+    useEffect(() => {
+        const savedInput = localStorage.getItem('voice_input_device');
+        const savedOutput = localStorage.getItem('voice_output_device');
+        if (savedInput) setAudioInputDeviceId(savedInput);
+        if (savedOutput) setAudioOutputDeviceId(savedOutput);
+    }, []);
+
+    const loadDevices = useCallback(async () => {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const inputs = devices.filter(d => d.kind === 'audioinput' && d.deviceId);
+            const outputs = devices.filter(d => d.kind === 'audiooutput' && d.deviceId);
+            setInputDevices(inputs);
+            setOutputDevices(outputs);
+            setDevicesLoaded(true);
+
+            // Evita manter device Bluetooth Hands-Free como entrada quando houver alternativa.
+            const selected = inputs.find(d => d.deviceId === audioInputDeviceId);
+            const nonBt = inputs.find(d => !isBluetoothLabel(d.label));
+            if (nonBt && (!audioInputDeviceId || (selected && isBluetoothLabel(selected.label)))) {
+                setAudioInputDeviceId(nonBt.deviceId);
+                localStorage.setItem('voice_input_device', nonBt.deviceId);
+                if (managerRef.current && isConnected) {
+                    await managerRef.current.setMicDevice(nonBt.deviceId);
+                }
+            }
+        } catch (e) {
+            console.warn('[VoiceChatPanel] Error enumerating devices', e);
+        }
+    }, [audioInputDeviceId, isBluetoothLabel, isConnected]);
+
+    useEffect(() => {
+        if (isConnected) {
+            loadDevices();
+            navigator.mediaDevices.addEventListener('devicechange', loadDevices);
+            return () => navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
+        }
+    }, [isConnected, loadDevices]);
+
+    const handleInputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const deviceId = e.target.value;
+        const selected = inputDevices.find(d => d.deviceId === deviceId);
+        if (selected?.label && isBluetoothLabel(selected.label)) {
+            setShowBluetoothWarning(true);
+        }
+        setAudioInputDeviceId(deviceId);
+        localStorage.setItem('voice_input_device', deviceId);
+        if (managerRef.current && isConnected) {
+            await managerRef.current.setMicDevice(deviceId);
+        }
+    }, [inputDevices, isBluetoothLabel, isConnected]);
+
+    const handleOutputDeviceChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const deviceId = e.target.value;
+        setAudioOutputDeviceId(deviceId);
+        localStorage.setItem('voice_output_device', deviceId);
+        if (managerRef.current) {
+            await managerRef.current.setOutputDevice(deviceId);
+        }
+    }, []);
 
     // Diagnóstico Etapa 1: Sanitização de IDs
     useEffect(() => {
@@ -77,7 +153,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (seqA !== 0 && seqB === 0) return -1;
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
-        return computeState(sorted);
+        return computeState(sorted, globalEventStore.getSnapshotState() ?? undefined);
     }, [events]);
 
     const getDisplayName = useCallback((uid: string, charId?: string) => {
@@ -88,58 +164,46 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             return uid;
         }
 
-        if (storedRole === 'GM' && uid === userId) {
-            return uid;
-        }
-
         const allChars = Object.values(state.characters);
 
-        // Prioridade: busca pelo characterId quando disponível
+        // 1. Prioridade absoluta por charId
         if (charId) {
             const byId = allChars.find(c => c.id === charId);
             if (byId) return byId.name;
         }
 
-        // Fallback: busca por ownerUserId, nome ou id
-        const matchedChar = allChars.find(c => {
-            const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
-            const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            const idMatch = c.id.toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch || idMatch) && c.imageUrl;
-        }) || allChars.find(c => {
-            const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
-            const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            const idMatch = c.id.toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch || idMatch);
-        });
+        // 2. Fallback por display name (uid) ou ownerUserId (normalização Unicode)
+        const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
+        const uidNorm = norm(uid);
+        const matchedChar = allChars.find(c =>
+            norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
+        );
 
         return matchedChar ? matchedChar.name : uid;
-    }, [state.characters, userId]);
+    }, [state.characters]);
 
     const getCharacterImage = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
-        const storedRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : 'PLAYER';
 
         if (uidLower.includes('mestre') || uidLower === 'gm' || uidLower === 'narrador' || uidLower === 'narradora') {
             return null;
         }
-        if (storedRole === 'GM' && uid === userId) return null;
 
         const allChars = Object.values(state.characters);
 
-        // Prioridade: busca pelo characterId quando disponível (evita erros de nome/ownerUserId)
+        // 1. Prioridade por charId
         if (charId) {
-            const byId = allChars.find(c => c.id === charId && c.imageUrl);
-            if (byId) return byId.imageUrl;
+            const byId = allChars.find(c => c.id === charId);
+            if (byId?.imageUrl) return byId.imageUrl;
+            if (byId) return null; // personagem encontrado mas sem imagem — não tentar fallback por nome
         }
 
-        // Fallback: busca robusta por ownerUserId, nome ou id
-        const matchedChar = allChars.find(c => {
-            const ownerMatch = (c.ownerUserId || "").trim().toLowerCase() === uidLower;
-            const nameMatch = (c.name || "").trim().toLowerCase() === uidLower;
-            const idMatch = c.id.toLowerCase() === uidLower;
-            return (ownerMatch || nameMatch || idMatch) && c.imageUrl;
-        });
+        // 2. Fallback robusto por ownerUserId ou nome (normalização Unicode para acentos)
+        const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
+        const uidNorm = norm(uid);
+        const matchedChar = allChars.find(c =>
+            norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
+        );
 
         return matchedChar?.imageUrl || null;
     }, [state.characters, userId]);
@@ -155,7 +219,27 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         setPeers([...updatedPeers]);
                     },
                     (updatedParticipants) => {
-                        setParticipants([...updatedParticipants]);
+                        // Log inline (não colapsável) para diagnóstico de characterId
+                        console.log('[VoiceChat] Presence Update:', JSON.stringify(
+                            updatedParticipants.map(u => ({ uid: u.userId, charId: u.characterId ?? 'MISSING' }))
+                        ));
+
+                        // Persistir characterId válido no Map e restaurar quando vier undefined
+                        // Evita flicker e cobre race condition do mount inicial sem ?c=
+                        const withKnownIds = updatedParticipants.map(p => {
+                            if (p.characterId) {
+                                lastKnownCharacterIdRef.current.set(p.userId, p.characterId);
+                                return p;
+                            }
+                            const known = lastKnownCharacterIdRef.current.get(p.userId);
+                            if (known) {
+                                console.log(`[VoiceChat] Restoring charId from cache: ${p.userId} → ${known}`);
+                                return { ...p, characterId: known };
+                            }
+                            return p;
+                        });
+
+                        setParticipants(withKnownIds);
                     },
                     characterId
                 );
@@ -238,11 +322,18 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         if (!mgr || isJoining) return;
         setIsJoining(true);
         try {
-            const ok = await mgr.joinVoice();
+            const savedInput = localStorage.getItem('voice_input_device') || undefined;
+            const ok = await mgr.joinVoice(savedInput);
             if (ok) {
                 setIsConnected(true);
                 setMicMuted(false);
                 localStorage.setItem(`voice_autojoin_${sessionId}`, "true");
+
+                // Restaura device de saída se salvo
+                const savedOutput = localStorage.getItem('voice_output_device');
+                if (savedOutput) {
+                    mgr.setOutputDevice(savedOutput).catch(console.warn);
+                }
             }
         } finally {
             setIsJoining(false);
@@ -299,6 +390,13 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         }
     }, [sessionId, isConnected, isJoining, isManagerReady, handleJoin]);
 
+    // Quando characterId chega depois do manager ser criado (useHeaderLogic lê ?c= assincronamente)
+    useEffect(() => {
+        if (characterId && managerRef.current) {
+            managerRef.current.updateCharacterId(characterId);
+        }
+    }, [characterId]);
+
     const handleToggleMic = useCallback(() => {
         const mgr = managerRef.current;
         if (!mgr) return;
@@ -334,14 +432,46 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
 
     // Juntar participantes e peers: todos aparecem, com status de voice
     const allUsers = useMemo(() => {
-        const users = participants.map(p => {
-            const peer = peers.find(vp => vp.peerId === p.userId);
-            const isMe = p.userId === userId;
+        const norm = (s: string) => (s || '').trim().toLowerCase().normalize('NFC');
+        const dedupParticipants = Array.from(
+            participants.reduce((acc, p) => {
+                const key = norm(p.userId);
+                const prev = acc.get(key);
+                if (!prev) {
+                    acc.set(key, p);
+                } else {
+                    acc.set(key, {
+                        userId: prev.userId.length >= p.userId.length ? prev.userId : p.userId,
+                        inVoice: prev.inVoice || p.inVoice,
+                        characterId: prev.characterId || p.characterId,
+                    });
+                }
+                return acc;
+            }, new Map<string, SessionParticipant>()).values()
+        );
+
+        const users = dedupParticipants.map(p => {
+            const peer = peers.find(vp => norm(vp.peerId) === norm(p.userId));
+            const isMe = norm(p.userId) === norm(userId);
+
+            // Resolver characterId: 1) prop local (eu), 2) presença, 3) fallback por ownerUserId/name no state atual
+            let resolvedCharId = isMe ? characterId : p.characterId;
+            if (!resolvedCharId) {
+                const uidNorm = norm(p.userId);
+                const matched = Object.values(state.characters).find(c =>
+                    norm(c.ownerUserId) === uidNorm ||
+                    norm(c.name) === uidNorm
+                );
+                if (matched) resolvedCharId = matched.id;
+            }
+
+            const remoteInVoice = !!peer;
+
             return {
                 id: p.userId,
-                characterId: isMe ? characterId : p.characterId,
+                characterId: resolvedCharId,
                 isMe,
-                inVoice: isMe ? isConnected : (peer?.inVoice || p.inVoice),
+                inVoice: isMe ? isConnected : remoteInVoice,
                 speaking: isMe ? localSpeaking : (peer?.speaking || false),
                 audioLevel: isMe ? localAudioLevel : (peer?.audioLevel || 0),
                 volume: isMe ? micVolume : (peer ? Math.round(peer.volume * 100) : 100),
@@ -365,13 +495,17 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             });
         }
 
+        // Mostrar apenas usuários realmente ligados ao voice (ou eu local),
+        // evitando "fantasmas" offline no painel.
+        const visibleUsers = users.filter(u => u.isMe || u.inVoice || u.hasPeer);
+
         // Mover "eu" para o topo
-        return users.sort((a, b) => {
+        return visibleUsers.sort((a, b) => {
             if (a.isMe) return -1;
             if (b.isMe) return 1;
             return 0;
         });
-    }, [participants, peers, userId, characterId, isConnected, localSpeaking, localAudioLevel, micVolume, micMuted]);
+    }, [participants, peers, userId, characterId, isConnected, localSpeaking, localAudioLevel, micVolume, micMuted, state.characters]);
 
     const voiceCount = allUsers.filter(u => u.inVoice).length;
 
@@ -589,6 +723,96 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                             <span>{isJoining ? '⏳' : (isConnected ? '📴' : '📡')}</span>
                             {isJoining ? 'CONECTANDO...' : (isConnected ? 'SAIR DO VOICE' : 'ENTRAR NO VOICE')}
                         </button>
+
+                        {/* Seletores de dispositivo */}
+                        {isConnected && devicesLoaded && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <label style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)' }}>
+                                        MIC (ENTRADA)
+                                    </label>
+                                    <select
+                                        value={audioInputDeviceId}
+                                        onChange={handleInputDeviceChange}
+                                        style={{
+                                            background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.15)',
+                                            color: '#fff', padding: '4px 6px', fontSize: '0.7rem',
+                                            borderRadius: '4px', outline: 'none', cursor: 'pointer', width: '100%',
+                                        }}
+                                    >
+                                        <option value="" style={{ background: '#1a1a1a' }}>Padrão do Sistema</option>
+                                        {inputDevices.map(d => (
+                                            <option key={d.deviceId} value={d.deviceId} style={{ background: '#1a1a1a' }}>
+                                                {d.label || 'Microfone'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {supportsSinkId ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <label style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-header)' }}>
+                                            FONE (SAÍDA)
+                                        </label>
+                                        <select
+                                            value={audioOutputDeviceId}
+                                            onChange={handleOutputDeviceChange}
+                                            style={{
+                                                background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.15)',
+                                                color: '#fff', padding: '4px 6px', fontSize: '0.7rem',
+                                                borderRadius: '4px', outline: 'none', cursor: 'pointer', width: '100%',
+                                            }}
+                                        >
+                                            <option value="" style={{ background: '#1a1a1a' }}>Padrão do Sistema</option>
+                                            {outputDevices.map(d => (
+                                                <option key={d.deviceId} value={d.deviceId} style={{ background: '#1a1a1a' }}>
+                                                    {d.label || 'Alto-falante'}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
+                                        SAÍDA: não suportado neste browser
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Aviso Bluetooth — mostrar sempre que voice estiver conectado */}
+                        {isConnected && showBluetoothWarning && (
+                            <div style={{
+                                fontSize: '0.58rem',
+                                color: 'rgba(255, 200, 80, 0.85)',
+                                background: 'rgba(255, 180, 0, 0.08)',
+                                border: '1px solid rgba(255, 200, 80, 0.2)',
+                                borderRadius: '4px',
+                                padding: '5px 7px',
+                                lineHeight: '1.4',
+                                marginTop: '6px',
+                                position: 'relative' as const,
+                            }}>
+                                ⚠ Usando fone Bluetooth? Selecione o <strong>microfone do computador</strong> como
+                                entrada para manter a qualidade de áudio. Fones Bluetooth no mic degradam toda a
+                                saída de áudio (incluindo música).
+                                <button
+                                    onClick={() => setShowBluetoothWarning(false)}
+                                    title="Fechar aviso"
+                                    style={{
+                                        position: 'absolute' as const,
+                                        top: '3px',
+                                        right: '4px',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'rgba(255, 200, 80, 0.6)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                        lineHeight: 1,
+                                        padding: '0 2px',
+                                    }}
+                                >✕</button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Lista de TODOS os participantes */}
@@ -663,6 +887,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     {/* Indicador de fala / status */}
                                     {(() => {
                                         const charImg = getCharacterImage(user.id, user.characterId);
+                                        const displayName = getDisplayName(user.id, user.characterId);
                                         return (
                                             <div style={{ position: 'relative', flexShrink: 0 }}>
                                                 <div style={{
@@ -670,7 +895,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                     height: '45px',
                                                     borderRadius: '50%',
                                                     background: charImg
-                                                        ? `url(${charImg}) center/cover no-repeat`
+                                                        ? 'transparent'
                                                         : (user.inVoice
                                                             ? (user.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
                                                             : 'rgba(255,255,255,0.04)'),
@@ -684,11 +909,25 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     fontSize: '1.2rem',
+                                                    overflow: 'hidden',
                                                     transition: 'all 0.2s ease',
                                                 }}>
-                                                    {!charImg && (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))}
+                                                    {charImg
+                                                        ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        : (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))
+                                                    }
                                                 </div>
-                                                {charImg && (
+                                                {/* Badge de mudo sobre avatar quando há imagem */}
+                                                {charImg && user.inVoice && user.muted && (
+                                                    <div style={{
+                                                        position: 'absolute', bottom: '-2px', right: '-2px',
+                                                        width: '16px', height: '16px',
+                                                        background: '#ff4d4d', borderRadius: '50%',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '0.55rem', border: '1px solid #111', zIndex: 2,
+                                                    }}>🔇</div>
+                                                )}
+                                                {!charImg && user.inVoice && (
                                                     <span style={{
                                                         position: 'absolute',
                                                         bottom: '-2px',
@@ -708,7 +947,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                                         fontWeight: 'bold',
                                                         color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
                                                     }}>
-                                                        {getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
+                                                        {displayName.charAt(0).toUpperCase()}
                                                     </span>
                                                 )}
                                             </div>
@@ -884,17 +1123,18 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 }}>
                     {allUsers.filter(u => u.inVoice).map(user => {
                         const charImg = getCharacterImage(user.id, user.characterId);
+                        const displayName = getDisplayName(user.id, user.characterId);
                         return (
                             <div
                                 key={`indicator-${user.id}`}
-                                title={getDisplayName(user.id, user.characterId)}
+                                title={displayName}
                                 style={{
                                     position: 'relative',
                                     width: '48px',
                                     height: '48px',
                                     borderRadius: '50%',
                                     background: charImg
-                                        ? `url(${charImg}) center/cover no-repeat`
+                                        ? 'transparent'
                                         : (user.speaking
                                             ? 'rgba(80, 200, 120, 0.25)'
                                             : 'rgba(30, 30, 30, 0.6)'),
@@ -906,36 +1146,41 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '1.15rem',
-                                    fontFamily: 'var(--font-header)',
-                                    fontWeight: 'bold',
-                                    color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0',
+                                    overflow: 'hidden',
                                     transition: 'all 0.2s ease',
                                     pointerEvents: 'auto',
                                     cursor: 'default',
                                 }}
                             >
-                                {!charImg && getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
+                                {charImg
+                                    ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    : <span style={{
+                                        fontSize: '1.15rem',
+                                        fontFamily: 'var(--font-header)',
+                                        fontWeight: 'bold',
+                                        color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
+                                    }}>{displayName.charAt(0).toUpperCase()}</span>
+                                }
+                                
                                 {charImg && (
                                     <span style={{
                                         position: 'absolute',
-                                        bottom: '-3px',
-                                        right: '-5px',
-                                        width: '21px',
-                                        height: '21px',
+                                        bottom: '1px',
+                                        right: '1px',
+                                        width: '18px',
+                                        height: '18px',
                                         borderRadius: '50%',
                                         background: user.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)',
                                         border: `1px solid ${user.speaking ? '#50c878' : 'rgba(255,255,255,0.15)'}`,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '0.75rem',
+                                        fontSize: '0.62rem',
                                         fontWeight: 'bold',
                                         color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
+                                        zIndex: 2,
                                     }}>
-                                        {getDisplayName(user.id, user.characterId).charAt(0).toUpperCase()}
+                                        {displayName.charAt(0).toUpperCase()}
                                     </span>
                                 )}
                             </div>

@@ -31,10 +31,17 @@ export function useSessionUIState() {
     const [showDiceRoller, setShowDiceRoller] = useState(false);
     const [transmissionVolume, setTransmissionVolume] = useState(() => {
         if (typeof window !== "undefined") {
+            const storedBase = localStorage.getItem("transmissionVolume");
             const stored = localStorage.getItem("transmissionActualVolume");
-            return stored ? parseFloat(stored) : 0.7;
+            const actual = stored ? parseFloat(stored) : NaN;
+            if (Number.isFinite(actual) && actual > 0) return actual;
+
+            const base = storedBase ? parseFloat(storedBase) : NaN;
+            if (Number.isFinite(base)) return base;
+
+            return 1;
         }
-        return 0.7;
+        return 1;
     });
 
     return {
