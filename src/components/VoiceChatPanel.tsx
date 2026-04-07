@@ -452,11 +452,13 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             })();
             console.log(`[VoiceChat] allUsers resolve: ${p.userId} → charId=${resolvedCharId ?? 'none'} img=${imgStatus}`);
 
+            const remoteInVoice = !!peer;
+
             return {
                 id: p.userId,
                 characterId: resolvedCharId,
                 isMe,
-                inVoice: isMe ? isConnected : (peer?.inVoice || p.inVoice),
+                inVoice: isMe ? isConnected : remoteInVoice,
                 speaking: isMe ? localSpeaking : (peer?.speaking || false),
                 audioLevel: isMe ? localAudioLevel : (peer?.audioLevel || 0),
                 volume: isMe ? micVolume : (peer ? Math.round(peer.volume * 100) : 100),
@@ -1146,17 +1148,17 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                                 {charImg && (
                                     <span style={{
                                         position: 'absolute',
-                                        bottom: '-3px',
-                                        right: '-5px',
-                                        width: '21px',
-                                        height: '21px',
+                                        bottom: '1px',
+                                        right: '1px',
+                                        width: '18px',
+                                        height: '18px',
                                         borderRadius: '50%',
                                         background: user.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)',
                                         border: `1px solid ${user.speaking ? '#50c878' : 'rgba(255,255,255,0.15)'}`,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '0.75rem',
+                                        fontSize: '0.62rem',
                                         fontWeight: 'bold',
                                         color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
                                         zIndex: 2,

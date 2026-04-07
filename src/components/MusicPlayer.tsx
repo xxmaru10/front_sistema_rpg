@@ -86,6 +86,22 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         setIsMounted(true);
     }, []);
 
+    // Evita herança de estado entre entradas/reloads de sessão.
+    useEffect(() => {
+        setCurrentTrack("");
+        setIsPlaying(false);
+        setYtAutoplayUnlocked(false);
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current.removeAttribute("src");
+        }
+        try {
+            ytPlayerRef.current?.pauseVideo?.();
+            ytPlayerRef.current?.stopVideo?.();
+        } catch (_) { }
+    }, [sessionId]);
+
     // Resetar unlock a cada nova faixa YouTube (cada troca de URL começa muda)
     useEffect(() => {
         if (isYouTubeUrl(currentTrack)) {
@@ -413,8 +429,9 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             const snapMusic = snap?.currentMusic;
             if (!snapMusic?.url) return;
 
-            // React 18 batcha os três setters na mesma renderização (sem setter aninhado)
-            setCurrentTrack(prev => prev || normalizeYouTubeUrl(snapMusic.url));
+            // Snapshot deve prevalecer no primeiro bootstrap da sessão para evitar
+            // reaproveitar faixa antiga local (fenômeno de autoplay "fantasma").
+            setCurrentTrack(normalizeYouTubeUrl(snapMusic.url));
             setIsPlaying(snapMusic.playing ?? false);
             setIsLooping(snapMusic.loop ?? true);
         }

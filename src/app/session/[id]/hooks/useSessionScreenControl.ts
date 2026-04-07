@@ -35,6 +35,7 @@ export function useSessionScreenControl({
 
     const screenVideoRef = useRef<HTMLVideoElement | null>(null);
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
+    const lastHandledReconnectVersionRef = useRef(0);
     const [videoNoSignal, setVideoNoSignal] = useState(false);
     const [videoMuted, setVideoMuted] = useState(false);
 
@@ -62,6 +63,7 @@ export function useSessionScreenControl({
                 screenShareManagerRef.current = null;
                 setTimeout(() => mgr.disconnect(), 200);
             }
+            screenShareStore.setHasStream(false);
         };
     }, [sessionId, actorUserId, setVideoStream]);
 
@@ -79,7 +81,8 @@ export function useSessionScreenControl({
     // ── Global reconnect trigger ─────────────────────────────────
     useEffect(() => {
         const unsubscribe = screenShareStore.subscribe(() => {
-            if (screenShareStore.reconnectVersion > 0) {
+            if (screenShareStore.reconnectVersion > lastHandledReconnectVersionRef.current) {
+                lastHandledReconnectVersionRef.current = screenShareStore.reconnectVersion;
                 console.log("[WebRTC] Reconnect triggered from Header.");
                 screenShareManagerRef.current?.reconnect();
             }
