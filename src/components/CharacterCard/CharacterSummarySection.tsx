@@ -80,25 +80,25 @@ export function CharacterSummarySection({
                     display: "inline-flex",
                     alignItems: "center",
                     flexWrap: "wrap",
-                    gap: "10px",
-                    padding: "8px 12px",
+                    gap: "8px",
+                    padding: "6px 10px",
                     borderRadius: "999px",
                     border: "1px solid rgba(var(--accent-rgb), 0.22)",
                     background: "rgba(0, 0, 0, 0.34)",
-                    boxShadow: "inset 0 0 16px rgba(0, 0, 0, 0.22)",
+                    boxShadow: "inset 0 0 12px rgba(0, 0, 0, 0.2)",
                 }}
             >
                 <div
                     style={{
                         display: "flex",
                         alignItems: "baseline",
-                        gap: "8px",
+                        gap: "6px",
                         whiteSpace: "nowrap",
                     }}
                 >
                     <span
                         style={{
-                            fontSize: "1.15rem",
+                            fontSize: "1rem",
                             color: "var(--accent-color)",
                             lineHeight: 1,
                         }}
@@ -108,7 +108,7 @@ export function CharacterSummarySection({
                     <span
                         style={{
                             fontFamily: "var(--font-header)",
-                            fontSize: isCompact ? "1rem" : "1.15rem",
+                            fontSize: isCompact ? "0.9rem" : "1rem",
                             color: "#f6e7bf",
                         }}
                     >
@@ -117,7 +117,7 @@ export function CharacterSummarySection({
                     <span
                         style={{
                             fontFamily: "var(--font-header)",
-                            fontSize: "0.85rem",
+                            fontSize: "0.76rem",
                             color: "rgba(255, 255, 255, 0.58)",
                         }}
                     >
@@ -126,14 +126,14 @@ export function CharacterSummarySection({
                 </div>
 
                 {canEditStressOrFP && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                         <button
                             type="button"
                             onClick={() => onFPChange(-1)}
                             style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "8px",
+                                width: "24px",
+                                height: "24px",
+                                borderRadius: "7px",
                                 border: "1px solid rgba(var(--accent-rgb), 0.28)",
                                 background: "rgba(0, 0, 0, 0.5)",
                                 color: "var(--accent-color)",
@@ -146,9 +146,9 @@ export function CharacterSummarySection({
                             type="button"
                             onClick={() => onFPChange(1)}
                             style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "8px",
+                                width: "24px",
+                                height: "24px",
+                                borderRadius: "7px",
                                 border: "1px solid rgba(var(--accent-rgb), 0.28)",
                                 background: "rgba(0, 0, 0, 0.5)",
                                 color: "var(--accent-color)",
@@ -158,15 +158,15 @@ export function CharacterSummarySection({
                             +
                         </button>
                         {isGM && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                                 <button
                                     type="button"
                                     onClick={() => onRefreshChange(-1)}
                                     title="Reduzir recarga"
                                     style={{
-                                        width: "28px",
-                                        height: "28px",
-                                        borderRadius: "8px",
+                                        width: "24px",
+                                        height: "24px",
+                                        borderRadius: "7px",
                                         border: "1px solid rgba(var(--accent-rgb), 0.22)",
                                         background: "rgba(0, 0, 0, 0.4)",
                                         color: "rgba(255, 255, 255, 0.72)",
@@ -180,9 +180,9 @@ export function CharacterSummarySection({
                                     onClick={() => onRefreshChange(1)}
                                     title="Aumentar recarga"
                                     style={{
-                                        width: "28px",
-                                        height: "28px",
-                                        borderRadius: "8px",
+                                        width: "24px",
+                                        height: "24px",
+                                        borderRadius: "7px",
                                         border: "1px solid rgba(var(--accent-rgb), 0.22)",
                                         background: "rgba(0, 0, 0, 0.4)",
                                         color: "rgba(255, 255, 255, 0.72)",
@@ -206,9 +206,9 @@ export function CharacterSummarySection({
                 background:
                     "radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.14), transparent 38%), linear-gradient(180deg, rgba(18, 18, 18, 0.98), rgba(8, 8, 8, 0.98))",
                 border: "1px solid rgba(var(--accent-rgb), 0.28)",
-                borderRadius: "24px",
-                padding: isCompact ? "18px" : "24px",
-                boxShadow: "inset 0 0 40px rgba(0, 0, 0, 0.45), 0 18px 42px rgba(0, 0, 0, 0.35)",
+                borderRadius: "20px",
+                padding: isCompact ? "14px" : "19px",
+                boxShadow: "inset 0 0 28px rgba(0, 0, 0, 0.42), 0 14px 34px rgba(0, 0, 0, 0.32)",
             }}
         >
             <div
@@ -217,17 +217,17 @@ export function CharacterSummarySection({
                     display: "flex",
                     alignItems: isCompact ? "flex-start" : "center",
                     flexDirection: isCompact ? "column" : "row",
-                    gap: "20px",
-                    paddingBottom: "20px",
+                    gap: "16px",
+                    paddingBottom: "16px",
                     borderBottom: "1px solid rgba(var(--accent-rgb), 0.16)",
-                    marginBottom: "20px",
+                    marginBottom: "16px",
                 }}
             >
                 <div
                     className="character-summary-avatar-frame"
                     style={{
-                        width: isCompact ? "74px" : "92px",
-                        height: isCompact ? "74px" : "92px",
+                        width: isCompact ? "60px" : "74px",
+                        height: isCompact ? "60px" : "74px",
                         borderRadius: "50%",
                         overflow: "hidden",
                         flexShrink: 0,
@@ -235,7 +235,7 @@ export function CharacterSummarySection({
                         background:
                             "radial-gradient(circle at 30% 30%, rgba(var(--accent-rgb), 0.28), rgba(0, 0, 0, 0.7)), rgba(0, 0, 0, 0.7)",
                         boxShadow:
-                            "0 0 0 4px rgba(var(--accent-rgb), 0.08), 0 0 24px rgba(var(--accent-rgb), 0.16)",
+                            "0 0 0 3px rgba(var(--accent-rgb), 0.08), 0 0 18px rgba(var(--accent-rgb), 0.14)",
                     }}
                 >
                     {character.imageUrl ? (
@@ -260,7 +260,7 @@ export function CharacterSummarySection({
                                 alignItems: "center",
                                 justifyContent: "center",
                                 fontFamily: "var(--font-header)",
-                                fontSize: "2rem",
+                                fontSize: "1.5rem",
                                 color: "var(--accent-color)",
                             }}
                         >
@@ -274,7 +274,7 @@ export function CharacterSummarySection({
                     style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: "10px",
+                        gap: "8px",
                         minWidth: 0,
                         flex: 1,
                     }}
@@ -285,7 +285,7 @@ export function CharacterSummarySection({
                             style={{
                                 display: "flex",
                                 flexWrap: "wrap",
-                                gap: "10px",
+                                gap: "8px",
                                 alignItems: "center",
                             }}
                         >
@@ -295,30 +295,30 @@ export function CharacterSummarySection({
                                 onChange={(e) => onTempNameChange(e.target.value)}
                                 autoFocus
                                 style={{
-                                    minWidth: "min(320px, 100%)",
+                                    minWidth: "min(260px, 100%)",
                                     flex: 1,
                                     background: "rgba(0, 0, 0, 0.48)",
                                     border: "1px solid rgba(var(--accent-rgb), 0.34)",
                                     borderRadius: "999px",
                                     color: "#f6e7bf",
-                                    padding: "12px 16px",
+                                    padding: "10px 14px",
                                     fontFamily: "var(--font-header)",
-                                    fontSize: "0.95rem",
+                                    fontSize: "0.82rem",
                                     letterSpacing: "0.08em",
                                     outline: "none",
                                 }}
                             />
                             <div
                                 className="character-summary-name-actions"
-                                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                                style={{ display: "flex", alignItems: "center", gap: "6px" }}
                             >
                                 <button
                                     className="character-summary-name-btn save"
                                     onClick={onSaveName}
                                     title="Salvar nome"
                                     style={{
-                                        width: "34px",
-                                        height: "34px",
+                                        width: "28px",
+                                        height: "28px",
                                         borderRadius: "50%",
                                         border: "1px solid rgba(143, 231, 167, 0.35)",
                                         background: "rgba(0, 0, 0, 0.45)",
@@ -333,8 +333,8 @@ export function CharacterSummarySection({
                                     onClick={onCancelEditName}
                                     title="Cancelar edição"
                                     style={{
-                                        width: "34px",
-                                        height: "34px",
+                                        width: "28px",
+                                        height: "28px",
                                         borderRadius: "50%",
                                         border: "1px solid rgba(255, 140, 140, 0.35)",
                                         background: "rgba(0, 0, 0, 0.45)",
@@ -355,7 +355,7 @@ export function CharacterSummarySection({
                                 alignItems: "center",
                                 justifyContent: "space-between",
                                 flexWrap: "wrap",
-                                gap: "12px 16px",
+                                gap: "10px 12px",
                                 minWidth: 0,
                             }}
                         >
@@ -363,7 +363,7 @@ export function CharacterSummarySection({
                                 style={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: "12px",
+                                    gap: "10px",
                                     minWidth: 0,
                                     flexWrap: "wrap",
                                 }}
@@ -373,7 +373,7 @@ export function CharacterSummarySection({
                                     style={{
                                         margin: 0,
                                         fontFamily: "var(--font-victorian)",
-                                        fontSize: isCompact ? "1.3rem" : "clamp(1.5rem, 2vw, 2.4rem)",
+                                        fontSize: isCompact ? "1.08rem" : "clamp(1.2rem, 1.7vw, 1.9rem)",
                                         lineHeight: 1.05,
                                         color: "#f6e7bf",
                                         textTransform: "uppercase",
@@ -389,8 +389,8 @@ export function CharacterSummarySection({
                                         onClick={onStartEditingName}
                                         title="Editar nome"
                                         style={{
-                                            width: "34px",
-                                            height: "34px",
+                                            width: "28px",
+                                            height: "28px",
                                             borderRadius: "50%",
                                             border: "1px solid rgba(var(--accent-rgb), 0.35)",
                                             background: "rgba(0, 0, 0, 0.45)",
@@ -413,7 +413,7 @@ export function CharacterSummarySection({
                 style={{
                     display: "grid",
                     gridTemplateColumns: isCompact ? "1fr" : "minmax(0, 1.2fr) minmax(0, 1fr)",
-                    gap: "20px",
+                    gap: "16px",
                 }}
             >
                 <div className="character-summary-panel" style={{ minWidth: 0 }}>

@@ -1,45 +1,10 @@
 "use client";
 
 import { Character, DEFAULT_SKILLS } from "@/types/domain";
+import { getSkillPalette } from "./skillPalette";
 
 interface CharacterSummarySkillsProps {
     character: Character;
-}
-
-function getSkillTone(level: number) {
-    if (level >= 5) return "legendary";
-    if (level >= 3) return "expert";
-    if (level >= 2) return "trained";
-    return "basic";
-}
-
-function getSkillToneStyles(level: number) {
-    const tone = getSkillTone(level);
-    if (tone === "legendary") {
-        return {
-            borderColor: "rgba(215, 96, 96, 0.34)",
-            background: "linear-gradient(135deg, rgba(122, 34, 34, 0.26), rgba(18, 8, 8, 0.8))",
-        };
-    }
-
-    if (tone === "expert") {
-        return {
-            borderColor: "rgba(219, 171, 76, 0.34)",
-            background: "linear-gradient(135deg, rgba(130, 93, 22, 0.24), rgba(19, 14, 8, 0.76))",
-        };
-    }
-
-    if (tone === "trained") {
-        return {
-            borderColor: "rgba(93, 196, 164, 0.28)",
-            background: "linear-gradient(135deg, rgba(26, 120, 96, 0.2), rgba(10, 16, 15, 0.72))",
-        };
-    }
-
-    return {
-        borderColor: "rgba(138, 170, 255, 0.24)",
-        background: "linear-gradient(135deg, rgba(56, 83, 165, 0.18), rgba(10, 12, 18, 0.72))",
-    };
 }
 
 export function CharacterSummarySkills({ character }: CharacterSummarySkillsProps) {
@@ -56,17 +21,18 @@ export function CharacterSummarySkills({ character }: CharacterSummarySkillsProp
     return (
         <div
             className="character-summary-skills"
-            style={{ display: "flex", flexDirection: "column", gap: "14px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
         >
             {visibleSkills.length === 0 ? (
                 <div
                     className="summary-skill-empty"
                     style={{
-                        padding: "14px 16px",
-                        borderRadius: "14px",
+                        padding: "11px 13px",
+                        borderRadius: "12px",
                         border: "1px dashed rgba(var(--accent-rgb), 0.18)",
                         color: "rgba(255, 255, 255, 0.58)",
                         fontStyle: "italic",
+                        fontSize: "0.9rem",
                     }}
                 >
                     Nenhuma perícia acima de 0 para exibir no resumo.
@@ -76,33 +42,37 @@ export function CharacterSummarySkills({ character }: CharacterSummarySkillsProp
                     className="summary-skills-grid"
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                        gap: "10px",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))",
+                        gap: "8px",
                     }}
                 >
-                    {visibleSkills.map(({ skill, level }) => (
-                        <div
-                            key={skill}
-                            className={`summary-skill-chip tone-${getSkillTone(level)}`}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: "12px",
-                                padding: "10px 12px",
-                                borderRadius: "999px",
-                                border: "1px solid rgba(255, 255, 255, 0.08)",
-                                ...getSkillToneStyles(level),
-                            }}
-                        >
+                    {visibleSkills.map(({ skill, level }) => {
+                        const palette = getSkillPalette(level);
+
+                        return (
+                            <div
+                                key={skill}
+                                className="summary-skill-chip"
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: "10px",
+                                    padding: "8px 10px",
+                                    borderRadius: "999px",
+                                    border: `1px solid ${palette.borderColor}`,
+                                    background: palette.background,
+                                    boxShadow: palette.shadow,
+                                }}
+                            >
                             <span
                                 className="summary-skill-label"
                                 style={{
                                     minWidth: 0,
                                     fontFamily: "var(--font-header)",
-                                    fontSize: "0.74rem",
+                                    fontSize: "0.66rem",
                                     letterSpacing: "0.12em",
-                                    color: "#efe2c0",
+                                    color: palette.labelColor,
                                     whiteSpace: "nowrap",
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
@@ -115,14 +85,15 @@ export function CharacterSummarySkills({ character }: CharacterSummarySkillsProp
                                 style={{
                                     flexShrink: 0,
                                     fontFamily: "var(--font-header)",
-                                    fontSize: "0.92rem",
-                                    color: "#ffffff",
+                                    fontSize: "0.82rem",
+                                    color: palette.valueColor,
                                 }}
                             >
                                 +{level}
                             </span>
-                        </div>
-                    ))}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

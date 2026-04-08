@@ -234,11 +234,11 @@ export function CharacterVitality({
                 }
 
                 .char-core-info.summary-compact .track-label-row {
-                    margin-bottom: 8px;
+                    margin-bottom: 6px;
                 }
 
                 .char-core-info.summary-compact .node-array-header {
-                    gap: 8px;
+                    gap: 6px;
                 }
 
                 .char-core-info.summary-compact .integrity-node-wrap {
@@ -246,43 +246,43 @@ export function CharacterVitality({
                 }
 
                 .char-core-info.summary-compact .integrity-node-header {
-                    width: 34px;
-                    min-width: 34px;
-                    height: 34px;
+                    width: 28px;
+                    min-width: 28px;
+                    height: 28px;
                     padding: 0;
                 }
 
                 .char-core-info.summary-compact .integrity-node-header .node-index {
-                    font-size: 0.95rem;
+                    font-size: 0.78rem;
                 }
 
                 .char-core-info.summary-compact .track-label-row span {
-                    font-size: 0.72rem;
-                    letter-spacing: 0.18em;
+                    font-size: 0.64rem;
+                    letter-spacing: 0.15em;
                 }
 
                 .char-core-info.summary-compact .header-track-controls {
                     gap: 6px;
-                    margin-left: 10px;
-                    padding: 4px 6px;
+                    margin-left: 8px;
+                    padding: 3px 5px;
                 }
 
                 .char-core-info.summary-compact .header-track-controls .h-add-btn {
-                    width: 22px;
-                    height: 22px;
-                    font-size: 0.9rem;
+                    width: 20px;
+                    height: 20px;
+                    font-size: 0.78rem;
                 }
 
                 .char-core-info.summary-compact .h-value-input {
-                    width: 52px;
-                    height: 22px;
-                    font-size: 0.68rem;
+                    width: 46px;
+                    height: 20px;
+                    font-size: 0.62rem;
                 }
 
                 .char-core-info.summary-compact .stress-value-editor {
-                    width: 36px;
-                    height: 18px;
-                    font-size: 0.62rem;
+                    width: 32px;
+                    height: 16px;
+                    font-size: 0.56rem;
                 }
 
                 .char-core-info .stress-value-editor,

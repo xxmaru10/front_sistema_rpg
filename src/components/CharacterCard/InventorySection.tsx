@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Backpack } from "lucide-react";
 import { Character, Item } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
@@ -20,6 +20,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     const [inventoryModal, setInventoryModal] = useState<{ index: number; item: Item; containerId: string | null } | null>(null);
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | string | null>(null);
+    const [activeInventoryTab, setActiveInventoryTab] = useState<string>("main");
     const [showVISelector, setShowVISelector] = useState(false);
 
     // Draggable Logic
@@ -27,6 +28,12 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     const [isDragging, setIsDragging] = useState(false);
     const posRef = useRef({ x: -270, y: 20 });
     const containerRef = useRef<HTMLDivElement>(null);
+    const storageContainers = useMemo(
+        () => (character.inventory || []).filter((item) => item?.isContainer),
+        [character.inventory]
+    );
+    const hasStorageTabs = storageContainers.length > 0;
+    const storageTabsKey = storageContainers.map((container) => container.id).join("|");
 
     // Load persisted position
     useEffect(() => {
@@ -39,6 +46,17 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
             } catch (e) { console.warn("Failed to load inventory position", e); }
         }
     }, [character.id]);
+
+    useEffect(() => {
+        const validTabs = hasStorageTabs
+            ? new Set(["all", "main", ...storageContainers.map((container) => `container:${container.id}`)])
+            : new Set(["main"]);
+        const fallbackTab = hasStorageTabs ? "all" : "main";
+
+        if (!validTabs.has(activeInventoryTab)) {
+            setActiveInventoryTab(fallbackTab);
+        }
+    }, [activeInventoryTab, hasStorageTabs, storageTabsKey]);
 
     const onMouseDownHeader = (e: any) => {
         // Don't drag if clicking buttons inside header
@@ -218,6 +236,183 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         }
     };
 
+    const renderInventorySlots = (
+        items: Item[] | undefined,
+        length: number,
+        containerId: string | null = null,
+        emptyLabel: string = "SLOT VAZIO"
+    ) => (
+        <div className="inventory-list compact-list">
+            {Array.from({ length }).map((_, i) => {
+                const item = items?.[i];
+                const isFilled = !!item?.name?.length;
+                const sizeClass = item?.size ? `size-${item.size.toLowerCase()}` : "";
+                const slotId = containerId ? `container-${containerId}-${i}` : `main-${i}`;
+                const isSlotActive = activeSlotIndex === slotId;
+                const usedStorageSlots = item?.isContainer
+                    ? (item.contents || []).filter((entry) => entry?.name?.trim()).length
+                    : 0;
+
+                return (
+                    <div key={slotId} className={`inventory-slot compact-slot ${isFilled ? "filled" : "empty"} ${sizeClass}`}>
+                        <div className="inventory-slot-inner">
+                            {canEdit ? (
+                                <button
+                                    className="inventory-btn-wrapper"
+                                    onClick={() => setActiveSlotIndex(isSlotActive ? null : slotId)}
+                                >
+                                    <div className="inv-slot-number">{i + 1}</div>
+                                    <div className="inv-main-content">
+                                        <div className="inv-name-row">
+                                            <span className="inv-name-col">
+                                                {isFilled ? item.name.toUpperCase() : <span className="placeholder">{emptyLabel}</span>}
+                                            </span>
+                                            {isFilled && item.bonus !== 0 && (
+                                                <span className="bonus-badge">
+                                                    {item.bonus > 0 ? `+${item.bonus}` : item.bonus}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {isFilled && item.description && (
+                                            <div className="inv-description-row">
+                                                {item.description}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {isFilled && item.size && (
+                                        <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
+                                            {item.size}
+                                        </div>
+                                    )}
+                                </button>
+                            ) : (
+                                <div
+                                    className="inventory-btn-wrapper interactive"
+                                    onClick={() => setActiveSlotIndex(isSlotActive ? null : slotId)}
+                                    style={{ cursor: "pointer" }}
+                                >
+                                    <div className="inv-slot-number">{i + 1}</div>
+                                    <div className="inv-main-content">
+                                        <div className="inv-name-row">
+                                            <span className="inv-name-col">
+                                                {isFilled ? item.name.toUpperCase() : <span className="placeholder">{emptyLabel}</span>}
+                                            </span>
+                                            {isFilled && item.bonus !== 0 && (
+                                                <span className="bonus-badge">
+                                                    {item.bonus > 0 ? `+${item.bonus}` : item.bonus}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {isFilled && item.description && (
+                                            <div className="inv-description-row">
+                                                {item.description}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {isFilled && item.size && (
+                                        <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
+                                            {item.size}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {isFilled && canEdit && !item.isContainer && (
+                                <div className="inv-quantity-controls">
+                                    <button
+                                        className="qty-btn qty-decrease"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleUpdateItemQuantity(i, -1, containerId);
+                                        }}
+                                        title="Diminuir quantidade"
+                                    >
+                                        ▼
+                                    </button>
+                                    <span className="qty-display">
+                                        {item.quantityCurrent ?? 1}/{item.quantityTotal ?? 1}
+                                    </span>
+                                    <button
+                                        className="qty-btn qty-increase"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleUpdateItemQuantity(i, 1, containerId);
+                                        }}
+                                        title="Aumentar quantidade"
+                                    >
+                                        ▲
+                                    </button>
+                                </div>
+                            )}
+
+                            {isFilled && item.isContainer && (
+                                <div className="inv-quantity-display">
+                                    <span
+                                        className="qty-label"
+                                        style={{ color: "var(--accent-color)", display: "flex", alignItems: "center", gap: "6px" }}
+                                    >
+                                        <Backpack size={14} />
+                                        {usedStorageSlots}/{item.capacity || 3}
+                                    </span>
+                                </div>
+                            )}
+
+                            {isFilled && !canEdit && !item.isContainer && (item.quantityCurrent !== undefined || item.quantityTotal !== undefined) && (
+                                <div className="inv-quantity-display">
+                                    <span className="qty-label">QTD:</span>
+                                    <span className="qty-value">{item.quantityCurrent ?? 1}/{item.quantityTotal ?? 1}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {isSlotActive && (
+                            <div className="slot-actions-overlay">
+                                {item?.url && (
+                                    <button
+                                        className="slot-action-btn eye"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setViewImageUrl(item.url || null);
+                                            setActiveSlotIndex(null);
+                                        }}
+                                        title="Visualizar Imagem"
+                                    >
+                                        👁️
+                                    </button>
+                                )}
+                                {canEdit && (
+                                    <button
+                                        className="slot-action-btn pencil"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleInventoryChange(i, containerId);
+                                            setActiveSlotIndex(null);
+                                        }}
+                                        title="Editar Item"
+                                    >
+                                        ✎
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+
+    const renderStorageSection = (container: Item, showHeading: boolean) => (
+        <div key={container.id} className="inventory-subsection">
+            {showHeading && (
+                <div className="inventory-subsection-header">
+                    <Backpack size={15} />
+                    <span>{(container.name || "ARMAZENAMENTO").toUpperCase()}</span>
+                </div>
+            )}
+            {renderInventorySlots(container.contents, container.capacity || 3, container.id, "VAZIO")}
+        </div>
+    );
+
     return (
         <>
         <div 
@@ -239,261 +434,64 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                         <span>INVENTÁRIO & ARSENAL</span>
                     </div>
                 </div>
-                    <div className="inventory-list compact-list">
-                        {Array.from({ length: 5 }).map((_, i) => {
-                            const item = character.inventory?.[i];
-                            const isFilled = item && item.name.length > 0;
-                            const sizeClass = item?.size ? `size-${item.size.toLowerCase()}` : '';
-
-                            return (
-                                <div key={i} className={`inventory-slot compact-slot ${isFilled ? 'filled' : 'empty'} ${sizeClass}`}>
-                                    <div className="inventory-slot-inner">
-                                        {canEdit ? (
-                                            <button
-                                                className="inventory-btn-wrapper"
-                                                onClick={() => setActiveSlotIndex(activeSlotIndex === i ? null : i)}
-                                            >
-                                                <div className="inv-slot-number">{i + 1}</div>
-                                                <div className="inv-main-content">
-                                                    <div className="inv-name-row">
-                                                        <span className="inv-name-col">
-                                                            {isFilled ? item.name.toUpperCase() : <span className="placeholder">SLOT VAZIO</span>}
-                                                        </span>
-                                                        {isFilled && item.bonus !== 0 && (
-                                                            <span className="bonus-badge">
-                                                                {item.bonus > 0 ? `+${item.bonus}` : item.bonus}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {isFilled && item.description && (
-                                                        <div className="inv-description-row">
-                                                            {item.description}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {isFilled && item.size && (
-                                                    <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
-                                                        {item.size}
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ) : (
-                                            <div
-                                                className="inventory-btn-wrapper interactive"
-                                                onClick={() => setActiveSlotIndex(activeSlotIndex === i ? null : i)}
-                                                style={{ cursor: 'pointer' }}
-                                            >
-                                                <div className="inv-slot-number">{i + 1}</div>
-                                                <div className="inv-main-content">
-                                                    <div className="inv-name-row">
-                                                        <span className="inv-name-col">
-                                                            {isFilled ? item.name.toUpperCase() : <span className="placeholder">SLOT VAZIO</span>}
-                                                        </span>
-                                                        {isFilled && item.bonus !== 0 && (
-                                                            <span className="bonus-badge">
-                                                                {item.bonus > 0 ? `+${item.bonus}` : item.bonus}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {isFilled && item.description && (
-                                                        <div className="inv-description-row">
-                                                            {item.description}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {isFilled && item.size && (
-                                                    <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
-                                                        {item.size}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Quantity Controls */}
-                                        {isFilled && canEdit && !item.isContainer && (
-                                            <div className="inv-quantity-controls">
-                                                <button
-                                                    className="qty-btn qty-decrease"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleUpdateItemQuantity(i, -1);
-                                                    }}
-                                                    title="Diminuir quantidade"
-                                                >
-                                                    ▼
-                                                </button>
-                                                <span className="qty-display">
-                                                    {item.quantityCurrent ?? 1}/{item.quantityTotal ?? 1}
-                                                </span>
-                                                <button
-                                                    className="qty-btn qty-increase"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleUpdateItemQuantity(i, 1);
-                                                    }}
-                                                    title="Aumentar quantidade"
-                                                >
-                                                    ▲
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* Quantity Controls for CONTAINERS (Cannot change qty, just label maybe?) */}
-                                        {isFilled && item.isContainer && (
-                                            <div className="inv-quantity-display">
-                                                <span className="qty-label" style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <Backpack size={14} /> ARMAZENAMENTO
-                                                </span>
-                                            </div>
-                                        )}
-
-
-                                        {/* Quantity Display for non-editable view */}
-                                        {isFilled && !canEdit && (item.quantityCurrent !== undefined || item.quantityTotal !== undefined) && (
-                                            <div className="inv-quantity-display">
-                                                <span className="qty-label">{item.isContainer ? <Backpack size={14} /> : "QTD:"}</span>
-                                                {!item.isContainer && <span className="qty-value">{item.quantityCurrent ?? 1}/{item.quantityTotal ?? 1}</span>}
-                                            </div>
-                                        )}
-                                    </div>
-                                    {activeSlotIndex === i && (
-                                        <div className="slot-actions-overlay">
-                                            {item?.url && (
-                                                <button
-                                                    className="slot-action-btn eye"
-                                                    onClick={(e) => { e.stopPropagation(); setViewImageUrl(item.url || null); setActiveSlotIndex(null); }}
-                                                    title="Visualizar Imagem"
-                                                >
-                                                    👁️
-                                                </button>
-                                            )}
-                                            {canEdit && (
-                                                <button
-                                                    className="slot-action-btn pencil"
-                                                    onClick={(e) => { e.stopPropagation(); handleInventoryChange(i); setActiveSlotIndex(null); }}
-                                                    title="Editar Item"
-                                                >
-                                                    ✎
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-
-                    {/* Nested Containers Rendering */}
-                    {character.inventory?.filter(i => i.isContainer).map((container) => (
-                        <div key={container.id} className="container-wrapper" style={{ marginTop: '16px', borderTop: '1px solid rgba(197, 160, 89, 0.2)', paddingTop: '8px' }}>
-                            <div className="readout-header mobile-col compact-header" style={{ marginBottom: '8px' }}>
-                                <div className="header-group">
-                                    <span className="symbol"><Backpack size={18} /></span>
-                                    <span>{container.name.toUpperCase()}</span>
-                                </div>
-                            </div>
-                            <div className="inventory-list compact-list">
-                                {Array.from({ length: container.capacity || 3 }).map((_, i) => {
-                                    const item = container.contents?.[i];
-                                    const isFilled = item && item.name.length > 0;
-                                    const sizeClass = item?.size ? `size-${item.size.toLowerCase()}` : '';
-                                    // Use a composite key for slot index to avoid collision with main inventory if using single state?
-                                    // Actually setActiveSlotIndex only stores a number. If we have multiple lists, we conflict.
-                                    // But activeSlotIndex is simple "open overlay".
-                                    // If I open slot 1 in backpack, activeSlotIndex=1. Slot 1 in main inventory also sees activeSlotIndex=1.
-                                    // I need to update setActiveSlotIndex to be smart or add containerId context.
-                                    // Quick fix: Use a specific ID for slot index? e.g. "containerId_index".
-                                    // But activeSlotIndex is number.
-                                    // I will interpret activeSlotIndex as local to the map.
-                                    // BUT they share the state.
-                                    // So if I set activeSlotIndex to 1, both show overlay.
-                                    // I should probably use a separate state or just accept the glitch for now, OR change activeSlotIndex to string.
-                                    // Changing activeSlotIndex to string is risky for other parts of code?
-                                    // Let's check: const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null); (Line 132)
-                                    // I will change it to string | number.
-                                    // Actually, if I change it to string, I can store "MAIN_1" or "UUID_1".
-                                    // I will update the state definition in a separate replacement or here if I can find it.
-                                    // It was line 132. I didn't include it in replacement chunks.
-                                    // I'll stick to number and add a hack:
-                                    // We can just add a separate `activeContainerSlot` state? No.
-                                    // I'll leave valid MultiReplace chunks and maybe fix the slot index issue in a second pass if it's tricky.
-                                    // Wait, I can just use a large offset? 100 + i?
-                                    // Or just string.
-                                    // Let's assume I will fix the activeSlotIndex definition in a separate tool call if needed, or include it now.
-                                    // I'll include it now.
-
-                                    const slotId = `${container.id}_${i}`;
-                                    const isSlotActive = activeSlotIndex === slotId as any; // Cast if TS complains, or I update state type.
-
-                                    return (
-                                        <div key={i} className={`inventory-slot compact-slot ${isFilled ? 'filled' : 'empty'} ${sizeClass}`}>
-                                            <div className="inventory-slot-inner">
-                                                {canEdit ? (
-                                                    <button
-                                                        className="inventory-btn-wrapper"
-                                                        onClick={() => setActiveSlotIndex(isSlotActive ? null : slotId as any)}
-                                                    >
-                                                        <div className="inv-slot-number">{i + 1}</div>
-                                                        <div className="inv-main-content">
-                                                            <div className="inv-name-row">
-                                                                <span className="inv-name-col">
-                                                                    {isFilled ? item.name.toUpperCase() : <span className="placeholder">VAZIO</span>}
-                                                                </span>
-                                                                {isFilled && item.bonus !== 0 && (
-                                                                    <span className="bonus-badge">
-                                                                        {item.bonus > 0 ? `+${item.bonus}` : item.bonus}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {isFilled && item.description && (
-                                                                <div className="inv-description-row">
-                                                                    {item.description}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </button>
-                                                ) : (
-                                                    <div className="inventory-btn-wrapper interactive"
-                                                        onClick={() => setActiveSlotIndex(isSlotActive ? null : slotId as any)}>
-                                                        <div className="inv-slot-number">{i + 1}</div>
-                                                        <div className="inv-main-content">
-                                                            <div className="inv-name-row">
-                                                                <span className="inv-name-col">{isFilled ? item.name.toUpperCase() : "VAZIO"}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {isFilled && canEdit && (
-                                                    <div className="inv-quantity-controls">
-                                                        <button className="qty-btn qty-decrease"
-                                                            onClick={(e) => { e.stopPropagation(); handleUpdateItemQuantity(i, -1, container.id); }}>▼</button>
-                                                        <span className="qty-display">{item.quantityCurrent ?? 1}/{item.quantityTotal ?? 1}</span>
-                                                        <button className="qty-btn qty-increase"
-                                                            onClick={(e) => { e.stopPropagation(); handleUpdateItemQuantity(i, 1, container.id); }}>▲</button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {isSlotActive && (
-                                                <div className="slot-actions-overlay">
-                                                    {item?.url && (
-                                                        <button className="slot-action-btn eye"
-                                                            onClick={(e) => { e.stopPropagation(); setViewImageUrl(item.url || null); setActiveSlotIndex(null); }}
-                                                            title="Visualizar">👁️</button>
-                                                    )}
-                                                    {canEdit && (
-                                                        <button className="slot-action-btn pencil"
-                                                            onClick={(e) => { e.stopPropagation(); handleInventoryChange(i, container.id); setActiveSlotIndex(null); }}
-                                                            title="Editar">✎</button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                    {hasStorageTabs && (
+                        <div className="inventory-tab-navigation">
+                            <button
+                                type="button"
+                                className={`inventory-tab-btn ${activeInventoryTab === "all" ? "active" : ""}`}
+                                onClick={() => setActiveInventoryTab("all")}
+                            >
+                                TODOS
+                            </button>
+                            <button
+                                type="button"
+                                className={`inventory-tab-btn ${activeInventoryTab === "main" ? "active" : ""}`}
+                                onClick={() => setActiveInventoryTab("main")}
+                            >
+                                PRINCIPAL
+                            </button>
+                            {storageContainers.map((container) => (
+                                <button
+                                    key={container.id}
+                                    type="button"
+                                    className={`inventory-tab-btn ${activeInventoryTab === `container:${container.id}` ? "active" : ""}`}
+                                    onClick={() => setActiveInventoryTab(`container:${container.id}`)}
+                                >
+                                    {(container.name || "ARMAZENAMENTO").toUpperCase()}
+                                </button>
+                            ))}
                         </div>
-                    ))}
+                    )}
+
+                    <div className="inventory-tab-panel">
+                        {!hasStorageTabs && renderInventorySlots(character.inventory, 5, null, "SLOT VAZIO")}
+
+                        {hasStorageTabs && activeInventoryTab === "all" && (
+                            <>
+                                <div className="inventory-subsection">
+                                    <div className="inventory-subsection-header">
+                                        <span>PRINCIPAL</span>
+                                    </div>
+                                    {renderInventorySlots(character.inventory, 5, null, "SLOT VAZIO")}
+                                </div>
+                                {storageContainers.map((container) => renderStorageSection(container, true))}
+                            </>
+                        )}
+
+                        {hasStorageTabs && activeInventoryTab === "main" && (
+                            <div className="inventory-subsection">
+                                {renderInventorySlots(character.inventory, 5, null, "SLOT VAZIO")}
+                            </div>
+                        )}
+
+                        {hasStorageTabs && activeInventoryTab.startsWith("container:") && (
+                            <>
+                                {storageContainers
+                                    .filter((container) => activeInventoryTab === `container:${container.id}`)
+                                    .map((container) => renderStorageSection(container, false))}
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* Inventory Modal */}
@@ -725,6 +723,65 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                         </div>
                     )
                 }
+                <style jsx>{`
+                    .inventory-tab-navigation {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                        margin: 0 0 18px 0;
+                        padding-bottom: 14px;
+                        border-bottom: 1px solid rgba(var(--accent-rgb), 0.14);
+                    }
+
+                    .inventory-tab-btn {
+                        background: rgba(var(--accent-rgb), 0.06);
+                        border: 1px solid rgba(var(--accent-rgb), 0.14);
+                        color: rgba(255, 255, 255, 0.72);
+                        padding: 8px 12px;
+                        border-radius: 999px;
+                        font-family: var(--font-header);
+                        font-size: 0.62rem;
+                        letter-spacing: 0.16em;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+
+                    .inventory-tab-btn:hover {
+                        color: #f2e3b6;
+                        border-color: rgba(var(--accent-rgb), 0.26);
+                        background: rgba(var(--accent-rgb), 0.1);
+                    }
+
+                    .inventory-tab-btn.active {
+                        color: var(--accent-color);
+                        border-color: rgba(var(--accent-rgb), 0.34);
+                        background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08));
+                        box-shadow: inset 0 -1px 0 rgba(var(--accent-rgb), 0.5);
+                    }
+
+                    .inventory-tab-panel {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 18px;
+                    }
+
+                    .inventory-subsection {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                    }
+
+                    .inventory-subsection-header {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 0 4px;
+                        font-family: var(--font-header);
+                        font-size: 0.66rem;
+                        letter-spacing: 0.18em;
+                        color: rgba(var(--accent-rgb), 0.82);
+                    }
+                `}</style>
         </>
     );
 }
