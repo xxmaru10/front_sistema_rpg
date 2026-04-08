@@ -22,6 +22,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | string | null>(null);
     const [activeInventoryTab, setActiveInventoryTab] = useState<string>("main");
     const [showVISelector, setShowVISelector] = useState(false);
+    const normalizedActorUserId = actorUserId.trim().toLowerCase();
 
     // Draggable Logic
     const [dragPos, setDragPos] = useState({ x: -270, y: 20 });
@@ -47,6 +48,22 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         quantityTotal: 1,
         size: undefined,
     });
+    const getLastFilledSlotIndex = (items: Item[] | undefined) => {
+        let lastFilledIndex = -1;
+        (items || []).forEach((item, index) => {
+            if (item?.name?.trim()) {
+                lastFilledIndex = index;
+            }
+        });
+        return lastFilledIndex;
+    };
+    const buildInventoryWithLength = (targetLength: number) => {
+        const nextInventory = (character.inventory || []).slice(0, targetLength);
+        while (nextInventory.length < targetLength) {
+            nextInventory.push(createEmptyInventorySlot());
+        }
+        return nextInventory;
+    };
 
     // Load persisted position
     useEffect(() => {
@@ -151,7 +168,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                     sessionId,
                     seq: 0,
                     type: "CHARACTER_INVENTORY_UPDATED",
-                    actorUserId,
+                    actorUserId: normalizedActorUserId,
                     createdAt: new Date().toISOString(),
                     visibility: "PUBLIC",
                     payload: { characterId: character.id, item: updatedContainer }
@@ -164,7 +181,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                 sessionId,
                 seq: 0,
                 type: "CHARACTER_INVENTORY_UPDATED",
-                actorUserId,
+                actorUserId: normalizedActorUserId,
                 createdAt: new Date().toISOString(),
                 visibility: "PUBLIC",
                 payload: { characterId: character.id, item: newItem }
@@ -203,7 +220,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                 sessionId,
                 seq: 0,
                 type: "CHARACTER_INVENTORY_UPDATED",
-                actorUserId,
+                actorUserId: normalizedActorUserId,
                 createdAt: new Date().toISOString(),
                 visibility: "PUBLIC",
                 payload: { characterId: character.id, item: updatedContainer }
@@ -225,7 +242,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                 sessionId,
                 seq: 0,
                 type: "CHARACTER_INVENTORY_UPDATED",
-                actorUserId,
+                actorUserId: normalizedActorUserId,
                 createdAt: new Date().toISOString(),
                 visibility: "PUBLIC",
                 payload: { characterId: character.id, item: updatedItem }
@@ -236,22 +253,46 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     const handleAddMainInventorySlot = () => {
         if (!isGM) return;
         const targetLength = mainInventorySlots + 1;
-        const nextInventory = Array.from({ length: targetLength }, (_, index) => (
-            character.inventory?.[index] || createEmptyInventorySlot()
-        ));
+        const nextInventory = buildInventoryWithLength(targetLength);
 
         globalEventStore.append({
             id: uuidv4(),
             sessionId,
             seq: 0,
             type: "CHARACTER_UPDATED",
-            actorUserId,
+            actorUserId: normalizedActorUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: {
                 characterId: character.id,
                 changes: {
                     inventory: nextInventory,
+                }
+            }
+        } as any);
+    };
+
+    const handleRemoveMainInventorySlot = () => {
+        if (!isGM) return;
+
+        const currentLength = character.inventory?.length || 0;
+        const lastFilledIndex = getLastFilledSlotIndex(character.inventory);
+        const nextLength = Math.max(5, currentLength - 1, lastFilledIndex + 1);
+
+        if (nextLength >= currentLength) return;
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "CHARACTER_UPDATED",
+            actorUserId: normalizedActorUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: {
+                characterId: character.id,
+                changes: {
+                    inventory: buildInventoryWithLength(nextLength),
                 }
             }
         } as any);
@@ -272,7 +313,34 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
             sessionId,
             seq: 0,
             type: "CHARACTER_INVENTORY_UPDATED",
-            actorUserId,
+            actorUserId: normalizedActorUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: { characterId: character.id, item: updatedContainer }
+        } as any);
+    };
+
+    const handleReduceContainerSlots = (container: Item) => {
+        if (!isGM || !container.isContainer) return;
+
+        const currentCapacity = Math.max(container.capacity || 3, container.contents?.length || 0);
+        const minimumCapacity = Math.max(1, getLastFilledSlotIndex(container.contents) + 1);
+        const nextCapacity = Math.max(minimumCapacity, currentCapacity - 1);
+
+        if (nextCapacity >= currentCapacity) return;
+
+        const updatedContainer: Item = {
+            ...container,
+            capacity: nextCapacity,
+            contents: (container.contents || []).slice(0, nextCapacity),
+        };
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "CHARACTER_INVENTORY_UPDATED",
+            actorUserId: normalizedActorUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { characterId: character.id, item: updatedContainer }
@@ -282,7 +350,8 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     const renderSubsectionHeader = (
         title: string,
         onAddSlot?: () => void,
-        options?: { showBackpack?: boolean }
+        onRemoveSlot?: () => void,
+        options?: { showBackpack?: boolean; canRemove?: boolean }
     ) => (
         <div
             className="inventory-subsection-header"
@@ -310,32 +379,71 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                 <span>{title.toUpperCase()}</span>
             </div>
             {isGM && onAddSlot && (
-                <button
-                    type="button"
-                    className="inventory-subsection-add"
-                    onClick={onAddSlot}
-                    title={`Adicionar slot em ${title.toLowerCase()}`}
+                <div
                     style={{
-                        appearance: "none",
-                        width: "26px",
-                        height: "26px",
-                        borderRadius: "999px",
-                        border: "1px solid rgba(var(--accent-rgb), 0.24)",
-                        background: "linear-gradient(180deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-rgb), 0.06))",
-                        color: "var(--accent-color)",
-                        fontFamily: "var(--font-header)",
-                        fontSize: "1rem",
-                        lineHeight: 1,
-                        cursor: "pointer",
                         display: "inline-flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.22)",
+                        gap: "6px",
                         flexShrink: 0,
                     }}
                 >
-                    +
-                </button>
+                    <button
+                        type="button"
+                        className="inventory-subsection-add"
+                        onClick={onRemoveSlot}
+                        disabled={!options?.canRemove}
+                        title={`Remover slot em ${title.toLowerCase()}`}
+                        style={{
+                            appearance: "none",
+                            width: "26px",
+                            height: "26px",
+                            borderRadius: "999px",
+                            border: "1px solid rgba(var(--accent-rgb), 0.24)",
+                            background: options?.canRemove
+                                ? "linear-gradient(180deg, rgba(255, 130, 130, 0.12), rgba(120, 20, 20, 0.08))"
+                                : "rgba(255, 255, 255, 0.03)",
+                            color: options?.canRemove ? "#ffb3b3" : "rgba(255, 255, 255, 0.28)",
+                            fontFamily: "var(--font-header)",
+                            fontSize: "1rem",
+                            lineHeight: 1,
+                            cursor: options?.canRemove ? "pointer" : "not-allowed",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.22)",
+                            flexShrink: 0,
+                            opacity: options?.canRemove ? 1 : 0.65,
+                        }}
+                    >
+                        -
+                    </button>
+                    <button
+                        type="button"
+                        className="inventory-subsection-add"
+                        onClick={onAddSlot}
+                        title={`Adicionar slot em ${title.toLowerCase()}`}
+                        style={{
+                            appearance: "none",
+                            width: "26px",
+                            height: "26px",
+                            borderRadius: "999px",
+                            border: "1px solid rgba(var(--accent-rgb), 0.24)",
+                            background: "linear-gradient(180deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-rgb), 0.06))",
+                            color: "var(--accent-color)",
+                            fontFamily: "var(--font-header)",
+                            fontSize: "1rem",
+                            lineHeight: 1,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.22)",
+                            flexShrink: 0,
+                        }}
+                    >
+                        +
+                    </button>
+                </div>
             )}
         </div>
     );
@@ -505,14 +613,26 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         </div>
     );
 
-    const renderStorageSection = (container: Item) => (
+    const renderStorageSection = (container: Item) => {
+        const currentCapacity = Math.max(container.capacity || 3, container.contents?.length || 0);
+        const minimumCapacity = Math.max(1, getLastFilledSlotIndex(container.contents) + 1);
+        const canRemove = currentCapacity > minimumCapacity;
+
+        return (
         <div key={container.id} className="inventory-subsection">
-            {renderSubsectionHeader(container.name || "ARMAZENAMENTO", () => handleExpandContainerSlots(container), {
-                showBackpack: true,
-            })}
+            {renderSubsectionHeader(
+                container.name || "ARMAZENAMENTO",
+                () => handleExpandContainerSlots(container),
+                () => handleReduceContainerSlots(container),
+                {
+                    showBackpack: true,
+                    canRemove,
+                }
+            )}
             {renderInventorySlots(container.contents, container.capacity || 3, container.id, "VAZIO")}
         </div>
-    );
+        );
+    };
 
     return (
         <>
@@ -567,7 +687,12 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                     <div className="inventory-tab-panel">
                         {!hasStorageTabs && (
                             <div className="inventory-subsection">
-                                {renderSubsectionHeader("Principal", handleAddMainInventorySlot)}
+                                {renderSubsectionHeader(
+                                    "Principal",
+                                    handleAddMainInventorySlot,
+                                    handleRemoveMainInventorySlot,
+                                    { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                )}
                                 {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                             </div>
                         )}
@@ -575,7 +700,12 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                         {hasStorageTabs && activeInventoryTab === "all" && (
                             <>
                                 <div className="inventory-subsection">
-                                    {renderSubsectionHeader("Principal", handleAddMainInventorySlot)}
+                                    {renderSubsectionHeader(
+                                        "Principal",
+                                        handleAddMainInventorySlot,
+                                        handleRemoveMainInventorySlot,
+                                        { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                    )}
                                     {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                                 </div>
                                 {storageContainers.map((container) => renderStorageSection(container))}
@@ -584,7 +714,12 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
 
                         {hasStorageTabs && activeInventoryTab === "main" && (
                             <div className="inventory-subsection">
-                                {renderSubsectionHeader("Principal", handleAddMainInventorySlot)}
+                                {renderSubsectionHeader(
+                                    "Principal",
+                                    handleAddMainInventorySlot,
+                                    handleRemoveMainInventorySlot,
+                                    { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                )}
                                 {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                             </div>
                         )}
