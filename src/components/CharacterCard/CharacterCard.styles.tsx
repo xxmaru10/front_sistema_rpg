@@ -925,9 +925,18 @@ export const CharacterCardStyles = () => (
     flex-wrap: wrap;
 }
 
+.integrity-node-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
 .integrity-node-header {
-    width: 34px;
+    min-width: 34px;
+    width: auto;
     height: 34px;
+    padding: 0 6px;
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(var(--accent-rgb), 0.3);
     position: relative;
@@ -974,11 +983,12 @@ export const CharacterCardStyles = () => (
 
 .integrity-node-header .node-index {
     font-family: var(--font-header);
-    font-size: 1.1rem;
+    font-size: 0.75rem;
     color: var(--accent-color);
     z-index: 2;
     font-weight: bold;
     text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
+    letter-spacing: 0.02em;
 }
 
 .integrity-node-header .node-glow {
@@ -997,6 +1007,7 @@ export const CharacterCardStyles = () => (
     display: flex;
     gap: 6px;
     margin-left: 12px;
+    align-items: center;
 }
 
 .h-add-btn {
@@ -1018,6 +1029,43 @@ export const CharacterCardStyles = () => (
     background: var(--accent-color);
     color: #000;
     transform: scale(1.1);
+}
+
+.h-value-input {
+    width: 64px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(var(--accent-rgb), 0.35);
+    color: var(--accent-color);
+    text-align: center;
+    font-family: var(--font-header);
+    font-size: 0.72rem;
+    border-radius: 4px;
+    outline: none;
+}
+
+.h-value-input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.25);
+}
+
+.stress-value-editor {
+    width: 42px;
+    height: 18px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    color: rgba(255, 255, 255, 0.85);
+    text-align: center;
+    font-family: var(--font-header);
+    font-size: 0.62rem;
+    border-radius: 3px;
+    outline: none;
+    padding: 0 2px;
+}
+
+.stress-value-editor:focus {
+    border-color: var(--accent-color);
+    color: #fff;
 }
 
 .integrity-matrix { display: flex; flex-direction: column; gap: 32px; }

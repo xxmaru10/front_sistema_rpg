@@ -139,6 +139,13 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             min-width: 0;
         }
 
+        .combat-top-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
         .combat-name {
             font-family: var(--font-header);
             font-size: 1rem;
@@ -159,6 +166,58 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             border-radius: 4px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             width: fit-content;
+        }
+
+        .combat-resource-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .impulse-cluster {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .impulse-label {
+            font-size: 0.55rem;
+            color: rgba(255,255,255,0.55);
+            letter-spacing: 0.1em;
+        }
+
+        .impulse-arrows-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            min-width: 16px;
+        }
+
+        .impulse-arrow {
+            color: #ffffff;
+            font-size: 0.9rem;
+            line-height: 1;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.85), 0 0 14px rgba(255, 255, 255, 0.5);
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+        }
+
+        .impulse-empty {
+            color: rgba(255,255,255,0.45);
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+        }
+
+        .impulse-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .fate-label {
@@ -185,6 +244,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .npc-hero-card .fate-btn { border-color: rgba(80,166,255,0.3); color: #50a6ff; }
         .threat-card .fate-btn { border-color: rgba(255,68,68,0.3); color: #ff4444; }
         .fate-btn:hover { background: rgba(197,160,89,0.1); }
+        .fate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* Aspects */
         .combat-aspects-row {
@@ -266,12 +326,14 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .stress-box {
-            width: 20px;
+            min-width: 28px;
+            width: auto;
             height: 20px;
+            padding: 0 4px;
             border: 1px solid #333;
             background: #111;
             color: #444;
-            font-size: 0.7rem;
+            font-size: 0.62rem;
             display: flex;
             align-items: center;
             justify-content: center;

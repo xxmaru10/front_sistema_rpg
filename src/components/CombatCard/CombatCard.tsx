@@ -49,6 +49,7 @@ export function CombatCard({
         openConsequenceModal,
         handleSaveConsequence,
         handleUpdateHazard,
+        handleImpulseArrowsChange,
     } = useCombatCard({ character, sessionId, actorUserId, isGM });
 
     const isNpcHero = character.isNPC && character.arenaSide === 'HERO';
@@ -68,6 +69,7 @@ export function CombatCard({
                 setIsCollapsed={setIsCollapsed}
                 onRemove={onRemove}
                 handleUpdateHazard={handleUpdateHazard}
+                handleImpulseArrowsChange={handleImpulseArrowsChange}
             />
         );
     }
@@ -87,6 +89,7 @@ export function CombatCard({
                 onToggleDiceRoller={onToggleDiceRoller}
                 onRemove={onRemove}
                 handleFPChange={handleFPChange}
+                handleImpulseArrowsChange={handleImpulseArrowsChange}
             />
 
             {!isCollapsed && (

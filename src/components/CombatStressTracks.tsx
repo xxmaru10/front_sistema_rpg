@@ -9,6 +9,12 @@ interface CombatStressTracksProps {
 }
 
 export function CombatStressTracks({ character, canEditSelf, handleStressToggle }: CombatStressTracksProps) {
+    const resolveValue = (track: "physical" | "mental", index: number) => {
+        const values = character.stressValues?.[track] || [];
+        const raw = values[index] ?? (index + 1);
+        return Math.max(1, Math.min(1000, Math.trunc(raw)));
+    };
+
     return (
         <div className="combat-stress-section">
             <div className="combat-track">
@@ -23,7 +29,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                             onClick={() => canEditSelf && handleStressToggle("PHYSICAL", i, box)}
                             disabled={!canEditSelf}
                         >
-                            {i + 1}
+                            {resolveValue("physical", i)}
                         </button>
                     ))}
                 </div>
@@ -40,7 +46,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                             onClick={() => canEditSelf && handleStressToggle("MENTAL", i, box)}
                             disabled={!canEditSelf}
                         >
-                            {i + 1}
+                            {resolveValue("mental", i)}
                         </button>
                     ))}
                 </div>
@@ -78,12 +84,14 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 }
 
                 .stress-box {
-                    width: 20px;
+                    min-width: 28px;
+                    width: auto;
                     height: 20px;
+                    padding: 0 4px;
                     border: 1px solid #333;
                     background: #111;
                     color: #444;
-                    font-size: 0.7rem;
+                    font-size: 0.62rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;

@@ -100,6 +100,8 @@ export function CharacterCard({
                 <CharacterVitality
                     stressPhysical={character.stress.physical}
                     stressMental={character.stress.mental}
+                    stressValuesPhysical={character.stressValues?.physical || []}
+                    stressValuesMental={character.stressValues?.mental || []}
                     fatePoints={character.fatePoints}
                     refresh={character.refresh ?? 3}
                     isNPC={!!character.isNPC}
@@ -109,6 +111,7 @@ export function CharacterCard({
                     onStressToggle={hook.handleStressToggle}
                     onAddStressBox={hook.handleAddStressBox}
                     onRemoveStressBox={hook.handleRemoveStressBox}
+                    onUpdateStressBoxValue={hook.handleUpdateStressBoxValue}
                     onFPChange={hook.handleFPChange}
                     onRefreshChange={hook.handleRefreshChange}
                 />

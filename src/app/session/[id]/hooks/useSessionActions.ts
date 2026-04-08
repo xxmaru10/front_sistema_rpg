@@ -32,6 +32,7 @@ export function useSessionActions({
     setSpectatorMode,
     screenShareManagerRef,
 }: SessionActionsParams) {
+    const normalizedUserId = actorUserId.trim().toLowerCase();
 
     const handleChallengeUpdate = (changes: {
         isActive?: boolean;
@@ -42,7 +43,7 @@ export function useSessionActions({
         const current = state.challenge || { isActive: false, text: "", difficulty: 0, aspects: ["", "", ""] };
         globalEventStore.append({
             id: uuidv4(), sessionId, seq: 0, type: "CHALLENGE_UPDATED",
-            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: {
                 isActive: changes.isActive ?? current.isActive,
                 text: changes.text ?? current.text,
@@ -59,7 +60,7 @@ export function useSessionActions({
     const handleMove = (characterId: string, toZoneId: string) => {
         globalEventStore.append({
             id: crypto.randomUUID(), sessionId, seq: 0, type: "CHARACTER_MOVED",
-            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId, toZoneId }
         } as any);
     };
@@ -68,14 +69,14 @@ export function useSessionActions({
         if (url === "BATTLEMAP_ACTIVATE") {
             globalEventStore.append({
                 id: crypto.randomUUID(), sessionId, seq: 0, type: "BATTLEMAP_UPDATED",
-                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: { isActive: true }
             } as any);
             return;
         }
         globalEventStore.append({
             id: crypto.randomUUID(), sessionId, seq: 0, type: "SESSION_HEADER_UPDATED",
-            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { tab: activeTab, imageUrl: url }
         } as any);
     };
@@ -83,7 +84,7 @@ export function useSessionActions({
     const handleAtmosphericEffectChange = (type: AtmosphericEffectType) => {
         globalEventStore.append({
             id: uuidv4(), sessionId, seq: 0, type: "ATMOSPHERIC_EFFECT_UPDATED",
-            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { type }
         } as any);
 
@@ -108,13 +109,13 @@ export function useSessionActions({
         if (soundTrack) {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "ATMOSPHERIC_PLAYBACK_CHANGED" as any,
-                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: { url: `Atmosferico/${soundTrack}`, playing: true, loop: true }
             } as any);
         } else if (type === "none") {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "ATMOSPHERIC_PLAYBACK_CHANGED" as any,
-                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: { url: "", playing: false, loop: false }
             } as any);
         }
@@ -130,13 +131,14 @@ export function useSessionActions({
             const hazardId = uuidv4();
             await globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CREATED",
-                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: {
                     id: hazardId, name: hazardData.name, isHazard: true,
                     difficulty: hazardData.difficulty, activeInArena: true,
-                    arenaSide: "THREAT", isNPC: true, ownerUserId: actorUserId,
+                    arenaSide: "THREAT", isNPC: true, ownerUserId: normalizedUserId,
                     source: "active", fatePoints: 0,
                     stress: { physical: [], mental: [] }, skills: {},
+                    stressValues: { physical: [], mental: [] },
                     inventory: [], stunts: [], spells: [], consequences: {},
                     magicLevel: 0, sheetAspects: ["", "", "", ""]
                 }
@@ -146,7 +148,7 @@ export function useSessionActions({
             if (state.turnOrder && state.turnOrder.length > 0 && userRole === "GM") {
                 globalEventStore.append({
                     id: uuidv4(), sessionId, seq: 0, type: "TURN_ORDER_UPDATED",
-                    actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                    actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                     payload: { characterIds: [...state.turnOrder, hazardId] }
                 } as any);
             }
@@ -161,7 +163,7 @@ export function useSessionActions({
         if (!shouldClone || (!originalChar.isNPC && summonMode === "HERO")) {
             await globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_UPDATED",
-                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: {
                     characterId: originalChar.id,
                     changes: { activeInArena: true, arenaSide: summonMode, source: "active" }
@@ -173,7 +175,7 @@ export function useSessionActions({
                 if (!state.turnOrder.includes(originalChar.id)) {
                     globalEventStore.append({
                         id: uuidv4(), sessionId, seq: 0, type: "TURN_ORDER_UPDATED",
-                        actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                        actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                         payload: { characterIds: [...state.turnOrder, originalChar.id] }
                     } as any);
                 }
@@ -190,15 +192,19 @@ export function useSessionActions({
             physical: new Array(originalChar.stress.physical.length).fill(false),
             mental: new Array(originalChar.stress.mental.length).fill(false)
         };
+        const stressValues = {
+            physical: stress.physical.map((_: boolean, index: number) => Math.max(1, Math.min(1000, Math.trunc(originalChar.stressValues?.physical?.[index] ?? (index + 1))))),
+            mental: stress.mental.map((_: boolean, index: number) => Math.max(1, Math.min(1000, Math.trunc(originalChar.stressValues?.mental?.[index] ?? (index + 1))))),
+        };
         const consequences = { mild: { text: "" }, moderate: { text: "" }, severe: { text: "" } };
 
         await globalEventStore.append({
             id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CREATED",
-            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: {
                 ...originalChar, id: newCharId, name: originalChar.name,
                 stunts: clonedStunts, inventory: clonedInventory, spells: clonedSpells,
-                stress, consequences, source: "active", isNPC: true,
+                stress, stressValues, consequences, source: "active", isNPC: true,
                 activeInArena: true, arenaSide: summonMode
             }
         } as any);
@@ -207,7 +213,7 @@ export function useSessionActions({
         if (state.turnOrder && state.turnOrder.length > 0 && userRole === "GM") {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "TURN_ORDER_UPDATED",
-                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: { characterIds: [...state.turnOrder, newCharId] }
             } as any);
         }
@@ -216,14 +222,14 @@ export function useSessionActions({
     const handleRemoveCharacter = (characterId: string) => {
         globalEventStore.append({
             id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_UPDATED",
-            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId, changes: { activeInArena: false } }
         } as any);
 
         if (state.turnOrder && state.turnOrder.includes(characterId)) {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "TURN_ORDER_UPDATED",
-                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                actorUserId: normalizedUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
                 payload: { characterIds: state.turnOrder.filter((id: string) => id !== characterId) }
             } as any);
         }

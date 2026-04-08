@@ -18,8 +18,9 @@ interface CharacterCreatorProps {
 type NpcTypeOption = "capanga" | "batedor" | "ameaca" | "boss" | "vilao";
 
 export function CharacterCreator({ sessionId, actorUserId, onClose, source = "active", religionsList = [] }: CharacterCreatorProps) {
+    const normalizedActorUserId = actorUserId.trim().toLowerCase();
     const [name, setName] = useState("");
-    const [owner, setOwner] = useState(actorUserId);
+    const [owner, setOwner] = useState(normalizedActorUserId);
     const [isNPC, setIsNPC] = useState(source === "bestiary");
     const [scope, setScope] = useState<"session" | "global">("session");
     const [physStress, setPhysStress] = useState(2);
@@ -74,13 +75,13 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
             sessionId,
             seq: 0,
             type: "CHARACTER_CREATED",
-            actorUserId,
+            actorUserId: normalizedActorUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: {
                 id: uuidv4(),
                 name: name.trim(),
-                ownerUserId: isNPC ? "AMBIENTE" : owner.trim(),
+                ownerUserId: isNPC ? "AMBIENTE" : owner.trim().toLowerCase(),
                 isNPC,
                 religionId: religionId || undefined,
                 npcType: isNPC ? npcType : undefined,
@@ -96,6 +97,13 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                 } : {
                     physical: Array(physStress).fill(false),
                     mental: Array(mentStress).fill(false)
+                },
+                stressValues: preset ? {
+                    physical: Array.from({ length: preset.physicalStress }, (_, index) => index + 1),
+                    mental: Array.from({ length: preset.mentalStress }, (_, index) => index + 1)
+                } : {
+                    physical: Array.from({ length: physStress }, (_, index) => index + 1),
+                    mental: Array.from({ length: mentStress }, (_, index) => index + 1)
                 },
                 skills: preset?.skills ?? DEFAULT_SKILLS.reduce((acc, sk) => ({ ...acc, [sk]: 0 }), {}),
                 consequences: preset?.consequences ?? {
