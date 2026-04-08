@@ -413,10 +413,19 @@ export function CharacterSummarySection({
                 style={{
                     display: "grid",
                     gridTemplateColumns: isCompact ? "1fr" : "minmax(0, 1.2fr) minmax(0, 1fr)",
+                    alignItems: "start",
                     gap: "16px",
                 }}
             >
-                <div className="character-summary-panel" style={{ minWidth: 0 }}>
+                <div
+                    className="character-summary-panel"
+                    style={{
+                        minWidth: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                    }}
+                >
                     <CharacterVitality
                         stressPhysical={character.stress.physical}
                         stressMental={character.stress.mental}
@@ -437,6 +446,8 @@ export function CharacterSummarySection({
                         onFPChange={onFPChange}
                         onRefreshChange={onRefreshChange}
                     />
+
+                    <CharacterSummarySkills character={character} />
                 </div>
 
                 <div className="character-summary-panel" style={{ minWidth: 0 }}>
@@ -453,13 +464,6 @@ export function CharacterSummarySection({
                         onOpenAddModal={onOpenAddModal}
                         onCloseAddModal={onCloseAddModal}
                     />
-                </div>
-
-                <div
-                    className="character-summary-panel summary-skills-panel"
-                    style={{ minWidth: 0, gridColumn: "1 / -1" }}
-                >
-                    <CharacterSummarySkills character={character} />
                 </div>
             </div>
         </section>

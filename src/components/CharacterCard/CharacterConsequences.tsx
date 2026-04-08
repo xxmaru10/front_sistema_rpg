@@ -38,7 +38,9 @@ export function CharacterConsequences({
     onOpenAddModal,
     onCloseAddModal,
 }: CharacterConsequencesProps) {
+    const defaultSlots = ["mild", "moderate", "severe"];
     const allKeys = new Set<string>();
+    defaultSlots.forEach((slot) => allKeys.add(slot));
     if (character.consequences) {
         Object.keys(character.consequences).forEach((k) => allKeys.add(k));
     }
@@ -219,13 +221,10 @@ export function CharacterConsequences({
                                                 <span
                                                     className="placeholder-text"
                                                     style={{
-                                                        fontSize: "0.82rem",
-                                                        color: "rgba(255, 255, 255, 0.42)",
-                                                        fontStyle: "italic",
+                                                        display: "block",
+                                                        minHeight: "22px",
                                                     }}
-                                                >
-                                                    SINTONIA ESTÁVEL
-                                                </span>
+                                                />
                                             )}
                                         </button>
                                         <button
@@ -290,13 +289,10 @@ export function CharacterConsequences({
                                             <span
                                                 className="placeholder-text"
                                                 style={{
-                                                    fontSize: "0.82rem",
-                                                    color: "rgba(255, 255, 255, 0.42)",
-                                                    fontStyle: "italic",
+                                                    display: "block",
+                                                    minHeight: "22px",
                                                 }}
-                                            >
-                                                SINTONIA ESTÁVEL
-                                            </span>
+                                            />
                                         )}
                                     </div>
                                 )}
