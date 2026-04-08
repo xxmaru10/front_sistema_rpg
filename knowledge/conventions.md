@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-08 (story-32/combate-impulso-estresse)
+last_updated: 2026-04-08 (story-32/arena-ui-polish)
 status: ativo
 ---
 

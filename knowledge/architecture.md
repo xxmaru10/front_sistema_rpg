@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-08 (story-32/combate-impulso-estresse/final)
+last_updated: 2026-04-08 (story-32/arena-ui-polish/final)
 status: ativo
 ---
 
@@ -69,6 +69,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Estabilidade Voice + Transmissão (Story 30) | `VoiceChatManager` voltou a priorizar inteligibilidade de voz (`noiseSuppression` + `autoGainControl` em constraints preferenciais), elevou bitrate de envio Opus para 48kbps (40kbps em malha alta) e trocou mute total do loopback guard por ducking (~35%) durante tab-audio share, preservando a escuta do mestre. `screen-share-manager` ganhou guardas anti-churn (não recriar PC saudável em `peer-join`, ignorar `answer` stale fora de `have-local-offer`, timeout só fecha PC ativo), reduzindo loops de `offer/answer` e `InvalidStateError`. `MusicPlayer` passou a aplicar `MUSIC_PLAYBACK_CHANGED` do bulk bootstrap (delta) antes do snapshot para restaurar corretamente estado `isPlaying`/indicador visual ao entrar na sessão. | 2026-04-07 |
 | Malha de Voz Hardened (Story 30 — follow-up) | `VoiceChatManager` eliminou ping-pong de `voice-join` no answerer (agora espera passiva + fallback único), normalizou chaves de peer por `userId` para evitar duplicidade por casing, adicionou throttling de `voice-join`, timeout de segurança para conexões presas e reconexão dirigida por peer (sem broadcast em cascata). Ajustou bitrate Opus para 64/56/52kbps (malha baixa/média/alta), priorização de encoding e desativação de DTX para reduzir cortes perceptíveis de fala. `setMicDevice` passou a evitar automaticamente input Bluetooth HFP quando houver alternativa, reduzindo degradação em headsets wireless. `screen-share-manager` reduziu bitrate de vídeo para preservar uplink da call e priorizou bitrate de áudio da transmissão (128→64kbps adaptativo). `useSessionScreenControl`, `TransmissionPlayer` e `useSessionUIState` subiram fallback de volume da transmissão para 100% e reduziram reconnect automático desnecessário quando não há stream ativa. | 2026-04-07 |
 | Cards de Combate com Impulso e Estresse Configurável (Story 32) | `Character` ganhou `impulseArrows` e `stressValues` por trilha. Projeções normalizam personagens legados, `STRESS_TRACK_EXPANDED` aceita `value` opcional, novo evento `STRESS_BOX_VALUE_UPDATED` permite edição granular e `gameLogic.calculateAbsorption` passou a absorver dano pelo valor real de cada caixa. UI de combate exibe setas de impulso (glow branco) com controle GM-only e header reorganizado (nome no topo, destino + impulso abaixo). | 2026-04-08 |
+| Polimento Visual do Card da Arena (Story 32 — follow-up) | Trilha de estresse no card da Arena migrou para iconografia sem emoji (SVG `Brain` e `Dumbbell`), com espaçamento mais compacto entre rótulo e caixas para leitura rápida. Seções de extras foram diferenciadas por semântica cromática: Façanhas em azul (alinhadas ao botão de rolagem) e Magias em roxo, mantendo contraste e hierarquia visual. | 2026-04-08 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -84,6 +85,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Eventos de estresse evoluídos**: `STRESS_TRACK_EXPANDED` agora aceita `value` opcional e foi criado `STRESS_BOX_VALUE_UPDATED` para edição pontual de caixa, ambos clampados em `1..1000` no reducer.
 - **Regra de absorção alinhada ao domínio**: `calculateAbsorption` passou a consumir capacidade real da caixa, mantendo marcação de caixas por índice e sem alterar contratos de consequência.
 - **Permissão GM-only reforçada**: controles de setas e edição de valor de estresse foram encapsulados em handlers com guarda de papel (`isGM`) e emissão de eventos com `actorUserId` normalizado.
+- **Polimento visual contextual da Arena**: card de combate recebeu iconografia vetorial (sem emoji) para trilhas de estresse e separação cromática explícita entre Façanhas (azul) e Magias (roxo), preservando o modelo de eventos e alterando apenas camada de apresentação.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
