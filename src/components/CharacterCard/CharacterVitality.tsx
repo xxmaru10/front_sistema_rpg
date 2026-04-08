@@ -50,26 +50,27 @@ export function CharacterVitality({
     const [newPhysicalValue, setNewPhysicalValue] = useState("1");
     const [newMentalValue, setNewMentalValue] = useState("1");
     const [draftValues, setDraftValues] = useState<Record<string, string>>({});
+    const [expandedEditorTrack, setExpandedEditorTrack] = useState<"PHYSICAL" | "MENTAL" | null>(null);
     const trackThemes = {
         PHYSICAL: {
             label: "FÍSICO",
             symbol: "🗡",
-            accent: "#f6a44c",
-            border: "rgba(246, 164, 76, 0.28)",
-            background: "linear-gradient(180deg, rgba(246, 164, 76, 0.12), rgba(0, 0, 0, 0.12))",
-            nodeBackground: "linear-gradient(180deg, rgba(246, 164, 76, 0.22), rgba(20, 10, 0, 0.9))",
-            nodeActiveBackground: "linear-gradient(180deg, rgba(255, 191, 105, 0.92), rgba(211, 124, 0, 0.92))",
-            shadow: "rgba(246, 164, 76, 0.2)",
+            accent: "#d4a269",
+            border: "rgba(212, 162, 105, 0.18)",
+            background: "linear-gradient(180deg, rgba(212, 162, 105, 0.05), rgba(255, 255, 255, 0.015))",
+            nodeBackground: "linear-gradient(180deg, rgba(212, 162, 105, 0.08), rgba(12, 12, 12, 0.96))",
+            nodeActiveBackground: "linear-gradient(180deg, rgba(233, 184, 108, 0.82), rgba(156, 100, 28, 0.92))",
+            shadow: "rgba(212, 162, 105, 0.1)",
         },
         MENTAL: {
             label: "MENTAL",
             symbol: "🧠",
-            accent: "#ff8fbd",
-            border: "rgba(255, 143, 189, 0.28)",
-            background: "linear-gradient(180deg, rgba(255, 143, 189, 0.1), rgba(0, 0, 0, 0.12))",
-            nodeBackground: "linear-gradient(180deg, rgba(255, 143, 189, 0.2), rgba(28, 8, 18, 0.9))",
-            nodeActiveBackground: "linear-gradient(180deg, rgba(255, 195, 223, 0.94), rgba(214, 78, 141, 0.92))",
-            shadow: "rgba(255, 143, 189, 0.2)",
+            accent: "#d79ab9",
+            border: "rgba(215, 154, 185, 0.18)",
+            background: "linear-gradient(180deg, rgba(215, 154, 185, 0.05), rgba(255, 255, 255, 0.015))",
+            nodeBackground: "linear-gradient(180deg, rgba(215, 154, 185, 0.08), rgba(12, 12, 12, 0.96))",
+            nodeActiveBackground: "linear-gradient(180deg, rgba(238, 186, 212, 0.82), rgba(160, 83, 120, 0.92))",
+            shadow: "rgba(215, 154, 185, 0.1)",
         },
     } as const;
 
@@ -111,16 +112,18 @@ export function CharacterVitality({
         setNextValue: (value: string) => void,
     ) => {
         const theme = trackThemes[track];
+        const showTrackEditorToggle = isGM && compactNodes && !isCompact;
+        const showTrackEditor = isGM && !isCompact && (!showTrackEditorToggle || expandedEditorTrack === track);
 
         return (
             <div
                 className="matrix-track-header"
                 style={compactNodes ? {
-                    padding: "8px 10px 10px",
+                    padding: "7px 9px 9px",
                     borderRadius: "14px",
                     border: `1px solid ${theme.border}`,
                     background: theme.background,
-                    boxShadow: `inset 0 0 18px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.02)`,
+                    boxShadow: "inset 0 0 14px rgba(0, 0, 0, 0.18)",
                 } : undefined}
             >
                 <div
@@ -129,8 +132,20 @@ export function CharacterVitality({
                         color: theme.accent,
                     }}
                 >
-                    <span className="symbol" style={{ color: theme.accent }}>{theme.symbol}</span>
-                    <span>{theme.label}</span>
+                    <div className="track-label-main">
+                        <span className="symbol" style={{ color: theme.accent }}>{theme.symbol}</span>
+                        <span>{theme.label}</span>
+                    </div>
+                    {showTrackEditorToggle && (
+                        <button
+                            type="button"
+                            className={`track-editor-toggle ${showTrackEditor ? "active" : ""}`}
+                            onClick={() => setExpandedEditorTrack((current) => (current === track ? null : track))}
+                            title={showTrackEditor ? `Fechar edição de ${theme.label.toLowerCase()}` : `Editar ${theme.label.toLowerCase()}`}
+                        >
+                            ✎
+                        </button>
+                    )}
                 </div>
                 <div className="node-array-header">
                     {boxes.map((box, i) => (
@@ -151,7 +166,7 @@ export function CharacterVitality({
                                 <span className="node-index">{getResolvedValue(values, i)}</span>
                                 <div className="node-glow" />
                             </button>
-                            {isGM && !isCompact && (
+                            {showTrackEditor && (
                                 <input
                                     className="stress-value-editor"
                                     type="number"
@@ -171,7 +186,7 @@ export function CharacterVitality({
                             )}
                         </div>
                     ))}
-                    {isGM && !isCompact && (
+                    {showTrackEditor && (
                         <div className="header-track-controls">
                             <button className="h-add-btn" onClick={() => onRemoveStressBox(track)} title={`Remover última caixa ${track === "PHYSICAL" ? "física" : "mental"}`}>-</button>
                             <button className="h-add-btn" onClick={() => handleAddStress(track)} title={`Adicionar caixa ${track === "PHYSICAL" ? "física" : "mental"}`}>+</button>
@@ -236,18 +251,29 @@ export function CharacterVitality({
                 .char-core-info.summary-compact .header-stress-tracks {
                     display: grid;
                     grid-template-columns: repeat(2, minmax(0, 1fr));
-                    gap: 10px 12px;
+                    gap: 8px 10px;
                     align-items: start;
                 }
 
                 .char-core-info.summary-compact .track-label-row {
                     display: flex;
                     align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    margin-bottom: 5px;
+                }
+
+                .char-core-info.summary-compact .track-label-main {
+                    display: flex;
+                    align-items: center;
                     gap: 6px;
-                    margin-bottom: 6px;
+                    min-width: 0;
                 }
 
                 .char-core-info.summary-compact .node-array-header {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: flex-start;
                     gap: 6px;
                 }
 
@@ -276,10 +302,31 @@ export function CharacterVitality({
                     line-height: 1;
                 }
 
+                .char-core-info.summary-compact .track-editor-toggle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 999px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    background: rgba(255, 255, 255, 0.03);
+                    color: rgba(255, 255, 255, 0.66);
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .char-core-info.summary-compact .track-editor-toggle:hover,
+                .char-core-info.summary-compact .track-editor-toggle.active {
+                    border-color: rgba(var(--accent-rgb), 0.22);
+                    background: rgba(var(--accent-rgb), 0.08);
+                    color: var(--accent-color);
+                }
+
                 .char-core-info.summary-compact .header-track-controls {
+                    width: 100%;
                     gap: 6px;
-                    margin-left: 8px;
-                    padding: 3px 5px;
+                    margin-left: 0;
+                    margin-top: 2px;
+                    padding: 4px 6px;
+                    justify-content: flex-start;
                 }
 
                 .char-core-info.summary-compact .header-track-controls .h-add-btn {
@@ -295,9 +342,10 @@ export function CharacterVitality({
                 }
 
                 .char-core-info.summary-compact .stress-value-editor {
-                    width: 32px;
-                    height: 16px;
-                    font-size: 0.56rem;
+                    width: 30px;
+                    height: 15px;
+                    font-size: 0.55rem;
+                    border-radius: 3px;
                 }
 
                 .char-core-info .stress-value-editor,

@@ -32,6 +32,10 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         () => (character.inventory || []).filter((item) => item?.isContainer),
         [character.inventory]
     );
+    const mainInventorySlots = useMemo(
+        () => Math.max(5, character.inventory?.length || 0),
+        [character.inventory]
+    );
     const hasStorageTabs = storageContainers.length > 0;
     const storageTabsKey = storageContainers.map((container) => container.id).join("|");
 
@@ -236,6 +240,77 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         }
     };
 
+    const handleAddMainInventorySlot = () => {
+        if (!isGM) return;
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "CHARACTER_INVENTORY_UPDATED",
+            actorUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: {
+                characterId: character.id,
+                item: {
+                    id: uuidv4(),
+                    name: "",
+                    description: "",
+                    bonus: 0,
+                    quantityCurrent: 1,
+                    quantityTotal: 1,
+                    size: undefined,
+                }
+            }
+        } as any);
+    };
+
+    const handleExpandContainerSlots = (container: Item) => {
+        if (!isGM || !container.isContainer) return;
+
+        const nextCapacity = Math.max(container.capacity || 3, (container.contents || []).length) + 1;
+        const updatedContainer: Item = {
+            ...container,
+            capacity: nextCapacity,
+            contents: container.contents || [],
+        };
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "CHARACTER_INVENTORY_UPDATED",
+            actorUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: { characterId: character.id, item: updatedContainer }
+        } as any);
+    };
+
+    const renderSubsectionHeader = (
+        title: string,
+        onAddSlot?: () => void,
+        options?: { showBackpack?: boolean }
+    ) => (
+        <div className="inventory-subsection-header">
+            <div className="inventory-subsection-title">
+                {options?.showBackpack && <Backpack size={15} />}
+                <span>{title.toUpperCase()}</span>
+            </div>
+            {isGM && onAddSlot && (
+                <button
+                    type="button"
+                    className="inventory-subsection-add"
+                    onClick={onAddSlot}
+                    title={`Adicionar slot em ${title.toLowerCase()}`}
+                >
+                    +
+                </button>
+            )}
+        </div>
+    );
+
     const renderInventorySlots = (
         items: Item[] | undefined,
         length: number,
@@ -401,14 +476,11 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         </div>
     );
 
-    const renderStorageSection = (container: Item, showHeading: boolean) => (
+    const renderStorageSection = (container: Item) => (
         <div key={container.id} className="inventory-subsection">
-            {showHeading && (
-                <div className="inventory-subsection-header">
-                    <Backpack size={15} />
-                    <span>{(container.name || "ARMAZENAMENTO").toUpperCase()}</span>
-                </div>
-            )}
+            {renderSubsectionHeader(container.name || "ARMAZENAMENTO", () => handleExpandContainerSlots(container), {
+                showBackpack: true,
+            })}
             {renderInventorySlots(container.contents, container.capacity || 3, container.id, "VAZIO")}
         </div>
     );
@@ -464,23 +536,27 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                     )}
 
                     <div className="inventory-tab-panel">
-                        {!hasStorageTabs && renderInventorySlots(character.inventory, 5, null, "SLOT VAZIO")}
+                        {!hasStorageTabs && (
+                            <div className="inventory-subsection">
+                                {renderSubsectionHeader("Principal", handleAddMainInventorySlot)}
+                                {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
+                            </div>
+                        )}
 
                         {hasStorageTabs && activeInventoryTab === "all" && (
                             <>
                                 <div className="inventory-subsection">
-                                    <div className="inventory-subsection-header">
-                                        <span>PRINCIPAL</span>
-                                    </div>
-                                    {renderInventorySlots(character.inventory, 5, null, "SLOT VAZIO")}
+                                    {renderSubsectionHeader("Principal", handleAddMainInventorySlot)}
+                                    {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                                 </div>
-                                {storageContainers.map((container) => renderStorageSection(container, true))}
+                                {storageContainers.map((container) => renderStorageSection(container))}
                             </>
                         )}
 
                         {hasStorageTabs && activeInventoryTab === "main" && (
                             <div className="inventory-subsection">
-                                {renderInventorySlots(character.inventory, 5, null, "SLOT VAZIO")}
+                                {renderSubsectionHeader("Principal", handleAddMainInventorySlot)}
+                                {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                             </div>
                         )}
 
@@ -488,7 +564,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                             <>
                                 {storageContainers
                                     .filter((container) => activeInventoryTab === `container:${container.id}`)
-                                    .map((container) => renderStorageSection(container, false))}
+                                    .map((container) => renderStorageSection(container))}
                             </>
                         )}
                     </div>
@@ -774,12 +850,38 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                     .inventory-subsection-header {
                         display: flex;
                         align-items: center;
+                        justify-content: space-between;
                         gap: 8px;
                         padding: 0 4px;
+                    }
+
+                    .inventory-subsection-title {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
                         font-family: var(--font-header);
                         font-size: 0.66rem;
                         letter-spacing: 0.18em;
                         color: rgba(var(--accent-rgb), 0.82);
+                    }
+
+                    .inventory-subsection-add {
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 999px;
+                        border: 1px solid rgba(var(--accent-rgb), 0.22);
+                        background: rgba(var(--accent-rgb), 0.08);
+                        color: var(--accent-color);
+                        font-family: var(--font-header);
+                        font-size: 0.92rem;
+                        line-height: 1;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+
+                    .inventory-subsection-add:hover {
+                        border-color: rgba(var(--accent-rgb), 0.36);
+                        background: rgba(var(--accent-rgb), 0.14);
                     }
                 `}</style>
         </>
