@@ -26,6 +26,7 @@ export function useCharacterCard({
     canEditStressOrFP,
 }: UseCharacterCardOptions) {
     const normalizedUserId = actorUserId.trim().toLowerCase();
+    const clampStressValue = (value: number) => Math.max(1, Math.min(1000, Math.trunc(value || 1)));
 
     // ── Bio / Lore State ──────────────────────────────────────────────────────
     const [isEditingBio, setIsEditingBio] = useState(false);
@@ -60,12 +61,12 @@ export function useCharacterCard({
         } as any);
     };
 
-    const handleAddStressBox = (track: "PHYSICAL" | "MENTAL") => {
+    const handleAddStressBox = (track: "PHYSICAL" | "MENTAL", value?: number) => {
         if (!isGM) return;
         globalEventStore.append({
             id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_EXPANDED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
-            payload: { characterId: character.id, track }
+            payload: { characterId: character.id, track, value: clampStressValue(value ?? 1) }
         } as any);
     };
 
@@ -75,6 +76,15 @@ export function useCharacterCard({
             id: uuidv4(), sessionId, seq: 0, type: "STRESS_TRACK_REDUCED", actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(), visibility: "PUBLIC",
             payload: { characterId: character.id, track }
+        } as any);
+    };
+
+    const handleUpdateStressBoxValue = (track: "PHYSICAL" | "MENTAL", boxIndex: number, value: number) => {
+        if (!isGM) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "STRESS_BOX_VALUE_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, track, boxIndex, value: clampStressValue(value) }
         } as any);
     };
 
@@ -354,6 +364,7 @@ export function useCharacterCard({
         showAddConsequenceModal, setShowAddConsequenceModal,
         // Handlers
         handleStressToggle, handleAddStressBox, handleRemoveStressBox,
+        handleUpdateStressBoxValue,
         handleFPChange, handleRefreshChange,
         handleMagicLevelChange,
         handleImageUpload,

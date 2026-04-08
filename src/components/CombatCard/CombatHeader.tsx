@@ -15,6 +15,7 @@ interface CombatHeaderProps {
     onToggleDiceRoller?: () => void;
     onRemove?: () => void;
     handleFPChange: (amount: number) => void;
+    handleImpulseArrowsChange: (delta: number) => void;
 }
 
 export function CombatHeader({
@@ -27,74 +28,107 @@ export function CombatHeader({
     canEdit,
     onToggleDiceRoller,
     onRemove,
-    handleFPChange
+    handleFPChange,
+    handleImpulseArrowsChange,
 }: CombatHeaderProps) {
+    const impulseCount = Math.max(0, Math.trunc(character.impulseArrows || 0));
+
     return (
         <div className="combat-header">
-            <div className="combat-identity" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: 'var(--accent-color)',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        flexShrink: 0
-                    }}
-                    title={isCollapsed ? "Expandir" : "Recolher"}
-                >
-                    {isCollapsed ? "+" : "−"}
-                </button>
-                <h3 className="combat-name">{character.name.toUpperCase()}</h3>
-                {onToggleDiceRoller && isOwner && !isGM && (
+            <div className="combat-identity">
+                <div className="combat-top-row">
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleDiceRoller();
-                        }}
+                        onClick={() => setIsCollapsed(!isCollapsed)}
                         style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'var(--accent-color)',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '4px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: 'rgba(80, 166, 255, 0.1)',
-                            border: '1px solid rgba(80, 166, 255, 0.5)',
-                            color: '#50a6ff',
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '4px',
+                            fontSize: '0.8rem',
                             cursor: 'pointer',
-                            marginLeft: '8px',
                             transition: 'all 0.2s',
                             flexShrink: 0
                         }}
-                        title="Abrir Zona de Rolagem"
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                            e.currentTarget.style.background = 'rgba(80, 166, 255, 0.2)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.background = 'rgba(80, 166, 255, 0.1)';
-                        }}
+                        title={isCollapsed ? "Expandir" : "Recolher"}
                     >
-                        <Dice5 size={18} />
+                        {isCollapsed ? "+" : "−"}
                     </button>
-                )}
+                    <h3 className="combat-name">{character.name.toUpperCase()}</h3>
+                    {onToggleDiceRoller && isOwner && !isGM && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleDiceRoller();
+                            }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(80, 166, 255, 0.1)',
+                                border: '1px solid rgba(80, 166, 255, 0.5)',
+                                color: '#50a6ff',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                marginLeft: '8px',
+                                transition: 'all 0.2s',
+                                flexShrink: 0
+                            }}
+                            title="Abrir Zona de Rolagem"
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                                e.currentTarget.style.background = 'rgba(80, 166, 255, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.background = 'rgba(80, 166, 255, 0.1)';
+                            }}
+                        >
+                            <Dice5 size={18} />
+                        </button>
+                    )}
+                </div>
+
                 {!isCollapsed && (isGM || isOwner) && (
-                    <div className="combat-fate">
-                        <span className="fate-label">{character.isNPC ? "PONTOS DE GM" : "PONTOS DE DESTINO"}</span>
-                        <div className="fate-controls">
-                            {canEditSelf && <button onClick={() => handleFPChange(-1)} className="fate-btn">-</button>}
-                            <span className="fate-value">{character.fatePoints}</span>
-                            {canEditSelf && <button onClick={() => handleFPChange(1)} className="fate-btn">+</button>}
+                    <div className="combat-resource-row">
+                        <div className="combat-fate">
+                            <span className="fate-label">{character.isNPC ? "PONTOS DE GM" : "DESTINO"}</span>
+                            <div className="fate-controls">
+                                {canEditSelf && <button onClick={() => handleFPChange(-1)} className="fate-btn">-</button>}
+                                <span className="fate-value">{character.fatePoints}</span>
+                                {canEditSelf && <button onClick={() => handleFPChange(1)} className="fate-btn">+</button>}
+                            </div>
+                        </div>
+
+                        <div className="impulse-cluster">
+                            <span className="impulse-label">IMPULSO</span>
+                            <div className="impulse-arrows-row">
+                                {impulseCount === 0 ? (
+                                    <span className="impulse-empty">—</span>
+                                ) : (
+                                    Array.from({ length: impulseCount }).map((_, index) => (
+                                        <span key={`${character.id}-impulse-${index}`} className="impulse-arrow">➤</span>
+                                    ))
+                                )}
+                            </div>
+                            {isGM && (
+                                <div className="impulse-controls">
+                                    <button
+                                        onClick={() => handleImpulseArrowsChange(-1)}
+                                        className="fate-btn"
+                                        disabled={impulseCount === 0}
+                                    >
+                                        -
+                                    </button>
+                                    <button onClick={() => handleImpulseArrowsChange(1)} className="fate-btn">+</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -104,9 +138,7 @@ export function CombatHeader({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm(`Remover ${character.name} da arena?`)) {
-                            onRemove();
-                        }
+                        onRemove();
                     }}
                     className="combat-remove-btn"
                     title="Remover personagem da arena"

@@ -46,14 +46,18 @@ export function calculateAbsorption(
     track: "PHYSICAL" | "MENTAL"
 ): DamageAbsorptionResult {
     const stressBoxes = track === "PHYSICAL" ? character.stress.physical : character.stress.mental;
+    const stressValues = track === "PHYSICAL" ? character.stressValues?.physical : character.stressValues?.mental;
     const stressToMarkIndices: number[] = [];
     let currentDamage = damage;
 
-    // 1. Fill Stress Boxes (Summing logic: 1 point per box)
+    // 1. Fill Stress Boxes using their configured capacity.
+    // Legacy fallback (without stressValues): each box absorbs 1.
     for (let i = 0; i < stressBoxes.length && currentDamage > 0; i++) {
         if (!stressBoxes[i]) {
             stressToMarkIndices.push(i);
-            currentDamage--;
+            const boxValueRaw = stressValues?.[i] ?? 1;
+            const boxValue = Math.max(1, Math.min(1000, Math.trunc(boxValueRaw)));
+            currentDamage -= boxValue;
         }
     }
 

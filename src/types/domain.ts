@@ -106,6 +106,11 @@ export type ConsequenceData = {
   debuff?: ConsequenceDebuff;
 };
 
+export type StressTrackValues = {
+  physical: number[];
+  mental: number[];
+};
+
 export type Character = {
   id: string;
   name: string;
@@ -115,6 +120,7 @@ export type Character = {
     physical: boolean[]; // boxes
     mental: boolean[];
   };
+  stressValues?: StressTrackValues; // Capacity per stress box (legacy fallback: index+1)
   consequences: {
     [key: string]: ConsequenceData | undefined;
     mild?: ConsequenceData;
@@ -142,6 +148,7 @@ export type Character = {
   arenaSide?: 'HERO' | 'THREAT'; // Overrides default side (NPC=Threat, Player=Hero) if set.
   isHazard?: boolean; // If true, it's a Challenge/Hazard card (Purple)
   difficulty?: number; // Used for Hazards
+  impulseArrows?: number;
   linkedNotes?: EntityNote[];
   religionId?: string;
 };
@@ -435,8 +442,9 @@ export type ActionEvent =
   | EventEnvelope<"CHARACTER_SPELL_DELETED", { characterId: string; spellId: string }>
   | EventEnvelope<"CHARACTER_MAGIC_LEVEL_UPDATED", { characterId: string; level: number }>
   | EventEnvelope<"CHARACTER_IMAGE_UPDATED", { characterId: string; imageUrl: string }>
-  | EventEnvelope<"STRESS_TRACK_EXPANDED", { characterId: string; track: "PHYSICAL" | "MENTAL" }>
+  | EventEnvelope<"STRESS_TRACK_EXPANDED", { characterId: string; track: "PHYSICAL" | "MENTAL"; value?: number }>
   | EventEnvelope<"STRESS_TRACK_REDUCED", { characterId: string; track: "PHYSICAL" | "MENTAL" }>
+  | EventEnvelope<"STRESS_BOX_VALUE_UPDATED", { characterId: string; track: "PHYSICAL" | "MENTAL"; boxIndex: number; value: number }>
   | EventEnvelope<"CHARACTER_REFRESH_UPDATED", { characterId: string; refresh: number }>
   | EventEnvelope<"CHARACTER_BIO_UPDATED", { characterId: string; biography: string }>
   | EventEnvelope<"CHARACTER_SHEET_ASPECT_UPDATED", { characterId: string; index: number; value: string }>

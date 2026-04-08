@@ -11,6 +11,7 @@ interface HazardCardProps {
     setIsCollapsed: (v: boolean) => void;
     onRemove?: () => void;
     handleUpdateHazard: (changes: Partial<Character>) => void;
+    handleImpulseArrowsChange: (delta: number) => void;
 }
 
 export function HazardCard({
@@ -21,7 +22,9 @@ export function HazardCard({
     onRemove,
     canEditSelf,
     handleUpdateHazard,
+    handleImpulseArrowsChange,
 }: HazardCardProps) {
+    const impulseCount = Math.max(0, Math.trunc(character.impulseArrows || 0));
     const hazardCardStyle: React.CSSProperties = {
         background: 'linear-gradient(135deg, rgba(45, 20, 70, 1) 0%, rgba(20, 10, 35, 1) 100%)',
         border: '1px solid rgba(168, 85, 247, 0.5)',
@@ -138,6 +141,75 @@ export function HazardCard({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                             <span style={badgeStyle}>◈ DESAFIO DE CENA</span>
                         </div>
+                        {!isCollapsed && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                marginTop: '8px',
+                                background: 'rgba(0, 0, 0, 0.25)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: '4px',
+                                padding: '2px 8px',
+                                width: 'fit-content'
+                            }}>
+                                <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.1em' }}>IMPULSO</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {impulseCount === 0 ? (
+                                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem' }}>—</span>
+                                    ) : (
+                                        Array.from({ length: impulseCount }).map((_, index) => (
+                                            <span
+                                                key={`${character.id}-hazard-impulse-${index}`}
+                                                style={{
+                                                    color: '#fff',
+                                                    fontSize: '0.9rem',
+                                                    lineHeight: 1,
+                                                    textShadow: '0 0 8px rgba(255,255,255,0.85), 0 0 14px rgba(255,255,255,0.5)',
+                                                    filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.8))'
+                                                }}
+                                            >
+                                                ➤
+                                            </span>
+                                        ))
+                                    )}
+                                </div>
+                                {isGM && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <button
+                                            onClick={() => handleImpulseArrowsChange(-1)}
+                                            disabled={impulseCount === 0}
+                                            style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '3px',
+                                                border: '1px solid rgba(168, 85, 247, 0.5)',
+                                                background: 'rgba(168, 85, 247, 0.12)',
+                                                color: '#c9a0ff',
+                                                cursor: impulseCount === 0 ? 'not-allowed' : 'pointer',
+                                                opacity: impulseCount === 0 ? 0.4 : 1
+                                            }}
+                                        >
+                                            -
+                                        </button>
+                                        <button
+                                            onClick={() => handleImpulseArrowsChange(1)}
+                                            style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '3px',
+                                                border: '1px solid rgba(168, 85, 247, 0.5)',
+                                                background: 'rgba(168, 85, 247, 0.12)',
+                                                color: '#c9a0ff',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
                 {isGM && onRemove && !isCollapsed && (

@@ -19,7 +19,7 @@ export function CombatExtras({ character, isGM, isOwner }: CombatExtrasProps) {
     return (
         <div className="combat-extras-section">
             {character.stunts && character.stunts.length > 0 && (
-                <div className="combat-extra-group">
+                <div className="combat-extra-group stunts-group">
                     <div className="extra-title">FAÇANHAS</div>
                     <div className="extra-list">
                         {character.stunts.map(stunt => (
@@ -33,7 +33,7 @@ export function CombatExtras({ character, isGM, isOwner }: CombatExtrasProps) {
             )}
 
             {character.spells && character.spells.length > 0 && (
-                <div className="combat-extra-group">
+                <div className="combat-extra-group spells-group">
                     <div className="extra-title">MAGIAS</div>
                     <div className="extra-list">
                         {character.spells.map(spell => (
@@ -97,6 +97,46 @@ export function CombatExtras({ character, isGM, isOwner }: CombatExtrasProps) {
                     background: rgba(0, 0, 0, 0.2);
                     padding: 0 4px;
                     border-radius: 3px;
+                }
+
+                .stunts-group .extra-title {
+                    color: rgba(80, 166, 255, 0.72);
+                }
+
+                .stunts-group .extra-item {
+                    background: linear-gradient(90deg, rgba(80, 166, 255, 0.14), rgba(10, 20, 32, 0.45));
+                    border-color: rgba(80, 166, 255, 0.45);
+                }
+
+                .stunts-group .extra-name {
+                    color: #8bc8ff;
+                    text-shadow: 0 0 8px rgba(80, 166, 255, 0.25);
+                }
+
+                .stunts-group .extra-cost {
+                    background: rgba(80, 166, 255, 0.18);
+                    border: 1px solid rgba(80, 166, 255, 0.35);
+                    color: #d9efff;
+                }
+
+                .spells-group .extra-title {
+                    color: rgba(168, 85, 247, 0.74);
+                }
+
+                .spells-group .extra-item {
+                    background: linear-gradient(90deg, rgba(168, 85, 247, 0.17), rgba(24, 11, 36, 0.45));
+                    border-color: rgba(168, 85, 247, 0.42);
+                }
+
+                .spells-group .extra-name {
+                    color: #d7b6ff;
+                    text-shadow: 0 0 8px rgba(168, 85, 247, 0.25);
+                }
+
+                .spells-group .extra-cost {
+                    background: rgba(168, 85, 247, 0.2);
+                    border: 1px solid rgba(168, 85, 247, 0.35);
+                    color: #f2e5ff;
                 }
             `}</style>
         </div>

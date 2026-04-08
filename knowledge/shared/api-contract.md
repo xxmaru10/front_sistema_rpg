@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-04 (story-21/image-fix)
+last_updated: 2026-04-08 (story-32/combate-impulso-estresse)
 status: ativo
 ---
 
@@ -54,6 +54,22 @@ export type EventEnvelope<TType extends string, TPayload> = {
   payload: TPayload;
 };
 
+export type StressTrackValues = {
+  physical: number[]; // cada caixa absorve este valor (clamp 1..1000)
+  mental: number[];
+};
+
+export type Character = {
+  id: string;
+  ownerUserId: string;
+  stress: {
+    physical: boolean[];
+    mental: boolean[];
+  };
+  stressValues?: StressTrackValues; // legado sem campo: fallback por índice
+  impulseArrows?: number; // contador de setas de impulso no card
+};
+
 export type SessionData = {
   id: string;
   name: string;
@@ -82,6 +98,30 @@ export type WorldEntity = {
   imageUrl?: string;
   fieldVisibility?: Record<string, boolean>;
 };
+```
+
+## Eventos de Domínio Relevantes (Story 32)
+
+```typescript
+type StressTrackExpanded = EventEnvelope<"STRESS_TRACK_EXPANDED", {
+  characterId: string;
+  track: "PHYSICAL" | "MENTAL";
+  value?: number; // opcional; reducer aplica clamp 1..1000
+}>;
+
+type StressBoxValueUpdated = EventEnvelope<"STRESS_BOX_VALUE_UPDATED", {
+  characterId: string;
+  track: "PHYSICAL" | "MENTAL";
+  boxIndex: number;
+  value: number; // clamp 1..1000
+}>;
+
+type CharacterUpdatedImpulse = EventEnvelope<"CHARACTER_UPDATED", {
+  characterId: string;
+  changes: {
+    impulseArrows?: number; // GM-only no fluxo de UI
+  };
+}>;
 ```
 
 ## Códigos de Erro

@@ -1,6 +1,7 @@
 "use client";
 
 import { Character } from "@/types/domain";
+import { Brain, Dumbbell } from "lucide-react";
 
 interface CombatStressTracksProps {
     character: Character;
@@ -9,11 +10,20 @@ interface CombatStressTracksProps {
 }
 
 export function CombatStressTracks({ character, canEditSelf, handleStressToggle }: CombatStressTracksProps) {
+    const resolveValue = (track: "physical" | "mental", index: number) => {
+        const values = character.stressValues?.[track] || [];
+        const raw = values[index] ?? (index + 1);
+        return Math.max(1, Math.min(1000, Math.trunc(raw)));
+    };
+
     return (
         <div className="combat-stress-section">
             <div className="combat-track">
                 <div className="track-header">
-                    <span className="track-icon">🜃</span> FÍSICO
+                    <span className="track-icon physical" aria-hidden="true">
+                        <Dumbbell size={11} strokeWidth={1.9} />
+                    </span>
+                    <span>FÍSICO</span>
                 </div>
                 <div className="track-boxes">
                     {character.stress.physical.map((box, i) => (
@@ -23,14 +33,17 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                             onClick={() => canEditSelf && handleStressToggle("PHYSICAL", i, box)}
                             disabled={!canEditSelf}
                         >
-                            {i + 1}
+                            {resolveValue("physical", i)}
                         </button>
                     ))}
                 </div>
             </div>
             <div className="combat-track">
                 <div className="track-header">
-                    <span className="track-icon">🜁</span> MENTAL
+                    <span className="track-icon mental" aria-hidden="true">
+                        <Brain size={11} strokeWidth={1.9} />
+                    </span>
+                    <span>MENTAL</span>
                 </div>
                 <div className="track-boxes">
                     {character.stress.mental.map((box, i) => (
@@ -40,7 +53,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                             onClick={() => canEditSelf && handleStressToggle("MENTAL", i, box)}
                             disabled={!canEditSelf}
                         >
-                            {i + 1}
+                            {resolveValue("mental", i)}
                         </button>
                     ))}
                 </div>
@@ -59,7 +72,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     flex: 1;
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 1px;
                 }
 
                 .track-header {
@@ -68,22 +81,39 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     display: flex;
                     align-items: center;
                     gap: 4px;
+                    line-height: 1.1;
                 }
                 
-                .track-icon { color: inherit; }
+                .track-icon {
+                    color: inherit;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .track-icon.physical {
+                    color: rgba(255, 115, 115, 0.88);
+                }
+
+                .track-icon.mental {
+                    color: rgba(181, 156, 255, 0.9);
+                }
                 
                 .track-boxes {
                     display: flex;
                     gap: 4px;
+                    margin-top: 1px;
                 }
 
                 .stress-box {
-                    width: 20px;
+                    min-width: 28px;
+                    width: auto;
                     height: 20px;
+                    padding: 0 4px;
                     border: 1px solid #333;
                     background: #111;
                     color: #444;
-                    font-size: 0.7rem;
+                    font-size: 0.62rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;

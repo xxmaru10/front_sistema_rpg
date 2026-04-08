@@ -22,6 +22,7 @@ interface ConsequenceModalState {
 export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCombatCardProps) {
     const [isCollapsed, setIsCollapsed] = useState(!isGM);
     const [consequenceModal, setConsequenceModal] = useState<ConsequenceModalState | null>(null);
+    const normalizedUserId = actorUserId.trim().toLowerCase();
 
     const handleStressToggle = useCallback((track: "PHYSICAL" | "MENTAL", index: number, current: boolean) => {
         const type = current ? "STRESS_CLEARED" : "STRESS_MARKED";
@@ -30,12 +31,12 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
             sessionId,
             seq: 0,
             type,
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { characterId: character.id, track, boxIndex: index }
         } as any);
-    }, [character.id, sessionId, actorUserId]);
+    }, [character.id, sessionId, normalizedUserId]);
 
     const handleFPChange = useCallback((amount: number) => {
         const type = amount > 0 ? "FP_GAINED" : "FP_SPENT";
@@ -44,12 +45,12 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
             sessionId,
             seq: 0,
             type,
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { characterId: character.id, amount: Math.abs(amount), reason: "COMBAT_MANUAL" }
         } as any);
-    }, [character.id, sessionId, actorUserId]);
+    }, [character.id, sessionId, normalizedUserId]);
 
     const handleConsequenceChange = useCallback((slot: string, value: string, debuff?: ConsequenceDebuff) => {
         if (!isGM) return;
@@ -59,12 +60,12 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
             sessionId,
             seq: 0,
             type: "CHARACTER_CONSEQUENCE_UPDATED",
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { characterId: character.id, slot, value, debuff: debuffPayload }
         } as any);
-    }, [character.id, sessionId, actorUserId, isGM]);
+    }, [character.id, sessionId, normalizedUserId, isGM]);
 
     const openConsequenceModal = useCallback((slot: string, currentValue: string, debuffSkill?: string, debuffValue?: number) => {
         if (!isGM) return;
@@ -89,12 +90,28 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
             sessionId,
             seq: 0,
             type: "CHARACTER_UPDATED",
-            actorUserId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { characterId: character.id, changes }
         } as any);
-    }, [character.id, sessionId, actorUserId]);
+    }, [character.id, sessionId, normalizedUserId]);
+
+    const handleImpulseArrowsChange = useCallback((delta: number) => {
+        if (!isGM) return;
+        const current = Math.max(0, Math.trunc(character.impulseArrows || 0));
+        const next = Math.max(0, current + delta);
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "CHARACTER_UPDATED",
+            actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: { characterId: character.id, changes: { impulseArrows: next } }
+        } as any);
+    }, [isGM, character.id, character.impulseArrows, sessionId, normalizedUserId]);
 
     return {
         isCollapsed,
@@ -107,5 +124,6 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
         openConsequenceModal,
         handleSaveConsequence,
         handleUpdateHazard,
+        handleImpulseArrowsChange,
     };
 }
