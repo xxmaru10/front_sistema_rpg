@@ -59,6 +59,18 @@ export class ScreenShareManager {
     public async initialize() {
         const socket = getSocket(this.userId);
 
+        // Fetch TURN credentials from backend
+        try {
+            const { fetchTurnCredentials } = await import('./apiClient');
+            const turnData = await fetchTurnCredentials(this.sessionId, this.userId);
+            if (turnData && turnData.iceServers) {
+                this.rtcConfig.iceServers = turnData.iceServers;
+                console.log(`[WebRTC - ${this.userId}] Loaded custom TURN credentials`);
+            }
+        } catch (err) {
+            console.error(`[WebRTC - ${this.userId}] Failed to fetch TURN credentials, using fallback:`, err);
+        }
+
         socket.on('transmission-status-req', (data: { fromSocketId: string }) => {
             if (this.isBroadcaster && this.localStream) {
                 socket.emit('transmission-status-res', {

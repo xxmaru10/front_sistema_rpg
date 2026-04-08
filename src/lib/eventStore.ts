@@ -111,7 +111,7 @@ export class EventStore {
             this._setStatus('SUBSCRIBED');
         });
 
-        socket.on('disconnect', (reason) => {
+        socket.on('disconnect', (reason: string) => {
             console.warn('[EventStore] WebSocket disconnected:', reason);
             this._setStatus('CLOSED');
 
@@ -122,7 +122,7 @@ export class EventStore {
             // All other reasons reconnect automatically via socket.io reconnection
         });
 
-        socket.on('connect_error', (err) => {
+        socket.on('connect_error', (err: Error) => {
             console.error('[EventStore] WebSocket connection error:', err.message);
             this._setStatus('CHANNEL_ERROR');
 

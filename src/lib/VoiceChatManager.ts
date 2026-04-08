@@ -478,6 +478,18 @@ export class VoiceChatManager {
         const socket = getSocket(this.userId);
         this.attachScreenShareLoopbackGuard();
 
+        // Fetch TURN credentials from backend
+        try {
+            const { fetchTurnCredentials } = await import('./apiClient');
+            const turnData = await fetchTurnCredentials(this.sessionId, this.userId);
+            if (turnData && turnData.iceServers) {
+                this.rtcConfig.iceServers = turnData.iceServers;
+                console.log(`[VoiceChat - ${this.userId}] Loaded custom TURN credentials`);
+            }
+        } catch (err) {
+            console.error(`[VoiceChat - ${this.userId}] Failed to fetch TURN credentials, using fallback:`, err);
+        }
+
         // Remove previous handler if reinitializing
         if (this.signalHandler) {
             socket.off('webrtc-signal', this.signalHandler);

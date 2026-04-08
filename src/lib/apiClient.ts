@@ -25,6 +25,10 @@ export interface SessionJoinInfo {
     characters: any[];
 }
 
+export interface TurnCredentials {
+    iceServers: any[];
+}
+
 export async function loadSessionEvents(sessionId: string): Promise<SessionLoadResult> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 50000); // 12s timeout for history
@@ -129,4 +133,12 @@ export async function uploadImage(blob: Blob, contentType: string): Promise<stri
   if (!res.ok) throw new Error(`upload failed: ${res.status}`);
   const data = await res.json();
   return data.publicUrl;
+}
+
+export async function fetchTurnCredentials(sessionId: string, userId: string): Promise<TurnCredentials> {
+    const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/turn-credentials?userId=${userId}`, {
+        signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) throw new Error(`[apiClient] fetchTurnCredentials falhou: ${res.status}`);
+    return await res.json();
 }
