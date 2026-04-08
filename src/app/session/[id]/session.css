@@ -895,6 +895,102 @@ body {
     width: 100%;
 }
 
+.combat-side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 400px;
+    min-width: 0;
+    overflow: visible;
+}
+
+.combat-party {
+    padding-left: 8px;
+}
+
+.combat-threats-column {
+    max-height: calc(100vh - 200px);
+    padding-right: 8px;
+}
+
+.combat-threats {
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
+}
+
+.combat-side-lane {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
+}
+
+.combat-side-lane.threat-side-lane {
+    justify-content: flex-end;
+}
+
+.combat-avatar-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    min-width: 56px;
+    padding-top: 6px;
+}
+
+.combat-avatar-rail.hero-avatar-rail {
+    margin-left: -26px;
+}
+
+.combat-avatar-rail.threat-avatar-rail {
+    align-items: flex-end;
+    margin-right: -26px;
+}
+
+.combat-expanded-stack {
+    flex: 1;
+    min-width: 0;
+    min-height: 400px;
+    overflow-y: auto;
+    overflow-x: visible;
+    padding: 0 8px 0 0;
+}
+
+.combat-side-lane.threat-side-lane .combat-expanded-stack {
+    padding: 0 0 0 8px;
+}
+
+.combat-expanded-stack .combat-card {
+    margin-bottom: 0;
+}
+
+.combat-side-empty-state {
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 16px;
+    border: 1px dashed rgba(197, 160, 89, 0.28);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(22, 16, 8, 0.78), rgba(8, 8, 8, 0.65));
+    color: rgba(255,255,255,0.7);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.combat-side-empty-state.hostile {
+    border-color: rgba(255, 68, 68, 0.28);
+    background: linear-gradient(135deg, rgba(28, 10, 10, 0.8), rgba(8, 8, 8, 0.65));
+}
+
 @media (max-width: 1024px) {
     .combat-arena-layout {
         grid-template-columns: 1fr;
@@ -926,6 +1022,36 @@ body {
     .combat-cards-stack {
         max-height: 400px;
         overflow-y: auto;
+    }
+
+    .combat-side-lane,
+    .combat-side-lane.threat-side-lane {
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 18px;
+    }
+
+    .combat-avatar-rail {
+        position: relative;
+        top: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 0;
+        min-width: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .combat-avatar-rail.threat-avatar-rail {
+        justify-content: flex-end;
+    }
+
+    .combat-expanded-stack,
+    .combat-side-lane.threat-side-lane .combat-expanded-stack {
+        width: 100%;
+        min-height: 0;
+        padding: 0;
     }
 }
 

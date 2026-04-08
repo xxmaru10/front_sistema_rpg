@@ -6,8 +6,6 @@ import { Character } from "@/types/domain";
 
 interface CombatHeaderProps {
     character: Character;
-    isCollapsed: boolean;
-    setIsCollapsed: (v: boolean) => void;
     isOwner: boolean;
     isGM: boolean;
     canEditSelf: boolean;
@@ -16,12 +14,25 @@ interface CombatHeaderProps {
     onRemove?: () => void;
     handleFPChange: (amount: number) => void;
     handleImpulseArrowsChange: (delta: number) => void;
+    onToggleExpanded?: () => void;
+    avatarSide?: "left" | "right";
+    themeClass: string;
+}
+
+function getCharacterInitials(name: string) {
+    const parts = name
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2);
+
+    if (parts.length === 0) return "??";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 }
 
 export function CombatHeader({
     character,
-    isCollapsed,
-    setIsCollapsed,
     isOwner,
     isGM,
     canEditSelf,
@@ -30,34 +41,39 @@ export function CombatHeader({
     onRemove,
     handleFPChange,
     handleImpulseArrowsChange,
+    onToggleExpanded,
+    avatarSide = "left",
+    themeClass,
 }: CombatHeaderProps) {
     const impulseCount = Math.max(0, Math.trunc(character.impulseArrows || 0));
+    const portraitInitials = getCharacterInitials(character.name);
+    const portraitButton = onToggleExpanded ? (
+        <button
+            type="button"
+            className={`combat-portrait-toggle ${themeClass} ${avatarSide === "right" ? "side-right" : "side-left"}`}
+            onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpanded();
+            }}
+            title={`Recolher card de ${character.name}`}
+            aria-label={`Recolher card de ${character.name}`}
+        >
+            <span className="combat-portrait-avatar">
+                {character.imageUrl ? (
+                    <img src={character.imageUrl} alt="" />
+                ) : (
+                    <span className="combat-portrait-fallback">{portraitInitials}</span>
+                )}
+            </span>
+        </button>
+    ) : null;
 
     return (
-        <div className="combat-header">
+        <div className={`combat-header ${avatarSide === "right" ? "portrait-right" : "portrait-left"}`}>
+            {avatarSide !== "right" && portraitButton}
+
             <div className="combat-identity">
                 <div className="combat-top-row">
-                    <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        style={{
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            color: 'var(--accent-color)',
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.8rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            flexShrink: 0
-                        }}
-                        title={isCollapsed ? "Expandir" : "Recolher"}
-                    >
-                        {isCollapsed ? "+" : "−"}
-                    </button>
                     <h3 className="combat-name">{character.name.toUpperCase()}</h3>
                     {onToggleDiceRoller && isOwner && !isGM && (
                         <button
@@ -95,7 +111,7 @@ export function CombatHeader({
                     )}
                 </div>
 
-                {!isCollapsed && (isGM || isOwner) && (
+                {(isGM || isOwner) && (
                     <div className="combat-resource-row">
                         <div className="combat-fate">
                             <span className="fate-label">{character.isNPC ? "PONTOS DE GM" : "DESTINO"}</span>
@@ -133,8 +149,11 @@ export function CombatHeader({
                     </div>
                 )}
             </div>
+
+            {avatarSide === "right" && portraitButton}
+
             {/* Remove Button */}
-            {!isCollapsed && canEdit && onRemove && (
+            {canEdit && onRemove && (
                 <button
                     onClick={(e) => {
                         e.stopPropagation();

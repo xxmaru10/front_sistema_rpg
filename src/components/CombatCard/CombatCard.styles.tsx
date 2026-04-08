@@ -31,6 +31,10 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             opacity: 0.4 !important;
         }
 
+        .combat-card.expanded-card {
+            margin-bottom: 0;
+        }
+
         /* Full Coloration / Painted Effects */
         .combat-card.hero-card {
             border-left: 4px solid #c5a059;
@@ -106,9 +110,13 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-header {
             display: flex;
             gap: 12px;
-            align-items: center;
+            align-items: flex-start;
             position: relative;
             z-index: 2;
+        }
+
+        .combat-header.portrait-right {
+            padding-right: 26px;
         }
 
         .combat-remove-btn {
@@ -137,6 +145,9 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-identity {
             flex-grow: 1;
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
         .combat-top-row {
@@ -146,11 +157,167 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             min-width: 0;
         }
 
+        .combat-portrait-toggle,
+        .combat-avatar-shell {
+            --portrait-ring: rgba(255,255,255,0.22);
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.14);
+            background: linear-gradient(135deg, rgba(18, 18, 18, 0.96) 0%, rgba(6, 6, 6, 0.98) 100%);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+            cursor: pointer;
+            overflow: hidden;
+            flex-shrink: 0;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+        }
+
+        .combat-portrait-toggle {
+            width: 58px;
+            height: 58px;
+            padding: 7px;
+            border-radius: 18px;
+        }
+
+        .combat-avatar-shell {
+            width: 74px;
+            height: 74px;
+            padding: 9px;
+            border-radius: 24px;
+            isolation: isolate;
+        }
+
+        .combat-avatar-shell.side-left {
+            --avatar-offset: -18px;
+            transform: translateX(var(--avatar-offset));
+        }
+
+        .combat-avatar-shell.side-right {
+            --avatar-offset: 18px;
+            transform: translateX(var(--avatar-offset));
+        }
+
+        .combat-portrait-toggle:hover,
+        .combat-avatar-shell:hover {
+            filter: saturate(1.05);
+        }
+
+        .combat-portrait-toggle:hover {
+            transform: translateY(-2px) scale(1.03);
+        }
+
+        .combat-avatar-shell.side-left:hover,
+        .combat-avatar-shell.side-right:hover {
+            transform: translateX(var(--avatar-offset)) translateY(-2px) scale(1.03);
+        }
+
+        .combat-portrait-toggle:focus-visible,
+        .combat-avatar-shell:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.18), 0 12px 24px rgba(0,0,0,0.45);
+        }
+
+        .combat-avatar-halo {
+            position: absolute;
+            inset: -30%;
+            background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, transparent 68%);
+            opacity: 0.55;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .combat-portrait-toggle::before,
+        .combat-avatar-shell::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 62%);
+            pointer-events: none;
+        }
+
+        .combat-portrait-avatar {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--portrait-ring);
+            background: linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(28,28,28,0.92) 100%);
+            box-shadow: inset 0 0 18px rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .combat-portrait-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .combat-portrait-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-header);
+            font-size: 0.92rem;
+            letter-spacing: 0.08em;
+            color: #f7ecd0;
+            text-shadow: 0 0 10px rgba(255,255,255,0.18);
+        }
+
+        .combat-portrait-toggle.hero-card,
+        .combat-avatar-shell.hero-card {
+            --portrait-ring: rgba(241, 207, 133, 0.68);
+            border-color: rgba(197, 160, 89, 0.48);
+            background: linear-gradient(135deg, rgba(34, 24, 12, 0.98) 0%, rgba(12, 8, 5, 0.98) 100%);
+            box-shadow: inset 0 0 28px rgba(197, 160, 89, 0.12), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(197, 160, 89, 0.16);
+        }
+
+        .combat-portrait-toggle.own-hero-card,
+        .combat-avatar-shell.own-hero-card {
+            --portrait-ring: rgba(170, 255, 202, 0.68);
+            border-color: rgba(46, 204, 113, 0.48);
+            background: linear-gradient(135deg, rgba(12, 30, 19, 0.98) 0%, rgba(5, 12, 9, 0.98) 100%);
+            box-shadow: inset 0 0 28px rgba(46, 204, 113, 0.11), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(46, 204, 113, 0.16);
+        }
+
+        .combat-portrait-toggle.npc-hero-card,
+        .combat-avatar-shell.npc-hero-card {
+            --portrait-ring: rgba(184, 222, 255, 0.72);
+            border-color: rgba(80, 166, 255, 0.5);
+            background: linear-gradient(135deg, rgba(10, 20, 34, 0.98) 0%, rgba(6, 10, 16, 0.98) 100%);
+            box-shadow: inset 0 0 28px rgba(80, 166, 255, 0.12), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(80, 166, 255, 0.16);
+        }
+
+        .combat-portrait-toggle.threat-card,
+        .combat-avatar-shell.threat-card {
+            --portrait-ring: rgba(255, 192, 192, 0.72);
+            border-color: rgba(255, 68, 68, 0.52);
+            background: linear-gradient(135deg, rgba(36, 13, 13, 0.98) 0%, rgba(14, 7, 7, 0.98) 100%);
+            box-shadow: inset 0 0 28px rgba(255, 68, 68, 0.13), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(255, 68, 68, 0.18);
+        }
+
+        .combat-avatar-shell.active-turn-avatar {
+            border-color: rgba(255,255,255,0.92) !important;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.25), 0 0 22px rgba(255,255,255,0.5), 0 12px 24px rgba(0,0,0,0.45) !important;
+        }
+
+        .combat-avatar-shell.active-turn-avatar .combat-portrait-avatar {
+            border-color: rgba(255,255,255,0.96);
+        }
+
         .combat-name {
             font-family: var(--font-header);
             font-size: 1rem;
             color: #e0e0e0;
-            margin: 0 0 4px 0;
+            margin: 0;
             letter-spacing: 0.05em;
             white-space: nowrap;
             overflow: hidden;
@@ -173,7 +340,6 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            margin-top: 6px;
             flex-wrap: wrap;
         }
 
