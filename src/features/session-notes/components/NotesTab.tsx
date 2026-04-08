@@ -68,6 +68,8 @@ export function NotesTab({
     failedEventIds = new Set(),
     handleRetry
 }: NotesTabProps) {
+    const normalizedUserId = userId.trim().toLowerCase();
+    const isAuthor = (authorId?: string) => (authorId || "").trim().toLowerCase() === normalizedUserId;
     const playerChars = Object.values((state?.characters) || {}).filter((c: any) => !c.isNPC && c.source !== 'bestiary') as any[];
     const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
     const toggleCard = (id: string) => setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
@@ -90,7 +92,7 @@ export function NotesTab({
             </div>
 
             {notesSubTab === "Sessão" && (() => {
-                const sessionNotes = notes.filter((n: any) => !n.isPrivate || n.authorId === userId);
+                const sessionNotes = notes.filter((n: any) => !n.isPrivate || isAuthor(n.authorId));
                 const grouped: Record<number, any[]> = {};
                 sessionNotes.forEach((note: any) => {
                     const sn = note.sessionNumber || 1;
@@ -143,7 +145,7 @@ export function NotesTab({
                                         <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--accent-color))' }} />
                                     </div>
                                     {grouped[sn].map((note: any) => {
-                                        const isMyNote = note.authorId === userId;
+                                        const isMyNote = isAuthor(note.authorId);
                                         const isFailed = failedEventIds.has(note.id);
                                         const isPending = note.seq === 0 && !isFailed;
 
@@ -210,12 +212,12 @@ export function NotesTab({
                                         </div>
                                         {isOpen && (
                                             <LinkedNotes
-                                                notes={(char.linkedNotes || []).filter((n: any) => n.authorId === userId)}
+                                                notes={(char.linkedNotes || []).filter((n: any) => isAuthor(n.authorId))}
                                                 onAddNote={(content: string, isPrivate?: boolean) => handleAddEntityNote?.('CHARACTER', char.id, content, isPrivate)}
                                                 onDeleteNote={(noteId: string) => handleDeleteEntityNote?.('CHARACTER', char.id, noteId)}
                                                 mentionEntities={mentionEntities}
                                                 hideTitle={true}
-                                                userId={userId}
+                                                userId={normalizedUserId}
                                                 userRole={userRole}
                                                 mergeAllNotes={true}
                                             />
@@ -278,7 +280,7 @@ export function NotesTab({
                     </div>
                 )}
                 {filteredNotes.map((note) => {
-                    const isMyNote = note.authorId === userId;
+                    const isMyNote = isAuthor(note.authorId);
                     const isGM = userRole === "GM";
 
                     const canEdit = isMyNote || (isGM && !note.isPrivate);

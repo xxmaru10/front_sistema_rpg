@@ -810,6 +810,14 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 notes: [...(state.notes || []), payload]
             };
 
+        case "NOTE_UPDATED":
+            return {
+                ...state,
+                notes: (state.notes || []).map(n =>
+                    n.id === payload.noteId ? { ...n, content: payload.content } : n
+                )
+            };
+
         case "NOTE_DELETED":
             return {
                 ...state,

@@ -56,6 +56,8 @@ interface LinkedNotesProps {
 }
 
 export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", hideTitle = false, mentionEntities, userId, userRole, mergeAllNotes }: LinkedNotesProps) {
+    const normalizedUserId = (userId || "").trim().toLowerCase();
+    const isAuthor = (authorId?: string) => (authorId || "").trim().toLowerCase() === normalizedUserId;
     const [newNote, setNewNote] = useState("");
     const [newPrivateNote, setNewPrivateNote] = useState("");
     const editorRef = useRef<HTMLDivElement>(null);
@@ -67,8 +69,8 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
     const sharedNotes = (notes || []).filter(n => !(n.isPrivate || (n as any).is_private));
     const privateNotes = (notes || []).filter(n => {
         if (!(n.isPrivate || (n as any).is_private)) return false;
-        if (!userId) return true;
-        return n.authorId === userId;
+        if (!normalizedUserId) return true;
+        return isAuthor(n.authorId);
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -133,7 +135,7 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
                                 </span>
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                     <span style={{ fontSize: '0.55rem', color: '#444' }}>{new Date(note.createdAt).toLocaleString()}</span>
-                                    {onDeleteNote && (note.authorId === userId || userRole === 'GM') && (
+                                    {onDeleteNote && (isAuthor(note.authorId) || userRole === 'GM') && (
                                         <button
                                             onClick={() => onDeleteNote(note.id)}
                                             style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.6, cursor: 'pointer', padding: '0', display: 'flex', alignItems: 'center' }}
@@ -205,7 +207,7 @@ export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", h
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '3px', alignItems: 'center', gap: '8px' }}>
                                         <span style={{ fontSize: '0.55rem', color: '#444' }}>{new Date(note.createdAt).toLocaleString()}</span>
-                                        {onDeleteNote && (note.authorId === userId || userRole === 'GM') && (
+                                        {onDeleteNote && (isAuthor(note.authorId) || userRole === 'GM') && (
                                             <button onClick={() => onDeleteNote(note.id)} style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.6, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} title="Excluir nota">
                                                 <Trash2 size={12} />
                                             </button>

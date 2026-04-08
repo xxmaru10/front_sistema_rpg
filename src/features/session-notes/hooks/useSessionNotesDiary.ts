@@ -26,6 +26,7 @@ export function useSessionNotesDiary({
     handleAddEntityNote,
 }: UseSessionNotesDiaryProps) {
     const userId = rawUserId.trim().toLowerCase();
+    const isAuthor = (authorId?: string) => (authorId || "").trim().toLowerCase() === userId;
     const notes = state.notes || [];
 
     const [editorContent, setEditorContent] = useState("");
@@ -58,7 +59,7 @@ export function useSessionNotesDiary({
 
     // --- Derived ---
     const authors = useMemo(() => {
-        const visibleNotes = notes.filter(n => !n.isPrivate || n.authorId === userId);
+        const visibleNotes = notes.filter(n => !n.isPrivate || isAuthor(n.authorId));
         return Array.from(new Set(visibleNotes.map(n => n.authorId))).map(id => {
             const note = visibleNotes.find(n => n.authorId === id);
             return { id, name: note?.authorName || id };
@@ -69,9 +70,9 @@ export function useSessionNotesDiary({
         if (notesSubTab === "Geral") {
             return notes.filter(n => !n.isPrivate && !locallyHiddenNoteIds.has(n.id));
         } else if (notesSubTab === "Sessão") {
-            return notes.filter(n => (!n.isPrivate || n.authorId === userId) && !locallyHiddenNoteIds.has(n.id));
+            return notes.filter(n => (!n.isPrivate || isAuthor(n.authorId)) && !locallyHiddenNoteIds.has(n.id));
         } else {
-            return notes.filter(n => n.isPrivate && n.authorId === userId && !locallyHiddenNoteIds.has(n.id));
+            return notes.filter(n => n.isPrivate && isAuthor(n.authorId) && !locallyHiddenNoteIds.has(n.id));
         }
     }, [notes, notesSubTab, userId, locallyHiddenNoteIds]);
 
@@ -98,7 +99,7 @@ export function useSessionNotesDiary({
     const handleClearNotesLocally = (tab: 'Geral' | 'Privado') => {
         const toHide = tab === 'Geral'
             ? notes.filter(n => !n.isPrivate).map(n => n.id)
-            : notes.filter(n => n.isPrivate && n.authorId === userId).map(n => n.id);
+            : notes.filter(n => n.isPrivate && isAuthor(n.authorId)).map(n => n.id);
         setLocallyHiddenNoteIds(prev => new Set([...prev, ...toHide]));
     };
 
@@ -226,12 +227,14 @@ export function useSessionNotesDiary({
     };
 
     const handleDelete = (noteId: string) => {
+        const existingNote = notes.find(n => n.id === noteId);
+        if (!existingNote) return;
         globalEventStore.append({
             id: uuidv4(), sessionId, seq: 0,
             type: "NOTE_DELETED",
             actorUserId: userId,
             createdAt: new Date().toISOString(),
-            visibility: "PUBLIC",
+            visibility: existingNote.isPrivate ? { kind: "PLAYER_ONLY", userId } : "PUBLIC",
             payload: { noteId }
         } as any);
     };

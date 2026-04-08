@@ -27,6 +27,34 @@ export class EventStore {
     private failedEventIds: Set<string> = new Set();
     private reconnectTimeout: any = null;
 
+    private _isNoteEventType(type: ActionEvent["type"]): boolean {
+        return type.includes("NOTE") || type === "ALL_NOTES_DELETED";
+    }
+
+    private _getFailureKeys(event: ActionEvent): string[] {
+        const keys = new Set<string>();
+        keys.add(event.id);
+
+        if (!this._isNoteEventType(event.type)) {
+            return Array.from(keys);
+        }
+
+        const payload = (event as any).payload || {};
+        if (typeof payload.id === "string") keys.add(payload.id);
+        if (typeof payload.noteId === "string") keys.add(payload.noteId);
+        if (payload.note && typeof payload.note.id === "string") keys.add(payload.note.id);
+
+        return Array.from(keys);
+    }
+
+    private _markEventFailed(event: ActionEvent) {
+        this._getFailureKeys(event).forEach((key) => this.failedEventIds.add(key));
+    }
+
+    private _clearEventFailed(event: ActionEvent) {
+        this._getFailureKeys(event).forEach((key) => this.failedEventIds.delete(key));
+    }
+
     private _sort() {
         this.events.sort((a, b) => {
             // seq 0 represents "optimistic/not yet confirmed"
@@ -137,12 +165,12 @@ export class EventStore {
                 this.listeners.forEach(l => l(formattedEvent));
                 this.bulkListeners.forEach(l => l([...this.events]));
             } else {
-                this.failedEventIds.delete(newEvent.id);
                 const updatedEvent = {
                     ...this.events[idx],
                     seq: newEvent.seq,
                     createdAt: newEvent.createdAt,
                 };
+                this._clearEventFailed(updatedEvent);
                 this.events[idx] = updatedEvent;
                 this._sort();
                 this.listeners.forEach(l => l(updatedEvent));
@@ -207,21 +235,22 @@ export class EventStore {
 
         this.appendQueue = this.appendQueue.then(async () => {
             try {
-                this.failedEventIds.delete(event.id);
+                this._clearEventFailed(event);
                 const result = await apiClient.appendEvent(event.sessionId, event);
                 const idx = this.events.findIndex(e => e.id === event.id);
                 if (idx !== -1 && result.seq) {
                     this.events[idx].seq = result.seq;
+                    this._clearEventFailed(this.events[idx]);
                     this._sort();
                     this.bulkListeners.forEach(l => l([...this.events]));
                 }
             } catch (err) {
                 console.error("[EventStore] Erro no append via NestJS:", err);
-                this.failedEventIds.add(event.id);
+                this._markEventFailed(event);
                 this.bulkListeners.forEach(l => l([...this.events]));
 
                 // Exponential backoff retry para notas (limitado a 3 tentativas)
-                const isNoteEvent = ['NOTE_ADDED', 'STICKY_NOTE_CREATED', 'STICKY_NOTE_UPDATED', 'STICKY_NOTE_DELETED'].includes(event.type);
+                const isNoteEvent = this._isNoteEventType(event.type);
                 if (isNoteEvent && retryCount < 3) {
                     const delay = Math.pow(2, retryCount) * 1000;
                     setTimeout(() => this.append(event, retryCount + 1), delay);
@@ -233,9 +262,12 @@ export class EventStore {
     }
 
     async retryEvent(eventId: string) {
-        const event = this.events.find(e => e.id === eventId);
-        if (event && this.failedEventIds.has(eventId)) {
-            this.failedEventIds.delete(eventId);
+        const event = this.events.find(e => {
+            if (e.id === eventId) return true;
+            return this._getFailureKeys(e).includes(eventId);
+        });
+        if (event && this._getFailureKeys(event).some((key) => this.failedEventIds.has(key))) {
+            this._clearEventFailed(event);
             return this.append(event, 0);
         }
     }
