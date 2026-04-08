@@ -889,23 +889,23 @@ body {
 
 .combat-arena-layout {
     display: grid;
-    grid-template-columns: 48px minmax(360px, 1fr) 48px;
+    grid-template-columns: 26px minmax(360px, 1fr) 26px;
     grid-template-rows: 1fr;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
     align-items: start;
 }
 
 .combat-arena-layout.has-expanded-left {
-    grid-template-columns: minmax(500px, 1.22fr) minmax(340px, 0.92fr) 48px;
+    grid-template-columns: minmax(470px, 1.16fr) minmax(360px, 0.96fr) 26px;
 }
 
 .combat-arena-layout.has-expanded-right {
-    grid-template-columns: 48px minmax(340px, 0.92fr) minmax(500px, 1.22fr);
+    grid-template-columns: 26px minmax(360px, 0.96fr) minmax(470px, 1.16fr);
 }
 
 .combat-arena-layout.has-expanded-left.has-expanded-right {
-    grid-template-columns: minmax(440px, 1.05fr) minmax(320px, 0.88fr) minmax(440px, 1.05fr);
+    grid-template-columns: minmax(410px, 1fr) minmax(320px, 0.84fr) minmax(410px, 1fr);
 }
 
 .combat-side-column {
@@ -918,12 +918,12 @@ body {
 }
 
 .combat-party {
-    padding-left: 0;
+    padding-left: 18px;
 }
 
 .combat-threats-column {
     max-height: calc(100vh - 200px);
-    padding-right: 0;
+    padding-right: 18px;
 }
 
 .combat-threats {
@@ -947,11 +947,11 @@ body {
 
 .combat-avatar-drawer {
     position: relative;
-    width: 38px;
-    min-width: 38px;
+    width: 24px;
+    min-width: 24px;
     flex-shrink: 0;
     align-self: stretch;
-    z-index: 8;
+    z-index: 6;
     overflow: visible;
 }
 
@@ -960,8 +960,8 @@ body {
     top: 0;
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: 10px;
+    gap: 6px;
+    padding: 6px;
     border: 1px solid rgba(255,255,255,0.12);
     background: rgba(8, 8, 8, 0.96);
     backdrop-filter: blur(14px);
@@ -971,15 +971,15 @@ body {
 
 .combat-avatar-drawer.side-left .combat-avatar-panel {
     left: 0;
-    border-radius: 0 26px 26px 0;
-    transform: translateX(calc(-100% + 38px));
+    border-radius: 0 18px 18px 0;
+    transform: translateX(calc(-100% + 24px));
 }
 
 .combat-avatar-drawer.side-right .combat-avatar-panel {
     right: 0;
     flex-direction: row-reverse;
-    border-radius: 26px 0 0 26px;
-    transform: translateX(calc(100% - 38px));
+    border-radius: 18px 0 0 18px;
+    transform: translateX(calc(100% - 24px));
 }
 
 .combat-avatar-drawer.hero-drawer .combat-avatar-panel {
@@ -1003,15 +1003,15 @@ body {
 .combat-avatar-rail {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
 .combat-avatar-drawer-tab {
-    width: 28px;
-    min-width: 28px;
-    height: 104px;
-    border-radius: 16px;
+    width: 20px;
+    min-width: 20px;
+    height: 72px;
+    border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(16, 16, 16, 0.98);
     color: #f4e2b0;
@@ -1077,7 +1077,7 @@ body {
 
 .combat-expanded-stack .combat-card {
     margin-bottom: 0;
-    width: min(100%, 620px);
+    width: min(100%, 580px);
 }
 
 .combat-party .combat-expanded-stack {
@@ -1133,22 +1133,22 @@ body {
     }
 
     .combat-avatar-drawer {
-        width: 38px;
-        min-width: 38px;
+        width: 24px;
+        min-width: 24px;
     }
 
     .combat-avatar-panel {
         position: relative;
         top: auto;
-        max-width: 118px;
+        max-width: 92px;
     }
 
     .combat-avatar-drawer.side-left .combat-avatar-panel {
-        transform: translateX(calc(-100% + 38px));
+        transform: translateX(calc(-100% + 24px));
     }
 
     .combat-avatar-drawer.side-right .combat-avatar-panel {
-        transform: translateX(calc(100% - 38px));
+        transform: translateX(calc(100% - 24px));
     }
 
     .combat-avatar-rail {

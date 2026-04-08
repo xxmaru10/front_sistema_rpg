@@ -174,27 +174,27 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-return-toggle {
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
             color: #f3e1b3;
         }
 
         .combat-avatar-shell {
-            width: 74px;
-            height: 74px;
-            padding: 9px;
-            border-radius: 24px;
+            width: 56px;
+            height: 56px;
+            padding: 6px;
+            border-radius: 18px;
             isolation: isolate;
         }
 
         .combat-avatar-shell.side-left {
-            --avatar-offset: -18px;
+            --avatar-offset: -6px;
             transform: translateX(var(--avatar-offset));
         }
 
         .combat-avatar-shell.side-right {
-            --avatar-offset: 18px;
+            --avatar-offset: 6px;
             transform: translateX(var(--avatar-offset));
         }
 

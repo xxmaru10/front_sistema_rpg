@@ -102,9 +102,10 @@ export function CombatTab({
 
     const compactHeroCards = heroCombatants.filter(c => !expandedHeroIds.includes(c.id));
     const compactThreatCards = threatCombatants.filter(c => !expandedThreatIds.includes(c.id));
+    const showChallengePanel = challengeMode && (userRole === "GM" || (state.challenge?.difficulty || 0) !== 0);
 
     const hasExpandedHeroes = expandedHeroCards.length > 0;
-    const hasExpandedThreats = expandedThreatCards.length > 0 || threatHazards.length > 0;
+    const hasExpandedThreats = expandedThreatCards.length > 0 || threatHazards.length > 0 || showChallengePanel;
 
     useEffect(() => {
         if (compactHeroCards.length === 0) setIsHeroDrawerPinned(false);
@@ -517,7 +518,7 @@ export function CombatTab({
                 {/* Coluna 3: Ameaças (Direita) */}
                 {/* Coluna 3: Ameaças (Direita) OU Desafio */}
                 <div className="combat-threats-column combat-side-column">
-                    {challengeMode && (userRole === "GM" || (state.challenge?.difficulty || 0) !== 0) && (() => {
+                    {showChallengePanel && (() => {
                         // Dynamic color based on difficulty level
                         const diff = state.challenge?.difficulty || 0;
                         let challengeColors = { primary: '#4ade80', glow: 'rgba(74, 222, 128, 0.3)', bg: 'rgba(10, 35, 20, 1)' }; // Default/1 - Green

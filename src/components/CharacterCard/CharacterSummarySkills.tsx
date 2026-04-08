@@ -12,7 +12,7 @@ export function CharacterSummarySkills({ character }: CharacterSummarySkillsProp
         skill,
         level: character.skills[skill] || 0,
     }))
-        .filter(({ level }) => level > 0)
+        .filter(({ level }) => level !== 0)
         .sort((a, b) => {
             if (b.level !== a.level) return b.level - a.level;
             return a.skill.localeCompare(b.skill);
@@ -35,7 +35,7 @@ export function CharacterSummarySkills({ character }: CharacterSummarySkillsProp
                         fontSize: "0.9rem",
                     }}
                 >
-                    Nenhuma perícia acima de 0 para exibir no resumo.
+                    Nenhuma perícia diferente de 0 para exibir no resumo.
                 </div>
             ) : (
                 <div
@@ -89,7 +89,7 @@ export function CharacterSummarySkills({ character }: CharacterSummarySkillsProp
                                     color: palette.valueColor,
                                 }}
                             >
-                                +{level}
+                                {level > 0 ? `+${level}` : `${level}`}
                             </span>
                             </div>
                         );
