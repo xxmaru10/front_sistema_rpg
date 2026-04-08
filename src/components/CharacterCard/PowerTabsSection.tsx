@@ -27,16 +27,40 @@ export function PowerTabsSection({
 }: PowerTabsSectionProps) {
 
     const hook = usePowerTabs({ character, sessionId, actorUserId });
+    const compactHeader = !includeInventory;
 
     return (
         <div className="power-tabs-container">
-            <div className="power-tabs-header">
+            <div
+                className={`power-tabs-header ${compactHeader ? "text-mode" : ""}`}
+                style={
+                    compactHeader
+                        ? {
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                          }
+                        : undefined
+                }
+            >
                 <button
                     className={`power-tab-btn ${hook.activeTab === 'stunts' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('stunts')}
                     title="FAÇANHAS"
+                    style={
+                        compactHeader
+                            ? {
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "10px",
+                                  fontSize: "0.72rem",
+                                  letterSpacing: "0.18em",
+                              }
+                            : undefined
+                    }
                 >
                     <Zap size={18} />
+                    {compactHeader && <span>FAÇANHAS</span>}
                 </button>
                 {includeInventory && (
                     <button
@@ -51,8 +75,21 @@ export function PowerTabsSection({
                     className={`power-tab-btn ${hook.activeTab === 'spells' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('spells')}
                     title="MAGIAS"
+                    style={
+                        compactHeader
+                            ? {
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "10px",
+                                  fontSize: "0.72rem",
+                                  letterSpacing: "0.18em",
+                              }
+                            : undefined
+                    }
                 >
                     <Wand2 size={18} />
+                    {compactHeader && <span>MAGIAS</span>}
                 </button>
             </div>
 

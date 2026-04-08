@@ -56,6 +56,119 @@ export function CharacterCard({
     });
 
     const showInventoryTab = !hideInventory;
+    const resolveActiveTab = () => {
+        if (activeTab === "inventory" && !showInventoryTab) return "lore";
+        return activeTab;
+    };
+    const visibleTab = resolveActiveTab();
+
+    const renderActivePanel = () => {
+        if (visibleTab === "lore") {
+            return (
+                <div className="top-layout-grid lore-tab-layout">
+                    <CharacterPortrait
+                        name={character.name}
+                        imageUrl={character.imageUrl}
+                        isGM={isGM}
+                        isCompact={isCompact}
+                        showName={false}
+                        isEditingName={hook.isEditingName}
+                        tempName={hook.tempName}
+                        onTempNameChange={hook.setTempName}
+                        onStartEditingName={hook.startEditingName}
+                        onSaveName={hook.handleSaveName}
+                        onCancelEditName={() => hook.setIsEditingName(false)}
+                        onImageUpload={hook.handleImageUpload}
+                        isImageProcessing={hook.isImageProcessing}
+                    />
+
+                    <CharacterLore
+                        biography={character.biography || ""}
+                        sheetAspects={character.sheetAspects}
+                        religionName={mentionEntities?.find((e) => e.id === character.religionId)?.name}
+                        canEdit={canEdit}
+                        showLore={hook.showLore}
+                        onToggleLore={() => hook.setShowLore(!hook.showLore)}
+                        isEditingBio={hook.isEditingBio}
+                        tempBio={hook.tempBio}
+                        onTempBioChange={hook.setTempBio}
+                        onStartEditingBio={hook.startEditingBio}
+                        onSaveBio={hook.handleSaveBio}
+                        onCancelBio={() => hook.setIsEditingBio(false)}
+                        editingAspectIndex={hook.editingAspectIndex}
+                        tempAspect={hook.tempAspect}
+                        onTempAspectChange={hook.setTempAspect}
+                        onStartEditingAspect={hook.startEditingAspect}
+                        onSaveAspect={hook.handleSaveAspect}
+                        onCancelAspect={() => hook.setEditingAspectIndex(null)}
+                    />
+                </div>
+            );
+        }
+
+        if (visibleTab === "powers") {
+            return (
+                <div className="character-powers-tab active">
+                    <PowerTabsSection
+                        character={character}
+                        sessionId={sessionId}
+                        actorUserId={actorUserId}
+                        canEdit={canEdit}
+                        isGM={isGM}
+                        magicLevel={character.magicLevel || 0}
+                        onMagicLevelChange={hook.handleMagicLevelChange}
+                        includeInventory={false}
+                    />
+
+                    <SkillsSection
+                        character={character}
+                        sessionId={sessionId}
+                        actorUserId={actorUserId}
+                        canEdit={canEdit}
+                    />
+                </div>
+            );
+        }
+
+        if (visibleTab === "inventory" && showInventoryTab) {
+            return (
+                <div className="character-main-tab-panel active">
+                    <InventorySection
+                        character={character}
+                        sessionId={sessionId}
+                        actorUserId={actorUserId}
+                        canEdit={canEdit}
+                        isGM={isGM}
+                        isFloating={false}
+                    />
+                </div>
+            );
+        }
+
+        return (
+            <div className="character-notes-tab active">
+                <div className="character-tab-intro">
+                    <span className="character-tab-kicker">ATALHO PRIVADO</span>
+                    <p>
+                        As notas privadas da ficha ficam abertas por padrão aqui, sem
+                        perder o restante das notas já existentes.
+                    </p>
+                </div>
+
+                <LinkedNotes
+                    notes={character.linkedNotes || []}
+                    onAddNote={hook.handleAddNote}
+                    onDeleteNote={hook.handleDeleteNote}
+                    mentionEntities={mentionEntities}
+                    hideTitle={false}
+                    userId={actorUserId}
+                    userRole={isGM ? "GM" : "PLAYER"}
+                    defaultShowNotes={false}
+                    defaultShowPrivateNotes={true}
+                />
+            </div>
+        );
+    };
 
     return (
         <div
@@ -92,148 +205,118 @@ export function CharacterCard({
                     onCloseAddModal={() => hook.setShowAddConsequenceModal(false)}
                 />
 
-                <div className="character-main-tabs-shell">
-                    <div className="character-main-tabs-header">
+                <div
+                    className="character-main-tabs-shell"
+                    style={{
+                        border: "1px solid rgba(var(--accent-rgb), 0.18)",
+                        borderRadius: "22px",
+                        overflow: "hidden",
+                        background: "linear-gradient(180deg, rgba(15, 15, 15, 0.95), rgba(8, 8, 8, 0.98))",
+                        boxShadow: "inset 0 0 30px rgba(0, 0, 0, 0.22)",
+                    }}
+                >
+                    <div
+                        className="character-main-tabs-header"
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: showInventoryTab ? "repeat(4, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
+                            background: "rgba(var(--accent-rgb), 0.05)",
+                            borderBottom: "1px solid rgba(var(--accent-rgb), 0.16)",
+                        }}
+                    >
                         <button
-                            className={`character-main-tab-btn ${activeTab === "lore" ? "active" : ""}`}
+                            className={`character-main-tab-btn ${visibleTab === "lore" ? "active" : ""}`}
                             onClick={() => setActiveTab("lore")}
                             type="button"
+                            style={{
+                                background: visibleTab === "lore"
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                    : "transparent",
+                                border: "none",
+                                color: visibleTab === "lore" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                padding: "16px 14px",
+                                fontFamily: "var(--font-header)",
+                                fontSize: "0.72rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                boxShadow: visibleTab === "lore" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                            }}
                         >
                             LORE
                         </button>
                         <button
-                            className={`character-main-tab-btn ${activeTab === "powers" ? "active" : ""}`}
+                            className={`character-main-tab-btn ${visibleTab === "powers" ? "active" : ""}`}
                             onClick={() => setActiveTab("powers")}
                             type="button"
+                            style={{
+                                background: visibleTab === "powers"
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                    : "transparent",
+                                border: "none",
+                                color: visibleTab === "powers" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                padding: "16px 14px",
+                                fontFamily: "var(--font-header)",
+                                fontSize: "0.72rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                boxShadow: visibleTab === "powers" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                            }}
                         >
                             FAÇANHAS & MAGIA
                         </button>
                         {showInventoryTab && (
                             <button
-                                className={`character-main-tab-btn ${activeTab === "inventory" ? "active" : ""}`}
+                                className={`character-main-tab-btn ${visibleTab === "inventory" ? "active" : ""}`}
                                 onClick={() => setActiveTab("inventory")}
                                 type="button"
+                                style={{
+                                    background: visibleTab === "inventory"
+                                        ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                        : "transparent",
+                                    border: "none",
+                                    color: visibleTab === "inventory" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                    cursor: "pointer",
+                                    padding: "16px 14px",
+                                    fontFamily: "var(--font-header)",
+                                    fontSize: "0.72rem",
+                                    letterSpacing: "0.18em",
+                                    textTransform: "uppercase",
+                                    boxShadow: visibleTab === "inventory" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                                }}
                             >
                                 INVENTÁRIO
                             </button>
                         )}
                         <button
-                            className={`character-main-tab-btn ${activeTab === "notes" ? "active" : ""}`}
+                            className={`character-main-tab-btn ${visibleTab === "notes" ? "active" : ""}`}
                             onClick={() => setActiveTab("notes")}
                             type="button"
+                            style={{
+                                background: visibleTab === "notes"
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                    : "transparent",
+                                border: "none",
+                                color: visibleTab === "notes" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                padding: "16px 14px",
+                                fontFamily: "var(--font-header)",
+                                fontSize: "0.72rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                boxShadow: visibleTab === "notes" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                            }}
                         >
                             NOTAS PRIVADAS
                         </button>
                     </div>
 
-                    <div className="character-main-tab-body">
-                        <section
-                            className={`character-main-tab-panel ${activeTab === "lore" ? "active" : ""}`}
-                            aria-hidden={activeTab !== "lore"}
-                        >
-                            <div className="top-layout-grid lore-tab-layout">
-                                <CharacterPortrait
-                                    name={character.name}
-                                    imageUrl={character.imageUrl}
-                                    isGM={isGM}
-                                    isCompact={isCompact}
-                                    showName={false}
-                                    isEditingName={hook.isEditingName}
-                                    tempName={hook.tempName}
-                                    onTempNameChange={hook.setTempName}
-                                    onStartEditingName={hook.startEditingName}
-                                    onSaveName={hook.handleSaveName}
-                                    onCancelEditName={() => hook.setIsEditingName(false)}
-                                    onImageUpload={hook.handleImageUpload}
-                                    isImageProcessing={hook.isImageProcessing}
-                                />
-
-                                <CharacterLore
-                                    biography={character.biography || ""}
-                                    sheetAspects={character.sheetAspects}
-                                    religionName={mentionEntities?.find((e) => e.id === character.religionId)?.name}
-                                    canEdit={canEdit}
-                                    showLore={hook.showLore}
-                                    onToggleLore={() => hook.setShowLore(!hook.showLore)}
-                                    isEditingBio={hook.isEditingBio}
-                                    tempBio={hook.tempBio}
-                                    onTempBioChange={hook.setTempBio}
-                                    onStartEditingBio={hook.startEditingBio}
-                                    onSaveBio={hook.handleSaveBio}
-                                    onCancelBio={() => hook.setIsEditingBio(false)}
-                                    editingAspectIndex={hook.editingAspectIndex}
-                                    tempAspect={hook.tempAspect}
-                                    onTempAspectChange={hook.setTempAspect}
-                                    onStartEditingAspect={hook.startEditingAspect}
-                                    onSaveAspect={hook.handleSaveAspect}
-                                    onCancelAspect={() => hook.setEditingAspectIndex(null)}
-                                />
-                            </div>
-                        </section>
-
-                        <section
-                            className={`character-main-tab-panel character-powers-tab ${activeTab === "powers" ? "active" : ""}`}
-                            aria-hidden={activeTab !== "powers"}
-                        >
-                            <PowerTabsSection
-                                character={character}
-                                sessionId={sessionId}
-                                actorUserId={actorUserId}
-                                canEdit={canEdit}
-                                isGM={isGM}
-                                magicLevel={character.magicLevel || 0}
-                                onMagicLevelChange={hook.handleMagicLevelChange}
-                                includeInventory={false}
-                            />
-
-                            <SkillsSection
-                                character={character}
-                                sessionId={sessionId}
-                                actorUserId={actorUserId}
-                                canEdit={canEdit}
-                            />
-                        </section>
-
-                        {showInventoryTab && (
-                            <section
-                                className={`character-main-tab-panel character-inventory-tab ${activeTab === "inventory" ? "active" : ""}`}
-                                aria-hidden={activeTab !== "inventory"}
-                            >
-                                <InventorySection
-                                    character={character}
-                                    sessionId={sessionId}
-                                    actorUserId={actorUserId}
-                                    canEdit={canEdit}
-                                    isGM={isGM}
-                                    isFloating={false}
-                                />
-                            </section>
-                        )}
-
-                        <section
-                            className={`character-main-tab-panel character-notes-tab ${activeTab === "notes" ? "active" : ""}`}
-                            aria-hidden={activeTab !== "notes"}
-                        >
-                            <div className="character-tab-intro">
-                                <span className="character-tab-kicker">ATALHO PRIVADO</span>
-                                <p>
-                                    As notas privadas da ficha ficam abertas por padrão aqui, sem
-                                    perder o restante das notas já existentes.
-                                </p>
-                            </div>
-
-                            <LinkedNotes
-                                notes={character.linkedNotes || []}
-                                onAddNote={hook.handleAddNote}
-                                onDeleteNote={hook.handleDeleteNote}
-                                mentionEntities={mentionEntities}
-                                hideTitle={false}
-                                userId={actorUserId}
-                                userRole={isGM ? "GM" : "PLAYER"}
-                                defaultShowNotes={false}
-                                defaultShowPrivateNotes={true}
-                            />
-                        </section>
+                    <div
+                        className="character-main-tab-body"
+                        style={{ padding: "28px" }}
+                    >
+                        {renderActivePanel()}
                     </div>
                 </div>
 
