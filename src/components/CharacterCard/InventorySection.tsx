@@ -38,6 +38,15 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     );
     const hasStorageTabs = storageContainers.length > 0;
     const storageTabsKey = storageContainers.map((container) => container.id).join("|");
+    const createEmptyInventorySlot = (): Item => ({
+        id: uuidv4(),
+        name: "",
+        description: "",
+        bonus: 0,
+        quantityCurrent: 1,
+        quantityTotal: 1,
+        size: undefined,
+    });
 
     // Load persisted position
     useEffect(() => {
@@ -100,25 +109,9 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
 
         if (containerId) {
             const container = character.inventory.find(i => i.id === containerId);
-            currentItem = container?.contents?.[index] || {
-                id: uuidv4(),
-                name: "",
-                description: "",
-                bonus: 0,
-                quantityCurrent: 1,
-                quantityTotal: 1,
-                size: undefined
-            };
+            currentItem = container?.contents?.[index] || createEmptyInventorySlot();
         } else {
-            currentItem = character.inventory?.[index] || {
-                id: uuidv4(),
-                name: "",
-                description: "",
-                bonus: 0,
-                quantityCurrent: 1,
-                quantityTotal: 1,
-                size: undefined
-            };
+            currentItem = character.inventory?.[index] || createEmptyInventorySlot();
         }
         setInventoryModal({ index, item: { ...currentItem }, containerId });
     };
@@ -242,25 +235,23 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
 
     const handleAddMainInventorySlot = () => {
         if (!isGM) return;
+        const targetLength = mainInventorySlots + 1;
+        const nextInventory = Array.from({ length: targetLength }, (_, index) => (
+            character.inventory?.[index] || createEmptyInventorySlot()
+        ));
 
         globalEventStore.append({
             id: uuidv4(),
             sessionId,
             seq: 0,
-            type: "CHARACTER_INVENTORY_UPDATED",
+            type: "CHARACTER_UPDATED",
             actorUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: {
                 characterId: character.id,
-                item: {
-                    id: uuidv4(),
-                    name: "",
-                    description: "",
-                    bonus: 0,
-                    quantityCurrent: 1,
-                    quantityTotal: 1,
-                    size: undefined,
+                changes: {
+                    inventory: nextInventory,
                 }
             }
         } as any);
@@ -293,8 +284,28 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         onAddSlot?: () => void,
         options?: { showBackpack?: boolean }
     ) => (
-        <div className="inventory-subsection-header">
-            <div className="inventory-subsection-title">
+        <div
+            className="inventory-subsection-header"
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "8px",
+                padding: "0 4px",
+            }}
+        >
+            <div
+                className="inventory-subsection-title"
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontFamily: "var(--font-header)",
+                    fontSize: "0.66rem",
+                    letterSpacing: "0.18em",
+                    color: "rgba(var(--accent-rgb), 0.82)",
+                }}
+            >
                 {options?.showBackpack && <Backpack size={15} />}
                 <span>{title.toUpperCase()}</span>
             </div>
@@ -304,6 +315,24 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                     className="inventory-subsection-add"
                     onClick={onAddSlot}
                     title={`Adicionar slot em ${title.toLowerCase()}`}
+                    style={{
+                        appearance: "none",
+                        width: "26px",
+                        height: "26px",
+                        borderRadius: "999px",
+                        border: "1px solid rgba(var(--accent-rgb), 0.24)",
+                        background: "linear-gradient(180deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-rgb), 0.06))",
+                        color: "var(--accent-color)",
+                        fontFamily: "var(--font-header)",
+                        fontSize: "1rem",
+                        lineHeight: 1,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.22)",
+                        flexShrink: 0,
+                    }}
                 >
                     +
                 </button>

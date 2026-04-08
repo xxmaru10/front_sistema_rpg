@@ -129,10 +129,23 @@ export function CharacterVitality({
                 <div
                     className="track-label-row"
                     style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                        marginBottom: compactNodes ? "5px" : undefined,
                         color: theme.accent,
                     }}
                 >
-                    <div className="track-label-main">
+                    <div
+                        className="track-label-main"
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            minWidth: 0,
+                        }}
+                    >
                         <span className="symbol" style={{ color: theme.accent }}>{theme.symbol}</span>
                         <span>{theme.label}</span>
                     </div>
@@ -142,6 +155,25 @@ export function CharacterVitality({
                             className={`track-editor-toggle ${showTrackEditor ? "active" : ""}`}
                             onClick={() => setExpandedEditorTrack((current) => (current === track ? null : track))}
                             title={showTrackEditor ? `Fechar edição de ${theme.label.toLowerCase()}` : `Editar ${theme.label.toLowerCase()}`}
+                            style={{
+                                appearance: "none",
+                                width: "24px",
+                                height: "24px",
+                                borderRadius: "999px",
+                                border: `1px solid ${showTrackEditor ? theme.border : "rgba(255, 255, 255, 0.08)"}`,
+                                background: showTrackEditor
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-rgb), 0.07))"
+                                    : "rgba(255, 255, 255, 0.04)",
+                                color: showTrackEditor ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.2)",
+                                flexShrink: 0,
+                                fontSize: "0.82rem",
+                                lineHeight: 1,
+                            }}
                         >
                             ✎
                         </button>
