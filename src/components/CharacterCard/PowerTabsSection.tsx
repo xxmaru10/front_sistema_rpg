@@ -11,10 +11,20 @@ interface PowerTabsSectionProps {
     isGM: boolean;
     magicLevel: number;
     onMagicLevelChange: (level: number) => void;
+    includeInventory?: boolean;
 }
 
 
-export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, isGM, magicLevel, onMagicLevelChange }: PowerTabsSectionProps) {
+export function PowerTabsSection({
+    character,
+    sessionId,
+    actorUserId,
+    canEdit,
+    isGM,
+    magicLevel,
+    onMagicLevelChange,
+    includeInventory = true,
+}: PowerTabsSectionProps) {
 
     const hook = usePowerTabs({ character, sessionId, actorUserId });
 
@@ -28,13 +38,15 @@ export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, i
                 >
                     <Zap size={18} />
                 </button>
-                <button
-                    className={`power-tab-btn ${hook.activeTab === 'inventory' ? 'active' : ''}`}
-                    onClick={() => hook.setActiveTab('inventory')}
-                    title="INVENTÁRIO"
-                >
-                    <Briefcase size={18} />
-                </button>
+                {includeInventory && (
+                    <button
+                        className={`power-tab-btn ${hook.activeTab === 'inventory' ? 'active' : ''}`}
+                        onClick={() => hook.setActiveTab('inventory')}
+                        title="INVENTÁRIO"
+                    >
+                        <Briefcase size={18} />
+                    </button>
+                )}
                 <button
                     className={`power-tab-btn ${hook.activeTab === 'spells' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('spells')}
@@ -105,7 +117,7 @@ export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, i
                     </div>
                 )}
 
-                {hook.activeTab === 'inventory' && (
+                {includeInventory && hook.activeTab === 'inventory' && (
                     <InventorySection 
                         character={character}
                         sessionId={sessionId}

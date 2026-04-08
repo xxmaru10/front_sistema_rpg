@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-08 (story-32/arena-ui-polish/final)
+last_updated: 2026-04-08 (story-33/ficha-resumo-tabs/final)
 status: ativo
 ---
 
@@ -70,6 +70,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Malha de Voz Hardened (Story 30 — follow-up) | `VoiceChatManager` eliminou ping-pong de `voice-join` no answerer (agora espera passiva + fallback único), normalizou chaves de peer por `userId` para evitar duplicidade por casing, adicionou throttling de `voice-join`, timeout de segurança para conexões presas e reconexão dirigida por peer (sem broadcast em cascata). Ajustou bitrate Opus para 64/56/52kbps (malha baixa/média/alta), priorização de encoding e desativação de DTX para reduzir cortes perceptíveis de fala. `setMicDevice` passou a evitar automaticamente input Bluetooth HFP quando houver alternativa, reduzindo degradação em headsets wireless. `screen-share-manager` reduziu bitrate de vídeo para preservar uplink da call e priorizou bitrate de áudio da transmissão (128→64kbps adaptativo). `useSessionScreenControl`, `TransmissionPlayer` e `useSessionUIState` subiram fallback de volume da transmissão para 100% e reduziram reconnect automático desnecessário quando não há stream ativa. | 2026-04-07 |
 | Cards de Combate com Impulso e Estresse Configurável (Story 32) | `Character` ganhou `impulseArrows` e `stressValues` por trilha. Projeções normalizam personagens legados, `STRESS_TRACK_EXPANDED` aceita `value` opcional, novo evento `STRESS_BOX_VALUE_UPDATED` permite edição granular e `gameLogic.calculateAbsorption` passou a absorver dano pelo valor real de cada caixa. UI de combate exibe setas de impulso (glow branco) com controle GM-only e header reorganizado (nome no topo, destino + impulso abaixo). | 2026-04-08 |
 | Polimento Visual do Card da Arena (Story 32 — follow-up) | Trilha de estresse no card da Arena migrou para iconografia sem emoji (SVG `Brain` e `Dumbbell`), com espaçamento mais compacto entre rótulo e caixas para leitura rápida. Seções de extras foram diferenciadas por semântica cromática: Façanhas em azul (alinhadas ao botão de rolagem) e Magias em roxo, mantendo contraste e hierarquia visual. | 2026-04-08 |
+| Reestruturação da Ficha com Resumo e Abas (Story 33) | `CharacterCard` foi reorganizado em um bloco superior de Resumo sempre visível e um segundo nível de abas para Lore, Façanhas/Magia, Inventário e Notas Privadas. A implementação preserva a lógica já existente de edição/eventos, reaproveitando os mesmos componentes e mantendo notas gerais acessíveis dentro do atalho privado da ficha. | 2026-04-08 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -86,6 +87,12 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Regra de absorção alinhada ao domínio**: `calculateAbsorption` passou a consumir capacidade real da caixa, mantendo marcação de caixas por índice e sem alterar contratos de consequência.
 - **Permissão GM-only reforçada**: controles de setas e edição de valor de estresse foram encapsulados em handlers com guarda de papel (`isGM`) e emissão de eventos com `actorUserId` normalizado.
 - **Polimento visual contextual da Arena**: card de combate recebeu iconografia vetorial (sem emoji) para trilhas de estresse e separação cromática explícita entre Façanhas (azul) e Magias (roxo), preservando o modelo de eventos e alterando apenas camada de apresentação.
+
+## Registro de Decisões (Story 33)
+- **Resumo sempre visível**: a ficha passou a ter um bloco superior permanente para identidade rápida do personagem, concentrando nome, retrato circular, estresse, consequências, destino e perícias treinadas sem alterar handlers ou eventos já existentes.
+- **Abas de segundo nível na ficha**: Lore, Façanhas/Magia, Inventário e Notas foram separados em abas principais, mas continuam montados no React para preservar estado local ao alternar entre elas.
+- **Paridade funcional por reaproveitamento**: `CharacterVitality`, `CharacterConsequences`, `CharacterLore`, `PowerTabsSection`, `SkillsSection`, `InventorySection` e `LinkedNotes` foram mantidos como fontes de comportamento, mudando apenas encaixe visual e navegação.
+- **Atalho privado sem perda de notas antigas**: a aba de Notas Privadas abre as notas privadas por padrão, mas mantém acesso às notas gerais já existentes da ficha para cumprir a exigência de não remoção de funcionalidade.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
