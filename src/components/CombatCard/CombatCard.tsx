@@ -23,17 +23,50 @@ interface CombatCardProps {
     isCurrentTurn?: boolean;
     isLinkedCharacter?: boolean;
     onToggleDiceRoller?: () => void;
+    displayMode?: "expanded" | "compact";
+    onToggleExpanded?: () => void;
+    avatarSide?: "left" | "right";
 }
 
-export function CombatCard({ 
-    character, 
-    sessionId, 
-    actorUserId, 
-    isGM = false, 
-    onRemove, 
-    isCurrentTurn = false, 
-    isLinkedCharacter = false, 
-    onToggleDiceRoller 
+function getPortraitInitials(name: string) {
+    const parts = name
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2);
+
+    if (parts.length === 0) return "??";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
+function isThreatCombatant(character: Character) {
+    return character.arenaSide === "THREAT" || (character.isNPC && character.arenaSide !== "HERO");
+}
+
+function getCombatCardThemeClass(character: Character, isOwner: boolean) {
+    const isNpcHero = character.isNPC && character.arenaSide === "HERO";
+    const isThreat = isThreatCombatant(character);
+
+    if (character.isHazard) return "hazard-card";
+    if (isThreat) return "threat-card";
+    if (isNpcHero) return "npc-hero-card";
+    if (isOwner) return "own-hero-card";
+    return "hero-card";
+}
+
+export function CombatCard({
+    character,
+    sessionId,
+    actorUserId,
+    isGM = false,
+    onRemove,
+    isCurrentTurn = false,
+    isLinkedCharacter = false,
+    onToggleDiceRoller,
+    displayMode = "expanded",
+    onToggleExpanded,
+    avatarSide = "left",
 }: CombatCardProps) {
     const isOwner = (actorUserId && character.ownerUserId && actorUserId.trim().toLowerCase() === character.ownerUserId.trim().toLowerCase()) || isLinkedCharacter;
     const canEditSelf = isGM || isOwner;
@@ -52,11 +85,11 @@ export function CombatCard({
         handleImpulseArrowsChange,
     } = useCombatCard({ character, sessionId, actorUserId, isGM });
 
-    const isNpcHero = character.isNPC && character.arenaSide === 'HERO';
-    const isThreat = character.arenaSide === 'THREAT' || (character.isNPC && character.arenaSide !== 'HERO');
     const isHazard = character.isHazard;
-
-    const cardThemeClass = isHazard ? 'hazard-card' : isThreat ? 'threat-card' : isOwner ? 'own-hero-card' : 'hero-card';
+    const isThreat = isThreatCombatant(character);
+    const isRestrictedThreatView = isThreat && !isGM && !isOwner;
+    const cardThemeClass = getCombatCardThemeClass(character, isOwner);
+    const portraitInitials = getPortraitInitials(character.name);
 
     if (isHazard) {
         return (
@@ -74,14 +107,37 @@ export function CombatCard({
         );
     }
 
+    if (displayMode === "compact") {
+        return (
+            <>
+                <button
+                    type="button"
+                    className={`combat-avatar-shell ${cardThemeClass} ${avatarSide === "right" ? "side-right" : "side-left"} ${isCurrentTurn ? "active-turn-avatar" : ""}`}
+                    onClick={onToggleExpanded}
+                    title={`Abrir card de ${character.name}`}
+                    aria-label={`Abrir card de ${character.name}`}
+                >
+                    <span className="combat-avatar-halo" aria-hidden="true"></span>
+                    <span className="combat-portrait-avatar">
+                        {character.imageUrl ? (
+                            <img src={character.imageUrl} alt="" />
+                        ) : (
+                            <span className="combat-portrait-fallback">{portraitInitials}</span>
+                        )}
+                    </span>
+                </button>
+
+                <CombatCardStyles isGM={isGM} />
+            </>
+        );
+    }
+
     return (
         <div
-            className={`combat-card animate-reveal ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''} ${isCollapsed ? 'collapsed' : ''} ${(!isGM && !isOwner && isCollapsed) ? 'dimmed' : ''}`}
+            className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
         >
-            <CombatHeader 
+            <CombatHeader
                 character={character}
-                isCollapsed={isCollapsed}
-                setIsCollapsed={setIsCollapsed}
                 isOwner={isOwner}
                 isGM={isGM}
                 canEditSelf={canEditSelf}
@@ -90,9 +146,14 @@ export function CombatCard({
                 onRemove={onRemove}
                 handleFPChange={handleFPChange}
                 handleImpulseArrowsChange={handleImpulseArrowsChange}
+                onToggleExpanded={onToggleExpanded}
+                avatarSide={avatarSide}
+                themeClass={cardThemeClass}
+                showPortrait={isRestrictedThreatView}
+                portraitInitials={portraitInitials}
             />
 
-            {!isCollapsed && (
+            {!isRestrictedThreatView && (
                 <>
                     <CombatAspects character={character} />
 
@@ -117,7 +178,7 @@ export function CombatCard({
             )}
 
             {/* Modal */}
-            {consequenceModal && (
+            {!isRestrictedThreatView && consequenceModal && (
                 <ConsequenceModal
                     isOpen={!!consequenceModal}
                     initialText={consequenceModal.current}

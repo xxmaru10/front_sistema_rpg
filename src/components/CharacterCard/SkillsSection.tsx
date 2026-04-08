@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Character, DEFAULT_SKILLS } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
+import { getSkillPalette } from "./skillPalette";
 
 interface SkillsSectionProps {
     character: Character;
@@ -100,23 +101,45 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
                                         const isExpanded = expandedSkills.has(skill);
                                         const debuff = getSkillDebuff(skill);
                                         const isNegative = level < 0;
+                                        const palette = getSkillPalette(level);
+                                        const displayedValue = `${level >= 0 ? "+" : ""}${level}`;
 
                                         return (
-                                            <div key={skill} className={`skill-row ${level > 0 ? "has-points" : ""} level-${level} ${debuff > 0 ? "has-debuff" : ""} ${isNegative ? "is-negative" : ""}`}>
-                                                <span className="skill-name">{skill.toUpperCase()}</span>
+                                            <div
+                                                key={skill}
+                                                className={`skill-row ${level > 0 ? "has-points" : ""} level-${level} ${debuff > 0 ? "has-debuff" : ""} ${isNegative ? "is-negative" : ""}`}
+                                                style={{
+                                                    border: `1px solid ${palette.borderColor}`,
+                                                    background: palette.background,
+                                                    boxShadow: palette.shadow,
+                                                }}
+                                            >
+                                                <span
+                                                    className="skill-name"
+                                                    style={{ color: palette.labelColor }}
+                                                >
+                                                    {skill.toUpperCase()}
+                                                </span>
                                                 {canEdit ? (
                                                     <div className="skill-controls">
-                                                        <span className="skill-value">{level >= 0 ? "+" : ""}{level}</span>
+                                                        <span
+                                                            className="skill-value"
+                                                            style={{ color: palette.valueColor }}
+                                                        >
+                                                            {displayedValue}
+                                                        </span>
                                                         {debuff > 0 && <span className="skill-debuff">(-{debuff})</span>}
                                                         <button
                                                             onClick={() => handleSkillChange(skill, level, -1)}
                                                             className="skill-btn"
+                                                            style={{ color: palette.valueColor, borderColor: palette.borderColor }}
                                                         >
                                                             ▼
                                                         </button>
                                                         <button
                                                             onClick={() => handleSkillChange(skill, level, 1)}
                                                             className="skill-btn"
+                                                            style={{ color: palette.valueColor, borderColor: palette.borderColor }}
                                                         >
                                                             ▲
                                                         </button>
@@ -164,6 +187,7 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
                                                                 className="add-resource-btn"
                                                                 title={resource ? "Abrir Recurso" : "Adicionar Recurso"}
                                                                 onClick={() => toggleSkillResource(skill)}
+                                                                style={{ color: palette.valueColor, borderColor: palette.borderColor }}
                                                             >
                                                                 +
                                                             </button>
@@ -171,7 +195,12 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
                                                     </div>
                                                 ) : (
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <span className="skill-value">+{level}</span>
+                                                        <span
+                                                            className="skill-value"
+                                                            style={{ color: palette.valueColor }}
+                                                        >
+                                                            {displayedValue}
+                                                        </span>
                                                         {debuff > 0 && <span className="skill-debuff">(-{debuff})</span>}
 
                                                         {/* Resource UI for Non-Editors (e.g. Players viewing their locked sheet?) */}
@@ -219,6 +248,7 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
                                                                 className="add-resource-btn"
                                                                 title={resource ? "Abrir Recurso" : "Adicionar Recurso"}
                                                                 onClick={() => toggleSkillResource(skill)}
+                                                                style={{ color: palette.valueColor, borderColor: palette.borderColor }}
                                                             >
                                                                 +
                                                             </button>

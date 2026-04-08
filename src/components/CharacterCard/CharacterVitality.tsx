@@ -12,6 +12,8 @@ interface CharacterVitalityProps {
     isNPC: boolean;
     isGM: boolean;
     isCompact: boolean;
+    compactNodes?: boolean;
+    hideFateReserve?: boolean;
     canEditStressOrFP: boolean;
     onStressToggle: (track: "PHYSICAL" | "MENTAL", index: number, current: boolean) => void;
     onAddStressBox: (track: "PHYSICAL" | "MENTAL", value?: number) => void;
@@ -33,6 +35,8 @@ export function CharacterVitality({
     isNPC,
     isGM,
     isCompact,
+    compactNodes = false,
+    hideFateReserve = false,
     canEditStressOrFP,
     onStressToggle,
     onAddStressBox,
@@ -46,6 +50,29 @@ export function CharacterVitality({
     const [newPhysicalValue, setNewPhysicalValue] = useState("1");
     const [newMentalValue, setNewMentalValue] = useState("1");
     const [draftValues, setDraftValues] = useState<Record<string, string>>({});
+    const [expandedEditorTrack, setExpandedEditorTrack] = useState<"PHYSICAL" | "MENTAL" | null>(null);
+    const trackThemes = {
+        PHYSICAL: {
+            label: "FÍSICO",
+            symbol: "🗡",
+            accent: "#d4a269",
+            border: "rgba(212, 162, 105, 0.18)",
+            background: "linear-gradient(180deg, rgba(212, 162, 105, 0.05), rgba(255, 255, 255, 0.015))",
+            nodeBackground: "linear-gradient(180deg, rgba(212, 162, 105, 0.08), rgba(12, 12, 12, 0.96))",
+            nodeActiveBackground: "linear-gradient(180deg, rgba(233, 184, 108, 0.82), rgba(156, 100, 28, 0.92))",
+            shadow: "rgba(212, 162, 105, 0.1)",
+        },
+        MENTAL: {
+            label: "MENTAL",
+            symbol: "🧠",
+            accent: "#d79ab9",
+            border: "rgba(215, 154, 185, 0.18)",
+            background: "linear-gradient(180deg, rgba(215, 154, 185, 0.05), rgba(255, 255, 255, 0.015))",
+            nodeBackground: "linear-gradient(180deg, rgba(215, 154, 185, 0.08), rgba(12, 12, 12, 0.96))",
+            nodeActiveBackground: "linear-gradient(180deg, rgba(238, 186, 212, 0.82), rgba(160, 83, 120, 0.92))",
+            shadow: "rgba(215, 154, 185, 0.1)",
+        },
+    } as const;
 
     const getDraftKey = (track: "PHYSICAL" | "MENTAL", index: number) => `${track}-${index}`;
     const getDraftValue = (track: "PHYSICAL" | "MENTAL", index: number, fallback: number) => {
@@ -77,128 +104,152 @@ export function CharacterVitality({
         if (track === "MENTAL") setNewMentalValue(String(next));
     };
 
+    const renderTrack = (
+        track: "PHYSICAL" | "MENTAL",
+        boxes: boolean[],
+        values: number[],
+        nextValue: string,
+        setNextValue: (value: string) => void,
+    ) => {
+        const theme = trackThemes[track];
+        const showTrackEditorToggle = isGM && compactNodes && !isCompact;
+        const showTrackEditor = isGM && !isCompact && (!showTrackEditorToggle || expandedEditorTrack === track);
 
-    return (
-        <div className="char-core-info">
-            <div className="header-stress-tracks">
-                {/* Physical Track */}
-                <div className="matrix-track-header">
-                    <div className="track-label-row">
-                        <span className="symbol">🜃</span>
-                        <span>FÍSICO</span>
+        return (
+            <div
+                className="matrix-track-header"
+                style={compactNodes ? {
+                    padding: "7px 9px 9px",
+                    borderRadius: "14px",
+                    border: `1px solid ${theme.border}`,
+                    background: theme.background,
+                    boxShadow: "inset 0 0 14px rgba(0, 0, 0, 0.18)",
+                } : undefined}
+            >
+                <div
+                    className="track-label-row"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                        marginBottom: compactNodes ? "5px" : undefined,
+                        color: theme.accent,
+                    }}
+                >
+                    <div
+                        className="track-label-main"
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            minWidth: 0,
+                        }}
+                    >
+                        <span className="symbol" style={{ color: theme.accent }}>{theme.symbol}</span>
+                        <span>{theme.label}</span>
                     </div>
-                    <div className="node-array-header">
-                        {stressPhysical.map((box, i) => (
-                            <div key={i} className="integrity-node-wrap">
-                                <button
-                                    className={`integrity-node-header ${box ? "ruptured" : ""} ${isCompact ? "mini" : ""}`}
-                                    onClick={() => canEditStressOrFP && onStressToggle("PHYSICAL", i, box)}
-                                    disabled={!canEditStressOrFP}
-                                >
-                                    <span className="node-index">{getResolvedValue(stressValuesPhysical, i)}</span>
-                                    <div className="node-glow" />
-                                </button>
-                                {isGM && !isCompact && (
-                                    <input
-                                        className="stress-value-editor"
-                                        type="number"
-                                        min={1}
-                                        max={1000}
-                                        value={getDraftValue("PHYSICAL", i, getResolvedValue(stressValuesPhysical, i))}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onChange={(e) => setDraftValue("PHYSICAL", i, e.target.value)}
-                                        onBlur={() => commitDraftValue("PHYSICAL", i, getResolvedValue(stressValuesPhysical, i))}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                (e.currentTarget as HTMLInputElement).blur();
-                                            }
-                                        }}
-                                    />
-                                )}
-                            </div>
-                        ))}
-                        {isGM && !isCompact && (
-                            <div className="header-track-controls">
-                                <button className="h-add-btn" onClick={() => onRemoveStressBox("PHYSICAL")} title="Remover última caixa física">-</button>
-                                <button className="h-add-btn" onClick={() => handleAddStress("PHYSICAL")} title="Adicionar caixa física">+</button>
-                                <div className="stress-next-value-group">
-                                    <span className="stress-next-value-label">NOVA</span>
-                                    <input
-                                        className="h-value-input"
-                                        type="number"
-                                        min={1}
-                                        max={1000}
-                                        value={newPhysicalValue}
-                                        onChange={(e) => setNewPhysicalValue(e.target.value)}
-                                        title="Valor da próxima caixa física"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    {showTrackEditorToggle && (
+                        <button
+                            type="button"
+                            className={`track-editor-toggle ${showTrackEditor ? "active" : ""}`}
+                            onClick={() => setExpandedEditorTrack((current) => (current === track ? null : track))}
+                            title={showTrackEditor ? `Fechar edição de ${theme.label.toLowerCase()}` : `Editar ${theme.label.toLowerCase()}`}
+                            style={{
+                                appearance: "none",
+                                width: "24px",
+                                height: "24px",
+                                borderRadius: "999px",
+                                border: `1px solid ${showTrackEditor ? theme.border : "rgba(255, 255, 255, 0.08)"}`,
+                                background: showTrackEditor
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-rgb), 0.07))"
+                                    : "rgba(255, 255, 255, 0.04)",
+                                color: showTrackEditor ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.2)",
+                                flexShrink: 0,
+                                fontSize: "0.82rem",
+                                lineHeight: 1,
+                            }}
+                        >
+                            ✎
+                        </button>
+                    )}
                 </div>
-
-                {/* Mental Track */}
-                <div className="matrix-track-header">
-                    <div className="track-label-row">
-                        <span className="symbol">🜁</span>
-                        <span>MENTAL</span>
-                    </div>
-                    <div className="node-array-header">
-                        {stressMental.map((box, i) => (
-                            <div key={i} className="integrity-node-wrap">
-                                <button
-                                    className={`integrity-node-header ${box ? "ruptured" : ""} ${isCompact ? "mini" : ""}`}
-                                    onClick={() => canEditStressOrFP && onStressToggle("MENTAL", i, box)}
-                                    disabled={!canEditStressOrFP}
-                                >
-                                    <span className="node-index">{getResolvedValue(stressValuesMental, i)}</span>
-                                    <div className="node-glow" />
-                                </button>
-                                {isGM && !isCompact && (
-                                    <input
-                                        className="stress-value-editor"
-                                        type="number"
-                                        min={1}
-                                        max={1000}
-                                        value={getDraftValue("MENTAL", i, getResolvedValue(stressValuesMental, i))}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onChange={(e) => setDraftValue("MENTAL", i, e.target.value)}
-                                        onBlur={() => commitDraftValue("MENTAL", i, getResolvedValue(stressValuesMental, i))}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                (e.currentTarget as HTMLInputElement).blur();
-                                            }
-                                        }}
-                                    />
-                                )}
+                <div className="node-array-header">
+                    {boxes.map((box, i) => (
+                        <div key={i} className="integrity-node-wrap">
+                            <button
+                                className={`integrity-node-header ${box ? "ruptured" : ""} ${isCompact ? "mini" : ""}`}
+                                onClick={() => canEditStressOrFP && onStressToggle(track, i, box)}
+                                disabled={!canEditStressOrFP}
+                                style={{
+                                    borderColor: theme.border,
+                                    background: box ? theme.nodeActiveBackground : theme.nodeBackground,
+                                    boxShadow: box
+                                        ? `0 0 14px ${theme.shadow}`
+                                        : `inset 0 0 10px rgba(0, 0, 0, 0.42), 0 0 0 1px ${theme.border}`,
+                                    color: box ? "#1a1202" : "#fff3d5",
+                                }}
+                            >
+                                <span className="node-index">{getResolvedValue(values, i)}</span>
+                                <div className="node-glow" />
+                            </button>
+                            {showTrackEditor && (
+                                <input
+                                    className="stress-value-editor"
+                                    type="number"
+                                    min={1}
+                                    max={1000}
+                                    value={getDraftValue(track, i, getResolvedValue(values, i))}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setDraftValue(track, i, e.target.value)}
+                                    onBlur={() => commitDraftValue(track, i, getResolvedValue(values, i))}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            (e.currentTarget as HTMLInputElement).blur();
+                                        }
+                                    }}
+                                />
+                            )}
+                        </div>
+                    ))}
+                    {showTrackEditor && (
+                        <div className="header-track-controls">
+                            <button className="h-add-btn" onClick={() => onRemoveStressBox(track)} title={`Remover última caixa ${track === "PHYSICAL" ? "física" : "mental"}`}>-</button>
+                            <button className="h-add-btn" onClick={() => handleAddStress(track)} title={`Adicionar caixa ${track === "PHYSICAL" ? "física" : "mental"}`}>+</button>
+                            <div className="stress-next-value-group">
+                                <span className="stress-next-value-label">NOVA</span>
+                                <input
+                                    className="h-value-input"
+                                    type="number"
+                                    min={1}
+                                    max={1000}
+                                    value={nextValue}
+                                    onChange={(e) => setNextValue(e.target.value)}
+                                    title={`Valor da próxima caixa ${track === "PHYSICAL" ? "física" : "mental"}`}
+                                />
                             </div>
-                        ))}
-                        {isGM && !isCompact && (
-                            <div className="header-track-controls">
-                                <button className="h-add-btn" onClick={() => onRemoveStressBox("MENTAL")} title="Remover última caixa mental">-</button>
-                                <button className="h-add-btn" onClick={() => handleAddStress("MENTAL")} title="Adicionar caixa mental">+</button>
-                                <div className="stress-next-value-group">
-                                    <span className="stress-next-value-label">NOVA</span>
-                                    <input
-                                        className="h-value-input"
-                                        type="number"
-                                        min={1}
-                                        max={1000}
-                                        value={newMentalValue}
-                                        onChange={(e) => setNewMentalValue(e.target.value)}
-                                        title="Valor da próxima caixa mental"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
+        );
+    };
 
-            {!(isNPC && !isGM) && (
+
+    return (
+        <div className={`char-core-info${compactNodes ? " summary-compact" : ""}`}>
+            <div className="header-stress-tracks">
+                {renderTrack("PHYSICAL", stressPhysical, stressValuesPhysical, newPhysicalValue, setNewPhysicalValue)}
+                {renderTrack("MENTAL", stressMental, stressValuesMental, newMentalValue, setNewMentalValue)}
+            </div>
+
+            {!(isNPC && !isGM) && !hideFateReserve && (
                 <div className="vitality-resources-row single">
                     <div className="fate-reserve">
                         <div className="reserve-label">{isCompact ? "DESTINO" : "PONTOS DE DESTINO"}</div>
@@ -227,6 +278,106 @@ export function CharacterVitality({
             <style jsx>{`
                 .char-core-info .integrity-node-wrap {
                     gap: 6px;
+                }
+
+                .char-core-info.summary-compact .header-stress-tracks {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 8px 10px;
+                    align-items: start;
+                }
+
+                .char-core-info.summary-compact .track-label-row {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    margin-bottom: 5px;
+                }
+
+                .char-core-info.summary-compact .track-label-main {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    min-width: 0;
+                }
+
+                .char-core-info.summary-compact .node-array-header {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: flex-start;
+                    gap: 6px;
+                }
+
+                .char-core-info.summary-compact .integrity-node-wrap {
+                    gap: 4px;
+                }
+
+                .char-core-info.summary-compact .integrity-node-header {
+                    width: 28px;
+                    min-width: 28px;
+                    height: 28px;
+                    padding: 0;
+                }
+
+                .char-core-info.summary-compact .integrity-node-header .node-index {
+                    font-size: 0.78rem;
+                }
+
+                .char-core-info.summary-compact .track-label-row span {
+                    font-size: 0.64rem;
+                    letter-spacing: 0.15em;
+                }
+
+                .char-core-info.summary-compact .track-label-row .symbol {
+                    font-size: 0.8rem;
+                    line-height: 1;
+                }
+
+                .char-core-info.summary-compact .track-editor-toggle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 999px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    background: rgba(255, 255, 255, 0.03);
+                    color: rgba(255, 255, 255, 0.66);
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .char-core-info.summary-compact .track-editor-toggle:hover,
+                .char-core-info.summary-compact .track-editor-toggle.active {
+                    border-color: rgba(var(--accent-rgb), 0.22);
+                    background: rgba(var(--accent-rgb), 0.08);
+                    color: var(--accent-color);
+                }
+
+                .char-core-info.summary-compact .header-track-controls {
+                    width: 100%;
+                    gap: 6px;
+                    margin-left: 0;
+                    margin-top: 2px;
+                    padding: 4px 6px;
+                    justify-content: flex-start;
+                }
+
+                .char-core-info.summary-compact .header-track-controls .h-add-btn {
+                    width: 20px;
+                    height: 20px;
+                    font-size: 0.78rem;
+                }
+
+                .char-core-info.summary-compact .h-value-input {
+                    width: 46px;
+                    height: 20px;
+                    font-size: 0.62rem;
+                }
+
+                .char-core-info.summary-compact .stress-value-editor {
+                    width: 30px;
+                    height: 15px;
+                    font-size: 0.55rem;
+                    border-radius: 3px;
                 }
 
                 .char-core-info .stress-value-editor,
@@ -334,6 +485,12 @@ export function CharacterVitality({
                 @media (max-width: 980px) {
                     .char-core-info .header-track-controls {
                         margin-left: 0;
+                    }
+                }
+
+                @media (max-width: 720px) {
+                    .char-core-info.summary-compact .header-stress-tracks {
+                        grid-template-columns: 1fr;
                     }
                 }
             `}</style>

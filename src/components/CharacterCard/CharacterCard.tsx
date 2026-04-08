@@ -1,16 +1,16 @@
 "use client";
 
-import { Character } from "@/types/domain";
-import { LinkedNotes } from "@/features/session-notes/components/LinkedNotes";
+import { useState } from "react";
+import { Character, SessionState } from "@/types/domain";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
 import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { CharacterLore } from "./CharacterLore";
-import { CharacterVitality } from "./CharacterVitality";
-import { CharacterConsequences } from "./CharacterConsequences";
 import { PowerTabsSection } from "./PowerTabsSection";
+import { CharacterSummarySection } from "./CharacterSummarySection";
+import { CharacterPrivateNotesPanel } from "./CharacterPrivateNotesPanel";
 
 interface CharacterCardProps {
     character: Character;
@@ -21,7 +21,11 @@ interface CharacterCardProps {
     isLinkedCharacter?: boolean;
     mentionEntities?: any[];
     hideInventory?: boolean;
+    sessionState?: SessionState;
+    userRole?: "GM" | "PLAYER";
 }
+
+type CharacterCardTab = "lore" | "powers" | "inventory" | "notes";
 
 export function CharacterCard({
     character,
@@ -32,7 +36,11 @@ export function CharacterCard({
     isLinkedCharacter = false,
     mentionEntities = [],
     hideInventory = false,
+    sessionState,
+    userRole,
 }: CharacterCardProps) {
+    const [activeTab, setActiveTab] = useState<CharacterCardTab>("lore");
+
     const isOwner =
         (actorUserId &&
             character.ownerUserId &&
@@ -51,20 +59,23 @@ export function CharacterCard({
         canEditStressOrFP,
     });
 
-    return (
-        <div
-            className={`char-artifact tarot-card ${
-                character.isNPC ? "threat-arcano" : "operative-arcano"
-            } ${isCompact ? "compact" : ""}`}
-        >
+    const showInventoryTab = !hideInventory;
+    const resolveActiveTab = () => {
+        if (activeTab === "inventory" && !showInventoryTab) return "lore";
+        return activeTab;
+    };
+    const visibleTab = resolveActiveTab();
 
-            <div className="tarot-inner">
-                <div className="top-layout-grid">
+    const renderActivePanel = () => {
+        if (visibleTab === "lore") {
+            return (
+                <div className="top-layout-grid lore-tab-layout">
                     <CharacterPortrait
                         name={character.name}
                         imageUrl={character.imageUrl}
                         isGM={isGM}
                         isCompact={isCompact}
+                        showName={false}
                         isEditingName={hook.isEditingName}
                         tempName={hook.tempName}
                         onTempNameChange={hook.setTempName}
@@ -78,7 +89,7 @@ export function CharacterCard({
                     <CharacterLore
                         biography={character.biography || ""}
                         sheetAspects={character.sheetAspects}
-                        religionName={mentionEntities?.find(e => e.id === character.religionId)?.name}
+                        religionName={mentionEntities?.find((e) => e.id === character.religionId)?.name}
                         canEdit={canEdit}
                         showLore={hook.showLore}
                         onToggleLore={() => hook.setShowLore(!hook.showLore)}
@@ -96,72 +107,215 @@ export function CharacterCard({
                         onCancelAspect={() => hook.setEditingAspectIndex(null)}
                     />
                 </div>
+            );
+        }
 
-                <CharacterVitality
-                    stressPhysical={character.stress.physical}
-                    stressMental={character.stress.mental}
-                    stressValuesPhysical={character.stressValues?.physical || []}
-                    stressValuesMental={character.stressValues?.mental || []}
-                    fatePoints={character.fatePoints}
-                    refresh={character.refresh ?? 3}
-                    isNPC={!!character.isNPC}
+        if (visibleTab === "powers") {
+            return (
+                <div className="character-powers-tab active">
+                    <PowerTabsSection
+                        character={character}
+                        sessionId={sessionId}
+                        actorUserId={actorUserId}
+                        canEdit={canEdit}
+                        isGM={isGM}
+                        magicLevel={character.magicLevel || 0}
+                        onMagicLevelChange={hook.handleMagicLevelChange}
+                        includeInventory={false}
+                    />
+
+                    <SkillsSection
+                        character={character}
+                        sessionId={sessionId}
+                        actorUserId={actorUserId}
+                        canEdit={canEdit}
+                    />
+                </div>
+            );
+        }
+
+        if (visibleTab === "inventory" && showInventoryTab) {
+            return (
+                <div className="character-main-tab-panel active">
+                    <InventorySection
+                        character={character}
+                        sessionId={sessionId}
+                        actorUserId={actorUserId}
+                        canEdit={canEdit}
+                        isGM={isGM}
+                        isFloating={false}
+                    />
+                </div>
+            );
+        }
+
+        return (
+            <div className="character-notes-tab active">
+                {sessionState ? (
+                    <CharacterPrivateNotesPanel
+                        sessionId={sessionId}
+                        userId={actorUserId}
+                        userRole={userRole || (isGM ? "GM" : "PLAYER")}
+                        state={sessionState}
+                        mentionEntities={mentionEntities}
+                    />
+                ) : (
+                    <div className="character-tab-intro">
+                        <span className="character-tab-kicker">NOTAS PRIVADAS</span>
+                        <p>As notas da sessão não estão disponíveis neste contexto da ficha.</p>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div
+            className={`char-artifact tarot-card ${
+                character.isNPC ? "threat-arcano" : "operative-arcano"
+            } ${isCompact ? "compact" : ""}`}
+        >
+            <div className="tarot-inner">
+                <CharacterSummarySection
+                    character={character}
                     isGM={isGM}
                     isCompact={isCompact}
                     canEditStressOrFP={canEditStressOrFP}
+                    isEditingName={hook.isEditingName}
+                    tempName={hook.tempName}
+                    onTempNameChange={hook.setTempName}
+                    onStartEditingName={hook.startEditingName}
+                    onSaveName={hook.handleSaveName}
+                    onCancelEditName={() => hook.setIsEditingName(false)}
                     onStressToggle={hook.handleStressToggle}
                     onAddStressBox={hook.handleAddStressBox}
                     onRemoveStressBox={hook.handleRemoveStressBox}
                     onUpdateStressBoxValue={hook.handleUpdateStressBoxValue}
                     onFPChange={hook.handleFPChange}
                     onRefreshChange={hook.handleRefreshChange}
+                    consequenceModal={hook.consequenceModal}
+                    showAddConsequenceModal={hook.showAddConsequenceModal}
+                    onConsequenceClick={(slot) => hook.handleConsequenceChange(slot as any, null)}
+                    onSaveConsequence={hook.handleSaveConsequence}
+                    onCancelConsequenceModal={() => hook.setConsequenceModal(null)}
+                    onDeleteConsequence={hook.handleDeleteConsequence}
+                    onAddConsequence={hook.handleAddConsequence}
+                    onOpenAddModal={() => hook.setShowAddConsequenceModal(true)}
+                    onCloseAddModal={() => hook.setShowAddConsequenceModal(false)}
                 />
 
-
-                <div className="lower-content-grid">
-                    <div className="lower-col-left">
-                        <CharacterConsequences
-                            character={character}
-                            isGM={isGM}
-                            consequenceModal={hook.consequenceModal}
-                            showAddConsequenceModal={hook.showAddConsequenceModal}
-                            onConsequenceClick={(slot) => hook.handleConsequenceChange(slot as any, null)}
-                            onSaveConsequence={hook.handleSaveConsequence}
-                            onCancelConsequenceModal={() => hook.setConsequenceModal(null)}
-                            onDeleteConsequence={hook.handleDeleteConsequence}
-                            onAddConsequence={hook.handleAddConsequence}
-                            onOpenAddModal={() => hook.setShowAddConsequenceModal(true)}
-                            onCloseAddModal={() => hook.setShowAddConsequenceModal(false)}
-                        />
-
-                        <PowerTabsSection
-                            character={character}
-                            sessionId={sessionId}
-                            actorUserId={actorUserId}
-                            canEdit={canEdit}
-                            isGM={isGM}
-                            magicLevel={character.magicLevel || 0}
-                            onMagicLevelChange={hook.handleMagicLevelChange}
-                        />
-
-
-                        <SkillsSection
-                            character={character}
-                            sessionId={sessionId}
-                            actorUserId={actorUserId}
-                            canEdit={canEdit}
-                        />
+                <div
+                    className="character-main-tabs-shell"
+                    style={{
+                        border: "1px solid rgba(var(--accent-rgb), 0.18)",
+                        borderRadius: "22px",
+                        overflow: "hidden",
+                        background: "linear-gradient(180deg, rgba(15, 15, 15, 0.95), rgba(8, 8, 8, 0.98))",
+                        boxShadow: "inset 0 0 30px rgba(0, 0, 0, 0.22)",
+                    }}
+                >
+                    <div
+                        className="character-main-tabs-header"
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: showInventoryTab ? "repeat(4, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
+                            background: "rgba(var(--accent-rgb), 0.05)",
+                            borderBottom: "1px solid rgba(var(--accent-rgb), 0.16)",
+                        }}
+                    >
+                        <button
+                            className={`character-main-tab-btn ${visibleTab === "lore" ? "active" : ""}`}
+                            onClick={() => setActiveTab("lore")}
+                            type="button"
+                            style={{
+                                background: visibleTab === "lore"
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                    : "transparent",
+                                border: "none",
+                                color: visibleTab === "lore" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                padding: "16px 14px",
+                                fontFamily: "var(--font-header)",
+                                fontSize: "0.72rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                boxShadow: visibleTab === "lore" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                            }}
+                        >
+                            LORE
+                        </button>
+                        <button
+                            className={`character-main-tab-btn ${visibleTab === "powers" ? "active" : ""}`}
+                            onClick={() => setActiveTab("powers")}
+                            type="button"
+                            style={{
+                                background: visibleTab === "powers"
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                    : "transparent",
+                                border: "none",
+                                color: visibleTab === "powers" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                padding: "16px 14px",
+                                fontFamily: "var(--font-header)",
+                                fontSize: "0.72rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                boxShadow: visibleTab === "powers" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                            }}
+                        >
+                            FAÇANHAS & MAGIA
+                        </button>
+                        {showInventoryTab && (
+                            <button
+                                className={`character-main-tab-btn ${visibleTab === "inventory" ? "active" : ""}`}
+                                onClick={() => setActiveTab("inventory")}
+                                type="button"
+                                style={{
+                                    background: visibleTab === "inventory"
+                                        ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                        : "transparent",
+                                    border: "none",
+                                    color: visibleTab === "inventory" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                    cursor: "pointer",
+                                    padding: "16px 14px",
+                                    fontFamily: "var(--font-header)",
+                                    fontSize: "0.72rem",
+                                    letterSpacing: "0.18em",
+                                    textTransform: "uppercase",
+                                    boxShadow: visibleTab === "inventory" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                                }}
+                            >
+                                INVENTÁRIO
+                            </button>
+                        )}
+                        <button
+                            className={`character-main-tab-btn ${visibleTab === "notes" ? "active" : ""}`}
+                            onClick={() => setActiveTab("notes")}
+                            type="button"
+                            style={{
+                                background: visibleTab === "notes"
+                                    ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
+                                    : "transparent",
+                                border: "none",
+                                color: visibleTab === "notes" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                cursor: "pointer",
+                                padding: "16px 14px",
+                                fontFamily: "var(--font-header)",
+                                fontSize: "0.72rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                boxShadow: visibleTab === "notes" ? "inset 0 -2px 0 var(--accent-color)" : "none",
+                            }}
+                        >
+                            NOTAS PRIVADAS
+                        </button>
                     </div>
 
-                    <div style={{ padding: "0 25px 25px 25px", width: "100%" }}>
-                        <LinkedNotes
-                            notes={character.linkedNotes || []}
-                            onAddNote={hook.handleAddNote}
-                            onDeleteNote={hook.handleDeleteNote}
-                            mentionEntities={mentionEntities}
-                            hideTitle={false}
-                            userId={actorUserId}
-                            userRole={isGM ? "GM" : "PLAYER"}
-                        />
+                    <div
+                        className="character-main-tab-body"
+                        style={{ padding: "28px" }}
+                    >
+                        {renderActivePanel()}
                     </div>
                 </div>
 

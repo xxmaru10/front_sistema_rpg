@@ -53,17 +53,31 @@ interface LinkedNotesProps {
     userId?: string;
     userRole?: string;
     mergeAllNotes?: boolean;
+    defaultShowNotes?: boolean;
+    defaultShowPrivateNotes?: boolean;
 }
 
-export function LinkedNotes({ notes, onAddNote, onDeleteNote, title = "NOTAS", hideTitle = false, mentionEntities, userId, userRole, mergeAllNotes }: LinkedNotesProps) {
+export function LinkedNotes({
+    notes,
+    onAddNote,
+    onDeleteNote,
+    title = "NOTAS",
+    hideTitle = false,
+    mentionEntities,
+    userId,
+    userRole,
+    mergeAllNotes,
+    defaultShowNotes = false,
+    defaultShowPrivateNotes = false,
+}: LinkedNotesProps) {
     const normalizedUserId = (userId || "").trim().toLowerCase();
     const isAuthor = (authorId?: string) => (authorId || "").trim().toLowerCase() === normalizedUserId;
     const [newNote, setNewNote] = useState("");
     const [newPrivateNote, setNewPrivateNote] = useState("");
     const editorRef = useRef<HTMLDivElement>(null);
     const privateEditorRef = useRef<HTMLDivElement>(null);
-    const [showNotes, setShowNotes] = useState(false);
-    const [showPrivateNotes, setShowPrivateNotes] = useState(false);
+    const [showNotes, setShowNotes] = useState(defaultShowNotes);
+    const [showPrivateNotes, setShowPrivateNotes] = useState(defaultShowPrivateNotes);
     const [hasViewedNotes, setHasViewedNotes] = useState(false);
 
     const sharedNotes = (notes || []).filter(n => !(n.isPrivate || (n as any).is_private));

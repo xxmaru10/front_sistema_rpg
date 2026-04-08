@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-08 (story-32/arena-ui-polish/final)
+last_updated: 2026-04-08 (story-34/follow-up-privacidade-inimigo)
 status: ativo
 ---
 
@@ -70,6 +70,8 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Malha de Voz Hardened (Story 30 — follow-up) | `VoiceChatManager` eliminou ping-pong de `voice-join` no answerer (agora espera passiva + fallback único), normalizou chaves de peer por `userId` para evitar duplicidade por casing, adicionou throttling de `voice-join`, timeout de segurança para conexões presas e reconexão dirigida por peer (sem broadcast em cascata). Ajustou bitrate Opus para 64/56/52kbps (malha baixa/média/alta), priorização de encoding e desativação de DTX para reduzir cortes perceptíveis de fala. `setMicDevice` passou a evitar automaticamente input Bluetooth HFP quando houver alternativa, reduzindo degradação em headsets wireless. `screen-share-manager` reduziu bitrate de vídeo para preservar uplink da call e priorizou bitrate de áudio da transmissão (128→64kbps adaptativo). `useSessionScreenControl`, `TransmissionPlayer` e `useSessionUIState` subiram fallback de volume da transmissão para 100% e reduziram reconnect automático desnecessário quando não há stream ativa. | 2026-04-07 |
 | Cards de Combate com Impulso e Estresse Configurável (Story 32) | `Character` ganhou `impulseArrows` e `stressValues` por trilha. Projeções normalizam personagens legados, `STRESS_TRACK_EXPANDED` aceita `value` opcional, novo evento `STRESS_BOX_VALUE_UPDATED` permite edição granular e `gameLogic.calculateAbsorption` passou a absorver dano pelo valor real de cada caixa. UI de combate exibe setas de impulso (glow branco) com controle GM-only e header reorganizado (nome no topo, destino + impulso abaixo). | 2026-04-08 |
 | Polimento Visual do Card da Arena (Story 32 — follow-up) | Trilha de estresse no card da Arena migrou para iconografia sem emoji (SVG `Brain` e `Dumbbell`), com espaçamento mais compacto entre rótulo e caixas para leitura rápida. Seções de extras foram diferenciadas por semântica cromática: Façanhas em azul (alinhadas ao botão de rolagem) e Magias em roxo, mantendo contraste e hierarquia visual. | 2026-04-08 |
+| Reestruturação da Ficha com Resumo e Abas (Story 33) | `CharacterCard` foi reorganizado em um bloco superior de Resumo sempre visível e um segundo nível de abas para Lore, Façanhas/Magia, Inventário e Notas Privadas. A implementação preserva a lógica já existente de edição/eventos, reaproveitando os mesmos componentes e mantendo notas gerais acessíveis dentro do atalho privado da ficha. | 2026-04-08 |
+| Navegação Lateral por Avatares na Arena (Story 34) | `CombatTab` passou a orquestrar abertura de cards por lado da Arena com rails laterais de retratos compactos; `CombatCard` ganhou modo compacto e o header expandido substituiu o antigo `+/-` por um botão com retrato. A mudança preserva o card completo existente, mantém hazards fora do novo fluxo e não altera Event Sourcing. | 2026-04-08 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -86,6 +88,24 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Regra de absorção alinhada ao domínio**: `calculateAbsorption` passou a consumir capacidade real da caixa, mantendo marcação de caixas por índice e sem alterar contratos de consequência.
 - **Permissão GM-only reforçada**: controles de setas e edição de valor de estresse foram encapsulados em handlers com guarda de papel (`isGM`) e emissão de eventos com `actorUserId` normalizado.
 - **Polimento visual contextual da Arena**: card de combate recebeu iconografia vetorial (sem emoji) para trilhas de estresse e separação cromática explícita entre Façanhas (azul) e Magias (roxo), preservando o modelo de eventos e alterando apenas camada de apresentação.
+
+## Registro de Decisões (Story 33)
+- **Resumo sempre visível**: a ficha passou a ter um bloco superior permanente para identidade rápida do personagem, concentrando nome, retrato circular, estresse, consequências, destino e perícias treinadas sem alterar handlers ou eventos já existentes.
+- **Abas de segundo nível na ficha**: Lore, Façanhas/Magia, Inventário e Notas foram separados em abas principais, mas continuam montados no React para preservar estado local ao alternar entre elas.
+- **Paridade funcional por reaproveitamento**: `CharacterVitality`, `CharacterConsequences`, `CharacterLore`, `PowerTabsSection`, `SkillsSection`, `InventorySection` e `LinkedNotes` foram mantidos como fontes de comportamento, mudando apenas encaixe visual e navegação.
+- **Atalho privado sem perda de notas antigas**: a aba de Notas Privadas abre as notas privadas por padrão, mas mantém acesso às notas gerais já existentes da ficha para cumprir a exigência de não remoção de funcionalidade.
+
+## Registro de Decisões (Story 34)
+- **Expansão orquestrada pela Arena**: o estado de abertura dos cards deixou de ser local ao `CombatCard` normal e passou a ser coordenado pela `CombatTab`, com listas independentes para heróis e ameaças.
+- **Avatar como gatilho primário**: o antigo `+/-` foi substituído por um retrato circular com moldura temática, reaproveitado tanto no rail lateral compacto quanto no header do card expandido para recolhimento.
+- **Pilhas independentes por lado**: cards abertos agora entram em ordem de clique abaixo do principal do respectivo lado, sem interferência cruzada entre a coluna de heróis e a de ameaças.
+- **Escopo visual sem impacto de domínio**: hazards permaneceram fora do novo padrão de avatar lateral e nenhum contrato/evento de `domain.ts` precisou ser alterado, preservando Event Sourcing intacto.
+- **Gaveta lateral com seta persistente**: o rail visível foi refinado para drawers ocultos na borda, revelados por hover no desktop e clique no mobile, reforçando a sensação de que os retratos “saem” das laterais da Arena.
+- **Card aberto prioriza largura útil**: a grade da Arena passou a redistribuir espaço dinamicamente quando há cards expandidos, aproximando os cards abertos do centro sem comprimir excessivamente a zona de rolagem.
+- **Retorno por seta no header**: quando o card está aberto, o retrato interno é suprimido em favor de um botão-seta que aponta para a lateral de origem e recolhe o card de volta ao estado oculto.
+- **Resumo com perícias não nulas**: o bloco de Resumo da ficha passou a listar todas as perícias diferentes de `0`, incluindo valores negativos, preservando a leitura de penalidades mecânicas sem exigir entrada na aba completa de perícias.
+- **Painel de desafio desacoplado de ameaça aberta**: a Arena agora reserva largura também quando apenas o desafio está ativo, evitando o colapso estreito do painel na ausência de adversários expandidos.
+- **Privacidade da ficha inimiga para jogadores**: quando um jogador expande um inimigo na Arena, o card passa a exibir somente nome, retrato e seta de retorno; estresse, consequências, aspectos e extras seguem visíveis apenas para o GM, preservando sigilo sem remover a presença do inimigo na cena.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

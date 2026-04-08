@@ -11,36 +11,85 @@ interface PowerTabsSectionProps {
     isGM: boolean;
     magicLevel: number;
     onMagicLevelChange: (level: number) => void;
+    includeInventory?: boolean;
 }
 
 
-export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, isGM, magicLevel, onMagicLevelChange }: PowerTabsSectionProps) {
+export function PowerTabsSection({
+    character,
+    sessionId,
+    actorUserId,
+    canEdit,
+    isGM,
+    magicLevel,
+    onMagicLevelChange,
+    includeInventory = true,
+}: PowerTabsSectionProps) {
 
     const hook = usePowerTabs({ character, sessionId, actorUserId });
+    const compactHeader = !includeInventory;
 
     return (
         <div className="power-tabs-container">
-            <div className="power-tabs-header">
+            <div
+                className={`power-tabs-header ${compactHeader ? "text-mode" : ""}`}
+                style={
+                    compactHeader
+                        ? {
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                          }
+                        : undefined
+                }
+            >
                 <button
                     className={`power-tab-btn ${hook.activeTab === 'stunts' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('stunts')}
                     title="FAÇANHAS"
+                    style={
+                        compactHeader
+                            ? {
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "10px",
+                                  fontSize: "0.72rem",
+                                  letterSpacing: "0.18em",
+                              }
+                            : undefined
+                    }
                 >
                     <Zap size={18} />
+                    {compactHeader && <span>FAÇANHAS</span>}
                 </button>
-                <button
-                    className={`power-tab-btn ${hook.activeTab === 'inventory' ? 'active' : ''}`}
-                    onClick={() => hook.setActiveTab('inventory')}
-                    title="INVENTÁRIO"
-                >
-                    <Briefcase size={18} />
-                </button>
+                {includeInventory && (
+                    <button
+                        className={`power-tab-btn ${hook.activeTab === 'inventory' ? 'active' : ''}`}
+                        onClick={() => hook.setActiveTab('inventory')}
+                        title="INVENTÁRIO"
+                    >
+                        <Briefcase size={18} />
+                    </button>
+                )}
                 <button
                     className={`power-tab-btn ${hook.activeTab === 'spells' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('spells')}
                     title="MAGIAS"
+                    style={
+                        compactHeader
+                            ? {
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "10px",
+                                  fontSize: "0.72rem",
+                                  letterSpacing: "0.18em",
+                              }
+                            : undefined
+                    }
                 >
                     <Wand2 size={18} />
+                    {compactHeader && <span>MAGIAS</span>}
                 </button>
             </div>
 
@@ -105,7 +154,7 @@ export function PowerTabsSection({ character, sessionId, actorUserId, canEdit, i
                     </div>
                 )}
 
-                {hook.activeTab === 'inventory' && (
+                {includeInventory && hook.activeTab === 'inventory' && (
                     <InventorySection 
                         character={character}
                         sessionId={sessionId}

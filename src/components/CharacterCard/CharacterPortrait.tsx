@@ -7,6 +7,7 @@ interface CharacterPortraitProps {
     imageUrl?: string;
     isGM: boolean;
     isCompact: boolean;
+    showName?: boolean;
     isEditingName: boolean;
     tempName: string;
     onTempNameChange: (value: string) => void;
@@ -22,6 +23,7 @@ export function CharacterPortrait({
     imageUrl,
     isGM,
     isCompact,
+    showName = true,
     isEditingName,
     tempName,
     onTempNameChange,
@@ -41,33 +43,34 @@ export function CharacterPortrait({
 
     return (
         <div className="portrait-column">
-            {isEditingName ? (
-                <div className="name-editor-container">
-                    <input
-                        className="name-input-edit"
-                        value={tempName}
-                        onChange={(e) => onTempNameChange(e.target.value)}
-                        autoFocus
-                    />
-                    <button className="save-name-btn" onClick={onSaveName}>✓</button>
-                    <button className="cancel-name-btn" onClick={onCancelEditName}>✕</button>
-                </div>
-            ) : (
-                <div className="name-display-container">
-                    <h3 className={`char-name-portrait ${isCompact ? "compact" : ""}`}>
-                        {name.toUpperCase()}
-                    </h3>
-                    {isGM && (
-                        <button
-                            onClick={onStartEditingName}
-                            className="edit-name-btn"
-                            title="Editar Nome"
-                        >
-                            ✎
-                        </button>
-                    )}
-                </div>
-            )}
+            {showName &&
+                (isEditingName ? (
+                    <div className="name-editor-container">
+                        <input
+                            className="name-input-edit"
+                            value={tempName}
+                            onChange={(e) => onTempNameChange(e.target.value)}
+                            autoFocus
+                        />
+                        <button className="save-name-btn" onClick={onSaveName}>✓</button>
+                        <button className="cancel-name-btn" onClick={onCancelEditName}>✕</button>
+                    </div>
+                ) : (
+                    <div className="name-display-container">
+                        <h3 className={`char-name-portrait ${isCompact ? "compact" : ""}`}>
+                            {name.toUpperCase()}
+                        </h3>
+                        {isGM && (
+                            <button
+                                onClick={onStartEditingName}
+                                className="edit-name-btn"
+                                title="Editar Nome"
+                            >
+                                ✎
+                            </button>
+                        )}
+                    </div>
+                ))}
 
             {/* Input de arquivo sempre oculto — acionado via ref */}
             {isGM && (

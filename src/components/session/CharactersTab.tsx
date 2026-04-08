@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Character } from "@/types/domain";
+import { Character, SessionState } from "@/types/domain";
 import { CharacterCard } from "@/components/CharacterCard";
 import { CharacterSummary } from "@/components/CharacterSummary";
 import { globalEventStore } from "@/lib/eventStore";
@@ -18,6 +18,7 @@ interface CharactersTabProps {
     onNewCharacter: () => void;
     bestiaryList: Character[];
     stateCharacters: Record<string, Character>;
+    sessionState: SessionState;
 }
 
 export function CharactersTab({
@@ -31,6 +32,7 @@ export function CharactersTab({
     onNewCharacter,
     bestiaryList,
     stateCharacters,
+    sessionState,
 }: CharactersTabProps) {
     const [viewingCharacterId, setViewingCharacterId] = useState<string | null>(null);
     const [showBestiaryImport, setShowBestiaryImport] = useState(false);
@@ -106,6 +108,8 @@ export function CharactersTab({
                                                         isGM={false}
                                                         isLinkedCharacter={fixedCharacterId === char.id}
                                                         mentionEntities={mentionEntities}
+                                                        sessionState={sessionState}
+                                                        userRole={userRole}
                                                     />
                                                 ))}
                                             </div>
@@ -123,6 +127,8 @@ export function CharactersTab({
                                                         actorUserId={actorUserId}
                                                         isGM={false}
                                                         mentionEntities={mentionEntities}
+                                                        sessionState={sessionState}
+                                                        userRole={userRole}
                                                     />
                                                 ))}
                                             </div>
@@ -159,6 +165,8 @@ export function CharactersTab({
                                         isGM={userRole === "GM"}
                                         isLinkedCharacter={fixedCharacterId === viewingCharacterId}
                                         mentionEntities={mentionEntities}
+                                        sessionState={sessionState}
+                                        userRole={userRole}
                                     />
                                 )}
                             </div>

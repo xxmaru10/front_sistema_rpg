@@ -9,12 +9,31 @@ interface CombatConsequencesProps {
 }
 
 export function CombatConsequences({ character, isGM, openConsequenceModal }: CombatConsequencesProps) {
+    const defaultSlots = ["mild", "moderate", "severe", "extreme"];
+    const slotOrder = ["mild", "mild2", "moderate", "severe", "extreme"];
+    const allSlots = new Set<string>(defaultSlots);
+
+    Object.keys(character.consequences || {}).forEach((slot) => allSlots.add(slot));
+
+    const orderedSlots = Array.from(allSlots).sort((left, right) => {
+        const leftIndex = slotOrder.indexOf(left);
+        const rightIndex = slotOrder.indexOf(right);
+
+        if (leftIndex !== -1 || rightIndex !== -1) {
+            if (leftIndex === -1) return 1;
+            if (rightIndex === -1) return -1;
+            return leftIndex - rightIndex;
+        }
+
+        return left.localeCompare(right);
+    });
+
     return (
         <div className="combat-consequences">
             <div className="consequences-title">CONSEQUÊNCIAS</div>
             <div className="consequences-list">
-                {Object.keys(character.consequences).map((slot) => {
-                    const cons = character.consequences[slot];
+                {orderedSlots.map((slot) => {
+                    const cons = character.consequences?.[slot];
 
                     let label = slot.toUpperCase();
                     if (slot === "mild" || slot.includes("mild")) label = "-2 LEVE";
@@ -28,7 +47,10 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
                         <div
                             key={slot}
                             className="combat-consequence-row"
-                            onClick={() => openConsequenceModal(slot, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value)}
+                            onClick={() => {
+                                if (!isGM) return;
+                                openConsequenceModal(slot, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value);
+                            }}
                         >
                             <span className="cons-label">{label}</span>
                             <span className={`cons-value ${isFilled ? 'filled' : 'empty'}`}>

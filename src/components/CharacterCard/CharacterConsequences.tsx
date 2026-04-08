@@ -38,7 +38,9 @@ export function CharacterConsequences({
     onOpenAddModal,
     onCloseAddModal,
 }: CharacterConsequencesProps) {
+    const defaultSlots = ["mild", "moderate", "severe"];
     const allKeys = new Set<string>();
+    defaultSlots.forEach((slot) => allKeys.add(slot));
     if (character.consequences) {
         Object.keys(character.consequences).forEach((k) => allKeys.add(k));
     }
@@ -67,16 +69,38 @@ export function CharacterConsequences({
 
     return (
         <>
-            <div className="logic-readout consequences-matrix compact-consequences">
-                <div className="readout-header mobile-col">
-                    <div className="header-group">
+            <div
+                className="logic-readout consequences-matrix compact-consequences"
+                style={{
+                    background: "rgba(0, 0, 0, 0.18)",
+                    border: "1px solid rgba(var(--accent-rgb), 0.12)",
+                    borderRadius: "18px",
+                    padding: "14px 16px",
+                    boxShadow: "none",
+                }}
+            >
+                <div
+                    className="readout-header mobile-col"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "10px",
+                        padding: "0 0 10px 0",
+                        marginBottom: "12px",
+                        borderBottom: "1px solid rgba(var(--accent-rgb), 0.12)",
+                        background: "transparent",
+                    }}
+                >
+                    <div className="header-group" style={{ gap: "8px" }}>
                         <span className="symbol">🜊</span>
-                        <span>CONSEQUÊNCIAS</span>
+                        <span style={{ fontSize: "0.7rem", letterSpacing: "0.22em" }}>CONSEQUÊNCIAS</span>
                         {isGM && (
                             <button
                                 onClick={onOpenAddModal}
                                 className="add-mild2-btn"
                                 title="Adicionar Nova Consequência"
+                                style={{ marginLeft: "4px" }}
                             >
                                 +
                             </button>
@@ -84,7 +108,7 @@ export function CharacterConsequences({
                     </div>
                 </div>
 
-                <div className="consequences-list">
+                <div className="consequences-list" style={{ display: "grid", gap: "10px" }}>
                     {sortedSlots.map((cons) => {
                         const consData = character.consequences[cons.slot as "mild" | "mild2" | "moderate" | "severe"];
                         const textValue = consData?.text || "";
@@ -94,10 +118,48 @@ export function CharacterConsequences({
                             <div
                                 key={cons.slot}
                                 className={`consequence-slot ${isFilled ? "filled" : "empty"} small-slot`}
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: isGM ? "auto minmax(0, 1fr) auto" : "auto minmax(0, 1fr)",
+                                    alignItems: "center",
+                                    gap: "10px",
+                                    marginBottom: 0,
+                                    padding: "10px 12px",
+                                    borderRadius: "14px",
+                                    border: "1px solid rgba(var(--accent-rgb), 0.12)",
+                                    background: isFilled ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.015)",
+                                }}
                             >
-                                <div className="slot-meta">
-                                    <span className="penalty-badge">{cons.penalty}</span>
-                                    <span className="slot-label">{cons.label}</span>
+                                <div className="slot-meta" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span
+                                        className="penalty-badge"
+                                        style={{
+                                            minWidth: "38px",
+                                            height: "26px",
+                                            padding: "0 8px",
+                                            borderRadius: "999px",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            background: "rgba(var(--accent-rgb), 0.12)",
+                                            border: "1px solid rgba(var(--accent-rgb), 0.2)",
+                                            color: "#f3dfac",
+                                            boxShadow: "none",
+                                            fontSize: "0.76rem",
+                                        }}
+                                    >
+                                        {cons.penalty}
+                                    </span>
+                                    <span
+                                        className="slot-label"
+                                        style={{
+                                            fontSize: "0.72rem",
+                                            letterSpacing: "0.18em",
+                                            color: "rgba(var(--accent-rgb), 0.88)",
+                                        }}
+                                    >
+                                        {cons.label}
+                                    </span>
                                 </div>
 
                                 {isGM ? (
@@ -105,41 +167,132 @@ export function CharacterConsequences({
                                         <button
                                             className="consequence-input-area"
                                             onClick={() => onConsequenceClick(cons.slot)}
+                                            style={{
+                                                width: "100%",
+                                                background: "transparent",
+                                                border: "none",
+                                                padding: 0,
+                                                textAlign: "left",
+                                                cursor: "pointer",
+                                            }}
                                         >
                                             {isFilled ? (
-                                                <div className="consequence-content">
-                                                    <span className="active-consequence">{textValue.toUpperCase()}</span>
+                                                <div
+                                                    className="consequence-content"
+                                                    style={{
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        alignItems: "flex-start",
+                                                        gap: "6px",
+                                                        minWidth: 0,
+                                                    }}
+                                                >
+                                                    <span
+                                                        className="active-consequence"
+                                                        style={{
+                                                            fontSize: "0.9rem",
+                                                            lineHeight: 1.35,
+                                                            color: "#efe4c7",
+                                                            fontStyle: "normal",
+                                                            opacity: 0.95,
+                                                            wordBreak: "break-word",
+                                                        }}
+                                                    >
+                                                        {textValue.toUpperCase()}
+                                                    </span>
                                                     {consData?.debuff?.skill && (
-                                                        <span className="consequence-debuff-badge">
+                                                        <span
+                                                            className="consequence-debuff-badge"
+                                                            style={{
+                                                                background: "rgba(255, 107, 107, 0.1)",
+                                                                border: "1px solid rgba(255, 107, 107, 0.22)",
+                                                                color: "#ff9494",
+                                                                padding: "3px 8px",
+                                                                borderRadius: "999px",
+                                                                fontSize: "0.62rem",
+                                                                letterSpacing: "0.08em",
+                                                            }}
+                                                        >
                                                             {consData.debuff.skill} -{consData.debuff.value}
                                                         </span>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="placeholder-text">SINTONIA ESTÁVEL</span>
+                                                <span
+                                                    className="placeholder-text"
+                                                    style={{
+                                                        display: "block",
+                                                        minHeight: "22px",
+                                                    }}
+                                                />
                                             )}
                                         </button>
                                         <button
                                             className="delete-consequence-btn"
                                             onClick={(e) => onDeleteConsequence(cons.slot, e)}
                                             title="Remover Consequência"
+                                            style={{
+                                                width: "28px",
+                                                height: "28px",
+                                                borderRadius: "999px",
+                                                marginLeft: 0,
+                                                padding: 0,
+                                            }}
                                         >
                                             ✕
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="consequence-input-area">
+                                    <div className="consequence-input-area" style={{ minWidth: 0 }}>
                                         {isFilled ? (
-                                            <div className="consequence-content">
-                                                <span className="active-consequence">{textValue.toUpperCase()}</span>
+                                            <div
+                                                className="consequence-content"
+                                                style={{
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    alignItems: "flex-start",
+                                                    gap: "6px",
+                                                    minWidth: 0,
+                                                }}
+                                            >
+                                                <span
+                                                    className="active-consequence"
+                                                    style={{
+                                                        fontSize: "0.9rem",
+                                                        lineHeight: 1.35,
+                                                        color: "#efe4c7",
+                                                        fontStyle: "normal",
+                                                        opacity: 0.95,
+                                                        wordBreak: "break-word",
+                                                    }}
+                                                >
+                                                    {textValue.toUpperCase()}
+                                                </span>
                                                 {consData?.debuff?.skill && (
-                                                    <span className="consequence-debuff-badge">
+                                                    <span
+                                                        className="consequence-debuff-badge"
+                                                        style={{
+                                                            background: "rgba(255, 107, 107, 0.1)",
+                                                            border: "1px solid rgba(255, 107, 107, 0.22)",
+                                                            color: "#ff9494",
+                                                            padding: "3px 8px",
+                                                            borderRadius: "999px",
+                                                            fontSize: "0.62rem",
+                                                            letterSpacing: "0.08em",
+                                                        }}
+                                                    >
                                                         {consData.debuff.skill} -{consData.debuff.value}
                                                     </span>
                                                 )}
                                             </div>
                                         ) : (
-                                            <span className="placeholder-text">SINTONIA ESTÁVEL</span>
+                                            <span
+                                                className="placeholder-text"
+                                                style={{
+                                                    display: "block",
+                                                    minHeight: "22px",
+                                                }}
+                                            />
                                         )}
                                     </div>
                                 )}
