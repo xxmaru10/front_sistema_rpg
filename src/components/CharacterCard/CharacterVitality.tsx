@@ -120,17 +120,20 @@ export function CharacterVitality({
                         ))}
                         {isGM && !isCompact && (
                             <div className="header-track-controls">
-                                <button className="h-add-btn" onClick={() => onRemoveStressBox("PHYSICAL")}>-</button>
-                                <button className="h-add-btn" onClick={() => handleAddStress("PHYSICAL")}>+</button>
-                                <input
-                                    className="h-value-input"
-                                    type="number"
-                                    min={1}
-                                    max={1000}
-                                    value={newPhysicalValue}
-                                    onChange={(e) => setNewPhysicalValue(e.target.value)}
-                                    title="Valor da próxima caixa física"
-                                />
+                                <button className="h-add-btn" onClick={() => onRemoveStressBox("PHYSICAL")} title="Remover última caixa física">-</button>
+                                <button className="h-add-btn" onClick={() => handleAddStress("PHYSICAL")} title="Adicionar caixa física">+</button>
+                                <div className="stress-next-value-group">
+                                    <span className="stress-next-value-label">NOVA</span>
+                                    <input
+                                        className="h-value-input"
+                                        type="number"
+                                        min={1}
+                                        max={1000}
+                                        value={newPhysicalValue}
+                                        onChange={(e) => setNewPhysicalValue(e.target.value)}
+                                        title="Valor da próxima caixa física"
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
@@ -175,17 +178,20 @@ export function CharacterVitality({
                         ))}
                         {isGM && !isCompact && (
                             <div className="header-track-controls">
-                                <button className="h-add-btn" onClick={() => onRemoveStressBox("MENTAL")}>-</button>
-                                <button className="h-add-btn" onClick={() => handleAddStress("MENTAL")}>+</button>
-                                <input
-                                    className="h-value-input"
-                                    type="number"
-                                    min={1}
-                                    max={1000}
-                                    value={newMentalValue}
-                                    onChange={(e) => setNewMentalValue(e.target.value)}
-                                    title="Valor da próxima caixa mental"
-                                />
+                                <button className="h-add-btn" onClick={() => onRemoveStressBox("MENTAL")} title="Remover última caixa mental">-</button>
+                                <button className="h-add-btn" onClick={() => handleAddStress("MENTAL")} title="Adicionar caixa mental">+</button>
+                                <div className="stress-next-value-group">
+                                    <span className="stress-next-value-label">NOVA</span>
+                                    <input
+                                        className="h-value-input"
+                                        type="number"
+                                        min={1}
+                                        max={1000}
+                                        value={newMentalValue}
+                                        onChange={(e) => setNewMentalValue(e.target.value)}
+                                        title="Valor da próxima caixa mental"
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
@@ -217,6 +223,120 @@ export function CharacterVitality({
                     </div>
                 </div>
             )}
+
+            <style jsx>{`
+                .char-core-info .integrity-node-wrap {
+                    gap: 6px;
+                }
+
+                .char-core-info .stress-value-editor,
+                .char-core-info .h-value-input {
+                    appearance: textfield;
+                    -moz-appearance: textfield;
+                }
+
+                .char-core-info .stress-value-editor::-webkit-outer-spin-button,
+                .char-core-info .stress-value-editor::-webkit-inner-spin-button,
+                .char-core-info .h-value-input::-webkit-outer-spin-button,
+                .char-core-info .h-value-input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+
+                .char-core-info .stress-value-editor {
+                    width: 44px;
+                    height: 20px;
+                    border: 1px solid rgba(var(--accent-rgb), 0.4);
+                    border-radius: 4px;
+                    background: linear-gradient(180deg, rgba(30, 30, 30, 0.95), rgba(12, 12, 12, 0.95));
+                    color: #f8eac2;
+                    font-family: var(--font-header);
+                    font-size: 0.68rem;
+                    text-align: center;
+                    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+                    outline: none;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                    padding: 0 2px;
+                }
+
+                .char-core-info .stress-value-editor:focus {
+                    border-color: var(--accent-color);
+                    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.25), inset 0 0 8px rgba(0, 0, 0, 0.65);
+                }
+
+                .char-core-info .header-track-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-left: 14px;
+                    padding: 4px 8px;
+                    border-radius: 999px;
+                    border: 1px solid rgba(var(--accent-rgb), 0.22);
+                    background: rgba(0, 0, 0, 0.4);
+                }
+
+                .char-core-info .header-track-controls .h-add-btn {
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 50%;
+                    border: 1px solid rgba(var(--accent-rgb), 0.45);
+                    background: radial-gradient(circle at 30% 30%, rgba(var(--accent-rgb), 0.2), rgba(0, 0, 0, 0.55));
+                    color: var(--accent-color);
+                    font-size: 1rem;
+                    line-height: 1;
+                    cursor: pointer;
+                    transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+                }
+
+                .char-core-info .header-track-controls .h-add-btn:hover {
+                    transform: translateY(-1px);
+                    border-color: var(--accent-color);
+                    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.25);
+                    background: radial-gradient(circle at 35% 30%, rgba(var(--accent-rgb), 0.35), rgba(0, 0, 0, 0.45));
+                }
+
+                .char-core-info .stress-next-value-group {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    border-left: 1px solid rgba(var(--accent-rgb), 0.2);
+                    padding-left: 8px;
+                }
+
+                .char-core-info .stress-next-value-label {
+                    font-family: var(--font-header);
+                    font-size: 0.52rem;
+                    letter-spacing: 0.14em;
+                    color: rgba(var(--accent-rgb), 0.75);
+                }
+
+                .char-core-info .h-value-input {
+                    width: 62px;
+                    height: 26px;
+                    border: 1px solid rgba(var(--accent-rgb), 0.42);
+                    border-radius: 5px;
+                    background: linear-gradient(180deg, rgba(28, 28, 28, 0.95), rgba(10, 10, 10, 0.95));
+                    color: #fff2cc;
+                    font-family: var(--font-header);
+                    font-size: 0.74rem;
+                    text-align: center;
+                    outline: none;
+                    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.55);
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                    padding: 0 4px;
+                }
+
+                .char-core-info .h-value-input:focus {
+                    border-color: var(--accent-color);
+                    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.3), inset 0 0 8px rgba(0, 0, 0, 0.7);
+                }
+
+                @media (max-width: 980px) {
+                    .char-core-info .header-track-controls {
+                        margin-left: 0;
+                    }
+                }
+            `}</style>
         </div>
     );
 }
