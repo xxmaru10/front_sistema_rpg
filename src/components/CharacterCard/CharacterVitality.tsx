@@ -12,6 +12,8 @@ interface CharacterVitalityProps {
     isNPC: boolean;
     isGM: boolean;
     isCompact: boolean;
+    compactNodes?: boolean;
+    hideFateReserve?: boolean;
     canEditStressOrFP: boolean;
     onStressToggle: (track: "PHYSICAL" | "MENTAL", index: number, current: boolean) => void;
     onAddStressBox: (track: "PHYSICAL" | "MENTAL", value?: number) => void;
@@ -33,6 +35,8 @@ export function CharacterVitality({
     isNPC,
     isGM,
     isCompact,
+    compactNodes = false,
+    hideFateReserve = false,
     canEditStressOrFP,
     onStressToggle,
     onAddStressBox,
@@ -79,7 +83,7 @@ export function CharacterVitality({
 
 
     return (
-        <div className="char-core-info">
+        <div className={`char-core-info${compactNodes ? " summary-compact" : ""}`}>
             <div className="header-stress-tracks">
                 {/* Physical Track */}
                 <div className="matrix-track-header">
@@ -198,7 +202,7 @@ export function CharacterVitality({
                 </div>
             </div>
 
-            {!(isNPC && !isGM) && (
+            {!(isNPC && !isGM) && !hideFateReserve && (
                 <div className="vitality-resources-row single">
                     <div className="fate-reserve">
                         <div className="reserve-label">{isCompact ? "DESTINO" : "PONTOS DE DESTINO"}</div>
@@ -227,6 +231,58 @@ export function CharacterVitality({
             <style jsx>{`
                 .char-core-info .integrity-node-wrap {
                     gap: 6px;
+                }
+
+                .char-core-info.summary-compact .track-label-row {
+                    margin-bottom: 8px;
+                }
+
+                .char-core-info.summary-compact .node-array-header {
+                    gap: 8px;
+                }
+
+                .char-core-info.summary-compact .integrity-node-wrap {
+                    gap: 4px;
+                }
+
+                .char-core-info.summary-compact .integrity-node-header {
+                    width: 34px;
+                    min-width: 34px;
+                    height: 34px;
+                    padding: 0;
+                }
+
+                .char-core-info.summary-compact .integrity-node-header .node-index {
+                    font-size: 0.95rem;
+                }
+
+                .char-core-info.summary-compact .track-label-row span {
+                    font-size: 0.72rem;
+                    letter-spacing: 0.18em;
+                }
+
+                .char-core-info.summary-compact .header-track-controls {
+                    gap: 6px;
+                    margin-left: 10px;
+                    padding: 4px 6px;
+                }
+
+                .char-core-info.summary-compact .header-track-controls .h-add-btn {
+                    width: 22px;
+                    height: 22px;
+                    font-size: 0.9rem;
+                }
+
+                .char-core-info.summary-compact .h-value-input {
+                    width: 52px;
+                    height: 22px;
+                    font-size: 0.68rem;
+                }
+
+                .char-core-info.summary-compact .stress-value-editor {
+                    width: 36px;
+                    height: 18px;
+                    font-size: 0.62rem;
                 }
 
                 .char-core-info .stress-value-editor,

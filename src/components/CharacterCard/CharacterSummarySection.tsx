@@ -68,6 +68,136 @@ export function CharacterSummarySection({
     onCloseAddModal,
 }: CharacterSummarySectionProps) {
     const initial = character.name?.trim()?.charAt(0)?.toUpperCase() || "?";
+    const showFateInline = !(character.isNPC && !isGM);
+
+    const renderFateInline = () => {
+        if (!showFateInline) return null;
+
+        return (
+            <div
+                className="character-summary-fate-inline"
+                style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                    padding: "8px 12px",
+                    borderRadius: "999px",
+                    border: "1px solid rgba(var(--accent-rgb), 0.22)",
+                    background: "rgba(0, 0, 0, 0.34)",
+                    boxShadow: "inset 0 0 16px rgba(0, 0, 0, 0.22)",
+                }}
+            >
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "8px",
+                        whiteSpace: "nowrap",
+                    }}
+                >
+                    <span
+                        style={{
+                            fontSize: "1.15rem",
+                            color: "var(--accent-color)",
+                            lineHeight: 1,
+                        }}
+                    >
+                        🜂
+                    </span>
+                    <span
+                        style={{
+                            fontFamily: "var(--font-header)",
+                            fontSize: isCompact ? "1rem" : "1.15rem",
+                            color: "#f6e7bf",
+                        }}
+                    >
+                        {character.fatePoints}
+                    </span>
+                    <span
+                        style={{
+                            fontFamily: "var(--font-header)",
+                            fontSize: "0.85rem",
+                            color: "rgba(255, 255, 255, 0.58)",
+                        }}
+                    >
+                        / {character.refresh ?? 3}
+                    </span>
+                </div>
+
+                {canEditStressOrFP && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                            type="button"
+                            onClick={() => onFPChange(-1)}
+                            style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "8px",
+                                border: "1px solid rgba(var(--accent-rgb), 0.28)",
+                                background: "rgba(0, 0, 0, 0.5)",
+                                color: "var(--accent-color)",
+                                cursor: "pointer",
+                            }}
+                        >
+                            -
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onFPChange(1)}
+                            style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "8px",
+                                border: "1px solid rgba(var(--accent-rgb), 0.28)",
+                                background: "rgba(0, 0, 0, 0.5)",
+                                color: "var(--accent-color)",
+                                cursor: "pointer",
+                            }}
+                        >
+                            +
+                        </button>
+                        {isGM && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => onRefreshChange(-1)}
+                                    title="Reduzir recarga"
+                                    style={{
+                                        width: "28px",
+                                        height: "28px",
+                                        borderRadius: "8px",
+                                        border: "1px solid rgba(var(--accent-rgb), 0.22)",
+                                        background: "rgba(0, 0, 0, 0.4)",
+                                        color: "rgba(255, 255, 255, 0.72)",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    v
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onRefreshChange(1)}
+                                    title="Aumentar recarga"
+                                    style={{
+                                        width: "28px",
+                                        height: "28px",
+                                        borderRadius: "8px",
+                                        border: "1px solid rgba(var(--accent-rgb), 0.22)",
+                                        background: "rgba(0, 0, 0, 0.4)",
+                                        color: "rgba(255, 255, 255, 0.72)",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    ^
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <section
@@ -144,23 +274,11 @@ export function CharacterSummarySection({
                     style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: "8px",
+                        gap: "10px",
                         minWidth: 0,
                         flex: 1,
                     }}
                 >
-                    <span
-                        className="character-summary-overline"
-                        style={{
-                            fontFamily: "var(--font-header)",
-                            fontSize: "0.68rem",
-                            letterSpacing: "0.35em",
-                            color: "rgba(var(--accent-rgb), 0.78)",
-                        }}
-                    >
-                        RESUMO DA FICHA
-                    </span>
-
                     {isEditingName ? (
                         <div
                             className="character-summary-name-edit"
@@ -227,45 +345,64 @@ export function CharacterSummarySection({
                                     ✕
                                 </button>
                             </div>
+                            {renderFateInline()}
                         </div>
                     ) : (
                         <div
                             className="character-summary-name-row"
-                            style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                flexWrap: "wrap",
+                                gap: "12px 16px",
+                                minWidth: 0,
+                            }}
                         >
-                            <h2
-                                className="character-summary-name"
+                            <div
                                 style={{
-                                    margin: 0,
-                                    fontFamily: "var(--font-victorian)",
-                                    fontSize: isCompact ? "1.3rem" : "clamp(1.5rem, 2vw, 2.4rem)",
-                                    lineHeight: 1.05,
-                                    color: "#f6e7bf",
-                                    textTransform: "uppercase",
-                                    textShadow: "0 0 20px rgba(var(--accent-rgb), 0.18)",
-                                    wordBreak: "break-word",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "12px",
+                                    minWidth: 0,
+                                    flexWrap: "wrap",
                                 }}
                             >
-                                {character.name.toUpperCase()}
-                            </h2>
-                            {isGM && (
-                                <button
-                                    className="character-summary-edit-name-btn"
-                                    onClick={onStartEditingName}
-                                    title="Editar nome"
+                                <h2
+                                    className="character-summary-name"
                                     style={{
-                                        width: "34px",
-                                        height: "34px",
-                                        borderRadius: "50%",
-                                        border: "1px solid rgba(var(--accent-rgb), 0.35)",
-                                        background: "rgba(0, 0, 0, 0.45)",
-                                        color: "var(--accent-color)",
-                                        cursor: "pointer",
+                                        margin: 0,
+                                        fontFamily: "var(--font-victorian)",
+                                        fontSize: isCompact ? "1.3rem" : "clamp(1.5rem, 2vw, 2.4rem)",
+                                        lineHeight: 1.05,
+                                        color: "#f6e7bf",
+                                        textTransform: "uppercase",
+                                        textShadow: "0 0 20px rgba(var(--accent-rgb), 0.18)",
+                                        wordBreak: "break-word",
                                     }}
                                 >
-                                    ✎
-                                </button>
-                            )}
+                                    {character.name.toUpperCase()}
+                                </h2>
+                                {isGM && (
+                                    <button
+                                        className="character-summary-edit-name-btn"
+                                        onClick={onStartEditingName}
+                                        title="Editar nome"
+                                        style={{
+                                            width: "34px",
+                                            height: "34px",
+                                            borderRadius: "50%",
+                                            border: "1px solid rgba(var(--accent-rgb), 0.35)",
+                                            background: "rgba(0, 0, 0, 0.45)",
+                                            color: "var(--accent-color)",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        ✎
+                                    </button>
+                                )}
+                            </div>
+                            {renderFateInline()}
                         </div>
                     )}
                 </div>
@@ -290,6 +427,8 @@ export function CharacterSummarySection({
                         isNPC={!!character.isNPC}
                         isGM={isGM}
                         isCompact={isCompact}
+                        compactNodes={true}
+                        hideFateReserve={true}
                         canEditStressOrFP={canEditStressOrFP}
                         onStressToggle={onStressToggle}
                         onAddStressBox={onAddStressBox}

@@ -652,6 +652,7 @@ export default function SessionPage() {
                                         onNewCharacter={() => { setCreatorSource("active"); setShowCreator(true); }}
                                         bestiaryList={bestiaryList}
                                         stateCharacters={state.characters}
+                                        sessionState={state}
                                     />
                                 )}
 

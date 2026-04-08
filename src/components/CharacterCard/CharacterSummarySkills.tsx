@@ -58,18 +58,6 @@ export function CharacterSummarySkills({ character }: CharacterSummarySkillsProp
             className="character-summary-skills"
             style={{ display: "flex", flexDirection: "column", gap: "14px" }}
         >
-            <div
-                className="summary-subtitle"
-                style={{
-                    fontFamily: "var(--font-header)",
-                    fontSize: "0.74rem",
-                    letterSpacing: "0.28em",
-                    color: "rgba(var(--accent-rgb), 0.82)",
-                }}
-            >
-                PERÍCIAS TREINADAS
-            </div>
-
             {visibleSkills.length === 0 ? (
                 <div
                     className="summary-skill-empty"

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Character } from "@/types/domain";
-import { LinkedNotes } from "@/features/session-notes/components/LinkedNotes";
+import { Character, SessionState } from "@/types/domain";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
@@ -11,6 +10,7 @@ import { CharacterPortrait } from "./CharacterPortrait";
 import { CharacterLore } from "./CharacterLore";
 import { PowerTabsSection } from "./PowerTabsSection";
 import { CharacterSummarySection } from "./CharacterSummarySection";
+import { CharacterPrivateNotesPanel } from "./CharacterPrivateNotesPanel";
 
 interface CharacterCardProps {
     character: Character;
@@ -21,6 +21,8 @@ interface CharacterCardProps {
     isLinkedCharacter?: boolean;
     mentionEntities?: any[];
     hideInventory?: boolean;
+    sessionState?: SessionState;
+    userRole?: "GM" | "PLAYER";
 }
 
 type CharacterCardTab = "lore" | "powers" | "inventory" | "notes";
@@ -34,6 +36,8 @@ export function CharacterCard({
     isLinkedCharacter = false,
     mentionEntities = [],
     hideInventory = false,
+    sessionState,
+    userRole,
 }: CharacterCardProps) {
     const [activeTab, setActiveTab] = useState<CharacterCardTab>("lore");
 
@@ -147,25 +151,20 @@ export function CharacterCard({
 
         return (
             <div className="character-notes-tab active">
-                <div className="character-tab-intro">
-                    <span className="character-tab-kicker">ATALHO PRIVADO</span>
-                    <p>
-                        As notas privadas da ficha ficam abertas por padrão aqui, sem
-                        perder o restante das notas já existentes.
-                    </p>
-                </div>
-
-                <LinkedNotes
-                    notes={character.linkedNotes || []}
-                    onAddNote={hook.handleAddNote}
-                    onDeleteNote={hook.handleDeleteNote}
-                    mentionEntities={mentionEntities}
-                    hideTitle={false}
-                    userId={actorUserId}
-                    userRole={isGM ? "GM" : "PLAYER"}
-                    defaultShowNotes={false}
-                    defaultShowPrivateNotes={true}
-                />
+                {sessionState ? (
+                    <CharacterPrivateNotesPanel
+                        sessionId={sessionId}
+                        userId={actorUserId}
+                        userRole={userRole || (isGM ? "GM" : "PLAYER")}
+                        state={sessionState}
+                        mentionEntities={mentionEntities}
+                    />
+                ) : (
+                    <div className="character-tab-intro">
+                        <span className="character-tab-kicker">NOTAS PRIVADAS</span>
+                        <p>As notas da sessão não estão disponíveis neste contexto da ficha.</p>
+                    </div>
+                )}
             </div>
         );
     };
