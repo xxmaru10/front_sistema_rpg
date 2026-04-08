@@ -105,7 +105,8 @@ export function CombatTab({
     const showChallengePanel = challengeMode && (userRole === "GM" || (state.challenge?.difficulty || 0) !== 0);
 
     const hasExpandedHeroes = expandedHeroCards.length > 0;
-    const hasExpandedThreats = expandedThreatCards.length > 0 || threatHazards.length > 0 || showChallengePanel;
+    const hasExpandedThreats = expandedThreatCards.length > 0 || threatHazards.length > 0;
+    const hasChallengePanel = showChallengePanel;
 
     useEffect(() => {
         if (compactHeroCards.length === 0) setIsHeroDrawerPinned(false);
@@ -144,7 +145,7 @@ export function CombatTab({
 
 
             <div
-                className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}`}
+                className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${hasChallengePanel ? " has-challenge-right" : ""}`}
             >
                 {/* Coluna 1: Herói Ativo (Esquerda) */}
                 <div className="combat-party combat-side-column">

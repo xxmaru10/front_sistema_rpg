@@ -115,6 +115,10 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             z-index: 2;
         }
 
+        .combat-header.with-portrait {
+            align-items: center;
+        }
+
         .combat-header.portrait-right {
             padding-right: 26px;
         }
@@ -180,6 +184,20 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             color: #f3e1b3;
         }
 
+        .combat-header-portrait-frame {
+            --portrait-ring: rgba(255,255,255,0.22);
+            position: relative;
+            width: 52px;
+            height: 52px;
+            padding: 6px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.14);
+            background: linear-gradient(135deg, rgba(18, 18, 18, 0.96) 0%, rgba(6, 6, 6, 0.98) 100%);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
         .combat-avatar-shell {
             width: 56px;
             height: 56px;
@@ -189,12 +207,12 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-avatar-shell.side-left {
-            --avatar-offset: -6px;
+            --avatar-offset: 0px;
             transform: translateX(var(--avatar-offset));
         }
 
         .combat-avatar-shell.side-right {
-            --avatar-offset: 6px;
+            --avatar-offset: 0px;
             transform: translateX(var(--avatar-offset));
         }
 
@@ -228,7 +246,8 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-return-toggle::before,
-        .combat-avatar-shell::before {
+        .combat-avatar-shell::before,
+        .combat-header-portrait-frame::before {
             content: '';
             position: absolute;
             inset: 0;
@@ -261,6 +280,11 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             justify-content: center;
         }
 
+        .combat-header-portrait {
+            width: 100%;
+            height: 100%;
+        }
+
         .combat-portrait-avatar img {
             width: 100%;
             height: 100%;
@@ -282,7 +306,8 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-return-toggle.hero-card,
-        .combat-avatar-shell.hero-card {
+        .combat-avatar-shell.hero-card,
+        .combat-header-portrait-frame.hero-card {
             --portrait-ring: rgba(241, 207, 133, 0.68);
             border-color: rgba(197, 160, 89, 0.48);
             background: linear-gradient(135deg, rgba(34, 24, 12, 0.98) 0%, rgba(12, 8, 5, 0.98) 100%);
@@ -290,7 +315,8 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-return-toggle.own-hero-card,
-        .combat-avatar-shell.own-hero-card {
+        .combat-avatar-shell.own-hero-card,
+        .combat-header-portrait-frame.own-hero-card {
             --portrait-ring: rgba(170, 255, 202, 0.68);
             border-color: rgba(46, 204, 113, 0.48);
             background: linear-gradient(135deg, rgba(12, 30, 19, 0.98) 0%, rgba(5, 12, 9, 0.98) 100%);
@@ -298,7 +324,8 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-return-toggle.npc-hero-card,
-        .combat-avatar-shell.npc-hero-card {
+        .combat-avatar-shell.npc-hero-card,
+        .combat-header-portrait-frame.npc-hero-card {
             --portrait-ring: rgba(184, 222, 255, 0.72);
             border-color: rgba(80, 166, 255, 0.5);
             background: linear-gradient(135deg, rgba(10, 20, 34, 0.98) 0%, rgba(6, 10, 16, 0.98) 100%);
@@ -306,7 +333,8 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-return-toggle.threat-card,
-        .combat-avatar-shell.threat-card {
+        .combat-avatar-shell.threat-card,
+        .combat-header-portrait-frame.threat-card {
             --portrait-ring: rgba(255, 192, 192, 0.72);
             border-color: rgba(255, 68, 68, 0.52);
             background: linear-gradient(135deg, rgba(36, 13, 13, 0.98) 0%, rgba(14, 7, 7, 0.98) 100%);
@@ -331,6 +359,10 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .combat-card.restricted-threat-card {
+            gap: 0;
         }
 
         .combat-fate {

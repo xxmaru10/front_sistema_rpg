@@ -17,6 +17,8 @@ interface CombatHeaderProps {
     onToggleExpanded?: () => void;
     avatarSide?: "left" | "right";
     themeClass: string;
+    showPortrait?: boolean;
+    portraitInitials?: string;
 }
 
 export function CombatHeader({
@@ -32,6 +34,8 @@ export function CombatHeader({
     onToggleExpanded,
     avatarSide = "left",
     themeClass,
+    showPortrait = false,
+    portraitInitials = "??",
 }: CombatHeaderProps) {
     const impulseCount = Math.max(0, Math.trunc(character.impulseArrows || 0));
     const returnButton = onToggleExpanded ? (
@@ -51,9 +55,22 @@ export function CombatHeader({
         </button>
     ) : null;
 
+    const portrait = showPortrait ? (
+        <div className={`combat-header-portrait-frame ${themeClass}`} aria-hidden="true">
+            <span className="combat-portrait-avatar combat-header-portrait">
+                {character.imageUrl ? (
+                    <img src={character.imageUrl} alt="" />
+                ) : (
+                    <span className="combat-portrait-fallback">{portraitInitials}</span>
+                )}
+            </span>
+        </div>
+    ) : null;
+
     return (
-        <div className={`combat-header ${avatarSide === "right" ? "portrait-right" : "portrait-left"}`}>
+        <div className={`combat-header ${avatarSide === "right" ? "portrait-right" : "portrait-left"}${showPortrait ? " with-portrait" : ""}`}>
             {avatarSide !== "right" && returnButton}
+            {portrait}
 
             <div className="combat-identity">
                 <div className="combat-top-row">

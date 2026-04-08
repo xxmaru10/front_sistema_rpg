@@ -900,6 +900,14 @@ body {
     grid-template-columns: minmax(470px, 1.16fr) minmax(360px, 0.96fr) 26px;
 }
 
+.combat-arena-layout.has-challenge-right {
+    grid-template-columns: 26px minmax(360px, 1fr) minmax(208px, 0.42fr);
+}
+
+.combat-arena-layout.has-expanded-left.has-challenge-right {
+    grid-template-columns: minmax(470px, 1.12fr) minmax(336px, 0.92fr) minmax(208px, 0.42fr);
+}
+
 .combat-arena-layout.has-expanded-right {
     grid-template-columns: 26px minmax(360px, 0.96fr) minmax(470px, 1.16fr);
 }
@@ -924,12 +932,19 @@ body {
 .combat-threats-column {
     max-height: calc(100vh - 200px);
     padding-right: 18px;
+    align-items: flex-end;
 }
 
 .combat-threats {
     flex: 1;
     min-height: 0;
     overflow: visible;
+    width: 100%;
+}
+
+.challenge-panel {
+    width: min(100%, 214px);
+    align-self: flex-end;
 }
 
 .combat-side-lane {
@@ -960,13 +975,14 @@ body {
     top: 0;
     display: flex;
     align-items: flex-start;
-    gap: 6px;
-    padding: 6px;
+    gap: 0;
+    padding: 8px 10px;
     border: 1px solid rgba(255,255,255,0.12);
     background: rgba(8, 8, 8, 0.96);
     backdrop-filter: blur(14px);
     box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
     transition: transform 0.28s ease, opacity 0.28s ease, box-shadow 0.28s ease;
+    overflow: visible;
 }
 
 .combat-avatar-drawer.side-left .combat-avatar-panel {
@@ -1005,9 +1021,12 @@ body {
     flex-direction: column;
     gap: 8px;
     flex-shrink: 0;
+    align-items: center;
 }
 
 .combat-avatar-drawer-tab {
+    position: absolute;
+    top: 12px;
     width: 20px;
     min-width: 20px;
     height: 72px;
@@ -1021,6 +1040,14 @@ body {
     justify-content: center;
     box-shadow: inset 0 0 16px rgba(255,255,255,0.04);
     transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+.combat-avatar-drawer.side-left .combat-avatar-drawer-tab {
+    right: -18px;
+}
+
+.combat-avatar-drawer.side-right .combat-avatar-drawer-tab {
+    left: -18px;
 }
 
 .combat-avatar-drawer.hero-drawer .combat-avatar-drawer-tab {

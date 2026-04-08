@@ -40,9 +40,13 @@ function getPortraitInitials(name: string) {
     return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 }
 
+function isThreatCombatant(character: Character) {
+    return character.arenaSide === "THREAT" || (character.isNPC && character.arenaSide !== "HERO");
+}
+
 function getCombatCardThemeClass(character: Character, isOwner: boolean) {
     const isNpcHero = character.isNPC && character.arenaSide === "HERO";
-    const isThreat = character.arenaSide === "THREAT" || (character.isNPC && character.arenaSide !== "HERO");
+    const isThreat = isThreatCombatant(character);
 
     if (character.isHazard) return "hazard-card";
     if (isThreat) return "threat-card";
@@ -82,6 +86,8 @@ export function CombatCard({
     } = useCombatCard({ character, sessionId, actorUserId, isGM });
 
     const isHazard = character.isHazard;
+    const isThreat = isThreatCombatant(character);
+    const isRestrictedThreatView = isThreat && !isGM && !isOwner;
     const cardThemeClass = getCombatCardThemeClass(character, isOwner);
     const portraitInitials = getPortraitInitials(character.name);
 
@@ -128,7 +134,7 @@ export function CombatCard({
 
     return (
         <div
-            className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}`}
+            className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
         >
             <CombatHeader
                 character={character}
@@ -143,30 +149,36 @@ export function CombatCard({
                 onToggleExpanded={onToggleExpanded}
                 avatarSide={avatarSide}
                 themeClass={cardThemeClass}
+                showPortrait={isRestrictedThreatView}
+                portraitInitials={portraitInitials}
             />
 
-            <CombatAspects character={character} />
+            {!isRestrictedThreatView && (
+                <>
+                    <CombatAspects character={character} />
 
-            <CombatStressTracks
-                character={character}
-                canEditSelf={canEditSelf}
-                handleStressToggle={handleStressToggle}
-            />
+                    <CombatStressTracks
+                        character={character}
+                        canEditSelf={canEditSelf}
+                        handleStressToggle={handleStressToggle}
+                    />
 
-            <CombatConsequences
-                character={character}
-                isGM={isGM}
-                openConsequenceModal={openConsequenceModal}
-            />
+                    <CombatConsequences
+                        character={character}
+                        isGM={isGM}
+                        openConsequenceModal={openConsequenceModal}
+                    />
 
-            <CombatExtras
-                character={character}
-                isGM={isGM}
-                isOwner={isOwner}
-            />
+                    <CombatExtras
+                        character={character}
+                        isGM={isGM}
+                        isOwner={isOwner}
+                    />
+                </>
+            )}
 
             {/* Modal */}
-            {consequenceModal && (
+            {!isRestrictedThreatView && consequenceModal && (
                 <ConsequenceModal
                     isOpen={!!consequenceModal}
                     initialText={consequenceModal.current}

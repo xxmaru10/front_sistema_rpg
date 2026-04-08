@@ -3,7 +3,7 @@ title: "Story 34 - Arena: avatares circulares laterais com expansão progressiva
 description: "Transformar os botões de expansão dos cards da Arena em avatares circulares com foto, ancorados nas laterais, permitindo abrir o card completo principal e expandir os demais abaixo dele em cada lado."
 priority: "alta"
 status: "concluida"
-last_updated: "2026-04-08 (refino-layout-e-resumo-validado)"
+last_updated: "2026-04-08 (follow-up-desafio-e-privacidade-inimigo)"
 tags: [ui, arena, combat, cards, avatar, personagem, npc]
 ---
 
@@ -96,4 +96,5 @@ Pelo que já existe em [knowledge/architecture.md](/C:/Users/danie/Desktop/RPG/C
 - Implementação concluída.
 - Cards da Arena passaram a operar com gavetas laterais ocultas por seta, com revelação por hover/click e pilhas independentes de cards expandidos para heróis e ameaças.
 - Refinos aplicados: painel de desafio agora expande corretamente mesmo sem ameaça aberta, drawers laterais ficaram mais compactos/clean e o resumo da ficha passou a exibir perícias negativas também.
+- Follow-up aplicado: o painel de desafio voltou a ter largura própria, sem herdar expansão do card inimigo, e a visualização do inimigo para jogadores foi reduzida a nome, retrato e seta de recolhimento, preservando estresse/consequências apenas para o GM.
 - Build de produção validado com sucesso via `npm run build` em 2026-04-08.

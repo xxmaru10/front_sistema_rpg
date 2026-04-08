@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-08 (story-34/refino-layout-resumo/final)
+last_updated: 2026-04-08 (story-34/follow-up-privacidade-inimigo)
 status: ativo
 ---
 
@@ -105,6 +105,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Retorno por seta no header**: quando o card está aberto, o retrato interno é suprimido em favor de um botão-seta que aponta para a lateral de origem e recolhe o card de volta ao estado oculto.
 - **Resumo com perícias não nulas**: o bloco de Resumo da ficha passou a listar todas as perícias diferentes de `0`, incluindo valores negativos, preservando a leitura de penalidades mecânicas sem exigir entrada na aba completa de perícias.
 - **Painel de desafio desacoplado de ameaça aberta**: a Arena agora reserva largura também quando apenas o desafio está ativo, evitando o colapso estreito do painel na ausência de adversários expandidos.
+- **Privacidade da ficha inimiga para jogadores**: quando um jogador expande um inimigo na Arena, o card passa a exibir somente nome, retrato e seta de retorno; estresse, consequências, aspectos e extras seguem visíveis apenas para o GM, preservando sigilo sem remover a presença do inimigo na cena.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
