@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Dice5 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dice5 } from "lucide-react";
 import { Character } from "@/types/domain";
 
 interface CombatHeaderProps {
@@ -19,18 +19,6 @@ interface CombatHeaderProps {
     themeClass: string;
 }
 
-function getCharacterInitials(name: string) {
-    const parts = name
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2);
-
-    if (parts.length === 0) return "??";
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
-}
-
 export function CombatHeader({
     character,
     isOwner,
@@ -46,11 +34,10 @@ export function CombatHeader({
     themeClass,
 }: CombatHeaderProps) {
     const impulseCount = Math.max(0, Math.trunc(character.impulseArrows || 0));
-    const portraitInitials = getCharacterInitials(character.name);
-    const portraitButton = onToggleExpanded ? (
+    const returnButton = onToggleExpanded ? (
         <button
             type="button"
-            className={`combat-portrait-toggle ${themeClass} ${avatarSide === "right" ? "side-right" : "side-left"}`}
+            className={`combat-return-toggle ${themeClass} ${avatarSide === "right" ? "side-right" : "side-left"}`}
             onClick={(e) => {
                 e.stopPropagation();
                 onToggleExpanded();
@@ -58,19 +45,15 @@ export function CombatHeader({
             title={`Recolher card de ${character.name}`}
             aria-label={`Recolher card de ${character.name}`}
         >
-            <span className="combat-portrait-avatar">
-                {character.imageUrl ? (
-                    <img src={character.imageUrl} alt="" />
-                ) : (
-                    <span className="combat-portrait-fallback">{portraitInitials}</span>
-                )}
+            <span className="combat-return-icon" aria-hidden="true">
+                {avatarSide === "right" ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </span>
         </button>
     ) : null;
 
     return (
         <div className={`combat-header ${avatarSide === "right" ? "portrait-right" : "portrait-left"}`}>
-            {avatarSide !== "right" && portraitButton}
+            {avatarSide !== "right" && returnButton}
 
             <div className="combat-identity">
                 <div className="combat-top-row">
@@ -150,7 +133,7 @@ export function CombatHeader({
                 )}
             </div>
 
-            {avatarSide === "right" && portraitButton}
+            {avatarSide === "right" && returnButton}
 
             {/* Remove Button */}
             {canEdit && onRemove && (

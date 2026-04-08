@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-08 (story-34/arena-avatares-laterais/final)
+last_updated: 2026-04-08 (story-34/arena-drawer-lateral/final)
 status: ativo
 ---
 
@@ -100,6 +100,9 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Avatar como gatilho primário**: o antigo `+/-` foi substituído por um retrato circular com moldura temática, reaproveitado tanto no rail lateral compacto quanto no header do card expandido para recolhimento.
 - **Pilhas independentes por lado**: cards abertos agora entram em ordem de clique abaixo do principal do respectivo lado, sem interferência cruzada entre a coluna de heróis e a de ameaças.
 - **Escopo visual sem impacto de domínio**: hazards permaneceram fora do novo padrão de avatar lateral e nenhum contrato/evento de `domain.ts` precisou ser alterado, preservando Event Sourcing intacto.
+- **Gaveta lateral com seta persistente**: o rail visível foi refinado para drawers ocultos na borda, revelados por hover no desktop e clique no mobile, reforçando a sensação de que os retratos “saem” das laterais da Arena.
+- **Card aberto prioriza largura útil**: a grade da Arena passou a redistribuir espaço dinamicamente quando há cards expandidos, aproximando os cards abertos do centro sem comprimir excessivamente a zona de rolagem.
+- **Retorno por seta no header**: quando o card está aberto, o retrato interno é suprimido em favor de um botão-seta que aponta para a lateral de origem e recolhe o card de volta ao estado oculto.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

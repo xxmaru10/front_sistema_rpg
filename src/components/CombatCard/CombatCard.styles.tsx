@@ -157,7 +157,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             min-width: 0;
         }
 
-        .combat-portrait-toggle,
+        .combat-return-toggle,
         .combat-avatar-shell {
             --portrait-ring: rgba(255,255,255,0.22);
             position: relative;
@@ -173,11 +173,11 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
         }
 
-        .combat-portrait-toggle {
-            width: 58px;
-            height: 58px;
-            padding: 7px;
-            border-radius: 18px;
+        .combat-return-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            color: #f3e1b3;
         }
 
         .combat-avatar-shell {
@@ -198,12 +198,12 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             transform: translateX(var(--avatar-offset));
         }
 
-        .combat-portrait-toggle:hover,
+        .combat-return-toggle:hover,
         .combat-avatar-shell:hover {
             filter: saturate(1.05);
         }
 
-        .combat-portrait-toggle:hover {
+        .combat-return-toggle:hover {
             transform: translateY(-2px) scale(1.03);
         }
 
@@ -212,7 +212,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             transform: translateX(var(--avatar-offset)) translateY(-2px) scale(1.03);
         }
 
-        .combat-portrait-toggle:focus-visible,
+        .combat-return-toggle:focus-visible,
         .combat-avatar-shell:focus-visible {
             outline: none;
             box-shadow: 0 0 0 2px rgba(255,255,255,0.18), 0 12px 24px rgba(0,0,0,0.45);
@@ -227,7 +227,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             z-index: 0;
         }
 
-        .combat-portrait-toggle::before,
+        .combat-return-toggle::before,
         .combat-avatar-shell::before {
             content: '';
             position: absolute;
@@ -235,6 +235,15 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             border-radius: inherit;
             background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 62%);
             pointer-events: none;
+        }
+
+        .combat-return-icon {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.24));
         }
 
         .combat-portrait-avatar {
@@ -272,7 +281,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             text-shadow: 0 0 10px rgba(255,255,255,0.18);
         }
 
-        .combat-portrait-toggle.hero-card,
+        .combat-return-toggle.hero-card,
         .combat-avatar-shell.hero-card {
             --portrait-ring: rgba(241, 207, 133, 0.68);
             border-color: rgba(197, 160, 89, 0.48);
@@ -280,7 +289,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             box-shadow: inset 0 0 28px rgba(197, 160, 89, 0.12), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(197, 160, 89, 0.16);
         }
 
-        .combat-portrait-toggle.own-hero-card,
+        .combat-return-toggle.own-hero-card,
         .combat-avatar-shell.own-hero-card {
             --portrait-ring: rgba(170, 255, 202, 0.68);
             border-color: rgba(46, 204, 113, 0.48);
@@ -288,7 +297,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             box-shadow: inset 0 0 28px rgba(46, 204, 113, 0.11), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(46, 204, 113, 0.16);
         }
 
-        .combat-portrait-toggle.npc-hero-card,
+        .combat-return-toggle.npc-hero-card,
         .combat-avatar-shell.npc-hero-card {
             --portrait-ring: rgba(184, 222, 255, 0.72);
             border-color: rgba(80, 166, 255, 0.5);
@@ -296,7 +305,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             box-shadow: inset 0 0 28px rgba(80, 166, 255, 0.12), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(80, 166, 255, 0.16);
         }
 
-        .combat-portrait-toggle.threat-card,
+        .combat-return-toggle.threat-card,
         .combat-avatar-shell.threat-card {
             --portrait-ring: rgba(255, 192, 192, 0.72);
             border-color: rgba(255, 68, 68, 0.52);

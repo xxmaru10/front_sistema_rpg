@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
-import { ChevronRight, FastForward, Trash2, Dice5 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FastForward, Trash2, Dice5 } from "lucide-react";
 import { CombatCard } from "@/components/CombatCard";
 import { TurnTimer } from "@/components/TurnTimer";
 import { DiceRoller } from "@/components/DiceRoller";
@@ -64,6 +64,8 @@ export function CombatTab({
 }: CombatTabProps) {
     const [expandedHeroIds, setExpandedHeroIds] = useState<string[]>([]);
     const [expandedThreatIds, setExpandedThreatIds] = useState<string[]>([]);
+    const [isHeroDrawerPinned, setIsHeroDrawerPinned] = useState(false);
+    const [isThreatDrawerPinned, setIsThreatDrawerPinned] = useState(false);
 
     const heroCombatants = useMemo(
         () => combatantList.filter(c => !c.isHazard && (c.arenaSide === "HERO" || (!c.isNPC && !c.arenaSide))),
@@ -101,8 +103,20 @@ export function CombatTab({
     const compactHeroCards = heroCombatants.filter(c => !expandedHeroIds.includes(c.id));
     const compactThreatCards = threatCombatants.filter(c => !expandedThreatIds.includes(c.id));
 
+    const hasExpandedHeroes = expandedHeroCards.length > 0;
+    const hasExpandedThreats = expandedThreatCards.length > 0 || threatHazards.length > 0;
+
+    useEffect(() => {
+        if (compactHeroCards.length === 0) setIsHeroDrawerPinned(false);
+    }, [compactHeroCards.length]);
+
+    useEffect(() => {
+        if (compactThreatCards.length === 0) setIsThreatDrawerPinned(false);
+    }, [compactThreatCards.length]);
+
     const toggleExpandedCard = (side: "hero" | "threat", characterId: string) => {
         if (side === "hero") {
+            setIsHeroDrawerPinned(false);
             setExpandedHeroIds(prev =>
                 prev.includes(characterId)
                     ? prev.filter(id => id !== characterId)
@@ -111,6 +125,7 @@ export function CombatTab({
             return;
         }
 
+        setIsThreatDrawerPinned(false);
         setExpandedThreatIds(prev =>
             prev.includes(characterId)
                 ? prev.filter(id => id !== characterId)
@@ -127,7 +142,9 @@ export function CombatTab({
 
 
 
-            <div className="combat-arena-layout">
+            <div
+                className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}`}
+            >
                 {/* Coluna 1: Herói Ativo (Esquerda) */}
                 <div className="combat-party combat-side-column">
                     {heroCombatants.length === 0 ? (
@@ -136,45 +153,55 @@ export function CombatTab({
                         </div>
                     ) : (
                         <div className="combat-side-lane hero-side-lane">
-                            <div className="combat-avatar-rail hero-avatar-rail">
-                                {compactHeroCards.map(char => (
+                            {compactHeroCards.length > 0 && (
+                                <div className={`combat-avatar-drawer side-left hero-drawer${isHeroDrawerPinned ? " is-pinned" : ""}`}>
+                                    <div className="combat-avatar-panel">
+                                        <div className="combat-avatar-rail hero-avatar-rail">
+                                            {compactHeroCards.map(char => (
+                                                <CombatCard
+                                                    key={`${char.id}-hero-compact`}
+                                                    character={char}
+                                                    sessionId={sessionId as string}
+                                                    actorUserId={actorUserId}
+                                                    isGM={userRole === "GM"}
+                                                    isCurrentTurn={currentTurnActorId === char.id}
+                                                    isLinkedCharacter={fixedCharacterId === char.id}
+                                                    displayMode="compact"
+                                                    avatarSide="left"
+                                                    onToggleExpanded={() => toggleExpandedCard("hero", char.id)}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="combat-avatar-drawer-tab"
+                                            onClick={() => setIsHeroDrawerPinned(prev => !prev)}
+                                            aria-label={isHeroDrawerPinned ? "Esconder retratos de aliados" : "Mostrar retratos de aliados"}
+                                            title={isHeroDrawerPinned ? "Esconder retratos" : "Mostrar retratos"}
+                                        >
+                                            <ChevronRight size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="combat-expanded-stack combat-cards-stack scrollbar-arcane">
+                                {expandedHeroCards.map(char => (
                                     <CombatCard
-                                        key={`${char.id}-hero-compact`}
+                                        key={`${char.id}-hero-expanded`}
                                         character={char}
                                         sessionId={sessionId as string}
                                         actorUserId={actorUserId}
                                         isGM={userRole === "GM"}
+                                        onRemove={char.isNPC ? () => handleRemoveCharacter(char.id) : undefined}
                                         isCurrentTurn={currentTurnActorId === char.id}
                                         isLinkedCharacter={fixedCharacterId === char.id}
-                                        displayMode="compact"
-                                        avatarSide="left"
+                                        onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
                                         onToggleExpanded={() => toggleExpandedCard("hero", char.id)}
+                                        avatarSide="left"
                                     />
                                 ))}
-                            </div>
-
-                            <div className="combat-expanded-stack combat-cards-stack scrollbar-arcane">
-                                {expandedHeroCards.length === 0 ? (
-                                    <div className="combat-side-empty-state">
-                                        Clique em um retrato à esquerda para abrir o card.
-                                    </div>
-                                ) : (
-                                    expandedHeroCards.map(char => (
-                                        <CombatCard
-                                            key={`${char.id}-hero-expanded`}
-                                            character={char}
-                                            sessionId={sessionId as string}
-                                            actorUserId={actorUserId}
-                                            isGM={userRole === "GM"}
-                                            onRemove={char.isNPC ? () => handleRemoveCharacter(char.id) : undefined}
-                                            isCurrentTurn={currentTurnActorId === char.id}
-                                            isLinkedCharacter={fixedCharacterId === char.id}
-                                            onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                            onToggleExpanded={() => toggleExpandedCard("hero", char.id)}
-                                            avatarSide="left"
-                                        />
-                                    ))
-                                )}
                             </div>
                         </div>
                     )}
@@ -635,16 +662,10 @@ export function CombatTab({
                     <div className="combat-threats">
                         <div className="combat-side-lane threat-side-lane">
                             <div className="combat-expanded-stack combat-cards-stack scrollbar-arcane">
-                                {expandedThreatCards.length === 0 && threatHazards.length === 0 ? (
-                                    compactThreatCards.length === 0 ? (
-                                        <div className="empty-combat-text p-4 text-center border border-dashed border-[rgba(255,68,68,0.35)] rounded opacity-50 text-xs">
-                                            Nenhuma ameaça na arena.
-                                        </div>
-                                    ) : (
-                                        <div className="combat-side-empty-state hostile">
-                                            Clique em um retrato à direita para abrir o card.
-                                        </div>
-                                    )
+                                {expandedThreatCards.length === 0 && threatHazards.length === 0 && compactThreatCards.length === 0 ? (
+                                    <div className="empty-combat-text p-4 text-center border border-dashed border-[rgba(255,68,68,0.35)] rounded opacity-50 text-xs">
+                                        Nenhuma ameaça na arena.
+                                    </div>
                                 ) : null}
 
                                 {expandedThreatCards.map(char => (
@@ -676,21 +697,37 @@ export function CombatTab({
                                 ))}
                             </div>
 
-                            <div className="combat-avatar-rail threat-avatar-rail">
-                                {compactThreatCards.map(char => (
-                                    <CombatCard
-                                        key={`${char.id}-threat-compact`}
-                                        character={char}
-                                        sessionId={sessionId as string}
-                                        actorUserId={actorUserId}
-                                        isGM={userRole === "GM"}
-                                        isCurrentTurn={currentTurnActorId === char.id}
-                                        displayMode="compact"
-                                        avatarSide="right"
-                                        onToggleExpanded={() => toggleExpandedCard("threat", char.id)}
-                                    />
-                                ))}
-                            </div>
+                            {compactThreatCards.length > 0 && (
+                                <div className={`combat-avatar-drawer side-right threat-drawer${isThreatDrawerPinned ? " is-pinned" : ""}`}>
+                                    <div className="combat-avatar-panel">
+                                        <div className="combat-avatar-rail threat-avatar-rail">
+                                            {compactThreatCards.map(char => (
+                                                <CombatCard
+                                                    key={`${char.id}-threat-compact`}
+                                                    character={char}
+                                                    sessionId={sessionId as string}
+                                                    actorUserId={actorUserId}
+                                                    isGM={userRole === "GM"}
+                                                    isCurrentTurn={currentTurnActorId === char.id}
+                                                    displayMode="compact"
+                                                    avatarSide="right"
+                                                    onToggleExpanded={() => toggleExpandedCard("threat", char.id)}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="combat-avatar-drawer-tab"
+                                            onClick={() => setIsThreatDrawerPinned(prev => !prev)}
+                                            aria-label={isThreatDrawerPinned ? "Esconder retratos de inimigos" : "Mostrar retratos de inimigos"}
+                                            title={isThreatDrawerPinned ? "Esconder retratos" : "Mostrar retratos"}
+                                        >
+                                            <ChevronLeft size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
