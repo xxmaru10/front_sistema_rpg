@@ -201,9 +201,19 @@ export class EventStore {
                 this.snapshotState = previousSnapshotState;
                 this.snapshotUpToSeq = previousSnapshotUpToSeq;
             }
-            this.events = result.events.length === 0 && isSameSessionRefresh && previousEvents.length > 0
-                ? previousEvents
-                : result.events;
+            if (isSameSessionRefresh && previousEvents.length > 0) {
+                // Delta-safe refresh: preserve previously loaded timeline and merge fetched events by id.
+                const merged = new Map<string, ActionEvent>();
+                for (const prev of previousEvents) {
+                    merged.set(prev.id, prev);
+                }
+                for (const incoming of result.events) {
+                    merged.set(incoming.id, incoming);
+                }
+                this.events = Array.from(merged.values());
+            } else {
+                this.events = result.events;
+            }
             fetchSuccess = true;
             console.info(`[EventStore] ${result.events.length} eventos carregados via NestJS.`);
         } catch (err: any) {
