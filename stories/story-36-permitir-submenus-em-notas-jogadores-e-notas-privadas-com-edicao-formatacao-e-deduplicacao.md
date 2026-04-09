@@ -3,7 +3,7 @@ title: "Story 36 - Permitir submenus em Notas > Jogadores e Notas Privadas com e
 description: "Adicionar organização por submenus (incluindo Todas), edição/exclusão no fluxo de Jogadores, ferramentas de formatação textual e robustez contra notas duplicadas, preservando regras de privacidade."
 priority: "alta"
 status: "concluído"
-last_updated: "2026-04-09 (implementacao-validada)"
+last_updated: "2026-04-09 (follow-up-validado)"
 tags: [notas, submenu, privacidade, bugfix, ui, eventsourcing]
 ---
 
@@ -97,3 +97,4 @@ A implementação deve respeitar a arquitetura de Event Sourcing e manter privac
 ## Status
 - Implementação concluída.
 - Build de produção validado com sucesso via `npm run build` em 2026-04-09.
+- Follow-up aplicado em 2026-04-09: filtro de Jogadores migrado para droplist, auto-menções por texto digitado com remoção por clique e correção de persistência de marcadores/listas no diário principal.

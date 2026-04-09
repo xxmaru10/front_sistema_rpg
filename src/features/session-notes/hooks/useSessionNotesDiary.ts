@@ -125,7 +125,10 @@ export function useSessionNotesDiary({
 
     const handleFormat = (command: string) => {
         document.execCommand(command, false, undefined);
-        if (editorRef.current) editorRef.current.focus();
+        if (editorRef.current) {
+            setEditorContent(editorRef.current.innerHTML);
+            editorRef.current.focus();
+        }
     };
 
     const crossPostMentionsToEntities = (htmlContent: string, isPrivate: boolean = false) => {
@@ -186,7 +189,8 @@ export function useSessionNotesDiary({
     };
 
     const handleSend = () => {
-        const content = editorContent.trim();
+        const latestContent = editorRef.current?.innerHTML || editorContent;
+        const content = latestContent.trim();
         if (!content) return;
 
         if (editingNoteId) {
@@ -198,7 +202,7 @@ export function useSessionNotesDiary({
                 actorUserId: userId,
                 createdAt: new Date().toISOString(),
                 visibility: existingNote.isPrivate ? { kind: "PLAYER_ONLY", userId } : "PUBLIC",
-                payload: { noteId: editingNoteId, patch: { content: editorContent } }
+                payload: { noteId: editingNoteId, patch: { content: latestContent } }
             } as any);
             setEditingNoteId(null);
         } else {
@@ -214,14 +218,14 @@ export function useSessionNotesDiary({
                     id: uuidv4(),
                     authorId: userId,
                     authorName: userId,
-                    content: editorContent,
+                    content: latestContent,
                     createdAt: new Date().toISOString(),
                     isPrivate,
                     sessionNumber: state.sessionNumber || 1,
                     folderId: isPrivate && hasSelectedFolder ? selectedPrivateFolderId : undefined
                 }
             } as any);
-            crossPostMentionsToEntities(editorContent, isPrivate);
+            crossPostMentionsToEntities(latestContent, isPrivate);
         }
 
         setEditorContent("");

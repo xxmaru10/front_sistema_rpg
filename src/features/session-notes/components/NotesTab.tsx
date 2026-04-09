@@ -351,49 +351,23 @@ export function NotesTab({
     );
 
     const renderPlayerSubmenus = () => (
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
-            <button
-                type="button"
-                onClick={() => setSelectedPlayerNotesView("all")}
-                style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    border: selectedPlayerNotesView === "all" ? "1px solid var(--accent-color)" : "1px solid rgba(255,255,255,0.08)",
-                    background: selectedPlayerNotesView === "all" ? "rgba(197,160,89,0.18)" : "rgba(255,255,255,0.03)",
-                    color: selectedPlayerNotesView === "all" ? "#fff" : "#bbb",
-                    padding: "8px 12px",
-                    borderRadius: "999px",
-                    cursor: "pointer"
-                }}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", padding: "8px 10px", border: "1px solid rgba(197,160,89,0.12)", background: "rgba(0,0,0,0.18)", borderRadius: "8px" }}>
+            <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>
+                JOGADOR:
+            </span>
+            <select
+                value={selectedPlayerNotesView}
+                onChange={(e) => setSelectedPlayerNotesView(e.target.value)}
+                className="author-filter"
+                style={{ minWidth: "240px" }}
             >
-                TODAS
-            </button>
-            {playerChars.map((char: any) => (
-                <button
-                    key={char.id}
-                    type="button"
-                    onClick={() => setSelectedPlayerNotesView(char.id)}
-                    style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        border: selectedPlayerNotesView === char.id ? "1px solid var(--accent-color)" : "1px solid rgba(255,255,255,0.08)",
-                        background: selectedPlayerNotesView === char.id ? "rgba(197,160,89,0.18)" : "rgba(255,255,255,0.03)",
-                        color: selectedPlayerNotesView === char.id ? "#fff" : "#bbb",
-                        padding: "8px 12px",
-                        borderRadius: "999px",
-                        cursor: "pointer"
-                    }}
-                >
-                    {char.imageUrl && (
-                        <span style={{ borderRadius: "50%", width: "18px", height: "18px", overflow: "hidden", display: "inline-flex", border: "1px solid rgba(255,255,255,0.15)" }}>
-                            <img src={char.imageUrl} alt={char.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        </span>
-                    )}
-                    {char.name.toUpperCase()}
-                </button>
-            ))}
+                <option value="all">TODOS</option>
+                {playerChars.map((char: any) => (
+                    <option key={char.id} value={char.id}>
+                        {char.name.toUpperCase()}
+                    </option>
+                ))}
+            </select>
         </div>
     );
 
