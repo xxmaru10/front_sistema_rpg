@@ -13,14 +13,17 @@ interface TextChatMessage {
     userId: string;
     text: string;
     timestamp: number;
+    authorRole?: "GM" | "PLAYER";
+    authorLabel?: string;
 }
 
 interface TextChatPanelProps {
     sessionId: string;
     userId: string;
+    userRole: "GM" | "PLAYER";
 }
 
-export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
+export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<TextChatMessage[]>([]);
     const [inputText, setInputText] = useState("");
@@ -49,11 +52,13 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
     }, [sessionId]);
 
     const state = useMemo(() => computeState(events), [events]);
-    const getDisplayName = useCallback((uid: string) => {
+    const getDisplayName = useCallback((uid: string, msg?: TextChatMessage) => {
+        if (msg?.authorRole === "GM") return "MESTRE";
+        if (msg?.authorLabel?.trim()) return msg.authorLabel.trim().toUpperCase();
         const ownedPc = Object.values(state.characters || {}).find(
             (c: any) => c.ownerUserId === uid && !c.isNPC
         );
-        return ownedPc ? (ownedPc as any).name : uid;
+        return ownedPc ? (ownedPc as any).name : uid.toUpperCase();
     }, [state.characters]);
 
     useEffect(() => {
@@ -134,9 +139,11 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
 
         const newMsg: TextChatMessage = {
             id: uuidv4(),
-            userId,
+            userId: userRole === "GM" ? "Mestre" : userId,
             text: inputText.trim(),
             timestamp: Date.now(),
+            authorRole: userRole,
+            authorLabel: userRole === "GM" ? "Mestre" : userId,
         };
 
         setMessages(prev => {
@@ -288,7 +295,7 @@ export function TextChatPanel({ sessionId, userId }: TextChatPanelProps) {
                                                 fontFamily: 'var(--font-header)',
                                                 paddingLeft: '4px',
                                             }}>
-                                                {getDisplayName(msg.userId)}
+                                                {getDisplayName(msg.userId, msg)}
                                             </span>
                                         )}
                                         <div style={{
