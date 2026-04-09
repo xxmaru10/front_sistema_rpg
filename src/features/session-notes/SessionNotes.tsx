@@ -1,5 +1,5 @@
 import { Book, Globe, Clock, Swords, Search, X, Filter, ChevronDown, RotateCw, Check } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Character, SessionState } from "@/types/domain";
 import { useSessionNotes } from "./hooks/useSessionNotes";
 import { NotesTab } from "./components/NotesTab";
@@ -8,6 +8,7 @@ import { TimeTab, GameTab } from "./components/TimeGameTabs";
 import { CreateWorldEntityModal } from "./components/CreateWorldEntityModal";
 import { ViewWorldEntityModal } from "./components/ViewWorldEntityModal";
 import { globalEventStore } from "@/lib/eventStore";
+import { getMentionNavigationRequest, MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { v4 as uuidv4 } from "uuid";
 import "./SessionNotes.css";
 
@@ -104,9 +105,21 @@ interface SessionNotesProps {
     globalBestiaryChars?: Character[];
     onRegisterThreat?: () => void;
     onRefresh?: () => void;
+    pendingMentionNavigation?: MentionNavigationRequest | null;
+    onMentionNavigationConsumed?: () => void;
 }
 
-export function SessionNotes({ sessionId, userId, userRole, state, globalBestiaryChars = [], onRegisterThreat, onRefresh }: SessionNotesProps) {
+export function SessionNotes({
+    sessionId,
+    userId,
+    userRole,
+    state,
+    globalBestiaryChars = [],
+    onRegisterThreat,
+    onRefresh,
+    pendingMentionNavigation = null,
+    onMentionNavigationConsumed,
+}: SessionNotesProps) {
     const {
         // State
         editorContent, setEditorContent,
@@ -305,7 +318,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         };
     }, [showWorldFilters]);
 
-    const handleSelectSearchResult = (entity: any) => {
+    const handleSelectSearchResult = useCallback((entity: any) => {
         if (entity.category === 'Mundo') {
             setActiveTab('Mundo');
             const typeToTab: any = {
@@ -339,31 +352,40 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         }
         setShowSuggestions(false);
         setWorldSearch("");
-    };
+    }, [setActiveTab, setShowSuggestions, setSubTabJogo, setSubTabMundo, setSubTabTempo, setViewingBestiaryCharId, setViewingEntityId, setWorldSearch]);
 
-    const handleMentionClick = (e: React.MouseEvent) => {
-        const target = e.target as HTMLElement;
-        const mentionId = target.getAttribute("data-mention-id");
-        const mentionType = target.getAttribute("data-mention-type");
-        const tag = target.getAttribute("data-tag");
-
-        if (tag) {
+    const navigateFromMentionRequest = useCallback((request: MentionNavigationRequest) => {
+        if (request.tag) {
+            const tag = request.tag;
             setWorldSearch(tag);
             setActiveTab("Mundo");
             return;
         }
 
-        if (mentionId && mentionType) {
+        if (request.mentionId && request.mentionType) {
             const mockEntity = {
-                id: mentionId,
-                type: mentionType,
-                category: mentionType === 'BESTIARIO' ? 'Criaturas' :
-                         ['MISSÃO', 'HISTÓRIA'].includes(mentionType) ? 'Tempo' :
-                         ['HABILIDADE', 'ITEM'].includes(mentionType) ? 'Jogo' : 'Mundo'
+                id: request.mentionId,
+                type: request.mentionType,
+                displayType: request.mentionType,
+                category: request.mentionType === 'BESTIARIO' ? 'Criaturas' :
+                         ['MISSÃO', 'HISTÓRIA'].includes(request.mentionType) ? 'Tempo' :
+                         ['HABILIDADE', 'ITEM'].includes(request.mentionType) ? 'Jogo' : 'Mundo'
             };
             handleSelectSearchResult(mockEntity);
         }
+    }, [handleSelectSearchResult, setActiveTab, setWorldSearch]);
+
+    const handleMentionClick = (e: React.MouseEvent) => {
+        const request = getMentionNavigationRequest(e.target);
+        if (!request) return;
+        navigateFromMentionRequest(request);
     };
+
+    useEffect(() => {
+        if (!pendingMentionNavigation) return;
+        navigateFromMentionRequest(pendingMentionNavigation);
+        onMentionNavigationConsumed?.();
+    }, [navigateFromMentionRequest, onMentionNavigationConsumed, pendingMentionNavigation]);
 
     return (
         <div className="session-notes-container solid ornate-border" onClick={handleMentionClick}>

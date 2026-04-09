@@ -4,6 +4,7 @@ import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { SessionState } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
+import { getMentionNavigationRequest, MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { NotesTab } from "@/features/session-notes/components/NotesTab";
 import { useSessionNotesDiary } from "@/features/session-notes/hooks/useSessionNotesDiary";
 import "@/features/session-notes/SessionNotes.css";
@@ -14,6 +15,7 @@ interface CharacterPrivateNotesPanelProps {
     userRole: "GM" | "PLAYER";
     state: SessionState;
     mentionEntities: any[];
+    onMentionNavigate?: (request: MentionNavigationRequest) => void;
 }
 
 const EMPTY_WORLD_FILTERS: Record<string, string[]> = {};
@@ -24,6 +26,7 @@ export function CharacterPrivateNotesPanel({
     userRole,
     state,
     mentionEntities,
+    onMentionNavigate,
 }: CharacterPrivateNotesPanelProps) {
     const normalizedUserId = userId.trim().toLowerCase();
     const [selectedPrivateFolderId, setSelectedPrivateFolderId] = useState("all");
@@ -90,8 +93,24 @@ export function CharacterPrivateNotesPanel({
         handleAddEntityNote,
     });
 
+    const handleMentionClick = (e: React.MouseEvent) => {
+        if (!onMentionNavigate) return;
+
+        const target = e.target as HTMLElement | null;
+        if (target?.closest(".mention-editor-container, .mention-rich-editor")) {
+            return;
+        }
+
+        const request = getMentionNavigationRequest(e.target);
+        if (!request) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        onMentionNavigate(request);
+    };
+
     return (
-        <div className="character-private-notes-panel">
+        <div className="character-private-notes-panel" onClick={handleMentionClick}>
             <NotesTab
                 notes={diary.notes}
                 filteredNotes={diary.filteredNotes}
