@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-08 (story-32/arena-ui-polish)
+last_updated: 2026-04-08 (story-34/gaveta-externa)
 status: ativo
 ---
 
@@ -49,5 +49,6 @@ Siga o padrão Conventional Commits:
 ## UI Patterns
 - **Luxury Portal Selection**: Para menus suspensos complexos (dropdowns), utilizar Portais (React Portal) fugindo do contexto de empilhamento local para garantir que menus flutuem acima de chats/logs sem recortes. O estilo deve seguir o padrão vitoriano: fundo sólido (obsidiana #0a0a0a para legibilidade), bordas douradas e animações de fade/slide.
 - **Background Image Processing (isImageProcessing)**: Todo upload de imagem que envolva compressão no cliente (Canvas API) deve implementar um estado de processamento (`isImageProcessing`). Esse estado deve desabilitar o botão de submissão e exibir feedback visual (ex: "PROCESSANDO...") para evitar que o usuário salve o formulário antes que a string Base64 final esteja pronta.
+- **Drawer Handle Externo**: Em trilhos laterais com avatares compactos, o controle de abrir/fechar deve ficar fora do bloco principal de conteúdo sempre que possível. O interior da gaveta deve priorizar apenas os elementos navegáveis (ex: retratos), evitando deslocamento lateral e poluição visual do rail.
 
 
