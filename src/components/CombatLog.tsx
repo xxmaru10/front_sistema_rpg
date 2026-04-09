@@ -6,30 +6,16 @@ interface CombatLogProps {
     events: ActionEvent[];
     characters: Record<string, Character>;
     sessionNumber?: number;
+    eventSessionMap?: Record<string, number>;
     onRefresh?: () => void;
 }
 
 import { RotateCw } from "lucide-react";
 
-export function CombatLog({ events, characters, sessionNumber, onRefresh }: CombatLogProps) {
-    // Determine the start of the current session: all events after the most recent SESSION_NUMBER_UPDATED
-    const sessionBoundarySeq = (() => {
-        const updates = events.filter(e => e.type === "SESSION_NUMBER_UPDATED");
-        if (updates.length === 0) return null;
-        const last = updates.reduce((a, b) => {
-            const seqA = a.seq || 0, seqB = b.seq || 0;
-            if (seqA && seqB) return seqA >= seqB ? a : b;
-            return new Date(a.createdAt) >= new Date(b.createdAt) ? a : b;
-        });
-        return last.seq || last.createdAt;
-    })();
-
-    const currentSessionEvents = sessionBoundarySeq === null
+export function CombatLog({ events, characters, sessionNumber, eventSessionMap, onRefresh }: CombatLogProps) {
+    const currentSessionEvents = sessionNumber === undefined
         ? events
-        : events.filter(e => {
-            if (typeof sessionBoundarySeq === 'number') return (e.seq || 0) >= (sessionBoundarySeq as number);
-            return new Date(e.createdAt) >= new Date(sessionBoundarySeq as string);
-        });
+        : events.filter(e => (eventSessionMap?.[e.id] ?? 1) === sessionNumber);
 
     const getActorName = (event: ActionEvent) => {
         const charId = (event.payload as any)?.characterId;
