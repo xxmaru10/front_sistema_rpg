@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-08 (story-34/follow-up-gaveta-externa)
+last_updated: 2026-04-09 (story-35/logs-history-full)
 status: ativo
 ---
 
@@ -107,6 +107,11 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Painel de desafio desacoplado de ameaça aberta**: a Arena agora reserva largura também quando apenas o desafio está ativo, evitando o colapso estreito do painel na ausência de adversários expandidos.
 - **Privacidade da ficha inimiga para jogadores**: quando um jogador expande um inimigo na Arena, o card passa a exibir somente nome, retrato e seta de retorno; estresse, consequências, aspectos e extras seguem visíveis apenas para o GM, preservando sigilo sem remover a presença do inimigo na cena.
 - **Handle externo e retratos centralizados na gaveta**: o rail lateral da Arena passou a manter apenas os avatares minimizados dentro do painel, com a seta/aba de abertura posicionada para fora da gaveta. Isso evita compressão visual dos retratos e reforça o papel do handle como controle separado do conteúdo.
+
+## Registro de Decisões (Story 35)
+- **Histórico completo para observabilidade de logs**: o frontend passou a carregar eventos com `GET /api/events/:sessionId?history=full`, garantindo que CombatLog/LogTab mantenham histórico visual após refresh e reentrada.
+- **Modo full sem snapshot no payload**: no backend, quando `history=full`, o retorno omite snapshot para evitar replay duplicado em projeções quando a lista já contém todos os eventos.
+- **Persistência de sessão atual por replay integral**: com histórico completo, `SESSION_NUMBER_UPDATED` é reprocessado integralmente na projeção, reduzindo risco de fallback incorreto de `sessionNumber` em fluxos de notas e filtros por sessão.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
