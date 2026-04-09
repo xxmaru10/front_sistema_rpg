@@ -159,10 +159,13 @@ export function useSessionSkillsItems({
         }
         if (!newItemName.trim()) return;
 
+        const itemId = editingItemId || uuidv4();
+        const normalizedDescription = newItemDescription.replace(/data-mention-id="__draft_global_item__"/g, `data-mention-id="${itemId}"`);
+
         const item: GlobalItem = {
-            id: uuidv4(),
+            id: itemId,
             name: newItemName,
-            description: newItemDescription,
+            description: normalizedDescription,
             price: newItemPrice,
             quantity: newItemQuantity,
             bonus: newItemBonus,

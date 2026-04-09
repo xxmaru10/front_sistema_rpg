@@ -3,7 +3,7 @@ import { renderMentions } from "@/lib/mentionUtils";
 import { MentionEditor } from "@/components/MentionEditor";
 import { LinkedNotes } from "./LinkedNotes";
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
@@ -485,12 +485,33 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
         newItemBonus, setNewItemBonus,
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
+        editingItemId,
         handleCreateItem, handleUpdateItem, handleDeleteItem,
         handleStartEditSkill, handleCancelSkillEdit,
         handleStartEditItem, handleCancelItemEdit,
         handleAddEntityNote, handleDeleteEntityNote,
         COLOR_PRESETS
     } = handlers;
+
+    const itemDescriptionMentionEntities = useMemo(() => {
+        const draftName = (newItemName || "").trim();
+        if (!draftName) return mentionEntities;
+
+        const draftEntity = {
+            id: editingItemId || "__draft_global_item__",
+            name: draftName,
+            category: "Jogo",
+            displayType: "ITEM",
+            type: "ITEM",
+            color: "#f8e71c"
+        };
+
+        const normalizedDraftName = draftName.toLowerCase();
+        return [
+            draftEntity,
+            ...(mentionEntities || []).filter((entity) => (entity?.name || "").trim().toLowerCase() !== normalizedDraftName)
+        ];
+    }, [editingItemId, mentionEntities, newItemName]);
 
 
     const skills = state.skills || [];
@@ -692,7 +713,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
 
                         <div className="form-group">
                             <label>DESCRIÇÃO</label>
-                            <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={mentionEntities} />
+                            <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={itemDescriptionMentionEntities} />
                         </div>
                         <div className="form-row-double" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
                             <div className="form-group">

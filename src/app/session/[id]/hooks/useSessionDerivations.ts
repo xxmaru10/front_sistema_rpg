@@ -122,16 +122,16 @@ export function useSessionDerivations({
             });
         });
         (state.missions || []).forEach((m: any) =>
-            results.push({ id: m.id, name: m.name, category: "Tempo", displayType: "MISSÃO", color: "#C5A059" })
+            results.push({ id: m.id, name: m.name, category: "Tempo", displayType: "MISSÃO", type: "MISSION", color: "#C5A059" })
         );
         (state.timeline || []).forEach((ev: any) =>
-            results.push({ id: ev.id, name: ev.name, category: "Tempo", displayType: "HISTÓRIA", color: "#4a90e2" })
+            results.push({ id: ev.id, name: ev.name, category: "Tempo", displayType: "HISTÓRIA", type: "TIMELINE", color: "#4a90e2" })
         );
         (state.skills || []).forEach((s: any) =>
-            results.push({ id: s.id, name: s.name, category: "Jogo", displayType: "HABILIDADE", color: s.color })
+            results.push({ id: s.id, name: s.name, category: "Jogo", displayType: "HABILIDADE", type: "SKILL", color: s.color })
         );
         (state.items || []).forEach((i: any) =>
-            results.push({ id: i.id, name: i.name, category: "Jogo", displayType: "ITEM", color: "#f8e71c" })
+            results.push({ id: i.id, name: i.name, category: "Jogo", displayType: "ITEM", type: "ITEM", color: "#f8e71c" })
         );
         const allTags = new Set<string>();
         Object.values(state.worldEntities || {}).forEach(e => (e.tags || []).forEach((t: string) => allTags.add(t)));
