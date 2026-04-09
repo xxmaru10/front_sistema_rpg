@@ -5,6 +5,7 @@ import { ReadonlyURLSearchParams } from "next/navigation";
 import { globalEventStore } from "@/lib/eventStore";
 import { battlemapToolStore, Tool } from "@/lib/battlemapToolStore";
 import { getThemePreset } from "@/lib/themePresets";
+import { computeState } from "@/lib/projections";
 import { v4 as uuidv4 } from "uuid";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -200,18 +201,24 @@ export function useHeaderLogic(
                 }
             },
             (bulkEvents) => {
-                const sorted = [...bulkEvents].reverse();
-
-                const lastSessionUpdate = sorted.find(
-                    (e) => e.type === "SESSION_NUMBER_UPDATED"
+                // Always derive from projection (snapshot + bulk events),
+                // so header stays in sync even when backend returns delta-only without SESSION_NUMBER_UPDATED in bulk.
+                const snapshot = globalEventStore.getSnapshotState();
+                const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+                const projectionEvents =
+                    snapshot && snapshotUpToSeq >= 0
+                        ? bulkEvents.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
+                        : bulkEvents;
+                const projected = computeState(
+                    projectionEvents,
+                    snapshot ?? undefined
                 );
-                if (lastSessionUpdate) {
-                    setSessionNumber((lastSessionUpdate.payload as any).number);
-                }
 
-                const lastBattlemap = sorted.find((e) => e.type === "BATTLEMAP_UPDATED");
-                if (lastBattlemap && lastBattlemap.payload.isActive !== undefined) {
-                    setBattlemapActive(lastBattlemap.payload.isActive);
+                if (projected.sessionNumber !== undefined) {
+                    setSessionNumber(projected.sessionNumber);
+                }
+                if (projected.battlemap?.isActive !== undefined) {
+                    setBattlemapActive(projected.battlemap.isActive);
                 }
             }
         );
@@ -239,6 +246,8 @@ export function useHeaderLogic(
     const changeSessionNumber = (delta: number) => {
         const newNumber = Math.max(1, sessionNumber + delta);
         if (newNumber === sessionNumber) return;
+        const normalizedUserId = userId.trim().toLowerCase();
+        if (!normalizedUserId) return;
 
         setSessionNumber(newNumber);
 
@@ -247,7 +256,7 @@ export function useHeaderLogic(
             sessionId: sessionId!,
             seq: 0,
             type: "SESSION_NUMBER_UPDATED",
-            actorUserId: userId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { number: newNumber },

@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-08 (story-32/combate-impulso-estresse)
+last_updated: 2026-04-09 (story-35/logs-resiliencia-final)
 status: ativo
 ---
 
@@ -31,7 +31,7 @@ Atualmente utiliza autenticação baseada em códigos de sessão (`gmCode`, `pla
 ### Eventos (Event Sourcing)
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/events/:sessionId` | Carrega todos os eventos de uma sessão |
+| GET | `/events/:sessionId` | Carrega eventos da sessão (modo padrão: delta pós-snapshot; `?history=full`: histórico completo sem snapshot no payload) |
 | POST | `/events/:sessionId` | Adiciona um novo evento à timeline |
 | DELETE | `/events/:sessionId` | Limpa o log de eventos da sessão |
 

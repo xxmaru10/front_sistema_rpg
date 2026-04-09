@@ -18,6 +18,8 @@ interface CombatTabProps {
     fixedCharacterId?: string;
     state: any;
     events: ActionEvent[];
+    eventSessionMap: Record<string, number>;
+    isRefreshing?: boolean;
     combatantList: Character[];
     aspectList: Aspect[];
     challengeMode: boolean;
@@ -44,6 +46,8 @@ export function CombatTab({
     fixedCharacterId,
     state,
     events,
+    eventSessionMap,
+    isRefreshing,
     combatantList,
     aspectList,
     challengeMode,
@@ -511,7 +515,14 @@ export function CombatTab({
 
                     {showDiceRoller && (
                         <div className="combat-log-wrapper">
-                            <CombatLog events={events} characters={state.characters} sessionNumber={state.sessionNumber} onRefresh={onRefresh} />
+                            <CombatLog
+                                events={events}
+                                characters={state.characters}
+                                sessionNumber={state.sessionNumber}
+                                eventSessionMap={eventSessionMap}
+                                isRefreshing={isRefreshing}
+                                onRefresh={onRefresh}
+                            />
                         </div>
                     )}
                 </div>

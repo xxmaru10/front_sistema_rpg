@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-09 (story-35/chat-autoria-gm)
+last_updated: 2026-04-09 (story-35/chat-autoria-gm & logs-resiliencia-final)
 status: ativo
 ---
 

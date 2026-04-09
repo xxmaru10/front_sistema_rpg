@@ -4,7 +4,6 @@
  * real-time synchronization via Supabase, and snapshot persistence.
  * @note: This is a synthesis guide for architectural understanding.
  */
-// Teste de commit - Conta Kasaxi ✅
 import { ActionEvent, SessionState } from "@/types/domain";
 import { computeState } from "./projections";
 import * as apiClient from "./apiClient";
@@ -15,6 +14,8 @@ import { getSocket } from "./socketClient";
 export type ConnectionStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'CONNECTING';
 
 export class EventStore {
+    private static readonly EVENT_CACHE_PREFIX = "cronos_event_cache_v1";
+    private static readonly EVENT_CACHE_MAX_EVENTS = 12000;
     private events: ActionEvent[] = [];
     private listeners: ((event: ActionEvent) => void)[] = [];
     private bulkListeners: ((events: ActionEvent[]) => void)[] = [];
@@ -26,6 +27,118 @@ export class EventStore {
     private connectionStatus: ConnectionStatus = 'CLOSED';
     private failedEventIds: Set<string> = new Set();
     private reconnectTimeout: any = null;
+
+    private _getCacheKey(sessionId: string): string {
+        return `${EventStore.EVENT_CACHE_PREFIX}:${sessionId}`;
+    }
+
+    private _compareEvents(a: ActionEvent, b: ActionEvent): number {
+        const seqA = a.seq || 0;
+        const seqB = b.seq || 0;
+
+        if (seqA !== seqB) {
+            if (seqA === 0) return 1;
+            if (seqB === 0) return -1;
+            return seqA - seqB;
+        }
+
+        const timeA = new Date(a.createdAt).getTime();
+        const timeB = new Date(b.createdAt).getTime();
+        return timeA - timeB;
+    }
+
+    private _sanitizeCachedEvent(raw: any, sessionId: string): ActionEvent | null {
+        if (!raw || typeof raw !== "object") return null;
+        if (typeof raw.id !== "string" || !raw.id) return null;
+        if (typeof raw.type !== "string" || !raw.type) return null;
+        if (typeof raw.actorUserId !== "string") return null;
+        if (typeof raw.createdAt !== "string") return null;
+
+        const eventSessionId = typeof raw.sessionId === "string" && raw.sessionId ? raw.sessionId : sessionId;
+        if (eventSessionId !== sessionId) return null;
+
+        return {
+            id: raw.id,
+            sessionId: eventSessionId,
+            seq: typeof raw.seq === "number" ? raw.seq : 0,
+            type: raw.type,
+            actorUserId: raw.actorUserId,
+            visibility: raw.visibility ?? "PUBLIC",
+            createdAt: raw.createdAt,
+            payload: raw.payload ?? {},
+        } as ActionEvent;
+    }
+
+    private _loadCachedEvents(sessionId: string): ActionEvent[] {
+        if (typeof window === "undefined") return [];
+
+        try {
+            const raw = localStorage.getItem(this._getCacheKey(sessionId));
+            if (!raw) return [];
+
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return [];
+
+            const merged = new Map<string, ActionEvent>();
+            for (const item of parsed) {
+                const event = this._sanitizeCachedEvent(item, sessionId);
+                if (event) merged.set(event.id, event);
+            }
+
+            const cached = Array.from(merged.values());
+            cached.sort((a, b) => this._compareEvents(a, b));
+            return cached;
+        } catch (err) {
+            console.warn("[EventStore] Falha ao ler cache local de eventos:", err);
+            return [];
+        }
+    }
+
+    private _saveCachedEvents(sessionId: string, events: ActionEvent[]) {
+        if (typeof window === "undefined") return;
+
+        const timeline = events
+            .filter((event) => event.sessionId === sessionId)
+            .slice()
+            .sort((a, b) => this._compareEvents(a, b))
+            .slice(-EventStore.EVENT_CACHE_MAX_EVENTS);
+
+        const key = this._getCacheKey(sessionId);
+        const serialized = JSON.stringify(timeline);
+
+        try {
+            localStorage.setItem(key, serialized);
+        } catch (err) {
+            try {
+                const fallback = timeline.slice(-Math.floor(EventStore.EVENT_CACHE_MAX_EVENTS / 2));
+                localStorage.setItem(key, JSON.stringify(fallback));
+            } catch (finalErr) {
+                console.warn("[EventStore] Falha ao persistir cache local de eventos:", finalErr ?? err);
+            }
+        }
+    }
+
+    private _clearCachedEvents(sessionId: string) {
+        if (typeof window === "undefined") return;
+        try {
+            localStorage.removeItem(this._getCacheKey(sessionId));
+        } catch (err) {
+            console.warn("[EventStore] Falha ao limpar cache local de eventos:", err);
+        }
+    }
+
+    private _persistCurrentSessionCache() {
+        if (!this.currentSessionId) return;
+        this._saveCachedEvents(this.currentSessionId, this.events);
+    }
+
+    private _eventsAfterSnapshot(events: ActionEvent[]): ActionEvent[] {
+        if (!this.snapshotState || this.snapshotUpToSeq < 0) return events;
+        return events.filter((event) => {
+            const seq = event.seq || 0;
+            return seq === 0 || seq > this.snapshotUpToSeq;
+        });
+    }
 
     private _isNoteEventType(type: ActionEvent["type"]): boolean {
         return type.includes("NOTE") || type === "ALL_NOTES_DELETED";
@@ -56,26 +169,16 @@ export class EventStore {
     }
 
     private _sort() {
-        this.events.sort((a, b) => {
-            // seq 0 represents "optimistic/not yet confirmed"
-            const seqA = a.seq || 0;
-            const seqB = b.seq || 0;
-
-            if (seqA !== seqB) {
-                if (seqA === 0) return 1;
-                if (seqB === 0) return -1;
-                return seqA - seqB;
-            }
-
-            // If both have same seq or both are 0, sort by createdAt
-            const timeA = new Date(a.createdAt).getTime();
-            const timeB = new Date(b.createdAt).getTime();
-            return timeA - timeB;
-        });
+        this.events.sort((a, b) => this._compareEvents(a, b));
     }
 
     async initSession(sessionId: string, force = false) {
         if (this.currentSessionId === sessionId && !force) return;
+        const isSameSessionRefresh = this.currentSessionId === sessionId;
+        const cachedEvents = this._loadCachedEvents(sessionId);
+        const previousEvents = isSameSessionRefresh ? [...this.events] : [];
+        const previousSnapshotState = isSameSessionRefresh ? this.snapshotState : null;
+        const previousSnapshotUpToSeq = isSameSessionRefresh ? this.snapshotUpToSeq : -1;
 
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
@@ -90,9 +193,11 @@ export class EventStore {
         socket.off('connect_error');
 
         this.currentSessionId = sessionId;
-        this.events = [];
-        this.snapshotState = null;
-        this.snapshotUpToSeq = -1;
+        if (!isSameSessionRefresh) {
+            this.events = cachedEvents;
+            this.snapshotState = null;
+            this.snapshotUpToSeq = -1;
+        }
         this.failedEventIds.clear();
         this._setStatus('CONNECTING');
         console.info(`[EventStore] Inicializando sessão: ${sessionId} (forçado: ${force})`);
@@ -162,6 +267,7 @@ export class EventStore {
             if (idx === -1) {
                 this.events.push(formattedEvent);
                 this._sort();
+                this._persistCurrentSessionCache();
                 this.listeners.forEach(l => l(formattedEvent));
                 this.bulkListeners.forEach(l => l([...this.events]));
             } else {
@@ -173,12 +279,13 @@ export class EventStore {
                 this._clearEventFailed(updatedEvent);
                 this.events[idx] = updatedEvent;
                 this._sort();
+                this._persistCurrentSessionCache();
                 this.listeners.forEach(l => l(updatedEvent));
                 this.bulkListeners.forEach(l => l([...this.events]));
             }
         });
 
-        // Load historical events via REST (unchanged)
+        // Load historical events via REST
         let fetchSuccess = false;
         try {
             const result = await apiClient.loadSessionEvents(sessionId);
@@ -186,12 +293,44 @@ export class EventStore {
                 this.snapshotState = result.snapshot.state as SessionState;
                 this.snapshotUpToSeq = result.snapshot.upToSeq;
                 console.info(`[EventStore] Snapshot encontrado: seq ${this.snapshotUpToSeq}`);
+            } else if (result.events.length > 0) {
+                // Full-history mode should not reuse stale snapshot, otherwise replay can duplicate state.
+                this.snapshotState = null;
+                this.snapshotUpToSeq = -1;
+            } else if (isSameSessionRefresh) {
+                // Keep previous snapshot when refresh returned empty delta.
+                this.snapshotState = previousSnapshotState;
+                this.snapshotUpToSeq = previousSnapshotUpToSeq;
             }
-            this.events = result.events;
+            const baseEvents = isSameSessionRefresh ? previousEvents : cachedEvents;
+            if (baseEvents.length > 0) {
+                // Preserve local timeline and merge fetched events by id.
+                const merged = new Map<string, ActionEvent>();
+                for (const prev of baseEvents) {
+                    merged.set(prev.id, prev);
+                }
+                for (const incoming of result.events) {
+                    merged.set(incoming.id, incoming);
+                }
+                this.events = Array.from(merged.values());
+            } else {
+                this.events = result.events;
+            }
             fetchSuccess = true;
-            console.info(`[EventStore] ${result.events.length} eventos delta carregados via NestJS.`);
+            console.info(`[EventStore] ${result.events.length} eventos carregados via NestJS.`);
         } catch (err: any) {
             console.error('[EventStore] Falha crítica no fetch via NestJS:', err);
+            if (isSameSessionRefresh && previousEvents.length > 0) {
+                this.events = previousEvents;
+                this.snapshotState = previousSnapshotState;
+                this.snapshotUpToSeq = previousSnapshotUpToSeq;
+                fetchSuccess = true;
+                console.warn('[EventStore] Refresh vazio/erro: mantendo histórico local para evitar sumiço visual.');
+            } else if (cachedEvents.length > 0) {
+                this.events = cachedEvents;
+                fetchSuccess = true;
+                console.warn('[EventStore] Fetch falhou: restaurando histórico local persistido.');
+            }
         }
 
         if (!fetchSuccess && this.snapshotState !== null) fetchSuccess = true;
@@ -207,8 +346,11 @@ export class EventStore {
         }
 
         this._sort();
+        this._persistCurrentSessionCache();
         this.bulkListeners.forEach(l => l([...this.events]));
-        this._updateSnapshot().catch(() => {});
+        if (!force) {
+            this._updateSnapshot().catch(() => {});
+        }
         this._migrateBase64Images().catch((err) => {
             console.error('[EventStore] _migrateBase64Images falhou:', err);
         });
@@ -228,6 +370,7 @@ export class EventStore {
             if (!this.events.some(e => e.id === event.id)) {
                 this.events.push(optimisticEvent);
                 this._sort();
+                this._persistCurrentSessionCache();
                 this.listeners.forEach(l => l(optimisticEvent));
                 this.bulkListeners.forEach(l => l([...this.events]));
             }
@@ -242,11 +385,13 @@ export class EventStore {
                     this.events[idx].seq = result.seq;
                     this._clearEventFailed(this.events[idx]);
                     this._sort();
+                    this._persistCurrentSessionCache();
                     this.bulkListeners.forEach(l => l([...this.events]));
                 }
             } catch (err) {
                 console.error("[EventStore] Erro no append via NestJS:", err);
                 this._markEventFailed(event);
+                this._persistCurrentSessionCache();
                 this.bulkListeners.forEach(l => l([...this.events]));
 
                 // Exponential backoff retry para notas (limitado a 3 tentativas)
@@ -309,10 +454,15 @@ export class EventStore {
     getSnapshotState(): SessionState | null {
         return this.snapshotState;
     }
+
+    getSnapshotUpToSeq(): number {
+        return this.snapshotUpToSeq;
+    }
     private async _migrateBase64Images(): Promise<void> {
         if (!this.currentSessionId) return;
 
-        const state = computeState(this.events, this.snapshotState ?? undefined);
+        const eventsForProjection = this._eventsAfterSnapshot(this.events);
+        const state = computeState(eventsForProjection, this.snapshotState ?? undefined);
 
         // Migrate character images
         const characters = state.characters || {};
@@ -378,7 +528,8 @@ export class EventStore {
         const maxSeq = this.events.reduce((max, e) => Math.max(max, e.seq || 0), 0);
         if (maxSeq <= this.snapshotUpToSeq) return;
 
-        const fullState = computeState(this.events, this.snapshotState ?? undefined);
+        const eventsForProjection = this._eventsAfterSnapshot(this.events);
+        const fullState = computeState(eventsForProjection, this.snapshotState ?? undefined);
         const snapshotStr = JSON.stringify(fullState);
         const sizeKB = Math.round(snapshotStr.length / 1024);
 
@@ -422,6 +573,7 @@ export class EventStore {
         try {
             await apiClient.clearSessionEvents(this.currentSessionId);
             this.events = [];
+            this._clearCachedEvents(this.currentSessionId);
             window.location.reload();
         } catch (err) {
             console.error('[EventStore] Erro ao limpar sessão:', err);

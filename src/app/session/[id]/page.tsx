@@ -98,7 +98,7 @@ export default function SessionPage() {
 
     // ─── EVENTS ───────────────────────────────────────────────────────────────
 
-    const { events, isLoading, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
+    const { events, isLoading, isRefreshing, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
         useSessionEvents(sessionId as string, actorUserId);
 
     // ─── EARLY PROJECTION (feeds useVictoryDefeat before full derivations) ────
@@ -113,7 +113,14 @@ export default function SessionPage() {
             if (seqA !== 0 && seqB === 0) return -1;
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
-        return computeState(sorted, globalEventStore.getSnapshotState() ?? undefined);
+        const snapshot = globalEventStore.getSnapshotState();
+        const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+        const projectionEvents =
+            snapshot && snapshotUpToSeq >= 0
+                ? sorted.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
+                : sorted;
+
+        return computeState(projectionEvents, snapshot ?? undefined);
     }, [events]);
 
     const _activePlayers = useMemo(() =>
@@ -664,6 +671,8 @@ export default function SessionPage() {
                                         fixedCharacterId={fixedCharacterId}
                                         state={state}
                                         events={events}
+                                        eventSessionMap={eventSessionMap}
+                                        isRefreshing={isRefreshing}
                                         combatantList={combatantList}
                                         aspectList={aspectList}
                                         challengeMode={challengeMode}
@@ -695,6 +704,7 @@ export default function SessionPage() {
                                         eventSessionMap={eventSessionMap}
                                         state={state}
                                         events={events}
+                                        isRefreshing={isRefreshing}
                                         onRefresh={refresh}
                                     />
                                 )}
