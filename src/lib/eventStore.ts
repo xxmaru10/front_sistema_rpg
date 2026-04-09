@@ -4,7 +4,6 @@
  * real-time synchronization via Supabase, and snapshot persistence.
  * @note: This is a synthesis guide for architectural understanding.
  */
-// Teste de commit - Conta Kasaxi ✅
 import { ActionEvent, SessionState } from "@/types/domain";
 import { computeState } from "./projections";
 import * as apiClient from "./apiClient";
