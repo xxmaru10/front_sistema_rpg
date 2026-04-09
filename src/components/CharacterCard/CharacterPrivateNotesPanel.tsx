@@ -11,6 +11,7 @@ import "@/features/session-notes/SessionNotes.css";
 
 interface CharacterPrivateNotesPanelProps {
     sessionId: string;
+    characterId: string;
     userId: string;
     userRole: "GM" | "PLAYER";
     state: SessionState;
@@ -22,6 +23,7 @@ const EMPTY_WORLD_FILTERS: Record<string, string[]> = {};
 
 export function CharacterPrivateNotesPanel({
     sessionId,
+    characterId,
     userId,
     userRole,
     state,
@@ -90,6 +92,7 @@ export function CharacterPrivateNotesPanel({
         notesSubTab: "Privado",
         worldFilters: EMPTY_WORLD_FILTERS,
         selectedPrivateFolderId,
+        targetInventoryCharacterId: characterId,
         handleAddEntityNote,
     });
 

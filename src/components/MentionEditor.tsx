@@ -47,7 +47,7 @@ function restoreSelectionOffset(root: HTMLElement, offset: number) {
     while (walker.nextNode()) {
         const node = walker.currentNode as Text;
         const parentElement = node.parentElement;
-        if (parentElement?.closest(".mention-link, .tag-link")) {
+        if (parentElement?.closest(".mention-link, .tag-link, [data-auto-mention-disabled='true']")) {
             continue;
         }
         const nextConsumed = consumed + (node.textContent || "").length;
@@ -89,6 +89,13 @@ function createMentionElement(item: MentionCandidate): HTMLSpanElement {
         span.style.textShadow = `0 0 5px ${color}44`;
     }
 
+    return span;
+}
+
+function createSuppressedTextElement(textContent: string): HTMLSpanElement {
+    const span = document.createElement("span");
+    span.setAttribute("data-auto-mention-disabled", "true");
+    span.textContent = textContent;
     return span;
 }
 
@@ -195,7 +202,7 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
                 acceptNode: (node) => {
                     const parent = node.parentElement;
                     if (!parent) return NodeFilter.FILTER_REJECT;
-                    if (parent.closest(".mention-link, .tag-link")) return NodeFilter.FILTER_REJECT;
+                    if (parent.closest(".mention-link, .tag-link, [data-auto-mention-disabled='true']")) return NodeFilter.FILTER_REJECT;
                     if (!(node.textContent || "").trim()) return NodeFilter.FILTER_REJECT;
                     return NodeFilter.FILTER_ACCEPT;
                 }
@@ -437,7 +444,7 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
         const textContent = mentionElement.classList.contains("tag-link")
             ? `#${mentionElement.getAttribute("data-tag") || mentionElement.textContent || ""}`
             : (mentionElement.textContent || "");
-        const replacement = document.createTextNode(textContent);
+        const replacement = createSuppressedTextElement(textContent);
         mentionElement.replaceWith(replacement);
         placeCaretAfterNode(replacement);
         onChange(editorRef.current.innerHTML);

@@ -482,6 +482,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
         newItemDescription, setNewItemDescription,
         newItemPrice, setNewItemPrice,
         newItemQuantity, setNewItemQuantity,
+        newItemBonus, setNewItemBonus,
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
         handleCreateItem, handleUpdateItem, handleDeleteItem,
@@ -581,8 +582,9 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                             <h5 className="item-title">{item.name.toUpperCase()}</h5>
                                             <div className="item-meta">
                                                 <span className="item-price gold-text">${item.price}</span>
-
                                                 <span className="item-qty">QTD: {item.quantity}</span>
+                                                <span className="item-qty">QTD: {item.quantity}</span>
+                                                <span className="item-qty">BÔNUS: {item.bonus || 0}</span>
                                                 {userRole === 'GM' && (
                                                     <div className="card-actions-mini">
                                                         <button className="edit-btn-mini" onClick={() => handleStartEditItem(item.id)} title="Editar">
@@ -692,7 +694,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             <label>DESCRIÇÃO</label>
                             <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={mentionEntities} />
                         </div>
-                        <div className="form-row-double">
+                        <div className="form-row-double" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
                             <div className="form-group">
                                 <label>PREÇO ($)</label>
                                 <input type="number" value={newItemPrice} onChange={(e) => setNewItemPrice(parseInt(e.target.value))} />
@@ -700,6 +702,10 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             <div className="form-group">
                                 <label>QUANTIDADE</label>
                                 <input type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(parseInt(e.target.value))} />
+                            </div>
+                            <div className="form-group">
+                                <label>BÔNUS</label>
+                                <input type="number" value={newItemBonus} onChange={(e) => setNewItemBonus(parseInt(e.target.value) || 0)} />
                             </div>
                         </div>
                         <div className="form-group">

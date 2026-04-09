@@ -157,6 +157,7 @@ export function CharacterCard({
                 {sessionState ? (
                     <CharacterPrivateNotesPanel
                         sessionId={sessionId}
+                        characterId={character.id}
                         userId={actorUserId}
                         userRole={userRole || (isGM ? "GM" : "PLAYER")}
                         state={sessionState}

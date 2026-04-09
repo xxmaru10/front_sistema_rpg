@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-09 (story-36/notas-submenus-privados-jogadores)
+last_updated: 2026-04-09 (story-36/follow-up-itens-inventario-automenções)
 status: ativo
 ---
 
@@ -109,6 +109,18 @@ export type NoteFolder = {
   createdAt: string;
 };
 
+export type GlobalItem = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  quantity: number;
+  bonus?: number; // legado sem campo: fallback 0
+  requirement: string;
+  imageUrl?: string;
+  createdAt: string;
+};
+
 export type WorldEntity = {
   id: string;
   name: string;
@@ -161,6 +173,19 @@ type CharacterNoteUpdated = EventEnvelope<"CHARACTER_NOTE_UPDATED", {
   noteId: string;
   patch: {
     content?: string;
+  };
+}>;
+
+type CharacterInventoryUpdated = EventEnvelope<"CHARACTER_INVENTORY_UPDATED", {
+  characterId: string;
+  item: {
+    id: string;
+    name: string;
+    description?: string;
+    bonus: number;
+    quantityCurrent?: number;
+    quantityTotal?: number;
+    url?: string;
   };
 }>;
 ```

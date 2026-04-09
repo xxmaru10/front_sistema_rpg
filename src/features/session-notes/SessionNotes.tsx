@@ -196,7 +196,9 @@ export function SessionNotes({
         newItemDescription, setNewItemDescription,
         newItemPrice, setNewItemPrice,
         newItemQuantity, setNewItemQuantity,
+        newItemBonus, setNewItemBonus,
         newItemRequirement, setNewItemRequirement,
+        newItemImageUrl, setNewItemImageUrl,
 
         // Derived state
         notes,
@@ -784,7 +786,9 @@ export function SessionNotes({
                         newItemDescription, setNewItemDescription,
                         newItemPrice, setNewItemPrice,
                         newItemQuantity, setNewItemQuantity,
+                        newItemBonus, setNewItemBonus,
                         newItemRequirement, setNewItemRequirement,
+                        newItemImageUrl, setNewItemImageUrl,
                         handleCreateItem, handleUpdateItem, handleDeleteItem,
                         handleStartEditSkill, handleStartEditItem,
                         handleCancelSkillEdit, handleCancelItemEdit,

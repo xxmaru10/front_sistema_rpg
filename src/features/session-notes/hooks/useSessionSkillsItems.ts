@@ -33,6 +33,7 @@ export function useSessionSkillsItems({
     const [newItemDescription, setNewItemDescription] = useState("");
     const [newItemPrice, setNewItemPrice] = useState(0);
     const [newItemQuantity, setNewItemQuantity] = useState(1);
+    const [newItemBonus, setNewItemBonus] = useState(0);
     const [newItemRequirement, setNewItemRequirement] = useState("");
     const [newItemImageUrl, setNewItemImageUrl] = useState("");
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -146,6 +147,7 @@ export function useSessionSkillsItems({
         setNewItemDescription("");
         setNewItemPrice(0);
         setNewItemQuantity(1);
+        setNewItemBonus(0);
         setNewItemRequirement("");
         setNewItemImageUrl("");
     };
@@ -163,6 +165,7 @@ export function useSessionSkillsItems({
             description: newItemDescription,
             price: newItemPrice,
             quantity: newItemQuantity,
+            bonus: newItemBonus,
             requirement: newItemRequirement,
             imageUrl: newItemImageUrl || undefined,
             createdAt: new Date().toISOString()
@@ -191,6 +194,7 @@ export function useSessionSkillsItems({
         setNewItemDescription(item.description || "");
         setNewItemPrice(item.price || 0);
         setNewItemQuantity(item.quantity || 1);
+        setNewItemBonus(item.bonus || 0);
         setNewItemRequirement(item.requirement || "");
         setNewItemImageUrl(item.imageUrl || "");
         setShowAddItem(true);
@@ -221,6 +225,7 @@ export function useSessionSkillsItems({
         newItemDescription, setNewItemDescription,
         newItemPrice, setNewItemPrice,
         newItemQuantity, setNewItemQuantity,
+        newItemBonus, setNewItemBonus,
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
         editingItemId, setEditingItemId,

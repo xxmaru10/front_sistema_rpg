@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { NoteFolder, SessionState } from "@/types/domain";
+import { Item, NoteFolder, SessionState } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 
@@ -10,6 +10,7 @@ interface UseSessionNotesDiaryProps {
     notesSubTab: string;
     worldFilters: Record<string, string[]>;
     selectedPrivateFolderId: string;
+    targetInventoryCharacterId?: string;
     handleAddEntityNote: (
         type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM',
         entityId: string,
@@ -20,6 +21,10 @@ interface UseSessionNotesDiaryProps {
 
 const MAX_PRIVATE_FOLDERS = 10;
 
+function normalizeComparable(value?: string): string {
+    return (value || "").trim().toLowerCase();
+}
+
 export function useSessionNotesDiary({
     sessionId,
     userId: rawUserId,
@@ -27,6 +32,7 @@ export function useSessionNotesDiary({
     notesSubTab,
     worldFilters,
     selectedPrivateFolderId,
+    targetInventoryCharacterId,
     handleAddEntityNote,
 }: UseSessionNotesDiaryProps) {
     const userId = rawUserId.trim().toLowerCase();
@@ -99,6 +105,80 @@ export function useSessionNotesDiary({
         return list;
     }, [filteredNotesByTab, filterAuthor, worldFilters.authorId]);
 
+    const resolveInventoryCharacterId = () => {
+        if (targetInventoryCharacterId && state.characters?.[targetInventoryCharacterId]) {
+            return targetInventoryCharacterId;
+        }
+
+        const seat = state.seats.find((entry) => normalizeComparable(entry.userId) === userId);
+        if (seat?.characterId && state.characters?.[seat.characterId]) {
+            return seat.characterId;
+        }
+
+        return null;
+    };
+
+    const findMatchingInventoryItem = (inventory: Item[], globalItem: any) => {
+        const globalName = normalizeComparable(globalItem.name);
+        const globalDescription = normalizeComparable(globalItem.description);
+        const globalBonus = globalItem.bonus || 0;
+        const globalImageUrl = globalItem.imageUrl || "";
+
+        return inventory.find((item) =>
+            normalizeComparable(item.name) === globalName &&
+            normalizeComparable(item.description) === globalDescription &&
+            (item.bonus || 0) === globalBonus &&
+            (item.url || "") === globalImageUrl
+        );
+    };
+
+    const syncMentionedItemsToInventory = (targets: Map<string, { id: string; type: string }>, sourceNoteId: string) => {
+        const characterId = resolveInventoryCharacterId();
+        if (!characterId) return;
+
+        const character = state.characters?.[characterId];
+        if (!character) return;
+
+        const inventory = character.inventory || [];
+
+        targets.forEach(({ id }) => {
+            const globalItem = (state.items || []).find((item: any) => item.id === id);
+            if (!globalItem) return;
+
+            const quantity = Math.max(1, globalItem.quantity || 1);
+            const existingItem = findMatchingInventoryItem(inventory, globalItem);
+
+            const inventoryItem: Item = existingItem
+                ? {
+                    ...existingItem,
+                    name: globalItem.name,
+                    description: globalItem.description,
+                    bonus: globalItem.bonus || 0,
+                    quantityCurrent: (existingItem.quantityCurrent ?? existingItem.quantityTotal ?? 0) + quantity,
+                    quantityTotal: (existingItem.quantityTotal ?? existingItem.quantityCurrent ?? 0) + quantity,
+                    url: globalItem.imageUrl || existingItem.url
+                }
+                : {
+                    id: `mentioned-item:${sourceNoteId}:${globalItem.id}`,
+                    name: globalItem.name,
+                    description: globalItem.description,
+                    bonus: globalItem.bonus || 0,
+                    quantityCurrent: quantity,
+                    quantityTotal: quantity,
+                    url: globalItem.imageUrl
+                };
+
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0,
+                type: "CHARACTER_INVENTORY_UPDATED",
+                actorUserId: userId,
+                createdAt: new Date().toISOString(),
+                visibility: "PUBLIC",
+                payload: { characterId, item: inventoryItem }
+            } as any);
+        });
+    };
+
     // --- Handlers ---
     const getAuthorColor = (id: string, role?: string) => {
         if (role === "GM" || id.toLowerCase().includes("mestre") || id.toLowerCase().includes("gm")) {
@@ -131,7 +211,7 @@ export function useSessionNotesDiary({
         }
     };
 
-    const crossPostMentionsToEntities = (htmlContent: string, isPrivate: boolean = false) => {
+    const crossPostMentionsToEntities = (htmlContent: string, sourceNoteId: string, isPrivate: boolean = false) => {
         if (!htmlContent) return;
 
         const parser = new DOMParser();
@@ -159,10 +239,11 @@ export function useSessionNotesDiary({
             }
         });
 
-        const seat = state.seats.find(s => s.userId === userId);
+        const seat = state.seats.find((entry) => normalizeComparable(entry.userId) === userId);
         const authorChar = seat?.characterId ? state.characters[seat.characterId] : null;
         const authorName = authorChar?.name || userId;
         const characterTypes = ["CHARACTER", "AMEAÇA", "AMEACA", "NPC", "INIMIGO"];
+        syncMentionedItemsToInventory(targets, sourceNoteId);
 
         targets.forEach(({ id, type }) => {
             const upperType = type.toUpperCase();
@@ -208,6 +289,7 @@ export function useSessionNotesDiary({
         } else {
             const isPrivate = notesSubTab.toLowerCase() === "privado";
             const hasSelectedFolder = selectedPrivateFolderId !== "all" && privateNoteFolders.some(folder => folder.id === selectedPrivateFolderId);
+            const noteId = uuidv4();
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0,
                 type: "NOTE_ADDED",
@@ -215,7 +297,7 @@ export function useSessionNotesDiary({
                 createdAt: new Date().toISOString(),
                 visibility: isPrivate ? { kind: "PLAYER_ONLY", userId } : "PUBLIC",
                 payload: {
-                    id: uuidv4(),
+                    id: noteId,
                     authorId: userId,
                     authorName: userId,
                     content: latestContent,
@@ -225,7 +307,7 @@ export function useSessionNotesDiary({
                     folderId: isPrivate && hasSelectedFolder ? selectedPrivateFolderId : undefined
                 }
             } as any);
-            crossPostMentionsToEntities(latestContent, isPrivate);
+            crossPostMentionsToEntities(latestContent, noteId, isPrivate);
         }
 
         setEditorContent("");

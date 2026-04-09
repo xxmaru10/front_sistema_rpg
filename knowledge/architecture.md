@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-09 (story-36/follow-up-droplist-automenções)
+last_updated: 2026-04-09 (story-36/follow-up-itens-inventario-automenções)
 status: ativo
 ---
 
@@ -130,6 +130,9 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Dropdown direto na visão Jogadores**: o filtro interno de `Notas > Jogadores` foi simplificado para um droplist com `Todos` + personagens, reduzindo ruído visual sem alterar o modelo de eventos.
 - **Auto-menções por texto digitado**: o `MentionEditor` passou a converter automaticamente nomes digitados em spans de menção com comparação case-insensitive e confirmação leve no clique (`x` para remover, `v` para manter), mantendo o comportamento manual por `@`.
 - **Persistência do HTML do editor**: o envio do diário principal passou a ler o `innerHTML` atual do editor antes de despachar `NOTE_*`, corrigindo perda de listas/marcadores quando a toolbar alterava o DOM sem atualizar o estado imediatamente.
+- **Opt-out persistente de auto-menção**: ao remover uma auto-menção durante a digitação, o trecho passa a ficar explicitamente suprimido no editor para não ser religado de novo no mesmo fluxo de escrita.
+- **Menções de item com efeito de inventário**: menções a `ITEM` no diário passaram a manter o cross-post atual e, adicionalmente, sincronizar uma cópia do item para o inventário do personagem-alvo, reaproveitando `CHARACTER_INVENTORY_UPDATED` e copiando nome, descrição, quantidade, bônus e imagem.
+- **Bônus como parte do item global**: `GlobalItem` foi expandido com `bonus` opcional (fallback 0), preservando compatibilidade com itens legados sem migração destrutiva.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.
