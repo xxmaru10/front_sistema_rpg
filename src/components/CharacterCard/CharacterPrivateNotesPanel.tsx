@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { SessionState } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
@@ -25,6 +26,7 @@ export function CharacterPrivateNotesPanel({
     mentionEntities,
 }: CharacterPrivateNotesPanelProps) {
     const normalizedUserId = userId.trim().toLowerCase();
+    const [selectedPrivateFolderId, setSelectedPrivateFolderId] = useState("all");
 
     const handleAddEntityNote = (
         type: "WORLD" | "CHARACTER" | "MISSION" | "TIMELINE" | "SKILL" | "ITEM",
@@ -84,6 +86,7 @@ export function CharacterPrivateNotesPanel({
         state,
         notesSubTab: "Privado",
         worldFilters: EMPTY_WORLD_FILTERS,
+        selectedPrivateFolderId,
         handleAddEntityNote,
     });
 
@@ -108,7 +111,6 @@ export function CharacterPrivateNotesPanel({
                 handleSend={diary.handleSend}
                 getAuthorColor={diary.getAuthorColor}
                 notesSubTab="Privado"
-                setNotesSubTab={() => {}}
                 editingNoteId={diary.editingNoteId}
                 handleStartEdit={diary.handleStartEdit}
                 handleCancelEdit={diary.handleCancelEdit}
@@ -118,7 +120,18 @@ export function CharacterPrivateNotesPanel({
                 failedEventIds={diary.failedEventIds}
                 handleRetry={diary.handleRetry}
                 handleAddEntityNote={handleAddEntityNote}
+                handleUpdateEntityNote={() => {}}
                 handleDeleteEntityNote={() => {}}
+                privateNoteFolders={diary.privateNoteFolders}
+                handleCreatePrivateFolder={diary.handleCreatePrivateFolder}
+                handleUpdatePrivateFolder={diary.handleUpdatePrivateFolder}
+                handleDeletePrivateFolder={diary.handleDeletePrivateFolder}
+                handleMovePrivateNoteToFolder={diary.handleMovePrivateNoteToFolder}
+                handleReorderPrivateFolders={diary.handleReorderPrivateFolders}
+                selectedPrivateFolderId={selectedPrivateFolderId}
+                setSelectedPrivateFolderId={setSelectedPrivateFolderId}
+                selectedPlayerNotesView="all"
+                setSelectedPlayerNotesView={() => {}}
             />
         </div>
     );

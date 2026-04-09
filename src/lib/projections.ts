@@ -4,7 +4,7 @@
  * Contains the initial state and the 'reduce' function that processes each ActionEvent.
  * @note: This is a synthesis guide for architectural understanding.
  */
-import { ActionEvent, SessionState, Character, Aspect, DEFAULT_SKILLS, StressTrackValues } from "@/types/domain";
+import { ActionEvent, SessionState, Character, Aspect, DEFAULT_SKILLS, StressTrackValues, Note, EntityNote } from "@/types/domain";
 
 /** The initial state for a new game session */
 export const initialState: SessionState = {
@@ -17,6 +17,7 @@ export const initialState: SessionState = {
     headerImages: {},
     currentRound: 1,
     notes: [],
+    noteFolders: [],
     themeColor: "#C5A059",
     themePreset: "medieval",
     missions: [],
@@ -54,6 +55,24 @@ function normalizeCharacterStress(char: Character): Character {
         impulseArrows: Math.max(0, Math.trunc(char.impulseArrows || 0)),
         stressValues: { physical, mental },
     };
+}
+
+function upsertById<T extends { id: string }>(list: T[], incoming: T): T[] {
+    const existingIndex = list.findIndex(item => item.id === incoming.id);
+    if (existingIndex === -1) {
+        return [...list, incoming];
+    }
+    const next = [...list];
+    next[existingIndex] = { ...next[existingIndex], ...incoming };
+    return next;
+}
+
+function patchById<T extends { id: string }>(list: T[], id: string, patch: Partial<T>): T[] {
+    return list.map(item => item.id === id ? { ...item, ...patch } : item);
+}
+
+function clearFolderIdFromNotes(notes: Note[], folderId: string): Note[] {
+    return notes.map(note => note.folderId === folderId ? { ...note, folderId: undefined } : note);
 }
 
 export function reduce(state: SessionState, event: ActionEvent): SessionState {
@@ -807,16 +826,16 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
         case "NOTE_ADDED":
             return {
                 ...state,
-                notes: [...(state.notes || []), payload]
+                notes: upsertById(state.notes || [], payload)
             };
 
-        case "NOTE_UPDATED":
+        case "NOTE_UPDATED": {
+            const patch = payload.patch || (payload.content !== undefined ? { content: payload.content } : {});
             return {
                 ...state,
-                notes: (state.notes || []).map(n =>
-                    n.id === payload.noteId ? { ...n, content: payload.content } : n
-                )
+                notes: patchById(state.notes || [], payload.noteId, patch)
             };
+        }
 
         case "NOTE_DELETED":
             return {
@@ -828,6 +847,25 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             return {
                 ...state,
                 notes: []
+            };
+
+        case "NOTE_FOLDER_CREATED":
+            return {
+                ...state,
+                noteFolders: upsertById(state.noteFolders || [], payload)
+            };
+
+        case "NOTE_FOLDER_UPDATED":
+            return {
+                ...state,
+                noteFolders: patchById(state.noteFolders || [], payload.folderId, payload.patch)
+            };
+
+        case "NOTE_FOLDER_DELETED":
+            return {
+                ...state,
+                noteFolders: (state.noteFolders || []).filter(folder => folder.id !== payload.folderId),
+                notes: clearFolderIdFromNotes(state.notes || [], payload.folderId)
             };
 
         case "SESSION_THEME_UPDATED":
@@ -973,7 +1011,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...entities,
                     [payload.entityId]: {
                         ...entity,
-                        linkedNotes: [...(entity.linkedNotes || []), payload.note]
+                        linkedNotes: upsertById(entity.linkedNotes || [], payload.note)
                     }
                 }
             };
@@ -1001,7 +1039,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 ...state,
                 missions: missions.map(m => m.id === payload.missionId ? {
                     ...m,
-                    linkedNotes: [...(m.linkedNotes || []), payload.note]
+                    linkedNotes: upsertById(m.linkedNotes || [], payload.note)
                 } : m)
             };
         }
@@ -1023,7 +1061,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 ...state,
                 timeline: timeline.map(e => e.id === payload.eventId ? {
                     ...e,
-                    linkedNotes: [...(e.linkedNotes || []), payload.note]
+                    linkedNotes: upsertById(e.linkedNotes || [], payload.note)
                 } : e)
             };
         }
@@ -1045,7 +1083,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 ...state,
                 skills: skills.map(s => s.id === payload.skillId ? {
                     ...s,
-                    linkedNotes: [...(s.linkedNotes || []), payload.note]
+                    linkedNotes: upsertById(s.linkedNotes || [], payload.note)
                 } : s)
             };
         }
@@ -1067,7 +1105,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 ...state,
                 items: items.map(i => i.id === payload.itemId ? {
                     ...i,
-                    linkedNotes: [...(i.linkedNotes || []), payload.note]
+                    linkedNotes: upsertById(i.linkedNotes || [], payload.note)
                 } : i)
             };
         }
@@ -1112,7 +1150,22 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        linkedNotes: [...(char.linkedNotes || []), payload.note]
+                        linkedNotes: upsertById(char.linkedNotes || [], payload.note)
+                    }
+                }
+            };
+        }
+
+        case "CHARACTER_NOTE_UPDATED": {
+            const char = state.characters[payload.characterId];
+            if (!char) return state;
+            return {
+                ...state,
+                characters: {
+                    ...state.characters,
+                    [payload.characterId]: {
+                        ...char,
+                        linkedNotes: patchById(char.linkedNotes || [], payload.noteId, payload.patch as Partial<EntityNote>)
                     }
                 }
             };

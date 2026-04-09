@@ -43,15 +43,25 @@ export type Note = {
   createdAt: string;
   isPrivate?: boolean;
   sessionNumber?: number;
+  folderId?: string;
 };
 
 export type EntityNote = {
-    id: string;
-    authorId: string;
-    authorName: string;
-    content: string;
-    createdAt: string;
-    isPrivate?: boolean;
+  id: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  isPrivate?: boolean;
+};
+
+export type NoteFolder = {
+  id: string;
+  ownerId: string;
+  name: string;
+  color: string;
+  order: number;
+  createdAt: string;
 };
 
 
@@ -231,6 +241,7 @@ export type SessionState = {
   timerPaused?: boolean;
   timerPausedAt?: string; // ISO string when paused
   notes?: Note[];
+  noteFolders?: NoteFolder[];
   themeColor?: string;
   themePreset?: string;
   soundSettings?: {
@@ -467,8 +478,11 @@ export type ActionEvent =
   | EventEnvelope<"TURN_FORCED_PASS", { characterId: string; isReaction: boolean }>
   | EventEnvelope<"NOTE_ADDED", Note>
   | EventEnvelope<"NOTE_DELETED", { noteId: string }>
-  | EventEnvelope<"NOTE_UPDATED", { noteId: string; content: string }>
+  | EventEnvelope<"NOTE_UPDATED", { noteId: string; content?: string; patch?: Partial<Note> }>
   | EventEnvelope<"ALL_NOTES_DELETED", {}>
+  | EventEnvelope<"NOTE_FOLDER_CREATED", NoteFolder>
+  | EventEnvelope<"NOTE_FOLDER_UPDATED", { folderId: string; patch: Partial<NoteFolder> }>
+  | EventEnvelope<"NOTE_FOLDER_DELETED", { folderId: string }>
 
   | EventEnvelope<"SESSION_THEME_UPDATED", { color: string }>
   | EventEnvelope<"SESSION_THEME_PRESET_UPDATED", { preset: string }>
@@ -516,6 +530,7 @@ export type ActionEvent =
   | EventEnvelope<"GLOBAL_ITEM_NOTE_ADDED", { itemId: string; note: EntityNote }>
   | EventEnvelope<"GLOBAL_ITEM_NOTE_DELETED", { itemId: string; noteId: string }>
   | EventEnvelope<"CHARACTER_NOTE_ADDED", { characterId: string; note: EntityNote }>
+  | EventEnvelope<"CHARACTER_NOTE_UPDATED", { characterId: string; noteId: string; patch: Partial<EntityNote> }>
   | EventEnvelope<"CHARACTER_NOTE_DELETED", { characterId: string; noteId: string }>
   | EventEnvelope<"SESSION_NUMBER_UPDATED", { number: number }>
   | EventEnvelope<"BATTLEMAP_UPDATED", Partial<BattlemapState>>

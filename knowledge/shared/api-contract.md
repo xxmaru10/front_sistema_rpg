@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-09 (story-35/logs-resiliencia-final)
+last_updated: 2026-04-09 (story-36/notas-submenus-privados-jogadores)
 status: ativo
 ---
 
@@ -89,6 +89,26 @@ export type SessionJoinInfo = {
   }>;
 };
 
+export type Note = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  isPrivate?: boolean;
+  sessionNumber?: number;
+  folderId?: string;
+};
+
+export type NoteFolder = {
+  id: string;
+  ownerId: string;
+  name: string;
+  color: string;
+  order: number;
+  createdAt: string;
+};
+
 export type WorldEntity = {
   id: string;
   name: string;
@@ -120,6 +140,27 @@ type CharacterUpdatedImpulse = EventEnvelope<"CHARACTER_UPDATED", {
   characterId: string;
   changes: {
     impulseArrows?: number; // GM-only no fluxo de UI
+  };
+}>;
+
+type NoteUpdated = EventEnvelope<"NOTE_UPDATED", {
+  noteId: string;
+  content?: string;
+  patch?: Partial<Note>;
+}>;
+
+type NoteFolderCreated = EventEnvelope<"NOTE_FOLDER_CREATED", NoteFolder>;
+
+type NoteFolderUpdated = EventEnvelope<"NOTE_FOLDER_UPDATED", {
+  folderId: string;
+  patch: Partial<NoteFolder>;
+}>;
+
+type CharacterNoteUpdated = EventEnvelope<"CHARACTER_NOTE_UPDATED", {
+  characterId: string;
+  noteId: string;
+  patch: {
+    content?: string;
   };
 }>;
 ```

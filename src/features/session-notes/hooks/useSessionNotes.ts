@@ -22,6 +22,8 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
     const [subTabTempo, setSubTabTempo] = useState<"Missões" | "Linha do Tempo">("Missões");
     const [subTabJogo, setSubTabJogo] = useState<"Habilidades" | "Itens" | "Jogadores">("Habilidades");
     const [notesSubTab, setNotesSubTab] = useState<"Geral" | "Privado" | "Jogadores" | "Sessão">("Geral");
+    const [selectedPrivateFolderId, setSelectedPrivateFolderId] = useState<string>("all");
+    const [selectedPlayerNotesView, setSelectedPlayerNotesView] = useState<string>("all");
     const [worldSearch, setWorldSearch] = useState("");
     const [bestiarySearch, setBestiarySearch] = useState("");
     const [bestiarySessionOnly, setBestiarySessionOnly] = useState(false);
@@ -69,8 +71,25 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
     const diary = useSessionNotesDiary({
         sessionId, userId, state,
         notesSubTab, worldFilters,
+        selectedPrivateFolderId,
         handleAddEntityNote: worldEntities.handleAddEntityNote,
     });
+
+    useEffect(() => {
+        if (selectedPrivateFolderId === "all") return;
+        const exists = diary.privateNoteFolders.some(folder => folder.id === selectedPrivateFolderId);
+        if (!exists) {
+            setSelectedPrivateFolderId("all");
+        }
+    }, [selectedPrivateFolderId, diary.privateNoteFolders]);
+
+    useEffect(() => {
+        if (selectedPlayerNotesView === "all") return;
+        const exists = Object.values(state.characters || {}).some(char => char.id === selectedPlayerNotesView && !char.isNPC && char.source !== "bestiary");
+        if (!exists) {
+            setSelectedPlayerNotesView("all");
+        }
+    }, [selectedPlayerNotesView, state.characters]);
 
     // --- Cross-hook derived state ---
     const mentionEntities = useMemo(() => {
@@ -207,6 +226,8 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         subTabTempo, setSubTabTempo,
         subTabJogo, setSubTabJogo,
         notesSubTab, setNotesSubTab,
+        selectedPrivateFolderId, setSelectedPrivateFolderId,
+        selectedPlayerNotesView, setSelectedPlayerNotesView,
         worldSearch, setWorldSearch,
         bestiarySearch, setBestiarySearch,
         bestiarySessionOnly, setBestiarySessionOnly,

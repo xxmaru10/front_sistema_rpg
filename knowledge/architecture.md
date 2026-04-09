@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-09 (story-35/chat-autoria-gm & logs-resiliencia-final)
+last_updated: 2026-04-09 (story-36/notas-submenus-privados-jogadores)
 status: ativo
 ---
 
@@ -72,6 +72,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Polimento Visual do Card da Arena (Story 32 — follow-up) | Trilha de estresse no card da Arena migrou para iconografia sem emoji (SVG `Brain` e `Dumbbell`), com espaçamento mais compacto entre rótulo e caixas para leitura rápida. Seções de extras foram diferenciadas por semântica cromática: Façanhas em azul (alinhadas ao botão de rolagem) e Magias em roxo, mantendo contraste e hierarquia visual. | 2026-04-08 |
 | Reestruturação da Ficha com Resumo e Abas (Story 33) | `CharacterCard` foi reorganizado em um bloco superior de Resumo sempre visível e um segundo nível de abas para Lore, Façanhas/Magia, Inventário e Notas Privadas. A implementação preserva a lógica já existente de edição/eventos, reaproveitando os mesmos componentes e mantendo notas gerais acessíveis dentro do atalho privado da ficha. | 2026-04-08 |
 | Navegação Lateral por Avatares na Arena (Story 34) | `CombatTab` passou a orquestrar abertura de cards por lado da Arena com rails laterais de retratos compactos; `CombatCard` ganhou modo compacto e o header expandido substituiu o antigo `+/-` por um botão com retrato. A mudança preserva o card completo existente, mantém hazards fora do novo fluxo e não altera Event Sourcing. | 2026-04-08 |
+| Submenus Privados e Visão por Jogador (Story 36) | Notas privadas ganharam `noteFolders` próprios por usuário, persistidos por eventos e sempre resolvidos com fallback em `Todas`. A aba Jogadores passou a navegar por submenus derivados dos personagens e as projeções de notas adotaram `upsert`/patch por `id` para evitar duplicação rara em replay/retry. | 2026-04-09 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -119,6 +120,13 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Cache local resiliente da timeline**: quando o backend retorna apenas delta, o frontend mantém um cache persistente por sessão (`localStorage`) e faz merge idempotente por `event.id`, evitando sumiço visual de rolagens após refresh, troca de aba/sessão ou reentrada.
 - **Projeção segura com snapshot**: projeções que usam `snapshot` passaram a aplicar apenas eventos com `seq > snapshotUpToSeq` (ou `seq=0` otimista), eliminando reaplicação duplicada ao coexistirem snapshot + timeline cacheada.
 - **Conformidade com convenções**: emissão de `SESSION_NUMBER_UPDATED` consolidada com `actorUserId` normalizado (`trim().toLowerCase()`), alinhando o fluxo de sessão às regras de identidade do projeto.
+
+## Registro de Decisões (Story 36)
+- **Pastas privadas como eventos próprios**: optamos por introduzir `noteFolders` separados de `Note`, com `ownerId`, `order` e `color`, para permitir subtópicos vazios, reordenação e persistência sem depender da existência de notas.
+- **Fallback estrutural em `Todas`**: notas privadas sem `folderId` continuam válidas e aparecem automaticamente em `Todas`, preservando compatibilidade com histórico anterior.
+- **Edição de notas de jogador via patch dedicado**: o fluxo `CHARACTER_NOTE_UPDATED` foi criado apenas para notas vinculadas de personagem, cobrindo a necessidade de edição em `Notas > Jogadores` sem refatorar todo o restante das notas vinculadas.
+- **Deduplicação idempotente por `id`**: reducers de `NOTE_*` e `*_NOTE_ADDED` passaram a usar `upsert` por identificador, reduzindo risco de notas duplicadas em cenários de optimistic event, retry e replay.
+- **Privacidade reforçada em exclusão/movimentação**: eventos de apagar/editar/mover notas privadas agora preservam `visibility: PLAYER_ONLY`, evitando vazamento de metadados de notas privadas durante manutenção de subtópicos.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

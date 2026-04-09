@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Note, SessionState, Character } from "@/types/domain";
+import { NoteFolder, SessionState } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 
@@ -9,6 +9,7 @@ interface UseSessionNotesDiaryProps {
     state: SessionState;
     notesSubTab: string;
     worldFilters: Record<string, string[]>;
+    selectedPrivateFolderId: string;
     handleAddEntityNote: (
         type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM',
         entityId: string,
@@ -17,12 +18,15 @@ interface UseSessionNotesDiaryProps {
     ) => void;
 }
 
+const MAX_PRIVATE_FOLDERS = 10;
+
 export function useSessionNotesDiary({
     sessionId,
     userId: rawUserId,
     state,
     notesSubTab,
     worldFilters,
+    selectedPrivateFolderId,
     handleAddEntityNote,
 }: UseSessionNotesDiaryProps) {
     const userId = rawUserId.trim().toLowerCase();
@@ -57,6 +61,16 @@ export function useSessionNotesDiary({
         }
     });
 
+    const privateNoteFolders = useMemo(() => {
+        return (state.noteFolders || [])
+            .filter(folder => isAuthor(folder.ownerId))
+            .slice()
+            .sort((a, b) => {
+                if (a.order !== b.order) return a.order - b.order;
+                return a.createdAt.localeCompare(b.createdAt);
+            });
+    }, [state.noteFolders, userId]);
+
     // --- Derived ---
     const authors = useMemo(() => {
         const visibleNotes = notes.filter(n => !n.isPrivate || isAuthor(n.authorId));
@@ -69,11 +83,11 @@ export function useSessionNotesDiary({
     const filteredNotesByTab = useMemo(() => {
         if (notesSubTab === "Geral") {
             return notes.filter(n => !n.isPrivate && !locallyHiddenNoteIds.has(n.id));
-        } else if (notesSubTab === "Sessão") {
-            return notes.filter(n => (!n.isPrivate || isAuthor(n.authorId)) && !locallyHiddenNoteIds.has(n.id));
-        } else {
-            return notes.filter(n => n.isPrivate && isAuthor(n.authorId) && !locallyHiddenNoteIds.has(n.id));
         }
+        if (notesSubTab === "Sessão") {
+            return notes.filter(n => (!n.isPrivate || isAuthor(n.authorId)) && !locallyHiddenNoteIds.has(n.id));
+        }
+        return notes.filter(n => n.isPrivate && isAuthor(n.authorId) && !locallyHiddenNoteIds.has(n.id));
     }, [notes, notesSubTab, userId, locallyHiddenNoteIds]);
 
     const filteredNotes = useMemo(() => {
@@ -99,7 +113,13 @@ export function useSessionNotesDiary({
     const handleClearNotesLocally = (tab: 'Geral' | 'Privado') => {
         const toHide = tab === 'Geral'
             ? notes.filter(n => !n.isPrivate).map(n => n.id)
-            : notes.filter(n => n.isPrivate && isAuthor(n.authorId)).map(n => n.id);
+            : notes
+                .filter(n => {
+                    if (!n.isPrivate || !isAuthor(n.authorId)) return false;
+                    if (selectedPrivateFolderId === "all") return true;
+                    return (n.folderId || "") === selectedPrivateFolderId;
+                })
+                .map(n => n.id);
         setLocallyHiddenNoteIds(prev => new Set([...prev, ...toHide]));
     };
 
@@ -112,17 +132,17 @@ export function useSessionNotesDiary({
         if (!htmlContent) return;
 
         const parser = new DOMParser();
-        const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
-        const mentionSpans = doc.querySelectorAll('[data-mention-id]');
-        const plainContentEl = doc.querySelector('div');
+        const doc = parser.parseFromString(`<div>${htmlContent}</div>`, "text/html");
+        const mentionSpans = doc.querySelectorAll("[data-mention-id]");
+        const plainContentEl = doc.querySelector("div");
         const cleanText = plainContentEl?.textContent || "";
         const noteHtml = plainContentEl?.innerHTML || htmlContent;
 
         const targets = new Map<string, { id: string; type: string }>();
 
         mentionSpans.forEach(span => {
-            const id = span.getAttribute('data-mention-id');
-            const type = span.getAttribute('data-mention-type');
+            const id = span.getAttribute("data-mention-id");
+            const type = span.getAttribute("data-mention-type");
             if (id && type) targets.set(id, { id, type });
         });
 
@@ -132,31 +152,31 @@ export function useSessionNotesDiary({
         Object.values(state.characters || {}).forEach(char => {
             const normalizedName = normalize(char.name);
             if (normalizedName.length > 2 && (normalizedContent.includes(normalizedName) || normalizedContent.includes(`@${normalizedName}`))) {
-                if (!targets.has(char.id)) targets.set(char.id, { id: char.id, type: 'CHARACTER' });
+                if (!targets.has(char.id)) targets.set(char.id, { id: char.id, type: "CHARACTER" });
             }
         });
 
         const seat = state.seats.find(s => s.userId === userId);
         const authorChar = seat?.characterId ? state.characters[seat.characterId] : null;
         const authorName = authorChar?.name || userId;
-        const characterTypes = ['CHARACTER', 'AMEAÇA', 'AMEACA', 'NPC', 'INIMIGO'];
+        const characterTypes = ["CHARACTER", "AMEAÇA", "AMEACA", "NPC", "INIMIGO"];
 
         targets.forEach(({ id, type }) => {
             const upperType = type.toUpperCase();
             let noteType: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM' | null = null;
 
-            if (state.worldEntities?.[id]) noteType = 'WORLD';
-            else if (state.characters?.[id]) noteType = 'CHARACTER';
-            else if ((state.missions || []).some((m: any) => m.id === id)) noteType = 'MISSION';
-            else if ((state.timeline || []).some((e: any) => e.id === id)) noteType = 'TIMELINE';
-            else if ((state.skills || []).some((s: any) => s.id === id)) noteType = 'SKILL';
-            else if ((state.items || []).some((i: any) => i.id === id)) noteType = 'ITEM';
-            else if (characterTypes.includes(upperType)) noteType = 'CHARACTER';
-            else if (upperType === 'MISSÃO' || upperType === 'MISSAO') noteType = 'MISSION';
-            else if (upperType === 'HISTÓRIA' || upperType === 'TIMELINE' || upperType === 'EVENTO') noteType = 'TIMELINE';
-            else if (upperType === 'HABILIDADE' || upperType === 'SKILL') noteType = 'SKILL';
-            else if (upperType === 'ITEM') noteType = 'ITEM';
-            else noteType = 'WORLD';
+            if (state.worldEntities?.[id]) noteType = "WORLD";
+            else if (state.characters?.[id]) noteType = "CHARACTER";
+            else if ((state.missions || []).some((mission: any) => mission.id === id)) noteType = "MISSION";
+            else if ((state.timeline || []).some((event: any) => event.id === id)) noteType = "TIMELINE";
+            else if ((state.skills || []).some((skill: any) => skill.id === id)) noteType = "SKILL";
+            else if ((state.items || []).some((item: any) => item.id === id)) noteType = "ITEM";
+            else if (characterTypes.includes(upperType)) noteType = "CHARACTER";
+            else if (upperType === "MISSÃO" || upperType === "MISSAO") noteType = "MISSION";
+            else if (upperType === "HISTÓRIA" || upperType === "TIMELINE" || upperType === "EVENTO") noteType = "TIMELINE";
+            else if (upperType === "HABILIDADE" || upperType === "SKILL") noteType = "SKILL";
+            else if (upperType === "ITEM") noteType = "ITEM";
+            else noteType = "WORLD";
 
             if (noteType) {
                 const crossPostContent = `<div class="crosspost-note">📝 [Nota de ${authorName.toUpperCase()}]: ${noteHtml}</div>`;
@@ -178,11 +198,12 @@ export function useSessionNotesDiary({
                 actorUserId: userId,
                 createdAt: new Date().toISOString(),
                 visibility: existingNote.isPrivate ? { kind: "PLAYER_ONLY", userId } : "PUBLIC",
-                payload: { noteId: editingNoteId, content: editorContent }
+                payload: { noteId: editingNoteId, patch: { content: editorContent } }
             } as any);
             setEditingNoteId(null);
         } else {
             const isPrivate = notesSubTab.toLowerCase() === "privado";
+            const hasSelectedFolder = selectedPrivateFolderId !== "all" && privateNoteFolders.some(folder => folder.id === selectedPrivateFolderId);
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0,
                 type: "NOTE_ADDED",
@@ -196,7 +217,8 @@ export function useSessionNotesDiary({
                     content: editorContent,
                     createdAt: new Date().toISOString(),
                     isPrivate,
-                    sessionNumber: state.sessionNumber || 1
+                    sessionNumber: state.sessionNumber || 1,
+                    folderId: isPrivate && hasSelectedFolder ? selectedPrivateFolderId : undefined
                 }
             } as any);
             crossPostMentionsToEntities(editorContent, isPrivate);
@@ -250,9 +272,92 @@ export function useSessionNotesDiary({
         } as any);
     };
 
+    const handleCreatePrivateFolder = (name: string, color: string): boolean => {
+        const trimmedName = name.trim();
+        if (!trimmedName || privateNoteFolders.length >= MAX_PRIVATE_FOLDERS) {
+            return false;
+        }
+
+        const nextOrder = privateNoteFolders.reduce((max, folder) => Math.max(max, folder.order), 0) + 1;
+        const folder: NoteFolder = {
+            id: uuidv4(),
+            ownerId: userId,
+            name: trimmedName,
+            color,
+            order: nextOrder,
+            createdAt: new Date().toISOString()
+        };
+
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0,
+            type: "NOTE_FOLDER_CREATED",
+            actorUserId: userId,
+            createdAt: new Date().toISOString(),
+            visibility: { kind: "PLAYER_ONLY", userId },
+            payload: folder
+        } as any);
+
+        return true;
+    };
+
+    const handleUpdatePrivateFolder = (folderId: string, patch: Partial<NoteFolder>) => {
+        const folder = privateNoteFolders.find(item => item.id === folderId);
+        if (!folder) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0,
+            type: "NOTE_FOLDER_UPDATED",
+            actorUserId: userId,
+            createdAt: new Date().toISOString(),
+            visibility: { kind: "PLAYER_ONLY", userId },
+            payload: { folderId, patch }
+        } as any);
+    };
+
+    const handleDeletePrivateFolder = (folderId: string) => {
+        const folder = privateNoteFolders.find(item => item.id === folderId);
+        if (!folder) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0,
+            type: "NOTE_FOLDER_DELETED",
+            actorUserId: userId,
+            createdAt: new Date().toISOString(),
+            visibility: { kind: "PLAYER_ONLY", userId },
+            payload: { folderId }
+        } as any);
+    };
+
+    const handleMovePrivateNoteToFolder = (noteId: string, folderId: string | null) => {
+        const note = notes.find(item => item.id === noteId);
+        if (!note || !note.isPrivate || !isAuthor(note.authorId)) return;
+
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0,
+            type: "NOTE_UPDATED",
+            actorUserId: userId,
+            createdAt: new Date().toISOString(),
+            visibility: { kind: "PLAYER_ONLY", userId },
+            payload: { noteId, patch: { folderId: folderId || undefined } }
+        } as any);
+    };
+
+    const handleReorderPrivateFolders = (orderedFolderIds: string[]) => {
+        orderedFolderIds.forEach((folderId, index) => {
+            const folder = privateNoteFolders.find(item => item.id === folderId);
+            if (!folder || folder.order === index + 1) return;
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0,
+                type: "NOTE_FOLDER_UPDATED",
+                actorUserId: userId,
+                createdAt: new Date().toISOString(),
+                visibility: { kind: "PLAYER_ONLY", userId },
+                payload: { folderId, patch: { order: index + 1 } }
+            } as any);
+        });
+    };
+
     const handleRetry = (noteId: string) => {
         const events = globalEventStore.getEvents();
-        const event = events.find(e => e.id === noteId || (e.type === 'NOTE_ADDED' && e.payload.id === noteId));
+        const event = events.find(e => e.id === noteId || (e.type === "NOTE_ADDED" && e.payload.id === noteId));
         if (event) globalEventStore.retryEvent(event.id);
     };
 
@@ -271,6 +376,7 @@ export function useSessionNotesDiary({
         notes,
         authors,
         filteredNotes,
+        privateNoteFolders,
         // Handlers
         getAuthorColor,
         handleClearNotesLocally,
@@ -280,6 +386,11 @@ export function useSessionNotesDiary({
         handleCancelEdit,
         handleDelete,
         handleDeleteAll,
+        handleCreatePrivateFolder,
+        handleUpdatePrivateFolder,
+        handleDeletePrivateFolder,
+        handleMovePrivateNoteToFolder,
+        handleReorderPrivateFolders,
         handleRetry,
     };
 }

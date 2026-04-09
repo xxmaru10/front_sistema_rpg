@@ -116,6 +116,8 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         subTabTempo, setSubTabTempo,
         subTabJogo, setSubTabJogo,
         notesSubTab, setNotesSubTab,
+        selectedPrivateFolderId, setSelectedPrivateFolderId,
+        selectedPlayerNotesView, setSelectedPlayerNotesView,
         editingNoteId, setEditingNoteId,
         newEntityProfession, setNewEntityProfession,
         worldFilters, toggleWorldFilter, worldFilterAvailableOptions,
@@ -195,6 +197,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         worldSearchSuggestions,
         mentionEntities,
         filteredNotes,
+        privateNoteFolders,
         filteredMissions,
         filteredTimeline,
         filteredSkills,
@@ -214,6 +217,11 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         handleClearNotesLocally,
         handleStartEdit,
         handleCancelEdit,
+        handleCreatePrivateFolder,
+        handleUpdatePrivateFolder,
+        handleDeletePrivateFolder,
+        handleMovePrivateNoteToFolder,
+        handleReorderPrivateFolders,
         handleCreateWorldEntity,
         handleAddTag,
         removeTag,
@@ -245,6 +253,7 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
         handleStartEditItem, handleCancelItemEdit,
         handleAddEntityNote,
         handleDeleteEntityNote,
+        handleUpdateEntityNote,
         handleUpdateFieldVisibility,
         handleAddDescriptionBlock,
         handleUpdateDescriptionBlock,
@@ -631,13 +640,13 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                     handleClearNotesLocally={handleClearNotesLocally}
                     handleAddEntityNote={handleAddEntityNote}
                     handleDeleteEntityNote={handleDeleteEntityNote}
+                    handleUpdateEntityNote={handleUpdateEntityNote}
                     state={state}
                     handleDelete={handleDelete}
                     handleFormat={handleFormat}
                     handleSend={handleSend}
                     getAuthorColor={getAuthorColor}
                     notesSubTab={notesSubTab}
-                    setNotesSubTab={setNotesSubTab}
                     editingNoteId={editingNoteId}
                     handleStartEdit={handleStartEdit}
                     handleCancelEdit={handleCancelEdit}
@@ -645,6 +654,16 @@ export function SessionNotes({ sessionId, userId, userRole, state, globalBestiar
                     connectionStatus={connectionStatus}
                     failedEventIds={failedEventIds}
                     handleRetry={handleRetry}
+                    privateNoteFolders={privateNoteFolders}
+                    handleCreatePrivateFolder={handleCreatePrivateFolder}
+                    handleUpdatePrivateFolder={handleUpdatePrivateFolder}
+                    handleDeletePrivateFolder={handleDeletePrivateFolder}
+                    handleMovePrivateNoteToFolder={handleMovePrivateNoteToFolder}
+                    handleReorderPrivateFolders={handleReorderPrivateFolders}
+                    selectedPrivateFolderId={selectedPrivateFolderId}
+                    setSelectedPrivateFolderId={setSelectedPrivateFolderId}
+                    selectedPlayerNotesView={selectedPlayerNotesView}
+                    setSelectedPlayerNotesView={setSelectedPlayerNotesView}
                 />
             ) : activeTab === "Mundo" ? (
                 <WorldTab 

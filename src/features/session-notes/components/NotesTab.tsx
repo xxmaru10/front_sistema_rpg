@@ -1,9 +1,8 @@
-import { Bold, Italic, Underline, Trash2, Send, Users, ShieldAlert, Pencil, X, Check, ChevronDown, ChevronUp, BookOpen, RefreshCw, Clock, AlertTriangle } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { AlertTriangle, Bold, Check, ChevronDown, ChevronUp, Clock, GripVertical, Italic, List, Pencil, Plus, RefreshCw, Send, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { MentionEditor } from "@/components/MentionEditor";
 import { renderMentions } from "@/lib/mentionUtils";
 import { LinkedNotes } from "./LinkedNotes";
-
 
 interface NotesTabProps {
     notes: any[];
@@ -24,17 +23,44 @@ interface NotesTabProps {
     handleSend: () => void;
     getAuthorColor: (id: string, role?: string) => string;
     notesSubTab: "Geral" | "Privado" | "Jogadores" | "Sessão";
-    setNotesSubTab: (tab: "Geral" | "Privado" | "Jogadores" | "Sessão") => void;
     editingNoteId: string | null;
     handleStartEdit: (noteId: string) => void;
     handleCancelEdit: () => void;
     mentionEntities: any[];
     state?: any;
     handleAddEntityNote?: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, content: string, isPrivate?: boolean) => void;
+    handleUpdateEntityNote?: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, noteId: string, patch: any) => void;
     handleDeleteEntityNote?: (type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', entityId: string, noteId: string) => void;
     connectionStatus?: string;
     failedEventIds?: Set<string>;
     handleRetry?: (noteId: string) => void;
+    privateNoteFolders: any[];
+    handleCreatePrivateFolder: (name: string, color: string) => boolean;
+    handleUpdatePrivateFolder: (folderId: string, patch: any) => void;
+    handleDeletePrivateFolder: (folderId: string) => void;
+    handleMovePrivateNoteToFolder: (noteId: string, folderId: string | null) => void;
+    handleReorderPrivateFolders: (orderedFolderIds: string[]) => void;
+    selectedPrivateFolderId: string;
+    setSelectedPrivateFolderId: (folderId: string) => void;
+    selectedPlayerNotesView: string;
+    setSelectedPlayerNotesView: (viewId: string) => void;
+}
+
+const NOTE_FOLDER_COLORS = [
+    "#C5A059",
+    "#4A90E2",
+    "#50E3C2",
+    "#B8E986",
+    "#F5A623",
+    "#D96C6C",
+    "#BD10E0",
+    "#7ED321"
+];
+
+function dedupeById<T extends { id: string }>(list: T[]): T[] {
+    const merged = new Map<string, T>();
+    list.forEach(item => merged.set(item.id, { ...(merged.get(item.id) || {}), ...item }));
+    return Array.from(merged.values());
 }
 
 export function NotesTab({
@@ -56,26 +82,363 @@ export function NotesTab({
     handleSend,
     getAuthorColor,
     notesSubTab,
-    setNotesSubTab,
     editingNoteId,
     handleStartEdit,
     handleCancelEdit,
     mentionEntities,
     state,
     handleAddEntityNote,
+    handleUpdateEntityNote,
     handleDeleteEntityNote,
-    connectionStatus = 'SUBSCRIBED',
+    connectionStatus = "SUBSCRIBED",
     failedEventIds = new Set(),
-    handleRetry
+    handleRetry,
+    privateNoteFolders,
+    handleCreatePrivateFolder,
+    handleUpdatePrivateFolder,
+    handleDeletePrivateFolder,
+    handleMovePrivateNoteToFolder,
+    handleReorderPrivateFolders,
+    selectedPrivateFolderId,
+    setSelectedPrivateFolderId,
+    selectedPlayerNotesView,
+    setSelectedPlayerNotesView
 }: NotesTabProps) {
     const normalizedUserId = userId.trim().toLowerCase();
     const isAuthor = (authorId?: string) => (authorId || "").trim().toLowerCase() === normalizedUserId;
-    const playerChars = Object.values((state?.characters) || {}).filter((c: any) => !c.isNPC && c.source !== 'bestiary') as any[];
-    const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-    const toggleCard = (id: string) => setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
-    const [sessionFilter, setSessionFilter] = useState<number | null>(null);
+    const playerChars = useMemo(
+        () => Object.values((state?.characters) || {}).filter((char: any) => !char.isNPC && char.source !== "bestiary") as any[],
+        [state?.characters]
+    );
 
-    const isOffline = connectionStatus !== 'SUBSCRIBED';
+    const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+    const [sessionFilter, setSessionFilter] = useState<number | null>(null);
+    const [folderDraft, setFolderDraft] = useState<{ mode: "closed" | "create" | "edit"; id: string | null; name: string; color: string }>({
+        mode: "closed",
+        id: null,
+        name: "",
+        color: NOTE_FOLDER_COLORS[0]
+    });
+    const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null);
+    const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
+
+    const isOffline = connectionStatus !== "SUBSCRIBED";
+    const toggleCard = (id: string) => setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
+
+    const folderMap = useMemo(() => {
+        const map = new Map<string, any>();
+        privateNoteFolders.forEach(folder => map.set(folder.id, folder));
+        return map;
+    }, [privateNoteFolders]);
+
+    const visibleNotes = useMemo(() => {
+        const deduped = dedupeById(filteredNotes);
+        if (notesSubTab !== "Privado" || selectedPrivateFolderId === "all") return deduped;
+        return deduped.filter(note => (note.folderId || "") === selectedPrivateFolderId);
+    }, [filteredNotes, notesSubTab, selectedPrivateFolderId]);
+
+    const currentFolder = selectedPrivateFolderId === "all" ? null : folderMap.get(selectedPrivateFolderId);
+
+    useEffect(() => {
+        if (notesSubTab === "Privado" && selectedPrivateFolderId !== "all" && !folderMap.has(selectedPrivateFolderId)) {
+            setSelectedPrivateFolderId("all");
+        }
+    }, [notesSubTab, selectedPrivateFolderId, folderMap, setSelectedPrivateFolderId]);
+
+    useEffect(() => {
+        if (notesSubTab === "Jogadores" && selectedPlayerNotesView !== "all" && !playerChars.some((char: any) => char.id === selectedPlayerNotesView)) {
+            setSelectedPlayerNotesView("all");
+        }
+    }, [notesSubTab, selectedPlayerNotesView, playerChars, setSelectedPlayerNotesView]);
+
+    const startCreateFolder = () => {
+        if (privateNoteFolders.length >= 10) return;
+        setFolderDraft({ mode: "create", id: null, name: "", color: NOTE_FOLDER_COLORS[0] });
+    };
+
+    const startEditFolder = (folder: any) => {
+        setFolderDraft({ mode: "edit", id: folder.id, name: folder.name, color: folder.color || NOTE_FOLDER_COLORS[0] });
+    };
+
+    const closeFolderDraft = () => {
+        setFolderDraft({ mode: "closed", id: null, name: "", color: NOTE_FOLDER_COLORS[0] });
+    };
+
+    const saveFolderDraft = () => {
+        const trimmedName = folderDraft.name.trim();
+        if (!trimmedName) return;
+
+        if (folderDraft.mode === "create") {
+            const created = handleCreatePrivateFolder(trimmedName, folderDraft.color);
+            if (created) closeFolderDraft();
+            return;
+        }
+
+        if (folderDraft.mode === "edit" && folderDraft.id) {
+            handleUpdatePrivateFolder(folderDraft.id, { name: trimmedName, color: folderDraft.color });
+            closeFolderDraft();
+        }
+    };
+
+    const moveDraggedFolder = (targetFolderId: string) => {
+        if (!draggedFolderId || draggedFolderId === targetFolderId) return;
+        const currentOrder = privateNoteFolders.map(folder => folder.id).filter(id => id !== draggedFolderId);
+        const targetIndex = targetFolderId === "all" ? 0 : currentOrder.indexOf(targetFolderId);
+        currentOrder.splice(targetIndex < 0 ? currentOrder.length : targetIndex, 0, draggedFolderId);
+        handleReorderPrivateFolders(currentOrder);
+        setDraggedFolderId(null);
+    };
+
+    const moveDraggedNote = (targetFolderId: string) => {
+        if (!draggedNoteId) return;
+        handleMovePrivateNoteToFolder(draggedNoteId, targetFolderId === "all" ? null : targetFolderId);
+        setDraggedNoteId(null);
+    };
+
+    const renderPrivateFolders = () => (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
+                    TÓPICOS PRIVADOS
+                </span>
+                <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)" }}>
+                    {privateNoteFolders.length}/10
+                </span>
+            </div>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                <button
+                    type="button"
+                    onClick={() => setSelectedPrivateFolderId("all")}
+                    onDragOver={(e) => {
+                        if (draggedFolderId || draggedNoteId) e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        if (draggedNoteId) moveDraggedNote("all");
+                        if (draggedFolderId) moveDraggedFolder("all");
+                    }}
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        border: selectedPrivateFolderId === "all" ? "1px solid var(--accent-color)" : "1px solid rgba(255,255,255,0.08)",
+                        background: selectedPrivateFolderId === "all" ? "rgba(197,160,89,0.18)" : "rgba(255,255,255,0.03)",
+                        color: selectedPrivateFolderId === "all" ? "#fff" : "#bbb",
+                        padding: "8px 12px",
+                        borderRadius: "999px",
+                        cursor: "pointer"
+                    }}
+                >
+                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--accent-color)" }} />
+                    TODAS
+                </button>
+
+                {privateNoteFolders.map(folder => (
+                    <div
+                        key={folder.id}
+                        draggable
+                        onDragStart={() => setDraggedFolderId(folder.id)}
+                        onDragOver={(e) => {
+                            if (draggedFolderId || draggedNoteId) e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            if (draggedNoteId) moveDraggedNote(folder.id);
+                            if (draggedFolderId) moveDraggedFolder(folder.id);
+                        }}
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            border: selectedPrivateFolderId === folder.id ? `1px solid ${folder.color}` : "1px solid rgba(255,255,255,0.08)",
+                            background: selectedPrivateFolderId === folder.id ? `${folder.color}22` : "rgba(255,255,255,0.03)",
+                            color: selectedPrivateFolderId === folder.id ? "#fff" : "#bbb",
+                            padding: "8px 12px",
+                            borderRadius: "999px",
+                            cursor: "pointer"
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setSelectedPrivateFolderId(folder.id)}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0 }}
+                        >
+                            <GripVertical size={12} style={{ opacity: 0.55 }} />
+                            <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: folder.color }} />
+                            {folder.name.toUpperCase()}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => startEditFolder(folder)}
+                            style={{ background: "none", border: "none", color: "inherit", opacity: 0.75, cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
+                            title="Editar submenu"
+                        >
+                            <Pencil size={12} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleDeletePrivateFolder(folder.id)}
+                            style={{ background: "none", border: "none", color: "#ff6b6b", opacity: 0.8, cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
+                            title="Excluir submenu"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    </div>
+                ))}
+
+                <button
+                    type="button"
+                    onClick={startCreateFolder}
+                    disabled={privateNoteFolders.length >= 10}
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        border: "1px dashed rgba(197,160,89,0.45)",
+                        background: "rgba(197,160,89,0.08)",
+                        color: privateNoteFolders.length >= 10 ? "rgba(255,255,255,0.35)" : "var(--accent-color)",
+                        padding: "8px 12px",
+                        borderRadius: "999px",
+                        cursor: privateNoteFolders.length >= 10 ? "not-allowed" : "pointer"
+                    }}
+                    title={privateNoteFolders.length >= 10 ? "Limite de 10 submenus atingido" : "Criar submenu"}
+                >
+                    <Plus size={12} />
+                    NOVO TÓPICO
+                </button>
+            </div>
+
+            {folderDraft.mode !== "closed" && (
+                <div style={{ border: "1px solid rgba(197,160,89,0.18)", background: "rgba(0,0,0,0.2)", borderRadius: "10px", padding: "12px" }}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                        <input
+                            value={folderDraft.name}
+                            onChange={(e) => setFolderDraft(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Nome do submenu..."
+                            className="author-filter"
+                            style={{ minWidth: "220px" }}
+                        />
+                        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                            {NOTE_FOLDER_COLORS.map(color => (
+                                <button
+                                    key={color}
+                                    type="button"
+                                    onClick={() => setFolderDraft(prev => ({ ...prev, color }))}
+                                    style={{
+                                        width: "22px",
+                                        height: "22px",
+                                        borderRadius: "50%",
+                                        border: folderDraft.color === color ? "2px solid #fff" : "1px solid rgba(255,255,255,0.18)",
+                                        background: color,
+                                        cursor: "pointer"
+                                    }}
+                                    title={`Cor ${color}`}
+                                />
+                            ))}
+                        </div>
+                        <div style={{ display: "flex", gap: "8px", marginLeft: "auto" }}>
+                            <button type="button" onClick={closeFolderDraft} className="tool-btn" title="Cancelar">
+                                <X size={12} />
+                            </button>
+                            <button type="button" onClick={saveFolderDraft} className="tool-btn" title="Salvar submenu">
+                                <Check size={12} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderPlayerSubmenus = () => (
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+            <button
+                type="button"
+                onClick={() => setSelectedPlayerNotesView("all")}
+                style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    border: selectedPlayerNotesView === "all" ? "1px solid var(--accent-color)" : "1px solid rgba(255,255,255,0.08)",
+                    background: selectedPlayerNotesView === "all" ? "rgba(197,160,89,0.18)" : "rgba(255,255,255,0.03)",
+                    color: selectedPlayerNotesView === "all" ? "#fff" : "#bbb",
+                    padding: "8px 12px",
+                    borderRadius: "999px",
+                    cursor: "pointer"
+                }}
+            >
+                TODAS
+            </button>
+            {playerChars.map((char: any) => (
+                <button
+                    key={char.id}
+                    type="button"
+                    onClick={() => setSelectedPlayerNotesView(char.id)}
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        border: selectedPlayerNotesView === char.id ? "1px solid var(--accent-color)" : "1px solid rgba(255,255,255,0.08)",
+                        background: selectedPlayerNotesView === char.id ? "rgba(197,160,89,0.18)" : "rgba(255,255,255,0.03)",
+                        color: selectedPlayerNotesView === char.id ? "#fff" : "#bbb",
+                        padding: "8px 12px",
+                        borderRadius: "999px",
+                        cursor: "pointer"
+                    }}
+                >
+                    {char.imageUrl && (
+                        <span style={{ borderRadius: "50%", width: "18px", height: "18px", overflow: "hidden", display: "inline-flex", border: "1px solid rgba(255,255,255,0.15)" }}>
+                            <img src={char.imageUrl} alt={char.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        </span>
+                    )}
+                    {char.name.toUpperCase()}
+                </button>
+            ))}
+        </div>
+    );
+
+    const renderPlayerCard = (char: any, expanded = true) => {
+        if (!char) return null;
+        const isOpen = expanded || !!expandedCards[char.id];
+        return (
+            <div key={char.id} className="global-item-card card-bg ornate-border" style={{ borderLeft: "4px solid var(--accent-color)" }}>
+                <div
+                    className="item-header"
+                    style={{ marginBottom: isOpen ? "8px" : "0", cursor: expanded ? "default" : "pointer", userSelect: "none" }}
+                    onClick={() => {
+                        if (!expanded) toggleCard(char.id);
+                    }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+                        {char.imageUrl && (
+                            <div style={{ borderRadius: "50%", width: "32px", height: "32px", overflow: "hidden", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }}>
+                                <img src={char.imageUrl} alt={char.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+                        )}
+                        <h5 className="item-title" style={{ color: "var(--accent-color)", margin: 0 }}>{char.name.toUpperCase()}</h5>
+                    </div>
+                    {!expanded && (
+                        <div style={{ color: "#666", flexShrink: 0 }}>
+                            {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </div>
+                    )}
+                </div>
+                {isOpen && (
+                    <LinkedNotes
+                        notes={(char.linkedNotes || []).filter((note: any) => isAuthor(note.authorId))}
+                        onAddNote={(content: string, isPrivate?: boolean) => handleAddEntityNote?.("CHARACTER", char.id, content, isPrivate)}
+                        onUpdateNote={(noteId: string, patch: any) => handleUpdateEntityNote?.("CHARACTER", char.id, noteId, patch)}
+                        onDeleteNote={(noteId: string) => handleDeleteEntityNote?.("CHARACTER", char.id, noteId)}
+                        mentionEntities={mentionEntities}
+                        hideTitle={true}
+                        userId={normalizedUserId}
+                        userRole={userRole}
+                        mergeAllNotes={true}
+                    />
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="tab-content-area">
@@ -92,24 +455,20 @@ export function NotesTab({
             </div>
 
             {notesSubTab === "Sessão" && (() => {
-                const sessionNotes = notes.filter((n: any) => !n.isPrivate || isAuthor(n.authorId));
+                const sessionNotes = dedupeById(notes.filter((note: any) => !note.isPrivate || isAuthor(note.authorId)));
                 const grouped: Record<number, any[]> = {};
                 sessionNotes.forEach((note: any) => {
-                    const sn = note.sessionNumber || 1;
-                    if (!grouped[sn]) grouped[sn] = [];
-                    grouped[sn].push(note);
+                    const sessionNumber = note.sessionNumber || 1;
+                    if (!grouped[sessionNumber]) grouped[sessionNumber] = [];
+                    grouped[sessionNumber].push(note);
                 });
                 const allSessionNumbers = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-                const visibleSessionNumbers = sessionFilter === null ? allSessionNumbers : allSessionNumbers.filter(sn => sn === sessionFilter);
+                const visibleSessionNumbers = sessionFilter === null ? allSessionNumbers : allSessionNumbers.filter(sessionNumber => sessionNumber === sessionFilter);
 
                 return (
                     <>
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '8px 10px', borderBottom: '1px solid rgba(197,160,89,0.1)',
-                            background: 'rgba(0,0,0,0.2)'
-                        }}>
-                            <span style={{ fontFamily: 'var(--font-header)', fontSize: '0.6rem', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(197,160,89,0.1)", background: "rgba(0,0,0,0.2)" }}>
+                            <span style={{ fontFamily: "var(--font-header)", fontSize: "0.6rem", letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>
                                 SESSÃO:
                             </span>
                             <select
@@ -118,51 +477,38 @@ export function NotesTab({
                                 className="author-filter"
                             >
                                 <option value="all">TODAS AS SESSÕES</option>
-                                {allSessionNumbers.map(sn => (
-                                    <option key={sn} value={String(sn)}>SESSÃO {sn}</option>
+                                {allSessionNumbers.map(sessionNumber => (
+                                    <option key={sessionNumber} value={String(sessionNumber)}>SESSÃO {sessionNumber}</option>
                                 ))}
                             </select>
                         </div>
-                        <div className="notes-scroll scrollbar-arcane" style={{ padding: '10px 5px' }}>
+                        <div className="notes-scroll scrollbar-arcane" style={{ padding: "10px 5px" }}>
                             {visibleSessionNumbers.length === 0 && (
                                 <div className="empty-notes">NENHUMA NOTA ENCONTRADA.</div>
                             )}
-                            {visibleSessionNumbers.map(sn => (
-                                <div key={sn}>
-                                    <div style={{
-                                        display: 'flex', alignItems: 'center', gap: '12px',
-                                        margin: '18px 0 12px', padding: '0 4px'
-                                    }}>
-                                        <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, var(--accent-color))' }} />
-                                        <span style={{
-                                            fontFamily: 'var(--font-header)', fontSize: '0.65rem',
-                                            letterSpacing: '0.25em', color: 'var(--accent-color)',
-                                            padding: '4px 14px', border: '1px solid var(--accent-color)',
-                                            background: 'rgba(0,0,0,0.5)', whiteSpace: 'nowrap'
-                                        }}>
-                                            SESSÃO {sn}
+                            {visibleSessionNumbers.map(sessionNumber => (
+                                <div key={sessionNumber}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "18px 0 12px", padding: "0 4px" }}>
+                                        <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, var(--accent-color))" }} />
+                                        <span style={{ fontFamily: "var(--font-header)", fontSize: "0.65rem", letterSpacing: "0.25em", color: "var(--accent-color)", padding: "4px 14px", border: "1px solid var(--accent-color)", background: "rgba(0,0,0,0.5)", whiteSpace: "nowrap" }}>
+                                            SESSÃO {sessionNumber}
                                         </span>
-                                        <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--accent-color))' }} />
+                                        <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, var(--accent-color))" }} />
                                     </div>
-                                    {grouped[sn].map((note: any) => {
-                                        const isMyNote = isAuthor(note.authorId);
+                                    {grouped[sessionNumber].map((note: any) => {
                                         const isFailed = failedEventIds.has(note.id);
                                         const isPending = note.seq === 0 && !isFailed;
 
                                         return (
-                                            <div key={note.id} className={`note-entry animate-fade-in ${isPending ? 'pending' : ''} ${isFailed ? 'failed' : ''}`} style={{ borderLeftColor: getAuthorColor(note.authorId) }}>
+                                            <div key={note.id} className={`note-entry animate-fade-in ${isPending ? "pending" : ""} ${isFailed ? "failed" : ""}`} style={{ borderLeftColor: getAuthorColor(note.authorId) }}>
                                                 <div className="entry-meta">
-                                                    <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                                                     <span className="actor" style={{ color: getAuthorColor(note.authorId) }}>
                                                         {note.authorName.toUpperCase()}
-                                                        {note.isPrivate && <span style={{ opacity: 0.5, marginLeft: '5px', fontSize: '0.6rem' }}>(PRIVADO)</span>}
+                                                        {note.isPrivate && <span style={{ opacity: 0.5, marginLeft: "5px", fontSize: "0.6rem" }}>(PRIVADO)</span>}
                                                     </span>
                                                     <div className="note-status-icons">
-                                                        {isPending && (
-                                                            <span title="Enviando...">
-                                                                <Clock size={12} className="status-pending" />
-                                                            </span>
-                                                        )}
+                                                        {isPending && <span title="Enviando..."><Clock size={12} className="status-pending" /></span>}
                                                         {isFailed && (
                                                             <button className="retry-btn" onClick={() => handleRetry?.(note.id)} title="Falha ao enviar. Clique para tentar novamente.">
                                                                 <RefreshCw size={12} />
@@ -184,186 +530,183 @@ export function NotesTab({
             })()}
 
             {notesSubTab === "Jogadores" && (
-                <div className="notes-scroll scrollbar-arcane" style={{ padding: '10px 5px' }}>
+                <div className="notes-scroll scrollbar-arcane" style={{ padding: "10px 5px" }}>
                     {playerChars.length === 0 ? (
                         <div className="empty-notes">NENHUM JOGADOR ENCONTRADO NA SESSÃO.</div>
                     ) : (
-                        <div className="items-grid" style={{ alignItems: 'start' }}>
-                            {playerChars.map((char: any) => {
-                                const isOpen = !!expandedCards[char.id];
-                                return (
-                                    <div key={char.id} className="global-item-card card-bg ornate-border" style={{ borderLeft: '4px solid var(--accent-color)' }}>
-                                        <div
-                                            className="item-header"
-                                            style={{ marginBottom: isOpen ? '8px' : '0', cursor: 'pointer', userSelect: 'none' }}
-                                            onClick={() => toggleCard(char.id)}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                                                {char.imageUrl && (
-                                                    <div style={{ borderRadius: '50%', width: '32px', height: '32px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <img src={char.imageUrl} alt={char.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    </div>
-                                                )}
-                                                <h5 className="item-title" style={{ color: 'var(--accent-color)', margin: 0 }}>{char.name.toUpperCase()}</h5>
-                                            </div>
-                                            <div style={{ color: '#666', flexShrink: 0 }}>
-                                                {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                            </div>
-                                        </div>
-                                        {isOpen && (
-                                            <LinkedNotes
-                                                notes={(char.linkedNotes || []).filter((n: any) => isAuthor(n.authorId))}
-                                                onAddNote={(content: string, isPrivate?: boolean) => handleAddEntityNote?.('CHARACTER', char.id, content, isPrivate)}
-                                                onDeleteNote={(noteId: string) => handleDeleteEntityNote?.('CHARACTER', char.id, noteId)}
-                                                mentionEntities={mentionEntities}
-                                                hideTitle={true}
-                                                userId={normalizedUserId}
-                                                userRole={userRole}
-                                                mergeAllNotes={true}
-                                            />
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        <>
+                            {renderPlayerSubmenus()}
+                            {selectedPlayerNotesView === "all" ? (
+                                <div className="items-grid" style={{ alignItems: "start" }}>
+                                    {playerChars.map((char: any) => renderPlayerCard(char, false))}
+                                </div>
+                            ) : (
+                                renderPlayerCard(playerChars.find((char: any) => char.id === selectedPlayerNotesView), true)
+                            )}
+                        </>
                     )}
                 </div>
             )}
 
-            {notesSubTab !== "Jogadores" && notesSubTab !== "Sessão" && (<>
-            <div className="notes-header">
-                <h3 className="notes-title">DIÁRIO DE CAMPANHA {notesSubTab === "Privado" && "(PRIVADO)"}</h3>
+            {notesSubTab !== "Jogadores" && notesSubTab !== "Sessão" && (
+                <>
+                    <div className="notes-header">
+                        <h3 className="notes-title">
+                            DIÁRIO DE CAMPANHA {notesSubTab === "Privado" && "(PRIVADO)"}
+                            {notesSubTab === "Privado" && currentFolder && (
+                                <span style={{ marginLeft: "10px", fontSize: "0.58rem", letterSpacing: "0.18em", color: currentFolder.color || "var(--accent-color)" }}>
+                                    {currentFolder.name.toUpperCase()}
+                                </span>
+                            )}
+                        </h3>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {notesSubTab === "Geral" && authors.length > 0 && (
-                        <select
-                            value={filterAuthor}
-                            onChange={(e) => setFilterAuthor(e.target.value)}
-                            className="author-filter"
-                        >
-                            <option value="all">TODOS OS AUTORES</option>
-                            {authors.map(a => (
-                                <option key={a.id} value={a.id}>{a.name.toUpperCase()}</option>
-                            ))}
-                        </select>
-                    )}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {notesSubTab === "Geral" && authors.length > 0 && (
+                                <select
+                                    value={filterAuthor}
+                                    onChange={(e) => setFilterAuthor(e.target.value)}
+                                    className="author-filter"
+                                >
+                                    <option value="all">TODOS OS AUTORES</option>
+                                    {authors.map(author => (
+                                        <option key={author.id} value={author.id}>{author.name.toUpperCase()}</option>
+                                    ))}
+                                </select>
+                            )}
 
-                    {filteredNotes.length > 0 && (
-                        <button
-                            className="clear-all-btn"
-                            onClick={() => handleClearNotesLocally(notesSubTab as 'Geral' | 'Privado')}
-                            title="Apagar notas da minha visualização"
-                        >
-                            LIMPAR PARA MIM
-                        </button>
-                    )}
+                            {visibleNotes.length > 0 && (
+                                <button
+                                    className="clear-all-btn"
+                                    onClick={() => handleClearNotesLocally(notesSubTab as 'Geral' | 'Privado')}
+                                    title="Apagar notas da minha visualização"
+                                >
+                                    LIMPAR PARA MIM
+                                </button>
+                            )}
 
-                    {userRole === "GM" && notesSubTab === "Geral" && notes.filter((n: any) => !n.isPrivate).length > 0 && (
-                        <button
-                            className="clear-all-btn"
-                            style={{ background: 'rgba(255,80,80,0.15)', borderColor: 'rgba(255,80,80,0.4)', color: '#ff6060' }}
-                            onClick={() => handleDeleteAll()}
-                            title="Apagar todas as notas gerais para todos"
-                        >
-                            LIMPAR TODOS
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            <div className="notes-scroll scrollbar-arcane" ref={scrollRef}>
-                {filteredNotes.length === 0 && (
-                    <div className="empty-notes">
-                        {notesSubTab === "Geral"
-                            ? "NENHUMA NOTA ENCONTRADA."
-                            : "VOCÊ AINDA NÃO TEM ANOTAÇÕES PRIVADAS."}
-                    </div>
-                )}
-                {filteredNotes.map((note) => {
-                    const isMyNote = isAuthor(note.authorId);
-                    const isGM = userRole === "GM";
-
-                    const canEdit = isMyNote || (isGM && !note.isPrivate);
-                    const canDelete = isMyNote || (isGM && !note.isPrivate);
-
-                    const authorColor = getAuthorColor(note.authorId, note.authorId === "GM" ? "GM" : undefined);
-                    const isFailed = isMyNote && failedEventIds.has(note.id);
-                    const isPending = isMyNote && note.seq === 0 && !isFailed;
-
-                    return (
-                        <div key={note.id} className={`note-entry animate-fade-in ${editingNoteId === note.id ? 'editing' : ''} ${isPending ? 'pending' : ''} ${isFailed ? 'failed' : ''}`} style={{ borderLeftColor: authorColor }}>
-                            <div className="entry-meta">
-                                <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span className="actor" style={{ color: authorColor }}>{note.authorName.toUpperCase()}</span>
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    {isPending && (
-                                        <span title="Enviando...">
-                                            <Clock size={12} className="status-pending" />
-                                        </span>
-                                    )}
-                                    {isFailed && (
-                                        <button className="retry-btn" onClick={() => handleRetry?.(note.id)} title="Falha ao enviar. Clique para tentar novamente.">
-                                            <RefreshCw size={12} />
-                                        </button>
-                                    )}
-                                    {canEdit && (
-                                        <button onClick={() => handleStartEdit(note.id)} className="edit-mini-btn" title="Editar nota">
-                                            <Pencil size={12} />
-                                        </button>
-                                    )}
-                                    {canDelete && (
-                                        <button onClick={() => handleDelete(note.id)} className="delete-btn" title="Apagar nota">
-                                            <Trash2 size={12} />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="entry-content">
-                                <div className="note-body" dangerouslySetInnerHTML={{ __html: renderMentions(note.content) }} />
-                            </div>
+                            {userRole === "GM" && notesSubTab === "Geral" && notes.filter((note: any) => !note.isPrivate).length > 0 && (
+                                <button
+                                    className="clear-all-btn"
+                                    style={{ background: "rgba(255,80,80,0.15)", borderColor: "rgba(255,80,80,0.4)", color: "#ff6060" }}
+                                    onClick={() => handleDeleteAll()}
+                                    title="Apagar todas as notas gerais para todos"
+                                >
+                                    LIMPAR TODOS
+                                </button>
+                            )}
                         </div>
-                    );
-                })}
-            </div>
-
-            <div className="notes-editor-area">
-                {editingNoteId && (
-                    <div className="editor-status-bar">
-                        <span>EDITANDO NOTA...</span>
-                        <button onClick={handleCancelEdit} className="cancel-edit-btn"><X size={12} /> CANCELAR</button>
                     </div>
-                )}
-                <div className="editor-toolbar">
-                    <button onClick={() => handleFormat('bold')} className="tool-btn" title="Negrito"><Bold size={14} /></button>
-                    <button onClick={() => handleFormat('italic')} className="tool-btn" title="Itálico"><Italic size={14} /></button>
-                    <button onClick={() => handleFormat('underline')} className="tool-btn" title="Sublinhado"><Underline size={14} /></button>
-                </div>
-                <div className="editor-input-wrapper">
-                    <MentionEditor
-                        ref={editorRef}
-                        value={editorContent}
-                        onChange={setEditorContent}
-                        placeholder={notesSubTab === "Geral" ? "Digite sua nota..." : "Anote algo privado..."}
-                        className="rich-editor"
-                        mentionEntities={mentionEntities}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSend();
-                            }
-                        }}
-                    />
-                    <button
-                        onClick={handleSend}
-                        className={`send-btn ${editingNoteId ? 'save-mode' : ''}`}
-                        disabled={!editorContent.trim() || isOffline}
-                        title={editingNoteId ? "Salvar Alterações" : "Enviar Nota"}
-                    >
-                        {editingNoteId ? <Check size={16} /> : <Send size={16} />}
-                    </button>
-                </div>
-            </div>
-            </>)}
+
+                    {notesSubTab === "Privado" && renderPrivateFolders()}
+
+                    <div className="notes-scroll scrollbar-arcane" ref={scrollRef}>
+                        {visibleNotes.length === 0 && (
+                            <div className="empty-notes">
+                                {notesSubTab === "Geral"
+                                    ? "NENHUMA NOTA ENCONTRADA."
+                                    : selectedPrivateFolderId === "all"
+                                        ? "VOCÊ AINDA NÃO TEM ANOTAÇÕES PRIVADAS."
+                                        : "ESTE SUBMENU AINDA NÃO TEM ANOTAÇÕES."}
+                            </div>
+                        )}
+                        {visibleNotes.map((note) => {
+                            const isMyNote = isAuthor(note.authorId);
+                            const isGM = userRole === "GM";
+                            const canEdit = isMyNote || (isGM && !note.isPrivate);
+                            const canDelete = isMyNote || (isGM && !note.isPrivate);
+                            const authorColor = getAuthorColor(note.authorId, note.authorId === "GM" ? "GM" : undefined);
+                            const isFailed = isMyNote && failedEventIds.has(note.id);
+                            const isPending = isMyNote && note.seq === 0 && !isFailed;
+                            const noteFolder = note.folderId ? folderMap.get(note.folderId) : null;
+
+                            return (
+                                <div
+                                    key={note.id}
+                                    className={`note-entry animate-fade-in ${editingNoteId === note.id ? "editing" : ""} ${isPending ? "pending" : ""} ${isFailed ? "failed" : ""}`}
+                                    style={{ borderLeftColor: authorColor, cursor: notesSubTab === "Privado" && isMyNote ? "grab" : "default" }}
+                                    draggable={notesSubTab === "Privado" && isMyNote}
+                                    onDragStart={() => setDraggedNoteId(note.id)}
+                                    onDragEnd={() => setDraggedNoteId(null)}
+                                >
+                                    <div className="entry-meta">
+                                        <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                                        <span className="actor" style={{ color: authorColor }}>{note.authorName.toUpperCase()}</span>
+                                        {noteFolder && (
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 8px", borderRadius: "999px", background: `${noteFolder.color || "#C5A059"}22`, color: noteFolder.color || "var(--accent-color)", fontSize: "0.55rem", letterSpacing: "0.12em" }}>
+                                                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: noteFolder.color || "#C5A059" }} />
+                                                {noteFolder.name.toUpperCase()}
+                                            </span>
+                                        )}
+                                        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginLeft: "auto" }}>
+                                            {isPending && <span title="Enviando..."><Clock size={12} className="status-pending" /></span>}
+                                            {isFailed && (
+                                                <button className="retry-btn" onClick={() => handleRetry?.(note.id)} title="Falha ao enviar. Clique para tentar novamente.">
+                                                    <RefreshCw size={12} />
+                                                </button>
+                                            )}
+                                            {canEdit && (
+                                                <button onClick={() => handleStartEdit(note.id)} className="edit-mini-btn" title="Editar nota">
+                                                    <Pencil size={12} />
+                                                </button>
+                                            )}
+                                            {canDelete && (
+                                                <button onClick={() => handleDelete(note.id)} className="delete-btn" title="Apagar nota">
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="entry-content">
+                                        <div className="note-body" dangerouslySetInnerHTML={{ __html: renderMentions(note.content) }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="notes-editor-area">
+                        {editingNoteId && (
+                            <div className="editor-status-bar">
+                                <span>EDITANDO NOTA...</span>
+                                <button onClick={handleCancelEdit} className="cancel-edit-btn"><X size={12} /> CANCELAR</button>
+                            </div>
+                        )}
+                        <div className="editor-toolbar">
+                            <button onClick={() => handleFormat("bold")} className="tool-btn" title="Negrito"><Bold size={14} /></button>
+                            <button onClick={() => handleFormat("italic")} className="tool-btn" title="Itálico"><Italic size={14} /></button>
+                            <button onClick={() => handleFormat("insertUnorderedList")} className="tool-btn" title="Marcadores"><List size={14} /></button>
+                        </div>
+                        <div className="editor-input-wrapper">
+                            <MentionEditor
+                                ref={editorRef}
+                                value={editorContent}
+                                onChange={setEditorContent}
+                                placeholder={notesSubTab === "Geral"
+                                    ? "Digite sua nota..."
+                                    : currentFolder
+                                        ? `Anote algo em ${currentFolder.name}...`
+                                        : "Anote algo privado..."}
+                                className="rich-editor"
+                                mentionEntities={mentionEntities}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={handleSend}
+                                className={`send-btn ${editingNoteId ? "save-mode" : ""}`}
+                                disabled={!editorContent.trim() || isOffline}
+                                title={editingNoteId ? "Salvar Alterações" : "Enviar Nota"}
+                            >
+                                {editingNoteId ? <Check size={16} /> : <Send size={16} />}
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
