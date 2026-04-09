@@ -177,7 +177,11 @@ export function HeaderWrapper() {
                 >
                     {sessionId && userId && (
                         <>
-                            <TextChatPanel sessionId={sessionId} userId={userId} />
+                            <TextChatPanel
+                                sessionId={sessionId}
+                                userId={userId}
+                                userRole={userRole}
+                            />
                             <VoiceChatPanel
                                 sessionId={sessionId}
                                 userId={userId}
