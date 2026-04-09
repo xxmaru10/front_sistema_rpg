@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-09 (story-35/logs-history-full)
+last_updated: 2026-04-09 (story-35/logs-resiliencia-final)
 status: ativo
 ---
 
