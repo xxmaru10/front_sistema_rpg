@@ -128,7 +128,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Deduplicação idempotente por `id`**: reducers de `NOTE_*` e `*_NOTE_ADDED` passaram a usar `upsert` por identificador, reduzindo risco de notas duplicadas em cenários de optimistic event, retry e replay.
 - **Privacidade reforçada em exclusão/movimentação**: eventos de apagar/editar/mover notas privadas agora preservam `visibility: PLAYER_ONLY`, evitando vazamento de metadados de notas privadas durante manutenção de subtópicos.
 - **Dropdown direto na visão Jogadores**: o filtro interno de `Notas > Jogadores` foi simplificado para um droplist com `Todos` + personagens, reduzindo ruído visual sem alterar o modelo de eventos.
-- **Auto-menções por texto digitado**: o `MentionEditor` passou a converter automaticamente nomes digitados em spans de menção com comparação case-insensitive e remoção por clique no próprio editor, mantendo o comportamento manual por `@`.
+- **Auto-menções por texto digitado**: o `MentionEditor` passou a converter automaticamente nomes digitados em spans de menção com comparação case-insensitive e confirmação leve no clique (`x` para remover, `v` para manter), mantendo o comportamento manual por `@`.
 - **Persistência do HTML do editor**: o envio do diário principal passou a ler o `innerHTML` atual do editor antes de despachar `NOTE_*`, corrigindo perda de listas/marcadores quando a toolbar alterava o DOM sem atualizar o estado imediatamente.
 
 ## Padrões Adotados

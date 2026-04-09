@@ -358,7 +358,7 @@ export function NotesTab({
             <select
                 value={selectedPlayerNotesView}
                 onChange={(e) => setSelectedPlayerNotesView(e.target.value)}
-                className="author-filter"
+                className="victorian-select notes-player-select"
                 style={{ minWidth: "240px" }}
             >
                 <option value="all">TODOS</option>

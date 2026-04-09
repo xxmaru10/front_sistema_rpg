@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { Check, X } from "lucide-react";
 import { MentionSuggestions } from "./MentionSuggestions";
 import { MENTION_COLORS, escapeMentionRegExp, normalizeMentionSearch } from "@/lib/mentionUtils";
 
@@ -87,6 +88,16 @@ function createMentionElement(item: MentionCandidate): HTMLSpanElement {
     return span;
 }
 
+function placeCaretAfterNode(node: Node) {
+    const selection = window.getSelection();
+    if (!selection) return;
+    const range = document.createRange();
+    range.setStartAfter(node);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
 export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
     value,
     style,
@@ -105,6 +116,11 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
         query: string;
         position: { top: number; left: number };
     }>({ active: false, query: "", position: { top: 0, left: 0 } });
+    const [mentionActionState, setMentionActionState] = useState<{
+        active: boolean;
+        target: HTMLElement | null;
+        position: { top: number; left: number };
+    }>({ active: false, target: null, position: { top: 0, left: 0 } });
 
     const autoMentionCandidates = useMemo(() => {
         const seen = new Set<string>();
@@ -286,39 +302,42 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
             const mentionElement = target?.closest(".mention-link, .tag-link") as HTMLElement | null;
             if (mentionElement && editor.contains(mentionElement)) {
                 e.preventDefault();
-                const textContent = mentionElement.classList.contains("tag-link")
-                    ? `#${mentionElement.getAttribute("data-tag") || mentionElement.textContent || ""}`
-                    : (mentionElement.textContent || "");
-                const replacement = document.createTextNode(textContent);
-                mentionElement.replaceWith(replacement);
-
-                const selection = window.getSelection();
-                if (selection) {
-                    const range = document.createRange();
-                    range.setStart(replacement, replacement.textContent?.length || 0);
-                    range.collapse(true);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
-
-                syncValue();
+                const rect = mentionElement.getBoundingClientRect();
+                const editorRect = editor.getBoundingClientRect();
+                setMentionActionState({
+                    active: true,
+                    target: mentionElement,
+                    position: {
+                        top: rect.top - editorRect.top - 36,
+                        left: Math.max(8, rect.left - editorRect.left)
+                    }
+                });
                 setMentionState(prev => ({ ...prev, active: false }));
                 return;
             }
 
+            setMentionActionState(prev => ({ ...prev, active: false, target: null }));
             updateMentionSuggestions();
+        };
+
+        const handleSelectionChange = () => {
+            if (!editor.contains(document.activeElement) && mentionActionState.active) {
+                setMentionActionState(prev => ({ ...prev, active: false, target: null }));
+            }
         };
 
         editor.addEventListener("input", handleInput);
         editor.addEventListener("keyup", handleKeyUp);
         editor.addEventListener("click", handleClick);
+        document.addEventListener("selectionchange", handleSelectionChange);
 
         return () => {
             editor.removeEventListener("input", handleInput);
             editor.removeEventListener("keyup", handleKeyUp);
             editor.removeEventListener("click", handleClick);
+            document.removeEventListener("selectionchange", handleSelectionChange);
         };
-    }, [autoMentionCandidates, onChange]);
+    }, [autoMentionCandidates, mentionActionState.active, onChange]);
 
     const handleSelectMention = (item: any) => {
         if (!editorRef.current) return;
@@ -369,6 +388,29 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
         setTimeout(() => editorRef.current?.focus(), 10);
     };
 
+    const handleKeepMention = () => {
+        setMentionActionState({ active: false, target: null, position: { top: 0, left: 0 } });
+        setTimeout(() => editorRef.current?.focus(), 10);
+    };
+
+    const handleRemoveMention = () => {
+        const mentionElement = mentionActionState.target;
+        if (!mentionElement || !editorRef.current || !editorRef.current.contains(mentionElement)) {
+            setMentionActionState({ active: false, target: null, position: { top: 0, left: 0 } });
+            return;
+        }
+
+        const textContent = mentionElement.classList.contains("tag-link")
+            ? `#${mentionElement.getAttribute("data-tag") || mentionElement.textContent || ""}`
+            : (mentionElement.textContent || "");
+        const replacement = document.createTextNode(textContent);
+        mentionElement.replaceWith(replacement);
+        placeCaretAfterNode(replacement);
+        onChange(editorRef.current.innerHTML);
+        setMentionActionState({ active: false, target: null, position: { top: 0, left: 0 } });
+        setTimeout(() => editorRef.current?.focus(), 10);
+    };
+
     const handlePaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
         const text = e.clipboardData.getData("text/plain");
@@ -384,14 +426,34 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
                 data-placeholder={placeholder}
                 onPaste={handlePaste}
                 onKeyDown={(e) => {
+                    const selection = window.getSelection();
+                    const anchorNode = selection?.anchorNode;
+                    const anchorElement = anchorNode?.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode as HTMLElement | null;
+
                     if (mentionState.active && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === "Escape")) {
                         e.preventDefault();
+                        return;
+                    }
+                    if (e.key === "Escape" && mentionActionState.active) {
+                        e.preventDefault();
+                        handleKeepMention();
+                        return;
+                    }
+                    if (e.key === "Shift" && mentionActionState.active) {
+                        return;
+                    }
+                    if (e.key === "Enter" && e.shiftKey && anchorElement?.closest("li")) {
+                        e.preventDefault();
+                        document.execCommand("insertHTML", false, "</li><li>");
+                        onChange(editorRef.current?.innerHTML || "");
                         return;
                     }
                     onKeyDown?.(e);
                 }}
                 onBlur={() => {
-                    setTimeout(() => setMentionState(prev => ({ ...prev, active: false })), 250);
+                    setTimeout(() => {
+                        setMentionState(prev => ({ ...prev, active: false }));
+                    }, 250);
                 }}
                 spellCheck="false"
                 data-gramm="false"
@@ -414,6 +476,44 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
                     position={mentionState.position}
                     onClose={() => setMentionState(prev => ({ ...prev, active: false }))}
                 />
+            )}
+            {mentionActionState.active && (
+                <div
+                    className="mention-action-popover"
+                    style={{
+                        position: "absolute",
+                        top: Math.max(4, mentionActionState.position.top),
+                        left: mentionActionState.position.left,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "6px 8px",
+                        borderRadius: "999px",
+                        background: "rgba(10,10,10,0.96)",
+                        border: "1px solid rgba(197,160,89,0.55)",
+                        boxShadow: "0 8px 18px rgba(0,0,0,0.35)",
+                        zIndex: 50
+                    }}
+                >
+                    <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={handleRemoveMention}
+                        className="tool-btn"
+                        title="Remover menção"
+                    >
+                        <X size={12} />
+                    </button>
+                    <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={handleKeepMention}
+                        className="tool-btn"
+                        title="Manter menção"
+                    >
+                        <Check size={12} />
+                    </button>
+                </div>
             )}
         </div>
     );
