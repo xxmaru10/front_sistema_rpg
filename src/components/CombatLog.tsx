@@ -15,7 +15,7 @@ import { RotateCw } from "lucide-react";
 export function CombatLog({ events, characters, sessionNumber, eventSessionMap, onRefresh }: CombatLogProps) {
     const currentSessionEvents = sessionNumber === undefined
         ? events
-        : events.filter(e => (eventSessionMap?.[e.id] ?? 1) === sessionNumber);
+        : events.filter(e => (eventSessionMap?.[e.id] ?? sessionNumber ?? 1) === sessionNumber);
 
     const getActorName = (event: ActionEvent) => {
         const charId = (event.payload as any)?.characterId;

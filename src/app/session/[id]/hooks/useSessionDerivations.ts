@@ -258,13 +258,14 @@ export function useSessionDerivations({
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
         const map: Record<string, number> = {};
-        let currentSession = 1;
+        const hasSessionMarkers = sorted.some(e => e.type === "SESSION_NUMBER_UPDATED");
+        let currentSession = hasSessionMarkers ? 1 : (state.sessionNumber ?? 1);
         for (const e of sorted) {
             if (e.type === "SESSION_NUMBER_UPDATED") currentSession = (e.payload as any).number ?? currentSession;
             map[e.id] = currentSession;
         }
         return map;
-    }, [events]);
+    }, [events, state.sessionNumber]);
 
     const logSessionNumbers = useMemo(() => {
         const nums = new Set(filteredEvents.map(e => eventSessionMap[e.id] ?? 1));
