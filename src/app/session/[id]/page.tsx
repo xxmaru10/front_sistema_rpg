@@ -664,6 +664,7 @@ export default function SessionPage() {
                                         fixedCharacterId={fixedCharacterId}
                                         state={state}
                                         events={events}
+                                        eventSessionMap={eventSessionMap}
                                         combatantList={combatantList}
                                         aspectList={aspectList}
                                         challengeMode={challengeMode}
