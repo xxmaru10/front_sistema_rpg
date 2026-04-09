@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-08 (story-34/gaveta-externa)
+last_updated: 2026-04-09 (story-35/chat-autoria-gm)
 status: ativo
 ---
 
@@ -41,6 +41,7 @@ Siga o padrão Conventional Commits:
 - Jamais commitar arquivos `.env` ou segredos sensíveis.
 - **Proibido usar `alert()` ou `confirm()`** em fluxos de rede ou lógica core; substitua por `console.error` ou UI states/Portals não-bloqueantes.
 - **Normalização de Identidade**: Todo `userId` deve ser normalizado com `.trim().toLowerCase()` antes de ser incluído em eventos ou comparado localmente para evitar dessincronia de permissão.
+- **Autoria de Chat (GM)**: Em mensagens de chat, a identidade técnica (`userId`) deve permanecer normalizada para transporte/comparação; o rótulo exibido do mestre deve usar metadados explícitos de autoria (ex: `authorRole: "GM"`, `authorLabel: "Mestre"`), nunca depender de seleção de personagem.
 - **Comparação de autoria em notas**: nunca compare `authorId` bruto com `userId`; normalize ambos (`trim().toLowerCase()`) antes de decidir visibilidade/permissão de editar/apagar.
 - **Valores configuráveis de estresse**: toda entrada de valor de caixa de estresse deve ser clampada em `1..1000` tanto na UI quanto no reducer/projeção (nunca confiar somente no input HTML).
 - **Requisições `fetch` sem timeout**: Sempre use `AbortSignal.timeout()` ou AbortController para evitar requisições pendentes infinitas.

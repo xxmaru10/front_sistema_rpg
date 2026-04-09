@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-09 (story-35/chat-autoria-gm)
+last_updated: 2026-04-09 (story-35/chat-autoria-gm-normalizada)
 status: ativo
 ---
 
@@ -110,8 +110,9 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 
 ## Registro de Decisões (Story 35)
 - **Autoria de chat desacoplada da rolagem**: o payload de mensagem do `TextChatPanel` passou a incluir metadados de autoria (`authorRole`/`authorLabel`) para impedir que a identidade exibida no chat dependa do personagem selecionado no fluxo de rolagem.
-- **Identidade fixa para GM no chat**: mensagens enviadas pelo GM agora saem explicitamente com `userId: "Mestre"` e `authorRole: "GM"`, garantindo consistência para todos os clientes mesmo quando o GM alterna personagem no dropdown de rolagem.
+- **Identidade fixa para GM no chat**: mensagens enviadas pelo GM usam `authorRole: "GM"` + `authorLabel: "Mestre"` para exibição determinística, enquanto `userId` permanece normalizado para transporte/comparação técnica entre clientes.
 - **Renderização determinística de nome no chat**: a UI do chat passou a priorizar `authorRole`/`authorLabel` ao resolver o nome exibido, preservando fallback atual para mensagens legadas sem metadados.
+- **Normalização rígida de autoria no chat**: comparações locais de autoria/histórico passaram a normalizar `userId` (`trim().toLowerCase()`) para evitar contagem de não lidas incorreta e prevenir eco/duplicidade visual por variação de casing.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

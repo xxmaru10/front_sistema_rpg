@@ -33,6 +33,8 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
     const [events, setEvents] = useState<ActionEvent[]>([]);
     const messagesRef = useRef<TextChatMessage[]>([]);
     const isOpenRef = useRef(false);
+    const normalizeUserId = useCallback((value: string) => value.trim().toLowerCase(), []);
+    const normalizedCurrentUserId = useMemo(() => normalizeUserId(userId), [userId, normalizeUserId]);
 
     useEffect(() => {
         messagesRef.current = messages;
@@ -55,17 +57,18 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
     const getDisplayName = useCallback((uid: string, msg?: TextChatMessage) => {
         if (msg?.authorRole === "GM") return "MESTRE";
         if (msg?.authorLabel?.trim()) return msg.authorLabel.trim().toUpperCase();
+        const uidNormalized = normalizeUserId(uid);
         const ownedPc = Object.values(state.characters || {}).find(
-            (c: any) => c.ownerUserId === uid && !c.isNPC
+            (c: any) => normalizeUserId(c.ownerUserId || "") === uidNormalized && !c.isNPC
         );
         return ownedPc ? (ownedPc as any).name : uid.toUpperCase();
-    }, [state.characters]);
+    }, [state.characters, normalizeUserId]);
 
     useEffect(() => {
-        const socket = getSocket(userId);
+        const socket = getSocket(normalizedCurrentUserId || userId);
 
         const handleNewMsg = (msg: TextChatMessage) => {
-            if (msg.userId === userId) return;
+            if (normalizeUserId(msg.userId) === normalizedCurrentUserId) return;
             setMessages(prev => {
                 const exists = prev.find(m => m.id === msg.id);
                 if (exists) return prev;
@@ -77,7 +80,7 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
 
         const handleHistoryReq = (data: { from: string; socketId: string }) => {
             const currentMsgs = messagesRef.current;
-            if (currentMsgs.length > 0 && data.from !== userId) {
+            if (currentMsgs.length > 0 && normalizeUserId(data.from) !== normalizedCurrentUserId) {
                 socket.emit('text-chat-history-res', {
                     toSocketId: data.socketId,
                     messages: currentMsgs,
@@ -95,7 +98,7 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
 
         // Request history from other participants
         const historyTimer = setTimeout(() => {
-            socket.emit('text-chat-history-req', { sessionId, from: userId });
+            socket.emit('text-chat-history-req', { sessionId, from: normalizedCurrentUserId });
         }, 500);
 
         return () => {
@@ -104,7 +107,7 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
             socket.off('text-chat-history-req', handleHistoryReq);
             socket.off('text-chat-history-res', handleHistoryRes);
         };
-    }, [sessionId, userId]);
+    }, [sessionId, userId, normalizedCurrentUserId, normalizeUserId]);
 
     useEffect(() => {
         isOpenRef.current = isOpen;
@@ -139,7 +142,7 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
 
         const newMsg: TextChatMessage = {
             id: uuidv4(),
-            userId: userRole === "GM" ? "Mestre" : userId,
+            userId: normalizedCurrentUserId,
             text: inputText.trim(),
             timestamp: Date.now(),
             authorRole: userRole,
@@ -152,7 +155,7 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
         });
         setInputText("");
 
-        const socket = getSocket(userId);
+        const socket = getSocket(normalizedCurrentUserId || userId);
         socket.emit('text-chat-send', { sessionId, message: newMsg });
     };
 
@@ -278,7 +281,7 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
                             </div>
                         ) : (
                             messages.map((msg) => {
-                                const isMe = msg.userId === userId;
+                                const isMe = normalizeUserId(msg.userId) === normalizedCurrentUserId;
                                 return (
                                     <div key={msg.id} style={{
                                         alignSelf: isMe ? 'flex-end' : 'flex-start',
