@@ -46,6 +46,10 @@ function restoreSelectionOffset(root: HTMLElement, offset: number) {
 
     while (walker.nextNode()) {
         const node = walker.currentNode as Text;
+        const parentElement = node.parentElement;
+        if (parentElement?.closest(".mention-link, .tag-link")) {
+            continue;
+        }
         const nextConsumed = consumed + (node.textContent || "").length;
         if (offset <= nextConsumed) {
             const range = document.createRange();
@@ -96,6 +100,32 @@ function placeCaretAfterNode(node: Node) {
     range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
+}
+
+function ensureCaretInEditablePosition(root: HTMLElement) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const anchorNode = selection.anchorNode;
+    const anchorElement = anchorNode?.nodeType === Node.TEXT_NODE
+        ? anchorNode.parentElement
+        : anchorNode as HTMLElement | null;
+
+    if (anchorElement?.closest(".mention-link, .tag-link")) {
+        const lockedElement = anchorElement.closest(".mention-link, .tag-link");
+        if (lockedElement) {
+            placeCaretAfterNode(lockedElement);
+            return;
+        }
+    }
+
+    if (anchorNode === root) {
+        const range = document.createRange();
+        range.selectNodeContents(root);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
 }
 
 export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
@@ -231,6 +261,8 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
 
             if (changed) {
                 restoreSelectionOffset(editor, caretOffset);
+                ensureCaretInEditablePosition(editor);
+                editor.focus();
             }
 
             return changed;
@@ -302,6 +334,7 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
             const mentionElement = target?.closest(".mention-link, .tag-link") as HTMLElement | null;
             if (mentionElement && editor.contains(mentionElement)) {
                 e.preventDefault();
+                e.stopPropagation();
                 const rect = mentionElement.getBoundingClientRect();
                 const editorRect = editor.getBoundingClientRect();
                 setMentionActionState({
@@ -316,6 +349,7 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
                 return;
             }
 
+            e.stopPropagation();
             setMentionActionState(prev => ({ ...prev, active: false, target: null }));
             updateMentionSuggestions();
         };
@@ -464,6 +498,7 @@ export const MentionEditor = forwardRef<HTMLDivElement, MentionEditorProps>(({
                     outline: "none",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
+                    overflowWrap: "anywhere",
                     transition: "all 0.2s ease",
                     ...style
                 }}

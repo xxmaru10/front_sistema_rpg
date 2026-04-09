@@ -772,9 +772,42 @@
 .note-body {
     white-space: pre-wrap;
     word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
 }
 
 .note-body b, .note-body strong { color: var(--accent-color); }
+
+.note-body ul,
+.note-body ol,
+.rich-editor ul,
+.rich-editor ol,
+.linked-note-editor ul,
+.linked-note-editor ol,
+.mention-rich-editor ul,
+.mention-rich-editor ol {
+    margin: 0.35rem 0;
+    padding-left: 1.15rem;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.note-body li,
+.rich-editor li,
+.linked-note-editor li,
+.mention-rich-editor li {
+    margin: 0.2rem 0;
+    padding-left: 0.1rem;
+    overflow-wrap: anywhere;
+}
+
+.note-body p,
+.rich-editor p,
+.linked-note-editor p,
+.mention-rich-editor p {
+    margin: 0;
+    max-width: 100%;
+}
 
 .notes-editor-area {
     border-top: 1px solid rgba(var(--accent-rgb), 0.25);
