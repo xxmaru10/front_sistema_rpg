@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-09 (story-35/chat-autoria-gm & logs-history)
+last_updated: 2026-04-09 (story-35/chat-autoria-gm & logs-history-cache)
 status: ativo
 ---
 
@@ -116,6 +116,8 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Histórico completo para observabilidade de logs**: o frontend passou a carregar eventos com `GET /api/events/:sessionId?history=full`, garantindo que CombatLog/LogTab mantenham histórico visual após refresh e reentrada.
 - **Modo full sem snapshot no payload**: no backend, quando `history=full`, o retorno omite snapshot para evitar replay duplicado em projeções quando a lista já contém todos os eventos.
 - **Persistência de sessão atual por replay integral**: com histórico completo, `SESSION_NUMBER_UPDATED` é reprocessado integralmente na projeção, reduzindo risco de fallback incorreto de `sessionNumber` em fluxos de notas e filtros por sessão.
+- **Cache local resiliente da timeline**: quando o backend retorna apenas delta, o frontend mantém um cache persistente por sessão (`localStorage`) e faz merge idempotente por `event.id`, evitando sumiço visual de rolagens após refresh, troca de aba/sessão ou reentrada.
+- **Projeção segura com snapshot**: projeções que usam `snapshot` passaram a aplicar apenas eventos com `seq > snapshotUpToSeq` (ou `seq=0` otimista), eliminando reaplicação duplicada ao coexistirem snapshot + timeline cacheada.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

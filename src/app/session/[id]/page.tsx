@@ -113,7 +113,14 @@ export default function SessionPage() {
             if (seqA !== 0 && seqB === 0) return -1;
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
-        return computeState(sorted, globalEventStore.getSnapshotState() ?? undefined);
+        const snapshot = globalEventStore.getSnapshotState();
+        const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+        const projectionEvents =
+            snapshot && snapshotUpToSeq >= 0
+                ? sorted.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
+                : sorted;
+
+        return computeState(projectionEvents, snapshot ?? undefined);
     }, [events]);
 
     const _activePlayers = useMemo(() =>
