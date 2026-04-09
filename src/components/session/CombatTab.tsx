@@ -19,6 +19,7 @@ interface CombatTabProps {
     state: any;
     events: ActionEvent[];
     eventSessionMap: Record<string, number>;
+    isRefreshing?: boolean;
     combatantList: Character[];
     aspectList: Aspect[];
     challengeMode: boolean;
@@ -46,6 +47,7 @@ export function CombatTab({
     state,
     events,
     eventSessionMap,
+    isRefreshing,
     combatantList,
     aspectList,
     challengeMode,
@@ -518,6 +520,7 @@ export function CombatTab({
                                 characters={state.characters}
                                 sessionNumber={state.sessionNumber}
                                 eventSessionMap={eventSessionMap}
+                                isRefreshing={isRefreshing}
                                 onRefresh={onRefresh}
                             />
                         </div>

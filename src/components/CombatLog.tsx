@@ -7,12 +7,13 @@ interface CombatLogProps {
     characters: Record<string, Character>;
     sessionNumber?: number;
     eventSessionMap?: Record<string, number>;
+    isRefreshing?: boolean;
     onRefresh?: () => void;
 }
 
 import { RotateCw } from "lucide-react";
 
-export function CombatLog({ events, characters, sessionNumber, eventSessionMap, onRefresh }: CombatLogProps) {
+export function CombatLog({ events, characters, sessionNumber, eventSessionMap, isRefreshing, onRefresh }: CombatLogProps) {
     const currentSessionEvents = sessionNumber === undefined
         ? events
         : events.filter(e => (eventSessionMap?.[e.id] ?? sessionNumber ?? 1) === sessionNumber);
@@ -38,25 +39,40 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 {onRefresh && (
                     <button 
                         onClick={onRefresh}
+                        disabled={!!isRefreshing}
                         className="refresh-btn"
-                        title="Atualizar Logs"
+                        title={isRefreshing ? "Sincronizando logs..." : "Atualizar Logs"}
                         style={{
                             background: 'transparent',
                             border: 'none',
                             color: 'var(--accent-color)',
                             cursor: 'pointer',
-                            opacity: 0.6,
+                            opacity: isRefreshing ? 1 : 0.6,
                             transition: 'all 0.2s',
                             display: 'flex',
-                            alignItems: 'center'
+                            alignItems: 'center',
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = isRefreshing ? '1' : '0.6'}
                     >
-                        <RotateCw size={14} />
+                        <RotateCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                     </button>
                 )}
             </div>
+            {isRefreshing && (
+                <div style={{
+                    padding: '6px 20px',
+                    borderBottom: '1px solid rgba(197, 160, 89, 0.1)',
+                    background: 'rgba(197, 160, 89, 0.05)',
+                    color: 'var(--accent-color)',
+                    fontFamily: 'var(--font-header)',
+                    fontSize: '0.55rem',
+                    letterSpacing: '0.14em',
+                    textAlign: 'center'
+                }}>
+                    SINCRONIZANDO LOGS...
+                </div>
+            )}
             <div className="log-entries-scroll">
                 {currentSessionEvents
                     .filter(e =>
