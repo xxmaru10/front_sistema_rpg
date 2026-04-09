@@ -98,7 +98,7 @@ export default function SessionPage() {
 
     // ─── EVENTS ───────────────────────────────────────────────────────────────
 
-    const { events, isLoading, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
+    const { events, isLoading, isRefreshing, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
         useSessionEvents(sessionId as string, actorUserId);
 
     // ─── EARLY PROJECTION (feeds useVictoryDefeat before full derivations) ────
@@ -665,6 +665,7 @@ export default function SessionPage() {
                                         state={state}
                                         events={events}
                                         eventSessionMap={eventSessionMap}
+                                        isRefreshing={isRefreshing}
                                         combatantList={combatantList}
                                         aspectList={aspectList}
                                         challengeMode={challengeMode}
@@ -696,6 +697,7 @@ export default function SessionPage() {
                                         eventSessionMap={eventSessionMap}
                                         state={state}
                                         events={events}
+                                        isRefreshing={isRefreshing}
                                         onRefresh={refresh}
                                     />
                                 )}

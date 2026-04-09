@@ -5,6 +5,7 @@ import { ActionEvent, Character } from "@/types/domain";
 export function useSessionEvents(sessionId: string, actorUserId: string) {
     const [events, setEvents] = useState<ActionEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [globalBestiaryChars, setGlobalBestiaryChars] = useState<Character[]>([]);
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(globalEventStore.getConnectionStatus());
     const [failedEventIds, setFailedEventIds] = useState<Set<string>>(new Set());
@@ -77,13 +78,16 @@ export function useSessionEvents(sessionId: string, actorUserId: string) {
     }, [sessionId, actorUserId]);
 
     const refresh = () => {
-        runInit(true);
+        if (isRefreshing) return;
+        setIsRefreshing(true);
+        runInit(true).finally(() => setIsRefreshing(false));
     };
 
     return { 
         events, 
         setEvents, 
         isLoading, 
+        isRefreshing,
         globalBestiaryChars, 
         setGlobalBestiaryChars,
         connectionStatus,

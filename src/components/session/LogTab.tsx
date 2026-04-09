@@ -15,10 +15,11 @@ interface LogTabProps {
     eventSessionMap: Record<string, number>;
     state: SessionState;
     events: ActionEvent[];
+    isRefreshing?: boolean;
     onRefresh?: () => void;
 }
 
-export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilter, setLogSessionFilter, logSessionNumbers, eventSessionMap, state, events, onRefresh }: LogTabProps) {
+export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilter, setLogSessionFilter, logSessionNumbers, eventSessionMap, state, events, isRefreshing, onRefresh }: LogTabProps) {
     return (
         <div className="log-display animate-reveal">
             <div className="display-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -27,23 +28,24 @@ export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilt
                     {onRefresh && (
                         <button 
                             onClick={onRefresh}
+                            disabled={!!isRefreshing}
                             className="refresh-btn"
-                            title="Atualizar Logs"
+                            title={isRefreshing ? "Sincronizando logs..." : "Atualizar Logs"}
                             style={{
                                 background: 'transparent',
                                 border: 'none',
                                 color: 'var(--accent-color)',
                                 cursor: 'pointer',
-                                opacity: 0.6,
+                                opacity: isRefreshing ? 1 : 0.6,
                                 transition: 'all 0.2s',
                                 display: 'flex',
                                 alignItems: 'center',
                                 padding: '4px'
                             }}
                             onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = isRefreshing ? '1' : '0.6'}
                         >
-                            <RotateCw size={14} />
+                            <RotateCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                         </button>
                     )}
                 </div>

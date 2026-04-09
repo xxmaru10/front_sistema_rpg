@@ -76,6 +76,10 @@ export class EventStore {
 
     async initSession(sessionId: string, force = false) {
         if (this.currentSessionId === sessionId && !force) return;
+        const isSameSessionRefresh = this.currentSessionId === sessionId;
+        const previousEvents = isSameSessionRefresh ? [...this.events] : [];
+        const previousSnapshotState = isSameSessionRefresh ? this.snapshotState : null;
+        const previousSnapshotUpToSeq = isSameSessionRefresh ? this.snapshotUpToSeq : -1;
 
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
@@ -90,9 +94,11 @@ export class EventStore {
         socket.off('connect_error');
 
         this.currentSessionId = sessionId;
-        this.events = [];
-        this.snapshotState = null;
-        this.snapshotUpToSeq = -1;
+        if (!isSameSessionRefresh) {
+            this.events = [];
+            this.snapshotState = null;
+            this.snapshotUpToSeq = -1;
+        }
         this.failedEventIds.clear();
         this._setStatus('CONNECTING');
         console.info(`[EventStore] Inicializando sessão: ${sessionId} (forçado: ${force})`);
@@ -186,12 +192,29 @@ export class EventStore {
                 this.snapshotState = result.snapshot.state as SessionState;
                 this.snapshotUpToSeq = result.snapshot.upToSeq;
                 console.info(`[EventStore] Snapshot encontrado: seq ${this.snapshotUpToSeq}`);
+            } else if (result.events.length > 0) {
+                // Full-history mode should not reuse stale snapshot, otherwise replay can duplicate state.
+                this.snapshotState = null;
+                this.snapshotUpToSeq = -1;
+            } else if (isSameSessionRefresh) {
+                // Keep previous snapshot when refresh returned empty delta.
+                this.snapshotState = previousSnapshotState;
+                this.snapshotUpToSeq = previousSnapshotUpToSeq;
             }
-            this.events = result.events;
+            this.events = result.events.length === 0 && isSameSessionRefresh && previousEvents.length > 0
+                ? previousEvents
+                : result.events;
             fetchSuccess = true;
-            console.info(`[EventStore] ${result.events.length} eventos delta carregados via NestJS.`);
+            console.info(`[EventStore] ${result.events.length} eventos carregados via NestJS.`);
         } catch (err: any) {
             console.error('[EventStore] Falha crítica no fetch via NestJS:', err);
+            if (isSameSessionRefresh && previousEvents.length > 0) {
+                this.events = previousEvents;
+                this.snapshotState = previousSnapshotState;
+                this.snapshotUpToSeq = previousSnapshotUpToSeq;
+                fetchSuccess = true;
+                console.warn('[EventStore] Refresh vazio/erro: mantendo histórico local para evitar sumiço visual.');
+            }
         }
 
         if (!fetchSuccess && this.snapshotState !== null) fetchSuccess = true;
