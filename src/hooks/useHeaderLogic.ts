@@ -203,9 +203,15 @@ export function useHeaderLogic(
             (bulkEvents) => {
                 // Always derive from projection (snapshot + bulk events),
                 // so header stays in sync even when backend returns delta-only without SESSION_NUMBER_UPDATED in bulk.
+                const snapshot = globalEventStore.getSnapshotState();
+                const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+                const projectionEvents =
+                    snapshot && snapshotUpToSeq >= 0
+                        ? bulkEvents.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
+                        : bulkEvents;
                 const projected = computeState(
-                    bulkEvents,
-                    globalEventStore.getSnapshotState() ?? undefined
+                    projectionEvents,
+                    snapshot ?? undefined
                 );
 
                 if (projected.sessionNumber !== undefined) {
@@ -240,6 +246,8 @@ export function useHeaderLogic(
     const changeSessionNumber = (delta: number) => {
         const newNumber = Math.max(1, sessionNumber + delta);
         if (newNumber === sessionNumber) return;
+        const normalizedUserId = userId.trim().toLowerCase();
+        if (!normalizedUserId) return;
 
         setSessionNumber(newNumber);
 
@@ -248,7 +256,7 @@ export function useHeaderLogic(
             sessionId: sessionId!,
             seq: 0,
             type: "SESSION_NUMBER_UPDATED",
-            actorUserId: userId,
+            actorUserId: normalizedUserId,
             createdAt: new Date().toISOString(),
             visibility: "PUBLIC",
             payload: { number: newNumber },

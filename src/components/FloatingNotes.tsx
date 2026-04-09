@@ -349,7 +349,13 @@ export function FloatingNotes() {
         // Subscribe to global event store to get projected notes
         const unsubStore = globalEventStore.subscribe(() => {}, (bulkEvents) => {
             // Re-project state from events to find current user's sticky notes
-            const state = computeState(bulkEvents, globalEventStore.getSnapshotState() ?? undefined);
+            const snapshot = globalEventStore.getSnapshotState();
+            const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+            const projectionEvents =
+                snapshot && snapshotUpToSeq >= 0
+                    ? bulkEvents.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
+                    : bulkEvents;
+            const state = computeState(projectionEvents, snapshot ?? undefined);
             const userNotes = (state.stickyNotes || []).filter(n => n.ownerId === userId);
             
             // Only update if they actually changed (or just set them, React will handle diff)

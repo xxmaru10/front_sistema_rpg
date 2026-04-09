@@ -68,7 +68,14 @@ export function useSessionDerivations({
             // 3. Fallback para data
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
-        return computeState(sorted, globalEventStore.getSnapshotState() ?? undefined);
+        const snapshot = globalEventStore.getSnapshotState();
+        const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+        const projectionEvents =
+            snapshot && snapshotUpToSeq >= 0
+                ? sorted.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
+                : sorted;
+
+        return computeState(projectionEvents, snapshot ?? undefined);
     }, [events]);
 
     // ─── DERIVED CHARACTER LISTS ──────────────────────────────────────────────
@@ -258,10 +265,16 @@ export function useSessionDerivations({
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
         const map: Record<string, number> = {};
-        // Baseline from projected current session keeps mapping stable when backend returns only deltas.
-        let currentSession = state.sessionNumber ?? 1;
+        const hasSessionMarkers = sorted.some((event) => event.type === "SESSION_NUMBER_UPDATED");
+        // Full history should start from session 1. Delta-only payloads fallback to projected current session.
+        let currentSession = hasSessionMarkers ? 1 : (state.sessionNumber ?? 1);
         for (const e of sorted) {
-            if (e.type === "SESSION_NUMBER_UPDATED") currentSession = (e.payload as any).number ?? currentSession;
+            if (e.type === "SESSION_NUMBER_UPDATED") {
+                const next = Number((e.payload as any).number);
+                if (Number.isFinite(next) && next >= 1) {
+                    currentSession = next;
+                }
+            }
             map[e.id] = currentSession;
         }
         return map;
