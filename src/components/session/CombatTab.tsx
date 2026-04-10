@@ -129,6 +129,13 @@ export function CombatTab({
         if (threatCombatants.length === 0) setIsThreatDrawerOpen(false);
     }, [threatCombatants.length]);
 
+    useEffect(() => {
+        if (showDiceRoller) {
+            setIsHeroDrawerOpen(false);
+            setIsThreatDrawerOpen(false);
+        }
+    }, [showDiceRoller]);
+
     return (
         <div className="combat-display animate-reveal">
             <div className="display-header">

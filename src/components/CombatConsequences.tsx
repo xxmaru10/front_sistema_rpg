@@ -28,20 +28,22 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
         return left.localeCompare(right);
     });
 
+    const filledSlots = orderedSlots.filter(slot => {
+        const cons = character.consequences?.[slot];
+        return cons && cons.text && cons.text.trim().length > 0;
+    });
+
     return (
         <div className="combat-consequences">
-            <div className="consequences-title">CONSEQUÊNCIAS</div>
+            <div className="consequences-title">CONSEQUÊNCIAS ({filledSlots.length})</div>
             <div className="consequences-list">
-                {orderedSlots.map((slot) => {
+                {filledSlots.length === 0 ? (
+                    <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', fontStyle: 'italic', padding: '4px' }}>
+                        Nenhuma ativa
+                    </div>
+                ) : filledSlots.map((slot) => {
                     const cons = character.consequences?.[slot];
-
-                    let label = slot.toUpperCase();
-                    if (slot === "mild" || slot.includes("mild")) label = "-2 LEVE";
-                    else if (slot === "moderate" || slot.includes("moderate")) label = "-4 MODERADA";
-                    else if (slot === "severe" || slot.includes("severe")) label = "-6 GRAVE";
-                    else if (slot === "extreme" || slot.includes("extreme")) label = "-8 EXTREMA";
-
-                    const isFilled = cons && cons.text && cons.text.trim().length > 0;
+                    const isFilled = true;
                     
                     let valueText = "";
                     if (slot === "mild" || slot.includes("mild")) valueText = "-2";
@@ -52,17 +54,17 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
                     return (
                         <div
                             key={slot}
-                            className={`combat-consequence-box ${isFilled ? 'filled' : 'empty'}`}
+                            className="combat-consequence-box filled"
                             onClick={() => {
                                 if (!isGM) return;
                                 openConsequenceModal(slot, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value);
                             }}
-                            title={isFilled ? cons.text.toUpperCase() : `Vazio (${valueText})`}
+                            title={cons?.text.toUpperCase()}
                         >
                             <span className="cons-content">
-                                {isFilled ? cons.text.toUpperCase() : valueText}
+                                {cons?.text.toUpperCase()}
                             </span>
-                            {isFilled && cons.debuff && (
+                            {cons?.debuff && (
                                 <span className="cons-debuff-badge">
                                     -{cons.debuff.value} {cons.debuff.skill.slice(0, 3).toUpperCase()}
                                 </span>

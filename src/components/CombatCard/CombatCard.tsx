@@ -164,7 +164,7 @@ export function CombatCard({
                 style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 110px) 2fr 1.5fr', gap: '16px', alignItems: 'start', padding: '16px', minWidth: '460px' }}
             >
                 {/* Dice Roller Trigger */}
-                {onToggleDiceRoller && (
+                {onToggleDiceRoller && isOwner && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
