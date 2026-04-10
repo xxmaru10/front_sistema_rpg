@@ -152,6 +152,15 @@ export function CombatTab({
                             <div className={`combat-avatar-drawer side-left hero-drawer${isHeroDrawerOpen ? " is-open" : ""}`}>
 
                                 <div className="combat-avatar-panel">
+                                    {isHeroDrawerOpen && (
+                                        <button 
+                                            className="combat-avatar-drawer-handle"
+                                            onClick={() => setIsHeroDrawerOpen(false)}
+                                            title="Recolher fichas"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+                                    )}
                                     <div className={`combat-avatar-rail hero-avatar-rail ${isHeroDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
                                         {heroDrawerCards.map(char => (
                                             isHeroDrawerOpen ? (
@@ -678,6 +687,15 @@ export function CombatTab({
                                 <div className={`combat-avatar-drawer side-right threat-drawer${isThreatDrawerOpen ? " is-open" : ""}`}>
 
                                     <div className="combat-avatar-panel">
+                                        {isThreatDrawerOpen && (
+                                            <button 
+                                                className="combat-avatar-drawer-handle"
+                                                onClick={() => setIsThreatDrawerOpen(false)}
+                                                title="Recolher fichas"
+                                            >
+                                                <ChevronRight size={16} />
+                                            </button>
+                                        )}
                                         <div className={`combat-avatar-rail threat-avatar-rail ${isThreatDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
                                             {threatDrawerCards.map(char => (
                                                 isThreatDrawerOpen ? (

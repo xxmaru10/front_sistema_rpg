@@ -1262,13 +1262,14 @@ body {
 
 .combat-avatar-drawer-handle {
     position: absolute;
-    top: 12px;
-    width: 20px;
-    min-width: 20px;
-    height: 80px;
-    border-radius: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(10, 10, 10, 0.56);
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(8px);
     backdrop-filter: blur(14px) saturate(1.25);
     -webkit-backdrop-filter: blur(14px) saturate(1.25);
     color: #f4e2b0;
@@ -1282,36 +1283,22 @@ body {
 }
 
 .combat-avatar-drawer.side-left .combat-avatar-drawer-handle {
-    right: -18px;
+    right: -16px;
 }
 
 .combat-avatar-drawer.side-right .combat-avatar-drawer-handle {
-    left: -18px;
+    left: -16px;
 }
 
-.combat-avatar-drawer.hero-drawer .combat-avatar-drawer-handle {
-    border-color: rgba(197, 160, 89, 0.42);
-    color: #e7c97c;
-}
-
-.combat-avatar-drawer.threat-drawer .combat-avatar-drawer-handle {
-    border-color: rgba(255, 68, 68, 0.46);
-    color: #ff9898;
-}
-
-.combat-avatar-drawer-handle:hover,
-.combat-avatar-drawer-handle:focus-visible {
-    background: rgba(18, 18, 18, 0.72);
-    transform: scale(1.04);
+.combat-avatar-drawer-handle:hover {
+    background: rgba(30, 30, 30, 1);
+    border-color: #c5a059;
+    transform: translateY(-50%) scale(1.1);
 }
 
 .combat-avatar-drawer-handle svg {
-    transition: transform 0.22s ease;
-}
-
-.combat-avatar-drawer.side-left.is-open .combat-avatar-drawer-handle svg,
-.combat-avatar-drawer.side-right.is-open .combat-avatar-drawer-handle svg {
-    transform: rotate(180deg);
+    width: 18px;
+    height: 18px;
 }
 
 .combat-expanded-stack {

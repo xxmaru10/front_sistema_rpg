@@ -11,8 +11,7 @@ import { CombatExtras } from "@/components/CombatExtras";
 
 // Sub-components
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Star, Sparkles, Briefcase, Target } from "lucide-react";
-import { CombatHeader } from "./CombatHeader";
+import { ChevronLeft, ChevronRight, Star, Sparkles, Briefcase, Target, Dices } from "lucide-react";
 import { CombatAspects } from "./CombatAspects";
 import { CombatCardStyles } from "./CombatCard.styles";
 
@@ -164,6 +163,36 @@ export function CombatCard({
                 className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
                 style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 110px) 2fr 1.5fr', gap: '16px', alignItems: 'start', padding: '16px', minWidth: '460px' }}
             >
+                {/* Dice Roller Trigger */}
+                {onToggleDiceRoller && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleDiceRoller();
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '32px',
+                            background: 'rgba(59, 130, 246, 0.2)',
+                            border: '1px solid rgba(59, 130, 246, 0.4)',
+                            borderRadius: '4px',
+                            color: '#60a5fa',
+                            padding: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            zIndex: 10
+                        }}
+                        className="combat-dice-trigger"
+                        title="Abrir dados"
+                    >
+                        <Dices size={16} />
+                    </button>
+                )}
+
                 {/* Remove Button for GM */}
                 {canEdit && onRemove && (
                     <button
@@ -178,24 +207,6 @@ export function CombatCard({
 
                 {/* COLUNA 1: Imagem, Destino, Impulso */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', position: 'relative' }}>
-                    {onToggleExpanded && (
-                        <button
-                            type="button"
-                            className={`combat-return-toggle ${cardThemeClass} ${avatarSide === "right" ? "side-right" : "side-left"}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleExpanded();
-                            }}
-                            title={`Recolher card de ${character.name}`}
-                            aria-label={`Recolher card de ${character.name}`}
-                            style={{ position: 'absolute', top: '-10px', [avatarSide === 'right' ? 'right' : 'left']: '-20px', zIndex: 10, width: '28px', height: '28px' }}
-                        >
-                            <span className="combat-return-icon" aria-hidden="true" style={{ fontSize: '14px' }}>
-                                {avatarSide === "right" ? <ChevronRight /> : <ChevronLeft />}
-                            </span>
-                        </button>
-                    )}
-                    
                     <div className={`combat-header-portrait-frame ${cardThemeClass}`} style={{ width: '80px', height: '80px', margin: '0 auto', borderRadius: '16px', overflow: 'hidden' }} aria-hidden="true">
                         <span className="combat-portrait-avatar combat-header-portrait" style={{ width: '100%', height: '100%', display: 'block' }}>
                             {character.imageUrl ? (
@@ -278,7 +289,7 @@ export function CombatCard({
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'stunts' ? 'rgba(80, 166, 255, 0.25)' : 'rgba(80, 166, 255, 0.1)', border: '1px solid rgba(80, 166, 255, 0.3)', borderRadius: '4px', color: '#8bc8ff', cursor: 'pointer', transition: 'all 0.2s' }}
                                         title="Façanhas"
                                     >
-                                        <Star size={14} /> <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{character.stunts.length}</span>
+                                        <Star size={14} />
                                     </button>
                                 )}
                                 {character.spells && character.spells.length > 0 && (
@@ -287,7 +298,7 @@ export function CombatCard({
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'spells' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '4px', color: '#d7b6ff', cursor: 'pointer', transition: 'all 0.2s' }}
                                         title="Magias"
                                     >
-                                        <Sparkles size={14} /> <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{character.spells.length}</span>
+                                        <Sparkles size={14} />
                                     </button>
                                 )}
                                 {activeSkills.length > 0 && (
@@ -296,7 +307,7 @@ export function CombatCard({
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'skills' ? 'rgba(230, 90, 90, 0.25)' : 'rgba(230, 90, 90, 0.1)', border: '1px solid rgba(230, 90, 90, 0.3)', borderRadius: '4px', color: '#ffaaaa', cursor: 'pointer', transition: 'all 0.2s' }}
                                         title="Perícias"
                                     >
-                                        <Target size={14} /> <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{activeSkills.length}</span>
+                                        <Target size={14} />
                                     </button>
                                 )}
                                 {mainInventoryItems.length > 0 && (
@@ -305,7 +316,7 @@ export function CombatCard({
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'items' ? 'rgba(46, 204, 113, 0.25)' : 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.3)', borderRadius: '4px', color: '#7cfc00', cursor: 'pointer', transition: 'all 0.2s' }}
                                         title="Itens"
                                     >
-                                        <Briefcase size={14} /> <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{mainInventoryItems.length}</span>
+                                        <Briefcase size={14} />
                                     </button>
                                 )}
                             </div>
