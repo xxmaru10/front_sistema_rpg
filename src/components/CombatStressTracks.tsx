@@ -65,7 +65,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     background: rgba(0, 0, 0, 0.8);
                     backdrop-filter: blur(12px);
                     -webkit-backdrop-filter: blur(12px);
-                    border: 2px solid var(--card-accent, rgba(255, 255, 255, 0.2));
+                    border: none;
                     border-radius: 8px;
                     padding: 8px 16px;
                     width: fit-content;

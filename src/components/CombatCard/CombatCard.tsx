@@ -157,16 +157,18 @@ export function CombatCard({
 
     return (
         <div 
+            className="combat-card-wrapper"
             style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
                 gap: '8px', 
                 marginBottom: '12px',
+                position: 'relative',
                 '--card-accent': accentColor 
             } as any}
         >
             {!isRestrictedThreatView && (
-                <div className="combat-external-stress" style={{ marginLeft: '140px', marginBottom: '-10px', zIndex: 10 }}>
+                <div className="combat-external-stress" style={{ position: 'absolute', top: '-15px', left: '-10px', zIndex: 50 }}>
                     <CombatStressTracks
                         character={character}
                         canEditSelf={canEditSelf}
@@ -187,9 +189,9 @@ export function CombatCard({
                     borderRadius: '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
-                    background: `linear-gradient(110deg, #000 0%, #000 35%, ${accentColor.replace('0.8', '0.3')} 100%)`,
+                    background: `linear-gradient(110deg, #000 0%, #000 35%, ${accentColor.replace('0.8', '0.15')} 85%, transparent 100%)`,
                     overflow: 'visible',
-                    boxShadow: '30px 0 60px rgba(0,0,0,0.9), inset 5px 0 15px rgba(255,255,255,0.05)',
+                    boxShadow: '40px 0 80px rgba(0,0,0,0.8)',
                     transform: 'skewX(-6deg)',
                     marginLeft: '10px'
                 }}
@@ -252,15 +254,15 @@ export function CombatCard({
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%)', pointerEvents: 'none' }} />
 
                     {(isGM || isOwner) && !isRestrictedThreatView && (
-                        <div style={{ position: 'absolute', bottom: '12px', left: '0', right: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '0 10px', zIndex: 5 }}>
-                            <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.8)', borderRadius: '4px', padding: '4px 10px', gap: '12px', border: '1px solid var(--card-accent)' }}>
-                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px' }}>-</button>}
-                                <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#fff', textShadow: '0 0 15px var(--card-accent)' }}>{character.fatePoints}</span>
-                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px' }}>+</button>}
+                        <div style={{ position: 'absolute', bottom: '12px', left: '0', right: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '0 10px', zIndex: 5 }}>
+                            <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.85)', borderRadius: '4px', padding: '2px 6px', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', padding: '0 2px' }}>-</button>}
+                                <span style={{ fontSize: '1rem', fontWeight: '900', color: '#fff' }}>{character.fatePoints}</span>
+                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', padding: '0 2px' }}>+</button>}
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '3px' }}>
-                                    {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.7rem', filter: 'drop-shadow(0 0 5px var(--card-accent))' }}>➤</span>)}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2px' }}>
+                                    {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.55rem', opacity: 0.7 }}>➤</span>)}
                                 </div>
                                 {isGM && (
                                     <div style={{ display: 'flex', gap: '12px', opacity: 0.7 }}>
@@ -273,10 +275,9 @@ export function CombatCard({
                     )}
                 </div>
 
-                {/* COLUNA 2: Nome, Conceito, Dificuldade, Expansíveis */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, padding: '24px 20px', transform: 'skewX(6deg)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <h3 className="combat-name" style={{ fontSize: '1.8rem', margin: 0, fontWeight: '900', letterSpacing: '-0.02em', textShadow: '4px 4px 0px rgba(0,0,0,0.5), 0 0 20px var(--card-accent)' }}>{character.name.toUpperCase()}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0, padding: '24px 20px', transform: 'skewX(6deg)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <h3 className="combat-name" style={{ fontSize: '1.1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
                             <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff' }}>
                                 DIF {character.difficulty}

@@ -35,7 +35,6 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
 
     return (
         <div className="combat-consequences">
-            <div className="consequences-title">CONSEQUÊNCIAS</div>
             <div className="consequences-list">
                 {orderedSlots.map((slot) => {
                     const cons = character.consequences?.[slot];
