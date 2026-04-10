@@ -103,7 +103,7 @@
 /* ─── Combat mode: substitui <style jsx global> dinâmico de page.tsx ─── */
 /* Aplicado via className="session-container in-combat" quando activeTab === "combat" */
 .session-container.in-combat {
-    padding: 0 40px 120px 40px !important;
+    padding: 0 40px 120px 10px !important;
     min-height: 100vh;
 }
 

@@ -221,7 +221,7 @@ export function CombatCard({
                     overflow: 'visible',
                     boxShadow: 'none',
                     transform: 'skewX(-6deg)',
-                    marginLeft: '10px'
+                    marginLeft: '0px'
                 }}
             >
                 {/* De-skew content container */}
@@ -239,7 +239,7 @@ export function CombatCard({
                     >✕</button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: '240px', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '240px', transform: 'skewX(6deg)', marginLeft: '-32px', overflow: 'hidden' }}>
                     <div style={{ width: '100%', height: '100%', background: '#000' }}>
                         {character.imageUrl ? (
                             <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.9 }} />
