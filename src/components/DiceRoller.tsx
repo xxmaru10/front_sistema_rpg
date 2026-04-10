@@ -160,9 +160,15 @@ export function DiceRoller(props: DiceRollerProps) {
                     width: 100%;
                     display: flex;
                     flex-direction: row;
-                    flex-wrap: wrap;
+                    flex-wrap: nowrap;
                     align-items: center;
                     justify-content: flex-start;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                }
+
+                .probability-grid.integrated > * {
+                    flex: 0 0 auto;
                 }
 
                 .roller-brand {

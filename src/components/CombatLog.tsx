@@ -9,11 +9,12 @@ interface CombatLogProps {
     eventSessionMap?: Record<string, number>;
     isRefreshing?: boolean;
     onRefresh?: () => void;
+    compact?: boolean;
 }
 
 import { RotateCw } from "lucide-react";
 
-export function CombatLog({ events, characters, sessionNumber, eventSessionMap, isRefreshing, onRefresh }: CombatLogProps) {
+export function CombatLog({ events, characters, sessionNumber, eventSessionMap, isRefreshing, onRefresh, compact = false }: CombatLogProps) {
     const currentSessionEvents = sessionNumber === undefined
         ? events
         : events.filter(e => (eventSessionMap?.[e.id] ?? sessionNumber ?? 1) === sessionNumber);
@@ -31,7 +32,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
     };
 
     return (
-        <div className="combat-log-container solid ornate-border">
+        <div className={`combat-log-container solid ornate-border ${compact ? "compact-mode" : ""}`}>
             <div className="log-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {sessionNumber !== undefined && (
                     <span className="resonance-indicator">SESSÃO {sessionNumber}</span>
@@ -262,9 +263,60 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     gap: 16px;
                 }
 
+                .combat-log-container.compact-mode {
+                    min-height: 92px;
+                    max-height: 126px;
+                    border-radius: 10px;
+                    background: rgba(5, 5, 5, 0.84);
+                }
+
+                .combat-log-container.compact-mode .log-header {
+                    padding: 6px 10px;
+                }
+
+                .combat-log-container.compact-mode .resonance-indicator {
+                    font-size: 0.52rem;
+                    letter-spacing: 0.22em;
+                }
+
+                .combat-log-container.compact-mode .log-entries-scroll {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: stretch;
+                    gap: 10px;
+                    padding: 8px 10px;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                }
+
                 .combat-entry {
                     padding-bottom: 8px;
                     border-bottom: 1px solid rgba(197, 160, 89, 0.05);
+                }
+
+                .combat-log-container.compact-mode .combat-entry {
+                    min-width: 250px;
+                    max-width: 320px;
+                    padding-right: 8px;
+                    border-bottom: none;
+                    border-right: 1px solid rgba(197, 160, 89, 0.08);
+                }
+
+                .combat-log-container.compact-mode .combat-entry:last-child {
+                    border-right: none;
+                }
+
+                .combat-log-container.compact-mode .entry-meta {
+                    margin-bottom: 4px;
+                    font-size: 0.5rem;
+                }
+
+                .combat-log-container.compact-mode .entry-content {
+                    font-size: 0.66rem;
+                }
+
+                .combat-log-container.compact-mode .roll-data {
+                    padding: 8px;
                 }
 
                 .entry-meta {

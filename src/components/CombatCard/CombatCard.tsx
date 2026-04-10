@@ -196,7 +196,7 @@ export function CombatCard({
     };
     const accentColor = accentColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.72)";
     const accentSoftColor = accentSoftColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.32)";
-    const imageColumnWidth = "clamp(148px, 19vw, 220px)";
+    const imageColumnWidth = "clamp(166px, 21vw, 238px)";
 
     return (
         <div 
@@ -207,7 +207,7 @@ export function CombatCard({
                 gap: '8px', 
                 marginBottom: '12px',
                 position: 'relative',
-                width: 'min(100%, 860px)',
+                width: 'min(100%, 884px)',
                 '--card-accent': accentColor,
                 '--card-accent-soft': accentSoftColor
             } as any}
@@ -324,7 +324,7 @@ export function CombatCard({
                     )}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '8px 14px', transform: 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '6px 14px', transform: 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
                     <div ref={middleContentRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
@@ -448,7 +448,7 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', paddingBottom: '6px', paddingRight: '8px', transform: 'skewX(5deg)', justifyContent: 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px', paddingBottom: '4px', paddingRight: '8px', transform: 'skewX(5deg)', justifyContent: 'flex-start' }}>
                     {!isRestrictedThreatView && (
                         <div ref={consequencesContentRef} style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences

@@ -242,9 +242,10 @@ export function RollerInputs({
 
                 .matrix-inputs.integrated {
                     flex-direction: row;
-                    flex-wrap: wrap;
+                    flex-wrap: nowrap;
                     align-items: center;
                     gap: 6px;
+                    min-width: max-content;
                 }
 
                 .matrix-field {
@@ -279,6 +280,7 @@ export function RollerInputs({
                     align-items: center !important;
                     justify-content: flex-start !important;
                     gap: 6px;
+                    flex-wrap: nowrap;
                 }
 
                 .panel-col {

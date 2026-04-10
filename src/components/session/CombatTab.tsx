@@ -68,6 +68,7 @@ export function CombatTab({
 }: CombatTabProps) {
     const [isHeroDrawerOpen, setIsHeroDrawerOpen] = useState(false);
     const [isThreatDrawerOpen, setIsThreatDrawerOpen] = useState(false);
+    const [showCombatLogs, setShowCombatLogs] = useState(false);
 
     const heroCombatants = useMemo(
         () => combatantList.filter(c => !c.isHazard && (c.arenaSide === "HERO" || (!c.isNPC && !c.arenaSide))),
@@ -133,7 +134,9 @@ export function CombatTab({
         if (showDiceRoller) {
             setIsHeroDrawerOpen(false);
             setIsThreatDrawerOpen(false);
+            return;
         }
+        setShowCombatLogs(false);
     }, [showDiceRoller]);
 
     return (
@@ -505,10 +508,18 @@ export function CombatTab({
                                 disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
                                 soundSettings={state.soundSettings}
                             />
+                            <button
+                                type="button"
+                                className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
+                                onClick={() => setShowCombatLogs(prev => !prev)}
+                                title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                            >
+                                {showCombatLogs ? "OCULTAR LOGS" : "MOSTRAR LOGS"}
+                            </button>
                         </div>
                     )}
 
-                    {showDiceRoller && (
+                    {showDiceRoller && showCombatLogs && (
                         <div className="combat-log-wrapper">
                             <CombatLog
                                 events={events}
@@ -517,6 +528,7 @@ export function CombatTab({
                                 eventSessionMap={eventSessionMap}
                                 isRefreshing={isRefreshing}
                                 onRefresh={onRefresh}
+                                compact={true}
                             />
                         </div>
                     )}

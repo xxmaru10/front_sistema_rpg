@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-10 (story-38/follow-up-gaveta-inimigos-e-rolagem-horizontal)
+last_updated: 2026-04-10 (story-38/follow-up-logs-toggle-e-ancoragem-esquerda)
 status: ativo
 ---
 
@@ -78,6 +78,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Dropdown de Mesa Responsivo no Login | O seletor customizado de mesa na Home ganhou abertura adaptativa (abre para cima quando falta espaco), altura maxima dinamica por viewport e scroll touch (`-webkit-overflow-scrolling: touch`). A listagem removeu a identificacao de mestre, exibindo apenas o nome da mesa. | 2026-04-10 |
 | Altura Dinamica do CombatCard sem Loop (Story 38 follow-up) | O calculo de altura na Arena passou a medir conteudo interno (refs intrinsecas) em vez das colunas esticadas do grid, mantendo margem de 2% sobre consequencias sem retroalimentacao de `ResizeObserver`/`minHeight` e evitando crescimento infinito do card. | 2026-04-10 |
 | Gaveta de Ameacas para a Esquerda + Rolagem Horizontal Compacta (Story 38 follow-up) | A gaveta lateral de ameacas passou a ancorar no lado direito com expansao visual para a esquerda (desktop e mobile), e a zona integrada de rolagem foi convertida para faixa horizontal compacta no topo da coluna central. O botao de rolar no modo integrado virou icone de dado, o campo de bonus passou a usar placeholder textual ("BONUS"), e o bloco de logs foi reduzido para acompanhar a nova densidade visual sem alterar fluxo de eventos/rolagem. | 2026-04-10 |
+| Logs Sob Demanda em Faixa Horizontal + Fix de Ancoragem Esquerda (Story 38 follow-up) | A visualizacao de logs na Arena passou a iniciar oculta e ser expandida por botao dedicado, em formato horizontal compacto alinhado a barra de rolagem. A gaveta esquerda deixou de deslocar ao expandir o menu lateral global (remocao de offset por `nav-expanded`), e a hierarquia de z-index foi ajustada para evitar sobreposicao dos cards sobre a barra de rolagem. | 2026-04-10 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 

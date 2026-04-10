@@ -527,7 +527,7 @@ body {
 }
 
 .main-command-layout.nav-expanded .combat-avatar-drawer.side-left {
-    margin-left: 46px;
+    margin-left: 0;
 }
 
 .tactical-nav-spacer {
@@ -1105,7 +1105,7 @@ body {
 }
 
 .combat-arena-layout.has-expanded-left {
-    grid-template-columns: minmax(350px, 1fr) minmax(310px, 0.95fr) minmax(26px, max-content);
+    grid-template-columns: minmax(26px, max-content) minmax(320px, 1fr) minmax(26px, max-content);
 }
 
 .combat-arena-layout.has-challenge-right {
@@ -1113,15 +1113,15 @@ body {
 }
 
 .combat-arena-layout.has-expanded-left.has-challenge-right {
-    grid-template-columns: minmax(320px, 1fr) minmax(300px, 0.9fr) minmax(210px, 0.52fr);
+    grid-template-columns: minmax(26px, max-content) minmax(300px, 1fr) minmax(210px, 0.52fr);
 }
 
 .combat-arena-layout.has-expanded-right {
-    grid-template-columns: minmax(26px, max-content) minmax(310px, 0.95fr) minmax(350px, 1fr);
+    grid-template-columns: minmax(26px, max-content) minmax(320px, 1fr) minmax(26px, max-content);
 }
 
 .combat-arena-layout.has-expanded-left.has-expanded-right {
-    grid-template-columns: minmax(300px, 1fr) minmax(260px, 0.82fr) minmax(300px, 1fr);
+    grid-template-columns: minmax(26px, max-content) minmax(280px, 1fr) minmax(26px, max-content);
 }
 
 .combat-side-column {
@@ -1131,6 +1131,7 @@ body {
     min-height: 400px;
     min-width: 0;
     overflow: visible;
+    z-index: 6;
 }
 
 .combat-party {
@@ -1187,8 +1188,8 @@ body {
 }
 
 .combat-avatar-drawer.side-left {
-    top: calc(50vh - 28px);
-    margin-left: -10px;
+    top: 96px;
+    margin-left: -16px;
     transition: margin-left 0.24s ease, top 0.24s ease;
 }
 
@@ -1405,11 +1406,11 @@ body {
     }
 
     .combat-avatar-drawer.side-left {
-        top: calc(50vh - 26px);
+        top: 88px;
     }
 
     .main-command-layout.nav-expanded .combat-avatar-drawer.side-left {
-        margin-left: 20px;
+        margin-left: 0;
     }
 
     .combat-avatar-panel {
@@ -1443,7 +1444,7 @@ body {
 }
 
 .combat-dice-integrated {
-    order: -3;
+    order: 0;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1457,6 +1458,7 @@ body {
     position: relative;
     backdrop-filter: blur(8px);
     border: 1px solid transparent;
+    z-index: 30;
 }
 
 .combat-dice-integrated .probability-grid.integrated {
@@ -1527,6 +1529,8 @@ body {
     flex-direction: column;
     gap: 10px;
     min-height: 0;
+    position: relative;
+    z-index: 20;
 }
 
 .scene-aspects-strip {
@@ -1570,13 +1574,40 @@ body {
 }
 
 .combat-log-wrapper {
-    order: -2;
+    order: 0;
     width: 100%;
     flex-grow: 1;
     min-height: 118px;
     max-height: 210px;
     overflow-y: auto;
     margin-top: 4px;
+    z-index: 28;
+}
+
+.combat-log-toggle-btn {
+    height: 30px;
+    border-radius: 9px;
+    border: 1px solid rgba(var(--accent-rgb), 0.38);
+    background: rgba(6, 8, 12, 0.9);
+    color: var(--accent-color);
+    font-family: var(--font-header);
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    padding: 0 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    flex: 0 0 auto;
+}
+
+.combat-log-toggle-btn:hover {
+    border-color: rgba(var(--accent-rgb), 0.62);
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.28);
+}
+
+.combat-log-toggle-btn.active {
+    background: rgba(var(--accent-rgb), 0.14);
+    border-color: rgba(var(--accent-rgb), 0.7);
 }
 
 .animate-reveal {
