@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-10 (story-37/follow-up-menu-d20 & home-dropdown-login)
+last_updated: 2026-04-10 (story-38/hotfix-altura-combat-card)
 status: ativo
 ---
 
@@ -76,6 +76,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Navegacao Lateral Global em Handle d20 (Story 37) | `page.tsx` passou a renderizar o menu lateral via React Portal no `document.body` para garantir sobreposicao acima da HUD. O handle d20 e os caps superior/inferior usam o mesmo asset (`dice_menu.png`) com tint dinamico por tema (`--accent-rgb`), incluindo numeracao `20/1` e seta de interacao. | 2026-04-10 |
 | Gavetas da Arena com Scroll Sync (Story 37 follow-up) | Rails laterais de avatares da Arena (`.combat-avatar-drawer`) migraram para `position: sticky` com `top` fixo, mantendo acesso aos retratos enquanto a coluna rola. A alteracao permanece visual e nao toca Event Sourcing. | 2026-04-10 |
 | Dropdown de Mesa Responsivo no Login | O seletor customizado de mesa na Home ganhou abertura adaptativa (abre para cima quando falta espaco), altura maxima dinamica por viewport e scroll touch (`-webkit-overflow-scrolling: touch`). A listagem removeu a identificacao de mestre, exibindo apenas o nome da mesa. | 2026-04-10 |
+| Altura Dinamica do CombatCard sem Loop (Story 38 follow-up) | O calculo de altura na Arena passou a medir conteudo interno (refs intrinsecas) em vez das colunas esticadas do grid, mantendo margem de 2% sobre consequencias sem retroalimentacao de `ResizeObserver`/`minHeight` e evitando crescimento infinito do card. | 2026-04-10 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 

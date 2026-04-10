@@ -422,22 +422,22 @@ export function CombatTab({
                     )}
 
                     {(!showDiceRoller && userRole === "GM") && (
-                        <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '0', order: -3 }}>
                             <button
                                 onClick={() => setShowDiceRoller(true)}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '8px',
-                                    background: 'linear-gradient(135deg, rgba(80, 166, 255, 0.2), rgba(10, 18, 30, 0.8))',
-                                    border: '1px solid rgba(80, 166, 255, 0.5)',
+                                    justifyContent: 'center',
+                                    background: 'rgba(8, 10, 14, 0.84)',
+                                    border: '1px solid rgba(255,255,255,0.24)',
                                     color: '#50a6ff',
-                                    padding: '12px 24px',
-                                    borderRadius: '8px',
+                                    padding: '0',
+                                    width: '34px',
+                                    height: '34px',
+                                    borderRadius: '10px',
                                     cursor: 'pointer',
-                                    fontSize: '1.2rem',
-                                    fontFamily: 'var(--font-header)',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.5), inset 0 0 20px rgba(80, 166, 255, 0.2)',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(80, 166, 255, 0.14)',
                                     transition: 'all 0.3s'
                                 }}
                                 onMouseEnter={(e) => {
@@ -449,30 +449,32 @@ export function CombatTab({
                                     e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5), inset 0 0 20px rgba(80, 166, 255, 0.2)';
                                 }}
                             >
-                                <Dice5 size={24} />
-                                ABRIR ZONA DE ROLAGEM
+                                <Dice5 size={18} />
                             </button>
                         </div>
                     )}
 
                     {showDiceRoller && (
                         <div className="combat-dice-integrated animate-reveal">
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0', marginLeft: 'auto', alignSelf: 'flex-start' }}>
                                 <button
                                     onClick={() => setShowDiceRoller(false)}
                                     style={{
-                                        background: 'transparent',
-                                        border: 'none',
+                                        background: 'rgba(8, 10, 14, 0.84)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
                                         color: '#ff4444',
-                                        padding: '4px',
+                                        padding: '0',
                                         cursor: 'pointer',
-                                        fontSize: '1.5rem',
+                                        fontSize: '1.15rem',
                                         fontWeight: 'bold',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         transition: 'all 0.2s',
-                                        lineHeight: 1
+                                        lineHeight: 1,
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '8px'
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.transform = 'scale(1.2) rotate(90deg)';
@@ -700,7 +702,7 @@ export function CombatTab({
                                                 onClick={() => setIsThreatDrawerOpen(false)}
                                                 title="Recolher fichas"
                                             >
-                                                <ChevronRight size={16} />
+                                                <ChevronLeft size={16} />
                                             </button>
                                         )}
                                         <div className={`combat-avatar-rail threat-avatar-rail ${isThreatDrawerOpen ? "is-expanded" : "is-collapsed"}`}>

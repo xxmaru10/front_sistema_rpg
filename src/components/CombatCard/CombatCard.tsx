@@ -94,21 +94,31 @@ export function CombatCard({
 
     const [isAspectsExpanded, setIsAspectsExpanded] = useState(false);
     const [expandedExtra, setExpandedExtra] = useState<'stunts' | 'spells' | 'items' | 'skills' | null>(null);
-    const middleColumnRef = useRef<HTMLDivElement | null>(null);
-    const consequencesColumnRef = useRef<HTMLDivElement | null>(null);
+    const middleContentRef = useRef<HTMLDivElement | null>(null);
+    const consequencesContentRef = useRef<HTMLDivElement | null>(null);
     const [dynamicCardHeight, setDynamicCardHeight] = useState<number | null>(null);
 
     useLayoutEffect(() => {
-        const middleEl = middleColumnRef.current;
-        const consequencesEl = consequencesColumnRef.current;
-        if (!middleEl || !consequencesEl) return;
+        const middleEl = middleContentRef.current;
+        const consequencesEl = consequencesContentRef.current;
+        if (!middleEl || !consequencesEl) {
+            setDynamicCardHeight(null);
+            return;
+        }
 
         const recalc = () => {
-            const middleHeight = middleEl.offsetHeight || 0;
-            const consequencesHeight = consequencesEl.offsetHeight || 0;
+            const middleHeight = Math.ceil(middleEl.scrollHeight || middleEl.offsetHeight || 0);
+            const consequencesHeight = Math.ceil(consequencesEl.scrollHeight || consequencesEl.offsetHeight || 0);
             const consequencesWithMargin = Math.ceil(consequencesHeight * 1.02);
             const nextHeight = Math.max(middleHeight, consequencesWithMargin);
-            setDynamicCardHeight(nextHeight > 0 ? nextHeight : null);
+            const normalizedNextHeight = nextHeight > 0 ? nextHeight : null;
+            setDynamicCardHeight((prevHeight) => {
+                if (prevHeight === null && normalizedNextHeight === null) return prevHeight;
+                if (prevHeight !== null && normalizedNextHeight !== null && Math.abs(prevHeight - normalizedNextHeight) <= 1) {
+                    return prevHeight;
+                }
+                return normalizedNextHeight;
+            });
         };
 
         recalc();
@@ -118,7 +128,7 @@ export function CombatCard({
         observer.observe(consequencesEl);
 
         return () => observer.disconnect();
-    }, [isAspectsExpanded, expandedExtra, character.consequences, character.stress]);
+    }, [isAspectsExpanded, expandedExtra, character.consequences, character.stress, isRestrictedThreatView]);
 
     if (isHazard) {
         return (
@@ -314,7 +324,8 @@ export function CombatCard({
                     )}
                 </div>
 
-                <div ref={middleColumnRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '8px 14px', transform: 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '8px 14px', transform: 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
+                    <div ref={middleContentRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
@@ -433,12 +444,13 @@ export function CombatCard({
                             )}
                         </div>
                     )}
+                    </div>
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div ref={consequencesColumnRef} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', paddingBottom: '6px', paddingRight: '8px', transform: 'skewX(5deg)', justifyContent: 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', paddingBottom: '6px', paddingRight: '8px', transform: 'skewX(5deg)', justifyContent: 'flex-start' }}>
                     {!isRestrictedThreatView && (
-                        <div style={{ borderTop: 'none', paddingTop: 0 }}>
+                        <div ref={consequencesContentRef} style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences
                                 character={character}
                                 isGM={isGM}
