@@ -110,8 +110,8 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
                 }
 
                 .combat-consequence-box.filled {
-                    border-color: rgba(255, 68, 68, 0.4);
-                    background: rgba(255, 68, 68, 0.05);
+                    border-color: rgba(255, 68, 68, 0.5);
+                    background: rgba(25, 0, 0, 0.9);
                 }
 
                 .cons-content {

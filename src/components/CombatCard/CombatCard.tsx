@@ -181,11 +181,12 @@ export function CombatCard({
                 className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
                 style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: '140px 2fr 1.5fr', 
+                    gridTemplateColumns: '240px 2fr 1.5fr', 
                     gap: '0', 
                     alignItems: 'stretch', 
                     padding: '0', 
                     minWidth: '550px',
+                    height: '95px',
                     borderRadius: '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
@@ -241,12 +242,12 @@ export function CombatCard({
                     >✕</button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: '140px', height: '100%', minHeight: '180px', transform: 'skewX(6deg)', marginLeft: '-10px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '240px', height: '95px', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
                     <div style={{ width: '100%', height: '100%', background: '#000' }}>
                         {character.imageUrl ? (
-                            <img src={character.imageUrl} alt="" style={{ width: '120%', height: '100%', objectFit: 'cover', opacity: 0.9, marginLeft: '-10%' }} />
+                            <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.9 }} />
                         ) : (
-                            <span className="combat-portrait-fallback" style={{ fontSize: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#111' }}>{portraitInitials}</span>
+                            <span className="combat-portrait-fallback" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#111' }}>{portraitInitials}</span>
                         )}
                     </div>
                     
@@ -272,20 +273,20 @@ export function CombatCard({
                             </div>
 
                             {/* Fate Points - Bottom Center Over Image */}
-                            <div style={{ position: 'absolute', bottom: '8px', left: '0', right: '0', display: 'flex', justifyContent: 'center', zIndex: 10 }}>
-                                <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
-                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7 }}>-</button>}
+                            <div style={{ position: 'absolute', bottom: '6px', left: '0', right: '0', display: 'flex', justifyContent: 'center', zIndex: 10 }}>
+                                <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', border: 'none', background: 'transparent', padding: 0 }}>
+                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7, padding: 0 }}>-</button>}
                                     <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints}</span>
-                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7 }}>+</button>}
+                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7, padding: 0 }}>+</button>}
                                 </div>
                             </div>
                         </>
                     )}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0, padding: '24px 20px', transform: 'skewX(6deg)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <h3 className="combat-name" style={{ fontSize: '1.1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>{character.name.toUpperCase()}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '12px 15px', transform: 'skewX(6deg)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
                             <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff' }}>
                                 DIF {character.difficulty}
@@ -405,7 +406,7 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '12px', borderLeft: '2px solid rgba(255,255,255,0.1)', paddingTop: '24px', paddingRight: '24px', transform: 'skewX(6deg)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px', paddingRight: '8px', transform: 'skewX(6deg)' }}>
                     {!isRestrictedThreatView && (
                         <div style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences
