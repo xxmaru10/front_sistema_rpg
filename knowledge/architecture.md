@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-10 (story-38/follow-up-resultado-logs-e-espacamento-lateral)
+last_updated: 2026-04-10 (story-38/follow-up-glass-roll-e-foco-arena)
 status: ativo
 ---
 
@@ -82,6 +82,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Top Strip Fixo de Rolagem + Escala Horizontal dos Cards (Story 38 follow-up) | A zona de rolagem integrada foi reposicionada para um strip superior fixo da Arena (`combat-top-strip`), fora da coluna central, evitando sobreposicao com cards e mantendo logs como expansao horizontal sob demanda. Cards e gavetas expandidas receberam aumento significativo de largura horizontal para suportar o rework visual sem alterar Event Sourcing. | 2026-04-10 |
 | Ajustes de Usabilidade na Rolagem Integrada e Logs (Story 38 follow-up) | Controles integrados de rolagem passaram a operar sem iconografia lateral, com largura dinamica/truncada por conteudo (pericia, acao, inventario e bonus). O resultado compacto exibido na barra superior foi simplificado para valor numerico puro (sem mini-dados 3D), e o log compacto foi reformulado para linhas horizontais por evento para leitura rapida. Controles de impulso no card receberam reforco de camada de clique (z-index/pointer-events) mantendo visual e posicao. | 2026-04-10 |
 | Resultado Integrado Expandido + Logs Semânticos (Story 38 follow-up) | O box de resultado da rolagem integrada foi ampliado com centralizacao do total em destaque. No log compacto, eventos de rolagem passaram a receber semantica visual por desempenho (verde para sucesso, vermelho para abaixo do esperado), com ocultacao de rotulos genericos de desafio ("Exploracao"/"Combate"). Layout da Arena passou a reservar largura real para drawers expandidas de ambos os lados, reduzindo sobreposicao entre cards de herois e ameacas e estreitando a gaveta de ameacas para leitura mais vertical. Trilhas de estresse foram fixadas em linha unica (sem quebra). | 2026-04-10 |
+| Glass UI na Rolagem + Segundo Crop de Foco da Arena (Story 38 follow-up) | A barra integrada de rolagem passou a usar container transparente estilo vidro com botoes escuros, e o toggle de logs migrou para iconografia de pergaminho/relatorio. O painel de desafio removeu o titulo "DESAFIO ATIVO", adotando vidro neutro com borda principal colorida e destaque no numero de dificuldade. Na ficha, o upload de retrato ganhou segunda etapa obrigatoria de ajuste de foco para Arena (posicao + zoom), persistida em `character.arenaPortraitFocus` e aplicada no `CombatCard` via `object-position` + `scale` para controlar a regiao exibida sem quebrar a responsividade vertical do card. | 2026-04-10 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 

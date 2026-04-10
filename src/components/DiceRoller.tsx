@@ -157,13 +157,14 @@ export function DiceRoller(props: DiceRollerProps) {
                 .probability-grid.integrated {
                     padding: 6px 8px;
                     gap: 6px;
-                    width: 100%;
+                    width: auto;
                     display: flex;
                     flex-direction: row;
                     flex-wrap: nowrap;
                     align-items: center;
                     justify-content: flex-start;
                     overflow: visible;
+                    flex: 0 0 auto;
                 }
 
                 .probability-grid.integrated > * {

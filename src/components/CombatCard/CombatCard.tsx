@@ -197,6 +197,9 @@ export function CombatCard({
     const accentColor = accentColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.72)";
     const accentSoftColor = accentSoftColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.32)";
     const imageColumnWidth = "clamp(224px, 28vw, 322px)";
+    const arenaFocusX = Math.max(0, Math.min(100, character.arenaPortraitFocus?.x ?? 50));
+    const arenaFocusY = Math.max(0, Math.min(100, character.arenaPortraitFocus?.y ?? 30));
+    const arenaFocusZoom = Math.max(1, Math.min(3, character.arenaPortraitFocus?.zoom ?? 1));
 
     return (
         <div 
@@ -285,7 +288,19 @@ export function CombatCard({
                 <div style={{ position: 'relative', width: imageColumnWidth, minWidth: imageColumnWidth, transform: 'skewX(5deg)', marginLeft: '-24px', overflow: 'hidden', alignSelf: 'stretch' }}>
                     <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
                         {character.imageUrl ? (
-                            <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.9 }} />
+                            <img
+                                src={character.imageUrl}
+                                alt=""
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    objectPosition: `${arenaFocusX}% ${arenaFocusY}%`,
+                                    opacity: 0.9,
+                                    transform: `scale(${arenaFocusZoom})`,
+                                    transformOrigin: `${arenaFocusX}% ${arenaFocusY}%`
+                                }}
+                            />
                         ) : (
                             <span className="combat-portrait-fallback" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#111' }}>{portraitInitials}</span>
                         )}
@@ -300,7 +315,7 @@ export function CombatCard({
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
                             {/* Impulse - Top Left Over Image */}
-                            <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
+                            <div style={{ position: 'absolute', top: '8px', left: '0px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.75rem', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>)}
                                 </div>

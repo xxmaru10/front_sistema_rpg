@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
-import { ChevronLeft, ChevronRight, FastForward, Trash2, Dice5 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FastForward, Trash2, Dice5, ScrollText } from "lucide-react";
 import { CombatCard } from "@/components/CombatCard";
 import { TurnTimer } from "@/components/TurnTimer";
 import { DiceRoller } from "@/components/DiceRoller";
@@ -221,8 +221,9 @@ export function CombatTab({
                                     className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
                                     onClick={() => setShowCombatLogs(prev => !prev)}
                                     title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                    aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
                                 >
-                                    {showCombatLogs ? "OCULTAR LOGS" : "MOSTRAR LOGS"}
+                                    <ScrollText size={15} />
                                 </button>
                             </div>
                         )}
@@ -543,35 +544,33 @@ export function CombatTab({
                                     gap: '0',
                                     height: 'fit-content',
                                     flexShrink: 0,
-                                    background: `linear-gradient(135deg, ${challengeColors.bg} 0%, rgba(10, 10, 12, 1) 100%)`,
-                                    border: `1px solid ${challengeColors.primary}40`,
-                                    borderLeft: `4px solid ${challengeColors.primary}`,
-                                    boxShadow: `inset 0 0 40px ${challengeColors.glow}, 0 0 20px ${challengeColors.glow}, 0 4px 20px rgba(0,0,0,0.7)`,
+                                    background: 'rgba(8, 10, 14, 0.18)',
+                                    border: `1px solid ${challengeColors.primary}7a`,
+                                    borderRight: `5px solid ${challengeColors.primary}`,
+                                    boxShadow: `0 8px 24px rgba(0,0,0,0.45), inset 0 0 16px rgba(255,255,255,0.06)`,
                                     borderRadius: '8px',
                                     position: 'relative',
                                     overflow: 'hidden',
                                     transition: 'all 0.5s ease',
-                                    marginBottom: '8px'
+                                    marginBottom: '8px',
+                                    backdropFilter: 'blur(12px)',
+                                    WebkitBackdropFilter: 'blur(12px)',
                                 }}
                             >
-                                <div style={{ position: 'absolute', top: 0, right: 0, width: '100px', height: '100px', background: `radial-gradient(circle at top right, ${challengeColors.primary}30, transparent 70%)`, pointerEvents: 'none' }}></div>
-
-                                <h3 className="combat-col-title" style={{ color: challengeColors.primary, textShadow: `0 0 10px ${challengeColors.glow}`, borderBottom: `1px solid ${challengeColors.primary}30`, padding: '4px 8px', fontSize: '0.7rem' }}>◈ DESAFIO ATIVO</h3>
-
                                 <div className="challenge-content" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '8px' }}>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.8rem' }}>
                                         <div style={{
-                                            background: 'rgba(0, 0, 0, 0.5)',
-                                            border: `1px solid ${challengeColors.primary}40`,
+                                            background: 'rgba(0, 0, 0, 0.48)',
+                                            border: `1px solid ${challengeColors.primary}80`,
                                             padding: '4px 10px',
                                             borderRadius: '20px',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             alignItems: 'center',
-                                            boxShadow: `0 0 10px ${challengeColors.glow}`,
+                                            boxShadow: `0 0 12px ${challengeColors.glow}`,
                                             minWidth: '50px'
                                         }}>
-                                            <label style={{ fontSize: '0.35rem', color: `${challengeColors.primary}aa`, letterSpacing: '0.1em' }}>DIF</label>
+                                            <label style={{ fontSize: '0.35rem', color: `${challengeColors.primary}cc`, letterSpacing: '0.1em' }}>DIF</label>
                                             <input
                                                 type="number"
                                                 style={{
@@ -584,7 +583,7 @@ export function CombatTab({
                                                     color: challengeColors.primary,
                                                     fontFamily: 'var(--font-header)',
                                                     fontWeight: 'bold',
-                                                    textShadow: `0 0 10px ${challengeColors.primary}`,
+                                                    textShadow: `0 0 12px ${challengeColors.primary}`,
                                                     outline: 'none',
                                                     transition: 'all 0.3s ease'
                                                 }}
@@ -605,7 +604,7 @@ export function CombatTab({
                                                     lineHeight: '1.2',
                                                     background: 'transparent',
                                                     border: 'none',
-                                                    borderBottom: `1px solid ${challengeColors.primary}30`,
+                                                    borderBottom: `1px solid ${challengeColors.primary}55`,
                                                     color: '#fff',
                                                     borderRadius: '0',
                                                     outline: 'none',
@@ -623,7 +622,7 @@ export function CombatTab({
 
                                     {(userRole === "GM" || (state.challenge?.aspects && state.challenge.aspects.some((a: string) => a.trim() !== ""))) && (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <label style={{ color: challengeColors.primary, fontSize: '0.45rem', fontWeight: 'bold', letterSpacing: '0.1em', opacity: 0.7 }}>ASPECTOS DA CENA</label>
+                                            <label style={{ color: challengeColors.primary, fontSize: '0.45rem', fontWeight: 'bold', letterSpacing: '0.1em', opacity: 0.72 }}>ASPECTOS DA CENA</label>
                                             {[0, 1, 2].map(idx => {
                                                 const aspectValue = (state.challenge?.aspects || [])[idx] || "";
                                                 if (userRole !== "GM" && aspectValue.trim() === "") return null;
@@ -636,7 +635,7 @@ export function CombatTab({
                                                             width: '100%',
                                                             background: 'rgba(255,255,255,0.03)',
                                                             border: 'none',
-                                                            borderLeft: `2px solid ${challengeColors.primary}40`,
+                                                            borderLeft: `2px solid ${challengeColors.primary}66`,
                                                             padding: '4px 8px',
                                                             fontSize: '0.75rem',
                                                             color: '#eee',
