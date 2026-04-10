@@ -78,7 +78,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 .combat-stress-section {
                     display: flex;
                     flex-direction: row;
-                    align-items: center;
+                    align-items: flex-start;
                     gap: 16px;
                 }
 
@@ -95,7 +95,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
 
                 .track-display {
                     display: flex;
-                    align-items: center;
+                    align-items: flex-start;
                     gap: 8px;
                 }
                 
@@ -117,7 +117,9 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 
                 .track-circles {
                     display: flex;
+                    flex-wrap: wrap;
                     gap: 4px;
+                    max-width: 148px;
                 }
 
                 .stress-circle {

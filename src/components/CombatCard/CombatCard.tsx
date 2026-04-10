@@ -148,12 +148,20 @@ export function CombatCard({
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
     const accentColors: Record<string, string> = {
-        "own-hero-card": "rgba(197, 160, 89, 0.8)",
-        "hero-card": "rgba(100, 200, 255, 0.8)",
-        "threat-card": "rgba(255, 68, 68, 0.8)",
-        "npc-hero-card": "rgba(200, 200, 200, 0.8)",
+        "own-hero-card": "rgba(var(--accent-rgb), 0.86)",
+        "hero-card": "rgba(var(--accent-rgb), 0.82)",
+        "threat-card": "rgba(255, 68, 68, 0.82)",
+        "npc-hero-card": "rgba(var(--accent-rgb), 0.76)",
     };
-    const accentColor = (character as any).color || accentColors[cardThemeClass] || "rgba(255, 255, 255, 0.2)";
+    const accentSoftColors: Record<string, string> = {
+        "own-hero-card": "rgba(var(--accent-rgb), 0.46)",
+        "hero-card": "rgba(var(--accent-rgb), 0.42)",
+        "threat-card": "rgba(255, 68, 68, 0.42)",
+        "npc-hero-card": "rgba(var(--accent-rgb), 0.36)",
+    };
+    const accentColor = accentColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.72)";
+    const accentSoftColor = accentSoftColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.32)";
+    const imageColumnWidth = "clamp(148px, 19vw, 220px)";
 
     return (
         <div 
@@ -164,12 +172,13 @@ export function CombatCard({
                 gap: '8px', 
                 marginBottom: '12px',
                 position: 'relative',
-                maxWidth: '800px',
-                '--card-accent': accentColor 
+                width: 'min(100%, 860px)',
+                '--card-accent': accentColor,
+                '--card-accent-soft': accentSoftColor
             } as any}
         >
             {!isRestrictedThreatView && (
-                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 50, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 50, display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
                     <CombatStressTracks
                         character={character}
                         canEditSelf={canEditSelf}
@@ -207,20 +216,19 @@ export function CombatCard({
                 className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
                 style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: '240px 2fr 1.5fr', 
+                    gridTemplateColumns: `${imageColumnWidth} minmax(0, 1.55fr) minmax(146px, 1fr)`,
                     gap: '0', 
                     alignItems: 'stretch', 
                     padding: '0', 
-                    minWidth: '550px',
                     height: 'auto',
                     minHeight: 'fit-content',
                     borderRadius: '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
-                    background: `linear-gradient(110deg, #000 0%, #000 35%, ${accentColor.replace('0.8', '0.4')} 80%, transparent 100%)`,
+                    background: `linear-gradient(110deg, #000 0%, #000 38%, var(--card-accent-soft) 82%, transparent 100%)`,
                     overflow: 'visible',
                     boxShadow: 'none',
-                    transform: 'skewX(-6deg)',
+                    transform: 'skewX(-5deg)',
                     marginLeft: '0px'
                 }}
             >
@@ -239,7 +247,7 @@ export function CombatCard({
                     >✕</button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: '240px', transform: 'skewX(6deg)', marginLeft: '-32px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: imageColumnWidth, minWidth: imageColumnWidth, transform: 'skewX(5deg)', marginLeft: '-24px', overflow: 'hidden' }}>
                     <div style={{ width: '100%', height: '100%', background: '#000' }}>
                         {character.imageUrl ? (
                             <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.9 }} />
@@ -281,7 +289,7 @@ export function CombatCard({
                     )}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '8px 15px', transform: 'skewX(6deg)', overflow: 'hidden', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '8px 14px', transform: 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
@@ -298,7 +306,7 @@ export function CombatCard({
                                 {otherAspects.length > 0 && (
                                     <button 
                                         onClick={() => setIsAspectsExpanded(!isAspectsExpanded)}
-                                        style={{ background: 'transparent', border: 'none', color: '#c5a059', cursor: 'pointer', fontSize: '1.2rem', padding: '0 4px', lineHeight: 1 }}
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--card-accent)', cursor: 'pointer', fontSize: '1.2rem', padding: '0 4px', lineHeight: 1 }}
                                     >
                                         {isAspectsExpanded ? '-' : '+'}
                                     </button>
@@ -403,7 +411,7 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', paddingBottom: '6px', paddingRight: '8px', transform: 'skewX(6deg)', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', paddingBottom: '6px', paddingRight: '8px', transform: 'skewX(5deg)', justifyContent: 'flex-start' }}>
                     {!isRestrictedThreatView && (
                         <div style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences
