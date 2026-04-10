@@ -477,7 +477,10 @@ export default function SessionPage() {
                     aria-label="Fechar menu lateral pelo topo"
                     title="Fechar menu lateral"
                 >
-                    d20
+                    <span className="nav-close-die" aria-hidden="true">
+                        <img src="/interface/dice_menu.png" alt="" />
+                        <span className="nav-close-value">20</span>
+                    </span>
                 </button>
 
                 <div className="nav-options-stack">
@@ -565,7 +568,10 @@ export default function SessionPage() {
                     aria-label="Fechar menu lateral pela base"
                     title="Fechar menu lateral"
                 >
-                    d1
+                    <span className="nav-close-die" aria-hidden="true">
+                        <img src="/interface/dice_menu.png" alt="" />
+                        <span className="nav-close-value">1</span>
+                    </span>
                 </button>
             </div>
         </nav>

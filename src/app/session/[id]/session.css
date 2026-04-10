@@ -545,7 +545,8 @@ body {
     z-index: 2147483000;
     position: fixed;
     left: 0;
-    top: 136px;
+    top: 50%;
+    transform: translateY(-50%);
     height: fit-content;
     overflow: visible;
     display: flex;
@@ -632,23 +633,53 @@ body {
 
 .nav-close-cap {
     width: 52px;
-    height: 28px;
-    border-radius: 999px;
-    border: 1px solid rgba(var(--accent-rgb), 0.48);
-    background: rgba(255, 255, 255, 0.92);
+    height: 34px;
+    border-radius: 0;
+    border: none;
+    background: transparent;
     color: #101010;
-    font-family: var(--font-header);
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .nav-close-cap:hover,
 .nav-close-cap:focus-visible {
-    transform: translateY(-1px);
-    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.34);
+    transform: translateY(-1px) scale(1.02);
+    filter: drop-shadow(0 0 8px rgba(var(--accent-rgb), 0.35));
+}
+
+.nav-close-die {
+    width: 46px;
+    height: 30px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-close-die img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.nav-close-value {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-header);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #111;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 .nav-options-stack {
@@ -1495,7 +1526,7 @@ body {
 
     .tactical-nav {
         width: 44px;
-        top: 118px;
+        top: 50%;
         left: 0;
         height: fit-content;
     }
