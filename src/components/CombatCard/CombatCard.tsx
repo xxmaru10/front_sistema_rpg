@@ -212,7 +212,8 @@ export function CombatCard({
                     alignItems: 'stretch', 
                     padding: '0', 
                     minWidth: '550px',
-                    minHeight: '85px',
+                    height: 'auto',
+                    minHeight: 'fit-content',
                     borderRadius: '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
@@ -238,7 +239,7 @@ export function CombatCard({
                     >✕</button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: '240px', minHeight: '85px', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '240px', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
                     <div style={{ width: '100%', height: '100%', background: '#000' }}>
                         {character.imageUrl ? (
                             <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.9 }} />
@@ -280,7 +281,7 @@ export function CombatCard({
                     )}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '10px 15px', transform: 'skewX(6deg)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '8px 15px', transform: 'skewX(6deg)', overflow: 'hidden', justifyContent: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
@@ -402,7 +403,7 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px', paddingRight: '8px', transform: 'skewX(6deg)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', paddingBottom: '6px', paddingRight: '8px', transform: 'skewX(6deg)', justifyContent: 'center' }}>
                     {!isRestrictedThreatView && (
                         <div style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences
