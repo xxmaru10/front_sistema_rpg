@@ -153,7 +153,7 @@ export function CombatCard({
         "threat-card": "rgba(255, 68, 68, 0.8)",
         "npc-hero-card": "rgba(200, 200, 200, 0.8)",
     };
-    const accentColor = accentColors[cardThemeClass] || "rgba(255, 255, 255, 0.2)";
+    const accentColor = (character as any).color || accentColors[cardThemeClass] || "rgba(255, 255, 255, 0.2)";
 
     return (
         <div 
@@ -168,7 +168,7 @@ export function CombatCard({
             } as any}
         >
             {!isRestrictedThreatView && (
-                <div className="combat-external-stress" style={{ position: 'absolute', top: '-15px', left: '-10px', zIndex: 50 }}>
+                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 50, alignSelf: 'flex-start' }}>
                     <CombatStressTracks
                         character={character}
                         canEditSelf={canEditSelf}
@@ -198,7 +198,7 @@ export function CombatCard({
             >
                 {/* De-skew content container */}
                 <div style={{ display: 'contents', transform: 'skewX(6deg)' }}>
-                {/* Dice Roller Trigger */}
+                {/* Dice Roller Trigger - Bottom Right */}
                 {onToggleDiceRoller && isOwner && (
                     <button
                         onClick={(e) => {
@@ -207,7 +207,7 @@ export function CombatCard({
                         }}
                         style={{
                             position: 'absolute',
-                            top: '12px',
+                            bottom: '12px',
                             right: '20px',
                             background: 'rgba(255, 255, 255, 0.1)',
                             border: '1px solid rgba(255, 255, 255, 0.3)',
@@ -249,29 +249,33 @@ export function CombatCard({
                             <span className="combat-portrait-fallback" style={{ fontSize: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#111' }}>{portraitInitials}</span>
                         )}
                     </div>
-                    
-                    {/* Persona slash effect overlay */}
+                                        {/* Persona slash effect overlay */}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%)', pointerEvents: 'none' }} />
 
                     {(isGM || isOwner) && !isRestrictedThreatView && (
-                        <div style={{ position: 'absolute', bottom: '12px', left: '0', right: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '0 10px', zIndex: 5 }}>
-                            <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.85)', borderRadius: '4px', padding: '2px 6px', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', padding: '0 2px' }}>-</button>}
-                                <span style={{ fontSize: '1rem', fontWeight: '900', color: '#fff' }}>{character.fatePoints}</span>
-                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', padding: '0 2px' }}>+</button>}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2px' }}>
-                                    {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.55rem', opacity: 0.7 }}>➤</span>)}
+                        <>
+                            {/* Impulse - Top Left Over Image */}
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 10 }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                                    {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.6rem', textShadow: '0 0 5px var(--card-accent)' }}>➤</span>)}
                                 </div>
                                 {isGM && (
-                                    <div style={{ display: 'flex', gap: '12px', opacity: 0.7 }}>
-                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }} disabled={impulseCount===0}>-</button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>+</button>
+                                    <div style={{ display: 'flex', gap: '6px', opacity: 0.6 }}>
+                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }} disabled={impulseCount===0}>-</button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>+</button>
                                     </div>
                                 )}
                             </div>
-                        </div>
+
+                            {/* Fate Points - Bottom Center Over Image */}
+                            <div style={{ position: 'absolute', bottom: '8px', left: '0', right: '0', display: 'flex', justifyContent: 'center', zIndex: 10 }}>
+                                <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7 }}>-</button>}
+                                    <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints}</span>
+                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7 }}>+</button>}
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
 
