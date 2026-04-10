@@ -161,7 +161,16 @@ export function CombatCard({
 
             <div
                 className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
-                style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 110px) 2fr 1.5fr', gap: '16px', alignItems: 'start', padding: '16px', minWidth: '460px' }}
+                style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'minmax(80px, 110px) 2fr 1.5fr', 
+                    gap: '16px', 
+                    alignItems: 'start', 
+                    padding: '16px', 
+                    minWidth: '460px',
+                    borderRadius: '12px 32px 32px 12px',
+                    position: 'relative'
+                }}
             >
                 {/* Dice Roller Trigger */}
                 {onToggleDiceRoller && isOwner && (
@@ -173,7 +182,7 @@ export function CombatCard({
                         style={{
                             position: 'absolute',
                             top: '8px',
-                            right: '32px',
+                            right: '8px',
                             background: 'rgba(59, 130, 246, 0.2)',
                             border: '1px solid rgba(59, 130, 246, 0.4)',
                             borderRadius: '4px',
@@ -220,7 +229,6 @@ export function CombatCard({
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: '4px', width: '100%' }}>
                             <div className="combat-fate" style={{ flexDirection: 'column', padding: '4px 8px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', gap: '4px', width: '100%' }}>
-                                <span className="fate-label" style={{ fontSize: '0.45rem', textAlign: 'center' }}>{character.isNPC ? "PONTOS DE GM" : "DESTINO"}</span>
                                 <div className="fate-controls" style={{ gap: '8px', justifyContent: 'center' }}>
                                     {canEditSelf && <button onClick={() => handleFPChange(-1)} className="fate-btn">-</button>}
                                     <span className="fate-value" style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{character.fatePoints}</span>
@@ -228,7 +236,6 @@ export function CombatCard({
                                 </div>
                             </div>
                             <div className="impulse-cluster" style={{ flexDirection: 'column', padding: '4px 8px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', gap: '4px', width: '100%' }}>
-                                <span className="impulse-label" style={{ fontSize: '0.45rem', textAlign: 'center' }}>IMPULSO</span>
                                 <div className="impulse-arrows-row" style={{ minHeight: '16px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
                                     {impulseCount === 0 ? <span className="impulse-empty">—</span> : Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} className="impulse-arrow">➤</span>)}
                                 </div>

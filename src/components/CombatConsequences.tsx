@@ -35,15 +35,11 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
 
     return (
         <div className="combat-consequences">
-            <div className="consequences-title">CONSEQUÊNCIAS ({filledSlots.length})</div>
+            <div className="consequences-title">CONSEQUÊNCIAS</div>
             <div className="consequences-list">
-                {filledSlots.length === 0 ? (
-                    <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', fontStyle: 'italic', padding: '4px' }}>
-                        Nenhuma ativa
-                    </div>
-                ) : filledSlots.map((slot) => {
+                {orderedSlots.map((slot) => {
                     const cons = character.consequences?.[slot];
-                    const isFilled = true;
+                    const isFilled = cons && cons.text && cons.text.trim().length > 0;
                     
                     let valueText = "";
                     if (slot === "mild" || slot.includes("mild")) valueText = "-2";
@@ -54,17 +50,17 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
                     return (
                         <div
                             key={slot}
-                            className="combat-consequence-box filled"
+                            className={`combat-consequence-box ${isFilled ? 'filled' : 'empty'}`}
                             onClick={() => {
                                 if (!isGM) return;
                                 openConsequenceModal(slot, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value);
                             }}
-                            title={cons?.text.toUpperCase()}
+                            title={isFilled ? cons.text.toUpperCase() : `Vazio (${valueText})`}
                         >
                             <span className="cons-content">
-                                {cons?.text.toUpperCase()}
+                                {isFilled ? cons.text.toUpperCase() : valueText}
                             </span>
-                            {cons?.debuff && (
+                            {isFilled && cons.debuff && (
                                 <span className="cons-debuff-badge">
                                     -{cons.debuff.value} {cons.debuff.skill.slice(0, 3).toUpperCase()}
                                 </span>
