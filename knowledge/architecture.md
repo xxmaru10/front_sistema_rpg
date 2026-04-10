@@ -132,7 +132,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Persistência do HTML do editor**: o envio do diário principal passou a ler o `innerHTML` atual do editor antes de despachar `NOTE_*`, corrigindo perda de listas/marcadores quando a toolbar alterava o DOM sem atualizar o estado imediatamente.
 - **Opt-out persistente de auto-menção**: ao remover uma auto-menção durante a digitação, o trecho passa a ficar explicitamente suprimido no editor para não ser religado de novo no mesmo fluxo de escrita.
 - **Menções de item com efeito de inventário**: menções a `ITEM` no diário passaram a manter o cross-post atual e, adicionalmente, sincronizar uma cópia do item para o inventário do personagem-alvo, reaproveitando `CHARACTER_INVENTORY_UPDATED` e copiando nome, descrição, quantidade, bônus e imagem.
-- **Manifestação de item no slot do inventário**: o modal de edição de slot passou a aceitar materialização de item global por nome exato ou por menção `ITEM` no editor rico da descrição, preenchendo automaticamente nome, descrição, quantidade, bônus e imagem sem introduzir chamadas diretas de API na UI.
+- **Manifestação de item no slot do inventário**: o modal de edição de slot passou a sugerir itens globais no campo de nome e sincronizar automaticamente descrição, quantidade, bônus e imagem quando há correspondência exata ou seleção da sugestão, sem transformar a descrição do slot em editor de menção nem introduzir chamadas diretas de API na UI.
 - **Bônus como parte do item global**: `GlobalItem` foi expandido com `bonus` opcional (fallback 0), preservando compatibilidade com itens legados sem migração destrutiva.
 
 ## Padrões Adotados

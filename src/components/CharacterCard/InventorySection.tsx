@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Backpack } from "lucide-react";
+import { Backpack, Eye, Pencil, X } from "lucide-react";
 import { Character, GlobalItem, Item } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { VIControlPanel } from "@/components/VIControlPanel";
-import { MentionEditor } from "@/components/MentionEditor";
+import { MentionSuggestions } from "@/components/MentionSuggestions";
 
 interface InventorySectionProps {
     character: Character;
@@ -15,7 +15,6 @@ interface InventorySectionProps {
     canEdit: boolean;
     isGM: boolean;
     isFloating?: boolean;
-    mentionEntities?: any[];
     globalItems?: GlobalItem[];
 }
 
@@ -34,13 +33,20 @@ function extractTextPreview(content?: string) {
     return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
 }
 
-function extractMentionedItemId(content?: string) {
-    if (!content || typeof window === "undefined") return null;
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(content, "text/html");
-    const match = doc.body.querySelector('[data-mention-type="ITEM"][data-mention-id]');
-    return match?.getAttribute("data-mention-id") || null;
+function createClearedItemDraft(item?: Item, name = "", preserveStructure = false): Item {
+    return {
+        id: item?.id || uuidv4(),
+        name,
+        description: "",
+        bonus: 0,
+        quantityCurrent: 1,
+        quantityTotal: 1,
+        size: preserveStructure ? item?.size : undefined,
+        url: undefined,
+        isContainer: preserveStructure ? item?.isContainer : false,
+        capacity: preserveStructure ? item?.capacity : undefined,
+        contents: preserveStructure ? (item?.contents || []) : [],
+    };
 }
 
 export function InventorySection({
@@ -50,15 +56,25 @@ export function InventorySection({
     canEdit,
     isGM,
     isFloating = true,
-    mentionEntities = [],
     globalItems = [],
 }: InventorySectionProps) {
-    const [inventoryModal, setInventoryModal] = useState<{ index: number; item: Item; containerId: string | null } | null>(null);
+    const [inventoryModal, setInventoryModal] = useState<{
+        index: number;
+        item: Item;
+        containerId: string | null;
+        linkedGlobalItemId: string | null;
+    } | null>(null);
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | string | null>(null);
     const [activeInventoryTab, setActiveInventoryTab] = useState<string>("main");
     const [showVISelector, setShowVISelector] = useState(false);
+    const [inventoryItemSuggestions, setInventoryItemSuggestions] = useState<{
+        active: boolean;
+        query: string;
+        position: { top: number; left: number };
+    }>({ active: false, query: "", position: { top: 0, left: 0 } });
     const normalizedActorUserId = actorUserId.trim().toLowerCase();
+    const itemNameInputRef = useRef<HTMLInputElement>(null);
 
     // Draggable Logic
     const [dragPos, setDragPos] = useState({ x: -270, y: 20 });
@@ -81,6 +97,16 @@ export function InventorySection({
     );
     const globalItemsByName = useMemo(
         () => new Map((globalItems || []).map((item) => [normalizeComparable(item.name), item])),
+        [globalItems]
+    );
+    const globalItemSuggestionEntities = useMemo(
+        () => (globalItems || []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            category: "Jogo",
+            displayType: "ITEM",
+            type: "ITEM",
+        })),
         [globalItems]
     );
     const createEmptyInventorySlot = (): Item => ({
@@ -174,7 +200,13 @@ export function InventorySection({
         } else {
             currentItem = character.inventory?.[index] || createEmptyInventorySlot();
         }
-        setInventoryModal({ index, item: { ...currentItem }, containerId });
+        const linkedGlobalItem = globalItemsByName.get(normalizeComparable(currentItem.name));
+        setInventoryModal({
+            index,
+            item: { ...currentItem },
+            containerId,
+            linkedGlobalItemId: linkedGlobalItem?.id || null,
+        });
     };
 
     const handleSaveInventoryItem = () => {
@@ -232,6 +264,7 @@ export function InventorySection({
             } as any);
         }
 
+        setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
         setInventoryModal(null);
     };
 
@@ -243,42 +276,74 @@ export function InventorySection({
         });
     };
 
-    const applyGlobalItemToInventoryModal = (globalItem: GlobalItem) => {
+    const updateInventoryNameSuggestions = (query: string) => {
+        const normalizedQuery = normalizeComparable(query);
+        const inputRect = itemNameInputRef.current?.getBoundingClientRect();
+
+        if (!normalizedQuery || normalizedQuery.length < 2 || !inputRect) {
+            setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+            return;
+        }
+
+        setInventoryItemSuggestions({
+            active: true,
+            query,
+            position: {
+                top: inputRect.bottom + 6,
+                left: inputRect.left,
+            }
+        });
+    };
+
+    const applyGlobalItemToInventoryModal = (globalItem: GlobalItem, nextName?: string) => {
         setInventoryModal((current) => {
             if (!current) return current;
 
             return {
                 ...current,
+                linkedGlobalItemId: globalItem.id,
                 item: {
                     ...current.item,
-                    name: globalItem.name,
+                    name: nextName ?? globalItem.name,
                     description: globalItem.description,
                     bonus: globalItem.bonus || 0,
                     quantityCurrent: globalItem.quantity,
                     quantityTotal: globalItem.quantity,
-                    url: globalItem.imageUrl || current.item.url,
+                    url: globalItem.imageUrl,
                 }
             };
         });
     };
 
     const handleInventoryNameChange = (nextName: string) => {
-        updateInventoryModalField("name", nextName);
+        updateInventoryNameSuggestions(nextName);
         const matchedItem = globalItemsByName.get(normalizeComparable(nextName));
         if (matchedItem) {
-            applyGlobalItemToInventoryModal(matchedItem);
+            applyGlobalItemToInventoryModal(matchedItem, nextName);
+            return;
         }
+
+        setInventoryModal((current) => {
+            if (!current) return current;
+            const nextItem = current.linkedGlobalItemId
+                ? createClearedItemDraft(current.item, nextName, true)
+                : { ...current.item, name: nextName };
+
+            return {
+                ...current,
+                linkedGlobalItemId: null,
+                item: nextItem,
+            };
+        });
     };
 
-    const handleInventoryDescriptionChange = (nextDescription: string) => {
-        updateInventoryModalField("description", nextDescription);
-        const mentionedItemId = extractMentionedItemId(nextDescription);
-        if (!mentionedItemId) return;
+    const handleSelectInventorySuggestion = (item: { id: string; name: string }) => {
+        const matchedItem = globalItemsById.get(item.id);
+        if (!matchedItem) return;
 
-        const matchedItem = globalItemsById.get(mentionedItemId);
-        if (matchedItem) {
-            applyGlobalItemToInventoryModal(matchedItem);
-        }
+        applyGlobalItemToInventoryModal(matchedItem, matchedItem.name);
+        setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+        setTimeout(() => itemNameInputRef.current?.focus(), 0);
     };
 
     const handleUpdateItemQuantity = (index: number, delta: number, containerId: string | null = null) => {
@@ -330,6 +395,51 @@ export function InventorySection({
                 payload: { characterId: character.id, item: updatedItem }
             } as any);
         }
+    };
+
+    const handleClearInventorySlot = (index: number, containerId: string | null = null) => {
+        if (containerId) {
+            const container = character.inventory.find(i => i.id === containerId);
+            if (!container) return;
+
+            const targetItem = container.contents?.[index];
+            const newContents = [...(container.contents || [])];
+            while (newContents.length <= index) {
+                newContents.push(createEmptyInventorySlot());
+            }
+            newContents[index] = createClearedItemDraft(targetItem);
+
+            const updatedContainer = {
+                ...container,
+                contents: newContents,
+            };
+
+            globalEventStore.append({
+                id: uuidv4(),
+                sessionId,
+                seq: 0,
+                type: "CHARACTER_INVENTORY_UPDATED",
+                actorUserId: normalizedActorUserId,
+                createdAt: new Date().toISOString(),
+                visibility: "PUBLIC",
+                payload: { characterId: character.id, item: updatedContainer }
+            } as any);
+            return;
+        }
+
+        const targetItem = character.inventory?.[index];
+        if (!targetItem) return;
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "CHARACTER_INVENTORY_UPDATED",
+            actorUserId: normalizedActorUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: { characterId: character.id, item: createClearedItemDraft(targetItem) }
+        } as any);
     };
 
     const handleAddMainInventorySlot = () => {
@@ -671,7 +781,7 @@ export function InventorySection({
                                         }}
                                         title="Visualizar Imagem"
                                     >
-                                        👁️
+                                        <Eye size={15} />
                                     </button>
                                 )}
                                 {canEdit && (
@@ -684,7 +794,20 @@ export function InventorySection({
                                         }}
                                         title="Editar Item"
                                     >
-                                        ✎
+                                        <Pencil size={15} />
+                                    </button>
+                                )}
+                                {isFilled && canEdit && (
+                                    <button
+                                        className="slot-action-btn clear"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClearInventorySlot(i, containerId);
+                                            setActiveSlotIndex(null);
+                                        }}
+                                        title="Limpar Slot"
+                                    >
+                                        <X size={15} />
                                     </button>
                                 )}
                             </div>
@@ -818,7 +941,10 @@ export function InventorySection({
 
                 {/* Inventory Modal */}
                 {inventoryModal && (
-                    <div className="inventory-modal-overlay" onClick={() => setInventoryModal(null)}>
+                    <div className="inventory-modal-overlay" onClick={() => {
+                        setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+                        setInventoryModal(null);
+                    }}>
                         <div className="inventory-modal" onClick={e => e.stopPropagation()}>
                             <div className="modal-header">
                                 <span className="modal-symbol">🜏</span>
@@ -829,24 +955,39 @@ export function InventorySection({
                                 <div className="inv-modal-field">
                                     <label>NOME DO ITEM</label>
                                     <input
+                                        ref={itemNameInputRef}
                                         type="text"
                                         className="inv-modal-input"
                                         placeholder="Nome do item..."
                                         value={inventoryModal.item.name}
                                         onChange={e => handleInventoryNameChange(e.target.value)}
+                                        onFocus={() => updateInventoryNameSuggestions(inventoryModal.item.name)}
+                                        onBlur={() => {
+                                            window.setTimeout(() => {
+                                                setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+                                            }, 150);
+                                        }}
                                         autoFocus
                                     />
                                 </div>
+                                {inventoryItemSuggestions.active && (
+                                    <MentionSuggestions
+                                        query={inventoryItemSuggestions.query}
+                                        entities={globalItemSuggestionEntities}
+                                        onSelect={handleSelectInventorySuggestion}
+                                        position={inventoryItemSuggestions.position}
+                                        onClose={() => setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } })}
+                                    />
+                                )}
 
                                 <div className="inv-modal-field">
-                                    <label>DESCRIÇÃO</label>
-                                    <MentionEditor
+                                    <label>DESCRICAO</label>
+                                    <textarea
                                         className="inv-modal-textarea"
                                         placeholder="Descricao do item..."
                                         value={inventoryModal.item.description || ''}
-                                        onChange={handleInventoryDescriptionChange}
-                                        mentionEntities={mentionEntities}
-                                        style={{ minHeight: "78px", maxHeight: "160px", overflowY: "auto" }}
+                                        onChange={e => updateInventoryModalField('description', e.target.value)}
+                                        rows={3}
                                     />
                                 </div>
 
@@ -1001,7 +1142,10 @@ export function InventorySection({
                                 <button className="modal-btn save" onClick={handleSaveInventoryItem}>
                                     CONFIRMAR
                                 </button>
-                                <button className="modal-btn cancel" onClick={() => setInventoryModal(null)}>
+                                <button className="modal-btn cancel" onClick={() => {
+                                    setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+                                    setInventoryModal(null);
+                                }}>
                                     CANCELAR
                                 </button>
                             </div>
