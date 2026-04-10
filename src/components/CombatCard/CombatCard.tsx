@@ -164,9 +164,39 @@ export function CombatCard({
                 gap: '8px', 
                 marginBottom: '12px',
                 position: 'relative',
+                maxWidth: '800px',
                 '--card-accent': accentColor 
             } as any}
         >
+            {/* Dice Roller Trigger - Top Right Outside Card */}
+            {onToggleDiceRoller && isOwner && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleDiceRoller();
+                    }}
+                    style={{
+                        position: 'absolute',
+                        top: '-35px',
+                        right: '0',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '4px',
+                        color: '#fff',
+                        padding: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        zIndex: 100
+                    }}
+                    className="combat-dice-trigger-outer"
+                    title="Abrir dados"
+                >
+                    <Dices size={16} />
+                </button>
+            )}
             {!isRestrictedThreatView && (
                 <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 50, alignSelf: 'flex-start' }}>
                     <CombatStressTracks
@@ -186,50 +216,19 @@ export function CombatCard({
                     alignItems: 'stretch', 
                     padding: '0', 
                     minWidth: '550px',
-                    height: '95px',
+                    minHeight: '95px',
                     borderRadius: '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
                     background: `linear-gradient(110deg, #000 0%, #000 35%, ${accentColor.replace('0.8', '0.4')} 80%, transparent 100%)`,
                     overflow: 'visible',
-                    boxShadow: '40px 0 80px rgba(0,0,0,0.8)',
+                    boxShadow: 'none',
                     transform: 'skewX(-6deg)',
                     marginLeft: '10px'
                 }}
             >
                 {/* De-skew content container */}
                 <div style={{ display: 'contents', transform: 'skewX(6deg)' }}>
-                {/* Dice Roller Trigger - Bottom Right */}
-                {onToggleDiceRoller && isOwner && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleDiceRoller();
-                        }}
-                        style={{
-                            position: 'absolute',
-                            bottom: '12px',
-                            right: '20px',
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                            borderRadius: '4px',
-                            color: '#fff',
-                            padding: '8px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            zIndex: 30,
-                            transform: 'skewX(6deg)'
-                        }}
-                        className="combat-dice-trigger"
-                        title="Abrir dados"
-                    >
-                        <Dices size={20} />
-                    </button>
-                )}
-
                 {/* Remove Button for GM */}
                 {canEdit && onRemove && (
                     <button
@@ -237,12 +236,13 @@ export function CombatCard({
                             e.stopPropagation();
                             onRemove();
                         }}
+                        style={{ position: 'absolute', top: '4px', right: '4px', color: 'rgba(255,255,255,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', zIndex: 40 }}
                         className="combat-remove-btn"
                         title="Remover personagem da arena"
                     >✕</button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: '240px', height: '95px', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '240px', minHeight: '95px', height: '100%', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
                     <div style={{ width: '100%', height: '100%', background: '#000' }}>
                         {character.imageUrl ? (
                             <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.9 }} />
@@ -272,23 +272,23 @@ export function CombatCard({
                                 )}
                             </div>
 
-                            {/* Fate Points - Bottom Center Over Image */}
-                            <div style={{ position: 'absolute', bottom: '6px', left: '0', right: '0', display: 'flex', justifyContent: 'center', zIndex: 10 }}>
-                                <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', border: 'none', background: 'transparent', padding: 0 }}>
-                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7, padding: 0 }}>-</button>}
+                            {/* Fate Points - Bottom Right Over Image */}
+                            <div style={{ position: 'absolute', bottom: '6px', right: '10px', display: 'flex', justifyContent: 'flex-end', zIndex: 10 }}>
+                                <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', border: 'none', background: 'transparent', padding: 0 }}>
+                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>-</button>}
                                     <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints}</span>
-                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer', opacity: 0.7, padding: 0 }}>+</button>}
+                                    {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>+</button>}
                                 </div>
                             </div>
                         </>
                     )}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '12px 15px', transform: 'skewX(6deg)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '10px 15px', transform: 'skewX(6deg)', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>{character.name.toUpperCase()}</h3>
+                        <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
-                            <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '2px 4px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff' }}>
                                 DIF {character.difficulty}
                             </span>
                         )}
@@ -297,7 +297,7 @@ export function CombatCard({
                     {!isRestrictedThreatView && conceptAspect && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <span style={{ flex: 1, fontSize: '0.8rem', color: '#ccc', fontStyle: 'italic' }}>{conceptAspect.value}</span>
+                                <span style={{ flex: 1, fontSize: '0.8rem', color: '#ccc', fontStyle: 'italic', whiteSpace: 'normal', wordBreak: 'break-word' }}>{conceptAspect.value}</span>
                                 {otherAspects.length > 0 && (
                                     <button 
                                         onClick={() => setIsAspectsExpanded(!isAspectsExpanded)}

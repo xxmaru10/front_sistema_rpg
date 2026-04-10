@@ -120,6 +120,7 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
                     color: #888;
                     text-align: center;
                     line-height: 1.2;
+                    word-break: break-word;
                 }
 
                 .filled .cons-content {
