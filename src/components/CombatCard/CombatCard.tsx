@@ -168,42 +168,38 @@ export function CombatCard({
                 '--card-accent': accentColor 
             } as any}
         >
-            {/* Dice Roller Trigger - Top Right Outside Card */}
-            {onToggleDiceRoller && isOwner && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleDiceRoller();
-                    }}
-                    style={{
-                        position: 'absolute',
-                        top: '-35px',
-                        right: '0',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '4px',
-                        color: '#fff',
-                        padding: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s',
-                        zIndex: 100
-                    }}
-                    className="combat-dice-trigger-outer"
-                    title="Abrir dados"
-                >
-                    <Dices size={16} />
-                </button>
-            )}
             {!isRestrictedThreatView && (
-                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 50, alignSelf: 'flex-start' }}>
+                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 50, display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <CombatStressTracks
                         character={character}
                         canEditSelf={canEditSelf}
                         handleStressToggle={handleStressToggle}
                     />
+                    {/* Dice Roller Trigger - Right of Stress */}
+                    {onToggleDiceRoller && isOwner && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleDiceRoller();
+                            }}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRadius: '4px',
+                                color: '#fff',
+                                padding: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s',
+                            }}
+                            className="combat-dice-trigger-outer"
+                            title="Abrir dados"
+                        >
+                            <Dices size={16} />
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -216,7 +212,7 @@ export function CombatCard({
                     alignItems: 'stretch', 
                     padding: '0', 
                     minWidth: '550px',
-                    minHeight: '95px',
+                    minHeight: '85px',
                     borderRadius: '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
@@ -242,7 +238,7 @@ export function CombatCard({
                     >✕</button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: '240px', minHeight: '95px', height: '100%', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '240px', minHeight: '85px', transform: 'skewX(6deg)', marginLeft: '-25px', overflow: 'hidden' }}>
                     <div style={{ width: '100%', height: '100%', background: '#000' }}>
                         {character.imageUrl ? (
                             <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.9 }} />
