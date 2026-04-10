@@ -103,12 +103,25 @@
 /* ─── Combat mode: substitui <style jsx global> dinâmico de page.tsx ─── */
 /* Aplicado via className="session-container in-combat" quando activeTab === "combat" */
 .session-container.in-combat {
-    padding: 0 40px 120px 10px !important;
+    padding: 0 32px 120px 0 !important;
     min-height: 100vh;
 }
 
 .session-container.in-combat .combat-control-bar {
     margin-bottom: 10px;
+}
+
+.session-container.in-combat .main-command-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+.session-container.in-combat .tactical-nav-spacer {
+    display: none;
+}
+
+.session-container.in-combat .primary-display {
+    grid-column: 1;
 }
 
 /* Body background transition — era inline no <style jsx global>, agora é estático */
@@ -1098,14 +1111,14 @@ body {
 .combat-arena-layout {
     display: grid;
     grid-template-columns: minmax(26px, max-content) minmax(340px, 1fr) minmax(26px, max-content);
-    grid-template-rows: 1fr;
+    grid-template-rows: auto 1fr;
     gap: 12px;
     width: 100%;
     align-items: start;
 }
 
 .combat-arena-layout.has-expanded-left {
-    grid-template-columns: minmax(26px, max-content) minmax(320px, 1fr) minmax(26px, max-content);
+    grid-template-columns: minmax(26px, max-content) minmax(300px, 1fr) minmax(26px, max-content);
 }
 
 .combat-arena-layout.has-challenge-right {
@@ -1117,11 +1130,48 @@ body {
 }
 
 .combat-arena-layout.has-expanded-right {
-    grid-template-columns: minmax(26px, max-content) minmax(320px, 1fr) minmax(26px, max-content);
+    grid-template-columns: minmax(26px, max-content) minmax(300px, 1fr) minmax(26px, max-content);
 }
 
 .combat-arena-layout.has-expanded-left.has-expanded-right {
-    grid-template-columns: minmax(26px, max-content) minmax(280px, 1fr) minmax(26px, max-content);
+    grid-template-columns: minmax(26px, max-content) minmax(250px, 1fr) minmax(26px, max-content);
+}
+
+.combat-top-strip {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: sticky;
+    top: 66px;
+    z-index: 16;
+}
+
+.combat-top-roll-open-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.24);
+    background: rgba(8, 10, 14, 0.84);
+    color: #50a6ff;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(80, 166, 255, 0.14);
+    transition: all 0.2s ease;
+}
+
+.combat-top-roll-open-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6), inset 0 0 24px rgba(80, 166, 255, 0.3);
+}
+
+.combat-party,
+.combat-center,
+.combat-threats-column {
+    grid-row: 2;
 }
 
 .combat-side-column {
@@ -1189,7 +1239,7 @@ body {
 
 .combat-avatar-drawer.side-left {
     top: 96px;
-    margin-left: -16px;
+    margin-left: -22px;
     transition: margin-left 0.24s ease, top 0.24s ease;
 }
 
@@ -1274,8 +1324,8 @@ body {
 }
 
 .combat-avatar-rail.is-expanded {
-    width: clamp(360px, 40vw, 560px);
-    min-width: clamp(320px, 34vw, 480px);
+    width: clamp(486px, 54vw, 756px);
+    min-width: clamp(432px, 46vw, 648px);
     max-height: calc(100vh - 220px);
     overflow-y: auto;
     overflow-x: visible;
@@ -1365,6 +1415,12 @@ body {
         flex-direction: column;
     }
 
+    .combat-top-strip {
+        position: sticky;
+        top: 60px;
+        order: 0;
+    }
+
     .combat-center {
         order: 1;
         width: 100%;
@@ -1378,10 +1434,7 @@ body {
         order: 3;
     }
 
-    .combat-log-wrapper {
-        order: 4;
-        max-height: 500px;
-    }
+    .combat-log-wrapper { max-height: 500px; }
 
     .combat-cards-stack {
         max-height: 400px;
@@ -1444,12 +1497,11 @@ body {
 }
 
 .combat-dice-integrated {
-    order: 0;
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
-    min-height: 44px;
+    min-height: 46px;
     background: rgba(0, 0, 0, 0.82);
     border-radius: 10px;
     padding: 6px 42px 6px 8px;
@@ -1458,7 +1510,7 @@ body {
     position: relative;
     backdrop-filter: blur(8px);
     border: 1px solid transparent;
-    z-index: 30;
+    z-index: 1;
 }
 
 .combat-dice-integrated .probability-grid.integrated {
@@ -1574,14 +1626,12 @@ body {
 }
 
 .combat-log-wrapper {
-    order: 0;
     width: 100%;
-    flex-grow: 1;
-    min-height: 118px;
-    max-height: 210px;
-    overflow-y: auto;
-    margin-top: 4px;
-    z-index: 28;
+    min-height: 112px;
+    max-height: 188px;
+    overflow: hidden;
+    margin-top: 2px;
+    z-index: 1;
 }
 
 .combat-log-toggle-btn {

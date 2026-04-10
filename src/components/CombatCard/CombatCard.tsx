@@ -196,7 +196,7 @@ export function CombatCard({
     };
     const accentColor = accentColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.72)";
     const accentSoftColor = accentSoftColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.32)";
-    const imageColumnWidth = "clamp(166px, 21vw, 238px)";
+    const imageColumnWidth = "clamp(224px, 28vw, 322px)";
 
     return (
         <div 
@@ -207,7 +207,7 @@ export function CombatCard({
                 gap: '8px', 
                 marginBottom: '12px',
                 position: 'relative',
-                width: 'min(100%, 884px)',
+                width: 'min(100%, 1195px)',
                 '--card-accent': accentColor,
                 '--card-accent-soft': accentSoftColor
             } as any}

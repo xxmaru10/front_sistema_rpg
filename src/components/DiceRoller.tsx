@@ -156,15 +156,14 @@ export function DiceRoller(props: DiceRollerProps) {
 
                 .probability-grid.integrated {
                     padding: 6px 8px;
-                    gap: 8px;
+                    gap: 6px;
                     width: 100%;
                     display: flex;
                     flex-direction: row;
                     flex-wrap: nowrap;
                     align-items: center;
                     justify-content: flex-start;
-                    overflow-x: auto;
-                    overflow-y: hidden;
+                    overflow: visible;
                 }
 
                 .probability-grid.integrated > * {
@@ -227,7 +226,6 @@ export function DiceRoller(props: DiceRollerProps) {
                     border-radius: 10px;
                     border-width: 1px;
                     box-shadow: 0 0 16px var(--accent-glow), inset 0 0 10px var(--accent-glow);
-                    margin-left: auto;
                 }
 
                 .trigger-content {

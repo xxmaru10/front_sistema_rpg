@@ -121,6 +121,7 @@ export function CombatTab({
     const hasExpandedHeroes = isHeroDrawerOpen;
     const hasExpandedThreats = isThreatDrawerOpen || threatHazards.length > 0;
     const hasChallengePanel = showChallengePanel;
+    const shouldRenderTopRollBar = showDiceRoller || userRole === "GM";
 
     useEffect(() => {
         if (heroCombatants.length === 0) setIsHeroDrawerOpen(false);
@@ -151,6 +152,97 @@ export function CombatTab({
             <div
                 className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${hasChallengePanel ? " has-challenge-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
             >
+                {shouldRenderTopRollBar && (
+                    <div className={`combat-top-strip ${showDiceRoller ? "is-open" : ""}`}>
+                        {!showDiceRoller && userRole === "GM" && (
+                            <button
+                                onClick={() => setShowDiceRoller(true)}
+                                className="combat-top-roll-open-btn"
+                                title="Abrir zona de rolagem"
+                                aria-label="Abrir zona de rolagem"
+                            >
+                                <Dice5 size={18} />
+                            </button>
+                        )}
+
+                        {showDiceRoller && (
+                            <div className="combat-dice-integrated animate-reveal">
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0', position: 'absolute', top: '6px', right: '6px', zIndex: 5 }}>
+                                    <button
+                                        onClick={() => setShowDiceRoller(false)}
+                                        style={{
+                                            background: 'rgba(8, 10, 14, 0.84)',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            color: '#ff4444',
+                                            padding: '0',
+                                            cursor: 'pointer',
+                                            fontSize: '1.15rem',
+                                            fontWeight: 'bold',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            transition: 'all 0.2s',
+                                            lineHeight: 1,
+                                            width: '28px',
+                                            height: '28px',
+                                            borderRadius: '8px'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1.2) rotate(90deg)';
+                                            e.currentTarget.style.color = '#ff0000';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                                            e.currentTarget.style.color = '#ff4444';
+                                        }}
+                                        title="Fechar"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                                <DiceRoller
+                                    sessionId={sessionId as string}
+                                    actorUserId={actorUserId}
+                                    characters={combatantList}
+                                    fixedCharacterId={fixedCharacterId}
+                                    isIntegrated={true}
+                                    isGM={userRole === "GM"}
+                                    stateTargetId={state.targetId}
+                                    isReaction={state.isReaction}
+                                    lastAttackTotal={lastReactionAttack?.total}
+                                    stateDamageType={state.damageType}
+                                    targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
+                                    challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
+                                    disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
+                                    soundSettings={state.soundSettings}
+                                />
+                                <button
+                                    type="button"
+                                    className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
+                                    onClick={() => setShowCombatLogs(prev => !prev)}
+                                    title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                >
+                                    {showCombatLogs ? "OCULTAR LOGS" : "MOSTRAR LOGS"}
+                                </button>
+                            </div>
+                        )}
+
+                        {showDiceRoller && showCombatLogs && (
+                            <div className="combat-log-wrapper">
+                                <CombatLog
+                                    events={events}
+                                    characters={state.characters}
+                                    sessionNumber={state.sessionNumber}
+                                    eventSessionMap={eventSessionMap}
+                                    isRefreshing={isRefreshing}
+                                    onRefresh={onRefresh}
+                                    compact={true}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Coluna 1: Herói Ativo (Esquerda) */}
                 <div className="combat-party combat-side-column">
                     {heroCombatants.length === 0 ? (
@@ -424,118 +516,10 @@ export function CombatTab({
                         </div>
                     )}
 
-                    {(!showDiceRoller && userRole === "GM") && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '0', order: -3 }}>
-                            <button
-                                onClick={() => setShowDiceRoller(true)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: 'rgba(8, 10, 14, 0.84)',
-                                    border: '1px solid rgba(255,255,255,0.24)',
-                                    color: '#50a6ff',
-                                    padding: '0',
-                                    width: '34px',
-                                    height: '34px',
-                                    borderRadius: '10px',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(80, 166, 255, 0.14)',
-                                    transition: 'all 0.3s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1.05)';
-                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.6), inset 0 0 30px rgba(80, 166, 255, 0.4)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5), inset 0 0 20px rgba(80, 166, 255, 0.2)';
-                                }}
-                            >
-                                <Dice5 size={18} />
-                            </button>
-                        </div>
-                    )}
-
-                    {showDiceRoller && (
-                        <div className="combat-dice-integrated animate-reveal">
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0', position: 'absolute', top: '6px', right: '6px', zIndex: 5 }}>
-                                <button
-                                    onClick={() => setShowDiceRoller(false)}
-                                    style={{
-                                        background: 'rgba(8, 10, 14, 0.84)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        color: '#ff4444',
-                                        padding: '0',
-                                        cursor: 'pointer',
-                                        fontSize: '1.15rem',
-                                        fontWeight: 'bold',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        transition: 'all 0.2s',
-                                        lineHeight: 1,
-                                        width: '28px',
-                                        height: '28px',
-                                        borderRadius: '8px'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'scale(1.2) rotate(90deg)';
-                                        e.currentTarget.style.color = '#ff0000';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-                                        e.currentTarget.style.color = '#ff4444';
-                                    }}
-                                    title="Fechar"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                            <DiceRoller
-                                sessionId={sessionId as string}
-                                actorUserId={actorUserId}
-                                characters={combatantList}
-                                fixedCharacterId={fixedCharacterId}
-                                isIntegrated={true}
-                                isGM={userRole === "GM"}
-                                stateTargetId={state.targetId}
-                                isReaction={state.isReaction}
-                                lastAttackTotal={lastReactionAttack?.total}
-                                stateDamageType={state.damageType}
-                                targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
-                                challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
-                                disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
-                                soundSettings={state.soundSettings}
-                            />
-                            <button
-                                type="button"
-                                className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
-                                onClick={() => setShowCombatLogs(prev => !prev)}
-                                title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
-                            >
-                                {showCombatLogs ? "OCULTAR LOGS" : "MOSTRAR LOGS"}
-                            </button>
-                        </div>
-                    )}
-
-                    {showDiceRoller && showCombatLogs && (
-                        <div className="combat-log-wrapper">
-                            <CombatLog
-                                events={events}
-                                characters={state.characters}
-                                sessionNumber={state.sessionNumber}
-                                eventSessionMap={eventSessionMap}
-                                isRefreshing={isRefreshing}
-                                onRefresh={onRefresh}
-                                compact={true}
-                            />
-                        </div>
-                    )}
-                </div>
 
                 {/* Coluna 3: Ameaças (Direita) */}
                 {/* Coluna 3: Ameaças (Direita) OU Desafio */}
+                </div>
                 <div className="combat-threats-column combat-side-column">
                     {showChallengePanel && (() => {
                         // Dynamic color based on difficulty level
