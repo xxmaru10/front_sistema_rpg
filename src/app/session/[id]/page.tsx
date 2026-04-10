@@ -42,6 +42,7 @@ import { useSessionDerivations } from "./hooks/useSessionDerivations";
 import { useSessionScreenControl } from "./hooks/useSessionScreenControl";
 import { diceSimulationStore } from "@/lib/diceSimulationStore";
 import dynamic from "next/dynamic";
+import { createPortal } from "react-dom";
 
 const FateDice3D = dynamic(() => import("@/components/FateDice3D"), { ssr: false });
 
@@ -80,6 +81,10 @@ export default function SessionPage() {
     const [diceVisible, setDiceVisible] = useState(false);
     const [diceParams, setDiceParams] = useState(diceSimulationStore.getParams());
     const [pendingMentionNavigation, setPendingMentionNavigation] = useState<MentionNavigationRequest | null>(null);
+    const [isNavExpanded, setIsNavExpanded] = useState(false);
+    const [isMobileNav, setIsMobileNav] = useState(false);
+    const [suppressHoverOpen, setSuppressHoverOpen] = useState(false);
+    const [isNavPortalReady, setIsNavPortalReady] = useState(false);
 
     const handleMentionNavigate = (request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
@@ -95,7 +100,54 @@ export default function SessionPage() {
         return () => { unsub(); };
     }, []);
 
+    useEffect(() => {
+        const media = window.matchMedia("(max-width: 768px)");
+        const syncMedia = () => setIsMobileNav(media.matches);
+        syncMedia();
+        media.addEventListener("change", syncMedia);
+        return () => media.removeEventListener("change", syncMedia);
+    }, []);
+
+    useEffect(() => {
+        setIsNavPortalReady(true);
+    }, []);
+
+    useEffect(() => {
+        if (isMobileNav) setIsNavExpanded(false);
+    }, [activeTab, isMobileNav]);
+
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
+
+    const closeNavDrawer = () => {
+        setIsNavExpanded(false);
+        setSuppressHoverOpen(true);
+    };
+
+    const openNavOnHover = () => {
+        if (!isMobileNav && !suppressHoverOpen) {
+            setIsNavExpanded(true);
+        }
+    };
+
+    const handleNavMouseLeave = () => {
+        if (!isMobileNav) {
+            setIsNavExpanded(false);
+        }
+        setSuppressHoverOpen(false);
+    };
+
+    const toggleNavHandle = () => {
+        setIsNavExpanded(prev => !prev);
+        setSuppressHoverOpen(false);
+    };
+
+    const switchTabFromNav = (tab: "characters" | "combat" | "notes" | "bestiary" | "log" | "vi") => {
+        if (tab === "characters" || tab === "combat" || tab === "bestiary" || tab === "log") {
+            setViewingBestiaryCharId(null);
+        }
+        setActiveTab(tab);
+        setIsNavExpanded(false);
+    };
 
     useEffect(() => {
         const unsub = battlemapToolStore.subscribe(() => {
@@ -399,8 +451,132 @@ export default function SessionPage() {
 
     // ─── RENDER ───────────────────────────────────────────────────────────────
 
+    const tacticalNav = (
+        <nav
+            className={`tactical-nav${isNavExpanded ? " is-expanded" : ""}`}
+            onMouseEnter={openNavOnHover}
+            onMouseLeave={handleNavMouseLeave}
+        >
+            <button
+                type="button"
+                className={`nav-d20-handle${isNavExpanded ? " is-hidden" : ""}`}
+                onClick={toggleNavHandle}
+                aria-label={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
+                title={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
+            >
+                <span className="d20-glyph" aria-hidden="true">
+                </span>
+            </button>
+
+            <div className={`nav-expanded-shell${isNavExpanded ? " is-open" : ""}`}>
+                <button
+                    type="button"
+                    className="nav-close-cap nav-close-cap-top"
+                    onClick={closeNavDrawer}
+                    aria-label="Fechar menu lateral pelo topo"
+                    title="Fechar menu lateral"
+                >
+                    <span className="nav-close-die" aria-hidden="true">
+                        <span className="nav-close-value">20</span>
+                    </span>
+                </button>
+
+                <div className="nav-options-stack">
+                    <button
+                        className={`nav-artifact ${activeTab === "characters" ? "active" : ""}`}
+                        onClick={() => switchTabFromNav("characters")}
+                        data-tooltip="PERSONAGEM"
+                        title="PERSONAGEM"
+                        aria-label="Abrir Personagem"
+                    >
+                        <div className="nav-icon"><Users size={20} /></div>
+                        <div className="nav-label">PERSONAGEM</div>
+                    </button>
+                    <button
+                        className={`nav-artifact ${activeTab === "combat" ? "active" : ""}`}
+                        onClick={() => switchTabFromNav("combat")}
+                        data-tooltip="ARENA"
+                        title="ARENA"
+                        aria-label="Abrir Arena"
+                    >
+                        <div className="nav-icon"><Swords size={20} /></div>
+                        <div className="nav-label">ARENA</div>
+                    </button>
+                    {userRole === "GM" ? (
+                        <>
+                            <button
+                                className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
+                                onClick={() => switchTabFromNav("notes")}
+                                data-tooltip="NOTAS"
+                                title="NOTAS"
+                                aria-label="Abrir Notas"
+                            >
+                                <div className="nav-icon"><ScrollText size={20} /></div>
+                                <div className="nav-label">NOTAS</div>
+                            </button>
+                            <button
+                                className={`nav-artifact ${activeTab === "bestiary" ? "active" : ""}`}
+                                onClick={() => switchTabFromNav("bestiary")}
+                                data-tooltip="BESTIARIO"
+                                title="BESTIARIO"
+                                aria-label="Abrir Bestiario"
+                            >
+                                <div className="nav-icon"><PawPrint size={20} /></div>
+                                <div className="nav-label">BESTIARIO</div>
+                            </button>
+                            <button
+                                className={`nav-artifact ${activeTab === "log" ? "active" : ""}`}
+                                onClick={() => switchTabFromNav("log")}
+                                data-tooltip="LOGS"
+                                title="LOGS"
+                                aria-label="Abrir Logs"
+                            >
+                                <div className="nav-icon"><History size={20} /></div>
+                                <div className="nav-label">LOGS</div>
+                            </button>
+                            <button
+                                className={`nav-artifact ${activeTab === "vi" ? "active" : ""}`}
+                                onClick={() => switchTabFromNav("vi")}
+                                data-tooltip="CONFIGURACOES"
+                                title="CONFIGURACOES"
+                                aria-label="Abrir Configuracoes"
+                            >
+                                <div className="nav-icon"><Settings size={20} /></div>
+                                <div className="nav-label">CONFIGURACOES</div>
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
+                            onClick={() => switchTabFromNav("notes")}
+                            data-tooltip="NOTAS"
+                            title="NOTAS"
+                            aria-label="Abrir Notas"
+                        >
+                            <div className="nav-icon"><ScrollText size={20} /></div>
+                            <div className="nav-label">NOTAS</div>
+                        </button>
+                    )}
+                </div>
+
+                <button
+                    type="button"
+                    className="nav-close-cap nav-close-cap-bottom"
+                    onClick={closeNavDrawer}
+                    aria-label="Fechar menu lateral pela base"
+                    title="Fechar menu lateral"
+                >
+                    <span className="nav-close-die" aria-hidden="true">
+                        <span className="nav-close-value">1</span>
+                    </span>
+                </button>
+            </div>
+        </nav>
+    );
+
     return (
         <div className={`session-view-wrapper${spectatorMode && videoStream ? " spectator-mode-active" : ""}`}>
+            {isNavPortalReady ? createPortal(tacticalNav, document.body) : null}
             {/* Screen share video — mantido montado enquanto stream ativa; oculto via CSS
                 em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
@@ -571,64 +747,8 @@ export default function SessionPage() {
 
             {!isTheaterMode && (
                 <div className={`session-container animate-reveal${activeTab === "combat" ? " in-combat" : ""}`}>
-                    <div className="main-command-layout" style={{ position: "relative", zIndex: 1 }}>
-                        <nav className="tactical-nav">
-                            <button
-                                className={`nav-artifact ${activeTab === "characters" ? "active" : ""}`}
-                                onClick={() => { setViewingBestiaryCharId(null); setActiveTab("characters"); }}
-                            >
-                                <div className="nav-icon"><Users size={24} /></div>
-                                <div className="nav-label">PERSONAGEM</div>
-                            </button>
-                            <button
-                                className={`nav-artifact ${activeTab === "combat" ? "active" : ""}`}
-                                onClick={() => { setViewingBestiaryCharId(null); setActiveTab("combat"); }}
-                            >
-                                <div className="nav-icon"><Swords size={24} /></div>
-                                <div className="nav-label">ARENA</div>
-                            </button>
-                            {userRole === "GM" ? (
-                                <>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
-                                        onClick={() => setActiveTab("notes")}
-                                    >
-                                        <div className="nav-icon"><ScrollText size={24} /></div>
-                                        <div className="nav-label">NOTAS</div>
-                                    </button>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "bestiary" ? "active" : ""}`}
-                                        onClick={() => { setViewingBestiaryCharId(null); setActiveTab("bestiary"); }}
-                                    >
-                                        <div className="nav-icon"><PawPrint size={24} /></div>
-                                        <div className="nav-label">BESTIÁRIO</div>
-                                    </button>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "log" ? "active" : ""}`}
-                                        onClick={() => { setViewingBestiaryCharId(null); setActiveTab("log"); }}
-                                    >
-                                        <div className="nav-icon"><History size={24} /></div>
-                                        <div className="nav-label">LOGS</div>
-                                    </button>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "vi" ? "active" : ""}`}
-                                        onClick={() => setActiveTab("vi")}
-                                    >
-                                        <div className="nav-icon"><Settings size={24} /></div>
-                                        <div className="nav-label">CONFIGURAÇÕES</div>
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("notes")}
-                                >
-                                    <div className="nav-icon"><ScrollText size={24} /></div>
-                                    <div className="nav-label">NOTAS</div>
-                                </button>
-                            )}
-                        </nav>
-
+                    <div className={`main-command-layout${isNavExpanded ? " nav-expanded" : ""}`}>
+                        <div className="tactical-nav-spacer" aria-hidden="true"></div>
                         <div className={`primary-display ${activeTab === "combat" || activeTab === "vi" ? "combat-mode-narrow" : ""}`}>
                             <div className="tab-content">
                                 {activeTab === "notes" && (
@@ -824,3 +944,7 @@ export default function SessionPage() {
         </div>
     );
 }
+
+
+
+
