@@ -617,7 +617,7 @@ export default function SessionPage() {
 
             {!isTheaterMode && (
                 <div className={`session-container animate-reveal${activeTab === "combat" ? " in-combat" : ""}`}>
-                    <div className={`main-command-layout${isNavExpanded ? " nav-expanded" : ""}`} style={{ position: "relative", zIndex: 1 }}>
+                    <div className={`main-command-layout${isNavExpanded ? " nav-expanded" : ""}`}>
                         <nav
                             className={`tactical-nav${isNavExpanded ? " is-expanded" : ""}`}
                             onMouseEnter={openNavOnHover}
@@ -631,10 +631,7 @@ export default function SessionPage() {
                                 title={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
                             >
                                 <span className="d20-glyph" aria-hidden="true">
-                                    <svg viewBox="0 0 100 100" role="presentation" focusable="false">
-                                        <polygon points="50,6 82,16 96,48 86,80 50,94 14,80 4,48 18,16" />
-                                        <path d="M50 6 L50 94 M18 16 L82 16 M14 80 L86 80 M4 48 L50 60 L96 48 M18 16 L50 60 L82 16 M14 80 L50 60 L86 80" />
-                                    </svg>
+                                    <img src="/interface/dice_menu.png" alt="" />
                                 </span>
                             </button>
 
@@ -653,6 +650,9 @@ export default function SessionPage() {
                                     <button
                                         className={`nav-artifact ${activeTab === "characters" ? "active" : ""}`}
                                         onClick={() => switchTabFromNav("characters")}
+                                        data-tooltip="PERSONAGEM"
+                                        title="PERSONAGEM"
+                                        aria-label="Abrir Personagem"
                                     >
                                         <div className="nav-icon"><Users size={20} /></div>
                                         <div className="nav-label">PERSONAGEM</div>
@@ -660,6 +660,9 @@ export default function SessionPage() {
                                     <button
                                         className={`nav-artifact ${activeTab === "combat" ? "active" : ""}`}
                                         onClick={() => switchTabFromNav("combat")}
+                                        data-tooltip="ARENA"
+                                        title="ARENA"
+                                        aria-label="Abrir Arena"
                                     >
                                         <div className="nav-icon"><Swords size={20} /></div>
                                         <div className="nav-label">ARENA</div>
@@ -669,12 +672,15 @@ export default function SessionPage() {
                                             <button
                                                 className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
                                                 onClick={() => switchTabFromNav("notes")}
+                                                data-tooltip="NOTAS"
+                                                title="NOTAS"
+                                                aria-label="Abrir Notas"
                                             >
                                                 <div className="nav-icon"><ScrollText size={20} /></div>
                                                 <div className="nav-label">NOTAS</div>
                                             </button>
                                             <button
-                                                className={`nav-artifact icon-only ${activeTab === "bestiary" ? "active" : ""}`}
+                                                className={`nav-artifact ${activeTab === "bestiary" ? "active" : ""}`}
                                                 onClick={() => switchTabFromNav("bestiary")}
                                                 data-tooltip="BESTIARIO"
                                                 title="BESTIARIO"
@@ -686,12 +692,15 @@ export default function SessionPage() {
                                             <button
                                                 className={`nav-artifact ${activeTab === "log" ? "active" : ""}`}
                                                 onClick={() => switchTabFromNav("log")}
+                                                data-tooltip="LOGS"
+                                                title="LOGS"
+                                                aria-label="Abrir Logs"
                                             >
                                                 <div className="nav-icon"><History size={20} /></div>
                                                 <div className="nav-label">LOGS</div>
                                             </button>
                                             <button
-                                                className={`nav-artifact icon-only ${activeTab === "vi" ? "active" : ""}`}
+                                                className={`nav-artifact ${activeTab === "vi" ? "active" : ""}`}
                                                 onClick={() => switchTabFromNav("vi")}
                                                 data-tooltip="CONFIGURACOES"
                                                 title="CONFIGURACOES"
@@ -705,6 +714,9 @@ export default function SessionPage() {
                                         <button
                                             className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
                                             onClick={() => switchTabFromNav("notes")}
+                                            data-tooltip="NOTAS"
+                                            title="NOTAS"
+                                            aria-label="Abrir Notas"
                                         >
                                             <div className="nav-icon"><ScrollText size={20} /></div>
                                             <div className="nav-label">NOTAS</div>
