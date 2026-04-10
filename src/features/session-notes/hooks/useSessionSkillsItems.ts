@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { SessionState, GlobalSkill, GlobalItem } from "@/types/domain";
+import { SessionState, GlobalSkill, GlobalItem, ItemSize } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 
@@ -33,6 +33,8 @@ export function useSessionSkillsItems({
     const [newItemDescription, setNewItemDescription] = useState("");
     const [newItemPrice, setNewItemPrice] = useState(0);
     const [newItemQuantity, setNewItemQuantity] = useState(1);
+    const [newItemBonus, setNewItemBonus] = useState(0);
+    const [newItemSize, setNewItemSize] = useState<ItemSize | undefined>(undefined);
     const [newItemRequirement, setNewItemRequirement] = useState("");
     const [newItemImageUrl, setNewItemImageUrl] = useState("");
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -146,6 +148,8 @@ export function useSessionSkillsItems({
         setNewItemDescription("");
         setNewItemPrice(0);
         setNewItemQuantity(1);
+        setNewItemBonus(0);
+        setNewItemSize(undefined);
         setNewItemRequirement("");
         setNewItemImageUrl("");
     };
@@ -157,12 +161,17 @@ export function useSessionSkillsItems({
         }
         if (!newItemName.trim()) return;
 
+        const itemId = editingItemId || uuidv4();
+        const normalizedDescription = newItemDescription.replace(/data-mention-id="__draft_global_item__"/g, `data-mention-id="${itemId}"`);
+
         const item: GlobalItem = {
-            id: uuidv4(),
+            id: itemId,
             name: newItemName,
-            description: newItemDescription,
+            description: normalizedDescription,
             price: newItemPrice,
             quantity: newItemQuantity,
+            bonus: newItemBonus,
+            size: newItemSize,
             requirement: newItemRequirement,
             imageUrl: newItemImageUrl || undefined,
             createdAt: new Date().toISOString()
@@ -191,6 +200,8 @@ export function useSessionSkillsItems({
         setNewItemDescription(item.description || "");
         setNewItemPrice(item.price || 0);
         setNewItemQuantity(item.quantity || 1);
+        setNewItemBonus(item.bonus || 0);
+        setNewItemSize(item.size);
         setNewItemRequirement(item.requirement || "");
         setNewItemImageUrl(item.imageUrl || "");
         setShowAddItem(true);
@@ -221,6 +232,8 @@ export function useSessionSkillsItems({
         newItemDescription, setNewItemDescription,
         newItemPrice, setNewItemPrice,
         newItemQuantity, setNewItemQuantity,
+        newItemBonus, setNewItemBonus,
+        newItemSize, setNewItemSize,
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
         editingItemId, setEditingItemId,

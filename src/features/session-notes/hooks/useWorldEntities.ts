@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { SessionState, WorldEntity, WorldEntityType } from "@/types/domain";
+import { SessionState, WorldEntity, WorldEntityType, EntityNote } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { useWorldEntityForm } from "./useWorldEntityForm";
@@ -98,6 +98,18 @@ export function useWorldEntities({
         Object.values(state.worldEntities || {}).forEach(e => (e.tags || []).forEach(t => tags.add(t)));
         return Array.from(tags).sort();
     }, [state.worldEntities]);
+
+    const getLinkedNotesForEntity = (
+        type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM',
+        entityId: string
+    ): EntityNote[] => {
+        if (type === 'WORLD') return state.worldEntities?.[entityId]?.linkedNotes || [];
+        if (type === 'CHARACTER') return state.characters?.[entityId]?.linkedNotes || [];
+        if (type === 'MISSION') return (state.missions || []).find(m => m.id === entityId)?.linkedNotes || [];
+        if (type === 'TIMELINE') return (state.timeline || []).find(event => event.id === entityId)?.linkedNotes || [];
+        if (type === 'SKILL') return (state.skills || []).find(skill => skill.id === entityId)?.linkedNotes || [];
+        return (state.items || []).find(item => item.id === entityId)?.linkedNotes || [];
+    };
 
     // --- Handlers ---
     const handleCreateWorldEntity = () => {
@@ -341,6 +353,7 @@ export function useWorldEntities({
         entityId: string,
         noteId: string
     ) => {
+        const existingNote = getLinkedNotesForEntity(type, entityId).find(note => note.id === noteId);
         const typeMap: Record<string, string> = {
             'WORLD': 'WORLD_ENTITY_NOTE_DELETED', 'CHARACTER': 'CHARACTER_NOTE_DELETED',
             'MISSION': 'MISSION_NOTE_DELETED', 'TIMELINE': 'TIMELINE_EVENT_NOTE_DELETED',
@@ -356,8 +369,38 @@ export function useWorldEntities({
             type: typeMap[type],
             actorUserId: userId,
             createdAt: new Date().toISOString(),
-            visibility: "PUBLIC",
+            visibility: existingNote?.isPrivate ? { kind: "PLAYER_ONLY", userId } : "PUBLIC",
             payload: { [payloadKeyMap[type]]: entityId, noteId }
+        } as any);
+    };
+
+    const handleUpdateEntityNote = (
+        type: 'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM',
+        entityId: string,
+        noteId: string,
+        patch: Partial<EntityNote>
+    ) => {
+        const existingNote = getLinkedNotesForEntity(type, entityId).find(note => note.id === noteId);
+        if (!existingNote) return;
+
+        const typeMap: Partial<Record<'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', string>> = {
+            CHARACTER: 'CHARACTER_NOTE_UPDATED'
+        };
+        const payloadKeyMap: Partial<Record<'WORLD' | 'CHARACTER' | 'MISSION' | 'TIMELINE' | 'SKILL' | 'ITEM', string>> = {
+            CHARACTER: 'characterId'
+        };
+
+        const updateType = typeMap[type];
+        const payloadKey = payloadKeyMap[type];
+        if (!updateType || !payloadKey) return;
+
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0,
+            type: updateType,
+            actorUserId: userId,
+            createdAt: new Date().toISOString(),
+            visibility: existingNote.isPrivate ? { kind: "PLAYER_ONLY", userId } : "PUBLIC",
+            payload: { [payloadKey]: entityId, noteId, patch }
         } as any);
     };
 
@@ -377,6 +420,7 @@ export function useWorldEntities({
         handleDeleteDescriptionBlock,
         handleToggleAllVisibility,
         handleAddEntityNote,
+        handleUpdateEntityNote,
         handleDeleteEntityNote,
     };
 }

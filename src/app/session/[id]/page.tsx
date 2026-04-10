@@ -22,6 +22,7 @@ import { TurnOrderModal } from "@/components/TurnOrderModal";
 import { TurnOrderTracker } from "@/components/TurnOrderTracker";
 import { SessionNotes } from "@/features/session-notes/SessionNotes";
 import { VIControlPanel } from "@/components/VIControlPanel";
+import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
@@ -78,6 +79,13 @@ export default function SessionPage() {
 
     const [diceVisible, setDiceVisible] = useState(false);
     const [diceParams, setDiceParams] = useState(diceSimulationStore.getParams());
+    const [pendingMentionNavigation, setPendingMentionNavigation] = useState<MentionNavigationRequest | null>(null);
+
+    const handleMentionNavigate = (request: MentionNavigationRequest) => {
+        setPendingMentionNavigation(request);
+        setViewingBestiaryCharId(null);
+        setActiveTab("notes");
+    };
 
     useEffect(() => {
         const unsub = diceSimulationStore.subscribe(() => {
@@ -633,6 +641,8 @@ export default function SessionPage() {
                                             globalBestiaryChars={globalBestiaryChars}
                                             onRegisterThreat={() => { setCreatorSource("bestiary"); setShowCreator(true); }}
                                             onRefresh={refresh}
+                                            pendingMentionNavigation={pendingMentionNavigation}
+                                            onMentionNavigationConsumed={() => setPendingMentionNavigation(null)}
                                         />
                                     </div>
                                 )}
@@ -660,6 +670,7 @@ export default function SessionPage() {
                                         bestiaryList={bestiaryList}
                                         stateCharacters={state.characters}
                                         sessionState={state}
+                                        onMentionNavigate={handleMentionNavigate}
                                     />
                                 )}
 

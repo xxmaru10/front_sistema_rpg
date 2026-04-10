@@ -212,7 +212,7 @@ export default function Home() {
         />
       )}
 
-      <style jsx>{`
+      <style jsx global>{`
         .home-container {
           padding-top: 40px;
           display: flex;
@@ -226,7 +226,7 @@ export default function Home() {
 
         .mystic-select {
             width: 100%;
-            background: rgba(197, 160, 89, 0.05);
+            background: #080808;
             border: 1px solid rgba(197, 160, 89, 0.2);
             color: var(--accent-color);
             padding: 12px;
@@ -234,11 +234,80 @@ export default function Home() {
             margin-bottom: 16px;
             outline: none;
             cursor: pointer;
+            color-scheme: dark;
         }
         
         .mystic-select option {
-            background: #000;
+            background: #080808;
             color: var(--accent-color);
+        }
+
+        .session-select-shell {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .mystic-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .mystic-select-trigger.open {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 18px rgba(197, 160, 89, 0.12);
+        }
+
+        .session-select-chevron {
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .session-select-chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .session-select-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            max-height: 260px;
+            overflow-y: auto;
+            background: #080808;
+            border: 1px solid rgba(197, 160, 89, 0.32);
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.68);
+        }
+
+        .session-select-option {
+            appearance: none;
+            width: 100%;
+            border: none;
+            border-bottom: 1px solid rgba(197, 160, 89, 0.08);
+            background: transparent;
+            color: var(--accent-color);
+            text-align: left;
+            padding: 12px 14px;
+            font-family: var(--font-header);
+            font-size: 0.82rem;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            transition: background 0.18s ease, color 0.18s ease;
+        }
+
+        .session-select-option:last-child {
+            border-bottom: none;
+        }
+
+        .session-select-option:hover,
+        .session-select-option.selected {
+            background: rgba(197, 160, 89, 0.16);
+            color: #f7dfae;
         }
 
         .role-selector {

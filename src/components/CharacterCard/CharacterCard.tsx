@@ -11,6 +11,7 @@ import { CharacterLore } from "./CharacterLore";
 import { PowerTabsSection } from "./PowerTabsSection";
 import { CharacterSummarySection } from "./CharacterSummarySection";
 import { CharacterPrivateNotesPanel } from "./CharacterPrivateNotesPanel";
+import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 
 interface CharacterCardProps {
     character: Character;
@@ -23,6 +24,7 @@ interface CharacterCardProps {
     hideInventory?: boolean;
     sessionState?: SessionState;
     userRole?: "GM" | "PLAYER";
+    onMentionNavigate?: (request: MentionNavigationRequest) => void;
 }
 
 type CharacterCardTab = "lore" | "powers" | "inventory" | "notes";
@@ -38,6 +40,7 @@ export function CharacterCard({
     hideInventory = false,
     sessionState,
     userRole,
+    onMentionNavigate,
 }: CharacterCardProps) {
     const [activeTab, setActiveTab] = useState<CharacterCardTab>("lore");
 
@@ -144,6 +147,7 @@ export function CharacterCard({
                         canEdit={canEdit}
                         isGM={isGM}
                         isFloating={false}
+                        globalItems={sessionState?.items || []}
                     />
                 </div>
             );
@@ -154,10 +158,12 @@ export function CharacterCard({
                 {sessionState ? (
                     <CharacterPrivateNotesPanel
                         sessionId={sessionId}
+                        characterId={character.id}
                         userId={actorUserId}
                         userRole={userRole || (isGM ? "GM" : "PLAYER")}
                         state={sessionState}
                         mentionEntities={mentionEntities}
+                        onMentionNavigate={onMentionNavigate}
                     />
                 ) : (
                     <div className="character-tab-intro">

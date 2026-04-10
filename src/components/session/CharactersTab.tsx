@@ -6,6 +6,7 @@ import { Character, SessionState } from "@/types/domain";
 import { CharacterCard } from "@/components/CharacterCard";
 import { CharacterSummary } from "@/components/CharacterSummary";
 import { globalEventStore } from "@/lib/eventStore";
+import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 
 interface CharactersTabProps {
     displayedCharacters: Character[];
@@ -19,6 +20,7 @@ interface CharactersTabProps {
     bestiaryList: Character[];
     stateCharacters: Record<string, Character>;
     sessionState: SessionState;
+    onMentionNavigate?: (request: MentionNavigationRequest) => void;
 }
 
 export function CharactersTab({
@@ -33,6 +35,7 @@ export function CharactersTab({
     bestiaryList,
     stateCharacters,
     sessionState,
+    onMentionNavigate,
 }: CharactersTabProps) {
     const [viewingCharacterId, setViewingCharacterId] = useState<string | null>(null);
     const [showBestiaryImport, setShowBestiaryImport] = useState(false);
@@ -110,6 +113,7 @@ export function CharactersTab({
                                                         mentionEntities={mentionEntities}
                                                         sessionState={sessionState}
                                                         userRole={userRole}
+                                                        onMentionNavigate={onMentionNavigate}
                                                     />
                                                 ))}
                                             </div>
@@ -129,6 +133,7 @@ export function CharactersTab({
                                                         mentionEntities={mentionEntities}
                                                         sessionState={sessionState}
                                                         userRole={userRole}
+                                                        onMentionNavigate={onMentionNavigate}
                                                     />
                                                 ))}
                                             </div>
@@ -167,6 +172,7 @@ export function CharactersTab({
                                         mentionEntities={mentionEntities}
                                         sessionState={sessionState}
                                         userRole={userRole}
+                                        onMentionNavigate={onMentionNavigate}
                                     />
                                 )}
                             </div>

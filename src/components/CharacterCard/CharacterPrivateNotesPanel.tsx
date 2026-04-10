@@ -1,30 +1,37 @@
 "use client";
 
+import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { SessionState } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
+import { getMentionNavigationRequest, MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { NotesTab } from "@/features/session-notes/components/NotesTab";
 import { useSessionNotesDiary } from "@/features/session-notes/hooks/useSessionNotesDiary";
 import "@/features/session-notes/SessionNotes.css";
 
 interface CharacterPrivateNotesPanelProps {
     sessionId: string;
+    characterId: string;
     userId: string;
     userRole: "GM" | "PLAYER";
     state: SessionState;
     mentionEntities: any[];
+    onMentionNavigate?: (request: MentionNavigationRequest) => void;
 }
 
 const EMPTY_WORLD_FILTERS: Record<string, string[]> = {};
 
 export function CharacterPrivateNotesPanel({
     sessionId,
+    characterId,
     userId,
     userRole,
     state,
     mentionEntities,
+    onMentionNavigate,
 }: CharacterPrivateNotesPanelProps) {
     const normalizedUserId = userId.trim().toLowerCase();
+    const [selectedPrivateFolderId, setSelectedPrivateFolderId] = useState("all");
 
     const handleAddEntityNote = (
         type: "WORLD" | "CHARACTER" | "MISSION" | "TIMELINE" | "SKILL" | "ITEM",
@@ -84,11 +91,29 @@ export function CharacterPrivateNotesPanel({
         state,
         notesSubTab: "Privado",
         worldFilters: EMPTY_WORLD_FILTERS,
+        selectedPrivateFolderId,
+        targetInventoryCharacterId: characterId,
         handleAddEntityNote,
     });
 
+    const handleMentionClick = (e: React.MouseEvent) => {
+        if (!onMentionNavigate) return;
+
+        const target = e.target as HTMLElement | null;
+        if (target?.closest(".mention-editor-container, .mention-rich-editor")) {
+            return;
+        }
+
+        const request = getMentionNavigationRequest(e.target);
+        if (!request) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        onMentionNavigate(request);
+    };
+
     return (
-        <div className="character-private-notes-panel">
+        <div className="character-private-notes-panel" onClick={handleMentionClick}>
             <NotesTab
                 notes={diary.notes}
                 filteredNotes={diary.filteredNotes}
@@ -108,7 +133,6 @@ export function CharacterPrivateNotesPanel({
                 handleSend={diary.handleSend}
                 getAuthorColor={diary.getAuthorColor}
                 notesSubTab="Privado"
-                setNotesSubTab={() => {}}
                 editingNoteId={diary.editingNoteId}
                 handleStartEdit={diary.handleStartEdit}
                 handleCancelEdit={diary.handleCancelEdit}
@@ -118,7 +142,18 @@ export function CharacterPrivateNotesPanel({
                 failedEventIds={diary.failedEventIds}
                 handleRetry={diary.handleRetry}
                 handleAddEntityNote={handleAddEntityNote}
+                handleUpdateEntityNote={() => {}}
                 handleDeleteEntityNote={() => {}}
+                privateNoteFolders={diary.privateNoteFolders}
+                handleCreatePrivateFolder={diary.handleCreatePrivateFolder}
+                handleUpdatePrivateFolder={diary.handleUpdatePrivateFolder}
+                handleDeletePrivateFolder={diary.handleDeletePrivateFolder}
+                handleMovePrivateNoteToFolder={diary.handleMovePrivateNoteToFolder}
+                handleReorderPrivateFolders={diary.handleReorderPrivateFolders}
+                selectedPrivateFolderId={selectedPrivateFolderId}
+                setSelectedPrivateFolderId={setSelectedPrivateFolderId}
+                selectedPlayerNotesView="all"
+                setSelectedPlayerNotesView={() => {}}
             />
         </div>
     );

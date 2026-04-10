@@ -30,6 +30,14 @@ export const getDisplayTypeLabel = (type: string): string => {
     return labels[type] || type;
 };
 
+export function normalizeMentionSearch(value: string): string {
+    return value.trim().toLowerCase();
+}
+
+export function escapeMentionRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Parses text and wraps mentions/tags in styled span elements.
  * Mentions are expected to be in the format: @[Name](type:id)

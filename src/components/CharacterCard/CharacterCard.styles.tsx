@@ -471,6 +471,18 @@ export const CharacterCardStyles = () => (
     transform: scale(1.1);
 }
 
+.slot-action-btn.clear {
+    border-color: rgba(255, 110, 110, 0.9);
+    color: #ff8f8f;
+    background: rgba(60, 8, 8, 0.9);
+}
+
+.slot-action-btn.clear:hover {
+    background: #a31818;
+    border-color: #ff8f8f;
+    color: #fff1f1;
+}
+
 .vi-modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;

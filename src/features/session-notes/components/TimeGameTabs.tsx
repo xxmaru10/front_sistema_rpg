@@ -3,7 +3,7 @@ import { renderMentions } from "@/lib/mentionUtils";
 import { MentionEditor } from "@/components/MentionEditor";
 import { LinkedNotes } from "./LinkedNotes";
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
@@ -482,14 +482,37 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
         newItemDescription, setNewItemDescription,
         newItemPrice, setNewItemPrice,
         newItemQuantity, setNewItemQuantity,
+        newItemBonus, setNewItemBonus,
+        newItemSize, setNewItemSize,
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
+        editingItemId,
         handleCreateItem, handleUpdateItem, handleDeleteItem,
         handleStartEditSkill, handleCancelSkillEdit,
         handleStartEditItem, handleCancelItemEdit,
         handleAddEntityNote, handleDeleteEntityNote,
         COLOR_PRESETS
     } = handlers;
+
+    const itemDescriptionMentionEntities = useMemo(() => {
+        const draftName = (newItemName || "").trim();
+        if (!draftName) return mentionEntities;
+
+        const draftEntity = {
+            id: editingItemId || "__draft_global_item__",
+            name: draftName,
+            category: "Jogo",
+            displayType: "ITEM",
+            type: "ITEM",
+            color: "#f8e71c"
+        };
+
+        const normalizedDraftName = draftName.toLowerCase();
+        return [
+            draftEntity,
+            ...(mentionEntities || []).filter((entity) => (entity?.name || "").trim().toLowerCase() !== normalizedDraftName)
+        ];
+    }, [editingItemId, mentionEntities, newItemName]);
 
 
     const skills = state.skills || [];
@@ -581,8 +604,9 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                             <h5 className="item-title">{item.name.toUpperCase()}</h5>
                                             <div className="item-meta">
                                                 <span className="item-price gold-text">${item.price}</span>
-
                                                 <span className="item-qty">QTD: {item.quantity}</span>
+                                                <span className="item-qty">BONUS: {item.bonus || 0}</span>
+                                                <span className="item-qty">TAM: {item.size || "-"}</span>
                                                 {userRole === 'GM' && (
                                                     <div className="card-actions-mini">
                                                         <button className="edit-btn-mini" onClick={() => handleStartEditItem(item.id)} title="Editar">
@@ -690,9 +714,9 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
 
                         <div className="form-group">
                             <label>DESCRIÇÃO</label>
-                            <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={mentionEntities} />
+                            <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={itemDescriptionMentionEntities} />
                         </div>
-                        <div className="form-row-double">
+                        <div className="form-row-double" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
                             <div className="form-group">
                                 <label>PREÇO ($)</label>
                                 <input type="number" value={newItemPrice} onChange={(e) => setNewItemPrice(parseInt(e.target.value))} />
@@ -700,6 +724,19 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             <div className="form-group">
                                 <label>QUANTIDADE</label>
                                 <input type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(parseInt(e.target.value))} />
+                            </div>
+                            <div className="form-group">
+                                <label>BONUS</label>
+                                <input type="number" value={newItemBonus} onChange={(e) => setNewItemBonus(parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div className="form-group">
+                                <label>TAMANHO</label>
+                                <select className="victorian-select" value={newItemSize || ""} onChange={(e) => setNewItemSize((e.target.value || undefined) as any)}>
+                                    <option value="">SEM TAMANHO</option>
+                                    <option value="L">L</option>
+                                    <option value="M">M</option>
+                                    <option value="G">G</option>
+                                </select>
                             </div>
                         </div>
                         <div className="form-group">

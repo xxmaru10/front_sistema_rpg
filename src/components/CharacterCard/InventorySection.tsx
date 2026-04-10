@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Backpack } from "lucide-react";
-import { Character, Item } from "@/types/domain";
+import { Backpack, Eye, Pencil, X } from "lucide-react";
+import { Character, GlobalItem, Item } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { VIControlPanel } from "@/components/VIControlPanel";
+import { MentionSuggestions } from "@/components/MentionSuggestions";
 
 interface InventorySectionProps {
     character: Character;
@@ -14,31 +15,103 @@ interface InventorySectionProps {
     canEdit: boolean;
     isGM: boolean;
     isFloating?: boolean;
+    globalItems?: GlobalItem[];
 }
 
-export function InventorySection({ character, sessionId, actorUserId, canEdit, isGM, isFloating = true }: InventorySectionProps) {
-    const [inventoryModal, setInventoryModal] = useState<{ index: number; item: Item; containerId: string | null } | null>(null);
+function normalizeComparable(value?: string | null) {
+    return (value || "").trim().toLowerCase();
+}
+
+function extractTextPreview(content?: string) {
+    if (!content) return "";
+    if (typeof window === "undefined") {
+        return content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(content, "text/html");
+    return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+}
+
+function createClearedItemDraft(item?: Item, name = "", preserveStructure = false): Item {
+    return {
+        id: item?.id || uuidv4(),
+        name,
+        description: "",
+        bonus: 0,
+        quantityCurrent: 1,
+        quantityTotal: 1,
+        size: preserveStructure ? item?.size : undefined,
+        url: undefined,
+        isContainer: preserveStructure ? item?.isContainer : false,
+        capacity: preserveStructure ? item?.capacity : undefined,
+        contents: preserveStructure ? (item?.contents || []) : [],
+        maxSize: item?.maxSize,
+    };
+}
+
+export function InventorySection({
+    character,
+    sessionId,
+    actorUserId,
+    canEdit,
+    isGM,
+    isFloating = true,
+    globalItems = [],
+}: InventorySectionProps) {
+    const [inventoryModal, setInventoryModal] = useState<{
+        index: number;
+        item: Item;
+        containerId: string | null;
+        linkedGlobalItemId: string | null;
+    } | null>(null);
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | string | null>(null);
     const [activeInventoryTab, setActiveInventoryTab] = useState<string>("main");
     const [showVISelector, setShowVISelector] = useState(false);
+    const [inventoryItemSuggestions, setInventoryItemSuggestions] = useState<{
+        active: boolean;
+        query: string;
+        position: { top: number; left: number };
+    }>({ active: false, query: "", position: { top: 0, left: 0 } });
     const normalizedActorUserId = actorUserId.trim().toLowerCase();
+    const itemNameInputRef = useRef<HTMLInputElement>(null);
+    const [inventoryValidationError, setInventoryValidationError] = useState<string | null>(null);
 
     // Draggable Logic
     const [dragPos, setDragPos] = useState({ x: -270, y: 20 });
     const [isDragging, setIsDragging] = useState(false);
     const posRef = useRef({ x: -270, y: 20 });
     const containerRef = useRef<HTMLDivElement>(null);
+
     const storageContainers = useMemo(
         () => (character.inventory || []).filter((item) => item?.isContainer),
         [character.inventory]
     );
     const mainInventorySlots = useMemo(
-        () => Math.max(5, character.inventory?.length || 0),
+        () => Math.max(1, character.inventory?.length || 0),
         [character.inventory]
     );
     const hasStorageTabs = storageContainers.length > 0;
     const storageTabsKey = storageContainers.map((container) => container.id).join("|");
+    const globalItemsById = useMemo(
+        () => new Map((globalItems || []).map((item) => [item.id, item])),
+        [globalItems]
+    );
+    const globalItemsByName = useMemo(
+        () => new Map((globalItems || []).map((item) => [normalizeComparable(item.name), item])),
+        [globalItems]
+    );
+    const globalItemSuggestionEntities = useMemo(
+        () => (globalItems || []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            category: "Jogo",
+            displayType: "ITEM",
+            type: "ITEM",
+        })),
+        [globalItems]
+    );
     const createEmptyInventorySlot = (): Item => ({
         id: uuidv4(),
         name: "",
@@ -121,6 +194,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     };
 
 
+
     const handleInventoryChange = (index: number, containerId: string | null = null) => {
         let currentItem: Item;
 
@@ -130,11 +204,42 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         } else {
             currentItem = character.inventory?.[index] || createEmptyInventorySlot();
         }
-        setInventoryModal({ index, item: { ...currentItem }, containerId });
+        const linkedGlobalItem = globalItemsByName.get(normalizeComparable(currentItem.name));
+        setInventoryValidationError(null);
+        setInventoryModal({
+            index,
+            item: { ...currentItem },
+            containerId,
+            linkedGlobalItemId: linkedGlobalItem?.id || null,
+        });
     };
 
     const handleSaveInventoryItem = () => {
         if (!inventoryModal) return;
+
+        // Validation Logic
+        const sizeWeights: Record<string, number> = { 'L': 1, 'M': 2, 'G': 3 };
+        
+        // Slot level restriction check
+        let slotMaxSize: string | undefined;
+        if (inventoryModal.containerId) {
+            const container = character.inventory.find(i => i.id === inventoryModal.containerId);
+            slotMaxSize = container?.contents?.[inventoryModal.index]?.maxSize;
+        } else {
+            slotMaxSize = character.inventory?.[inventoryModal.index]?.maxSize;
+        }
+
+        if (slotMaxSize && inventoryModal.item.size) {
+            const itemWeight = sizeWeights[inventoryModal.item.size] || 0;
+            const slotWeight = sizeWeights[slotMaxSize] || 0;
+            
+            if (itemWeight > slotWeight) {
+                setInventoryValidationError(`Item é tamanho [${inventoryModal.item.size}], encaixe no local correto (Máx: ${slotMaxSize})`);
+                return;
+            }
+        }
+
+        setInventoryValidationError(null);
 
         const newItem: Item = {
             id: inventoryModal.item.id || uuidv4(),
@@ -147,17 +252,16 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
             url: inventoryModal.item.url,
             isContainer: inventoryModal.item.isContainer,
             capacity: inventoryModal.item.capacity,
-            contents: inventoryModal.item.contents || []
+            contents: inventoryModal.item.contents || [],
+            maxSize: inventoryModal.item.maxSize
         };
 
         if (inventoryModal.containerId) {
-            // Saving item INSIDE a container
             const container = character.inventory.find(i => i.id === inventoryModal.containerId);
             if (container) {
                 const newContents = [...(container.contents || [])];
-                // Resize if needed
                 while (newContents.length <= inventoryModal.index) {
-                    newContents.push({ id: uuidv4(), name: "", bonus: 0 }); // Placeholder
+                    newContents.push(createEmptyInventorySlot());
                 }
                 newContents[inventoryModal.index] = newItem;
 
@@ -175,7 +279,6 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                 } as any);
             }
         } else {
-            // Saving a root item (which might be a container)
             globalEventStore.append({
                 id: uuidv4(),
                 sessionId,
@@ -188,8 +291,11 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
             } as any);
         }
 
+        setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+        setInventoryValidationError(null);
         setInventoryModal(null);
     };
+
 
     const updateInventoryModalField = (field: keyof Item, value: any) => {
         if (!inventoryModal) return;
@@ -197,6 +303,77 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
             ...inventoryModal,
             item: { ...inventoryModal.item, [field]: value }
         });
+    };
+
+    const updateInventoryNameSuggestions = (query: string) => {
+        const normalizedQuery = normalizeComparable(query);
+        const inputRect = itemNameInputRef.current?.getBoundingClientRect();
+
+        if (!normalizedQuery || normalizedQuery.length < 2 || !inputRect) {
+            setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+            return;
+        }
+
+        setInventoryItemSuggestions({
+            active: true,
+            query,
+            position: {
+                top: inputRect.bottom + 6,
+                left: inputRect.left,
+            }
+        });
+    };
+
+    const applyGlobalItemToInventoryModal = (globalItem: GlobalItem, nextName?: string) => {
+        setInventoryModal((current) => {
+            if (!current) return current;
+
+            return {
+                ...current,
+                linkedGlobalItemId: globalItem.id,
+                item: {
+                    ...current.item,
+                    name: nextName ?? globalItem.name,
+                    description: globalItem.description,
+                    bonus: globalItem.bonus || 0,
+                    size: globalItem.size as any,
+                    quantityCurrent: globalItem.quantity,
+                    quantityTotal: globalItem.quantity,
+                    url: globalItem.imageUrl,
+                }
+            };
+        });
+    };
+
+    const handleInventoryNameChange = (nextName: string) => {
+        updateInventoryNameSuggestions(nextName);
+        const matchedItem = globalItemsByName.get(normalizeComparable(nextName));
+        if (matchedItem) {
+            applyGlobalItemToInventoryModal(matchedItem, nextName);
+            return;
+        }
+
+        setInventoryModal((current) => {
+            if (!current) return current;
+            const nextItem = current.linkedGlobalItemId
+                ? createClearedItemDraft(current.item, nextName, true)
+                : { ...current.item, name: nextName };
+
+            return {
+                ...current,
+                linkedGlobalItemId: null,
+                item: nextItem,
+            };
+        });
+    };
+
+    const handleSelectInventorySuggestion = (item: { id: string; name: string }) => {
+        const matchedItem = globalItemsById.get(item.id);
+        if (!matchedItem) return;
+
+        applyGlobalItemToInventoryModal(matchedItem, matchedItem.name);
+        setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+        setTimeout(() => itemNameInputRef.current?.focus(), 0);
     };
 
     const handleUpdateItemQuantity = (index: number, delta: number, containerId: string | null = null) => {
@@ -250,6 +427,51 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
         }
     };
 
+    const handleClearInventorySlot = (index: number, containerId: string | null = null) => {
+        if (containerId) {
+            const container = character.inventory.find(i => i.id === containerId);
+            if (!container) return;
+
+            const targetItem = container.contents?.[index];
+            const newContents = [...(container.contents || [])];
+            while (newContents.length <= index) {
+                newContents.push(createEmptyInventorySlot());
+            }
+            newContents[index] = createClearedItemDraft(targetItem);
+
+            const updatedContainer = {
+                ...container,
+                contents: newContents,
+            };
+
+            globalEventStore.append({
+                id: uuidv4(),
+                sessionId,
+                seq: 0,
+                type: "CHARACTER_INVENTORY_UPDATED",
+                actorUserId: normalizedActorUserId,
+                createdAt: new Date().toISOString(),
+                visibility: "PUBLIC",
+                payload: { characterId: character.id, item: updatedContainer }
+            } as any);
+            return;
+        }
+
+        const targetItem = character.inventory?.[index];
+        if (!targetItem) return;
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "CHARACTER_INVENTORY_UPDATED",
+            actorUserId: normalizedActorUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: { characterId: character.id, item: createClearedItemDraft(targetItem) }
+        } as any);
+    };
+
     const handleAddMainInventorySlot = () => {
         if (!isGM) return;
         const targetLength = mainInventorySlots + 1;
@@ -277,7 +499,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
 
         const currentLength = character.inventory?.length || 0;
         const lastFilledIndex = getLastFilledSlotIndex(character.inventory);
-        const nextLength = Math.max(5, currentLength - 1, lastFilledIndex + 1);
+        const nextLength = Math.max(1, currentLength - 1, lastFilledIndex + 1);
 
         if (nextLength >= currentLength) return;
 
@@ -458,7 +680,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
             {Array.from({ length }).map((_, i) => {
                 const item = items?.[i];
                 const isFilled = !!item?.name?.length;
-                const sizeClass = item?.size ? `size-${item.size.toLowerCase()}` : "";
+                const sizeClass = item?.maxSize ? `size-${item.maxSize.toLowerCase()}` : "";
                 const slotId = containerId ? `container-${containerId}-${i}` : `main-${i}`;
                 const isSlotActive = activeSlotIndex === slotId;
                 const usedStorageSlots = item?.isContainer
@@ -487,13 +709,13 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         </div>
                                         {isFilled && item.description && (
                                             <div className="inv-description-row">
-                                                {item.description}
+                                                {extractTextPreview(item.description)}
                                             </div>
                                         )}
                                     </div>
-                                    {isFilled && item.size && (
-                                        <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
-                                            {item.size}
+                                    {item?.maxSize && (
+                                        <div className={`inv-size-indicator restriction size-${item.maxSize.toLowerCase()}`} title={`Restrição: Máximo ${item.maxSize}`}>
+                                            {item.maxSize}
                                         </div>
                                     )}
                                 </button>
@@ -517,13 +739,13 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         </div>
                                         {isFilled && item.description && (
                                             <div className="inv-description-row">
-                                                {item.description}
+                                                {extractTextPreview(item.description)}
                                             </div>
                                         )}
                                     </div>
-                                    {isFilled && item.size && (
-                                        <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
-                                            {item.size}
+                                    {item?.maxSize && (
+                                        <div className={`inv-size-indicator restriction size-${item.maxSize.toLowerCase()}`} title={`Restrição: Máximo ${item.maxSize}`}>
+                                            {item.maxSize}
                                         </div>
                                     )}
                                 </div>
@@ -589,7 +811,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         }}
                                         title="Visualizar Imagem"
                                     >
-                                        👁️
+                                        <Eye size={15} />
                                     </button>
                                 )}
                                 {canEdit && (
@@ -602,7 +824,20 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         }}
                                         title="Editar Item"
                                     >
-                                        ✎
+                                        <Pencil size={15} />
+                                    </button>
+                                )}
+                                {isFilled && canEdit && (
+                                    <button
+                                        className="slot-action-btn clear"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClearInventorySlot(i, containerId);
+                                            setActiveSlotIndex(null);
+                                        }}
+                                        title="Limpar Slot"
+                                    >
+                                        <X size={15} />
                                     </button>
                                 )}
                             </div>
@@ -655,6 +890,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                         <span>INVENTÁRIO & ARSENAL</span>
                     </div>
                 </div>
+                <div className="inventory-inner">
                     {hasStorageTabs && (
                         <div className="inventory-tab-navigation">
                             <button
@@ -691,7 +927,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                     "Principal",
                                     handleAddMainInventorySlot,
                                     handleRemoveMainInventorySlot,
-                                    { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                    { canRemove: mainInventorySlots > Math.max(1, getLastFilledSlotIndex(character.inventory) + 1) }
                                 )}
                                 {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                             </div>
@@ -704,7 +940,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         "Principal",
                                         handleAddMainInventorySlot,
                                         handleRemoveMainInventorySlot,
-                                        { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                        { canRemove: mainInventorySlots > Math.max(1, getLastFilledSlotIndex(character.inventory) + 1) }
                                     )}
                                     {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                                 </div>
@@ -718,7 +954,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                     "Principal",
                                     handleAddMainInventorySlot,
                                     handleRemoveMainInventorySlot,
-                                    { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                    { canRemove: mainInventorySlots > Math.max(1, getLastFilledSlotIndex(character.inventory) + 1) }
                                 )}
                                 {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                             </div>
@@ -736,7 +972,10 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
 
                 {/* Inventory Modal */}
                 {inventoryModal && (
-                    <div className="inventory-modal-overlay" onClick={() => setInventoryModal(null)}>
+                    <div className="inventory-modal-overlay" onClick={() => {
+                        setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+                        setInventoryModal(null);
+                    }}>
                         <div className="inventory-modal" onClick={e => e.stopPropagation()}>
                             <div className="modal-header">
                                 <span className="modal-symbol">🜏</span>
@@ -744,23 +983,55 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                             </div>
 
                             <div className="inv-modal-form">
+                                {inventoryValidationError && (
+                                    <div className="inv-modal-error" style={{
+                                        background: 'rgba(255, 80, 80, 0.15)',
+                                        border: '1px solid #ff5050',
+                                        color: '#ff8080',
+                                        padding: '10px',
+                                        borderRadius: '4px',
+                                        marginBottom: '16px',
+                                        fontSize: '0.85rem',
+                                        fontFamily: 'var(--font-header)',
+                                        letterSpacing: '0.05em',
+                                        textAlign: 'center'
+                                    }}>
+                                        ⚠️ {inventoryValidationError.toUpperCase()}
+                                    </div>
+                                )}
                                 <div className="inv-modal-field">
                                     <label>NOME DO ITEM</label>
                                     <input
+                                        ref={itemNameInputRef}
                                         type="text"
                                         className="inv-modal-input"
                                         placeholder="Nome do item..."
                                         value={inventoryModal.item.name}
-                                        onChange={e => updateInventoryModalField('name', e.target.value)}
+                                        onChange={e => handleInventoryNameChange(e.target.value)}
+                                        onFocus={() => updateInventoryNameSuggestions(inventoryModal.item.name)}
+                                        onBlur={() => {
+                                            window.setTimeout(() => {
+                                                setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+                                            }, 150);
+                                        }}
                                         autoFocus
                                     />
                                 </div>
+                                {inventoryItemSuggestions.active && (
+                                    <MentionSuggestions
+                                        query={inventoryItemSuggestions.query}
+                                        entities={globalItemSuggestionEntities}
+                                        onSelect={handleSelectInventorySuggestion}
+                                        position={inventoryItemSuggestions.position}
+                                        onClose={() => setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } })}
+                                    />
+                                )}
 
                                 <div className="inv-modal-field">
-                                    <label>DESCRIÇÃO</label>
+                                    <label>DESCRICAO</label>
                                     <textarea
                                         className="inv-modal-textarea"
-                                        placeholder="Descrição do item..."
+                                        placeholder="Descricao do item..."
                                         value={inventoryModal.item.description || ''}
                                         onChange={e => updateInventoryModalField('description', e.target.value)}
                                         rows={3}
@@ -819,7 +1090,6 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                     </div>
                                 </div>
 
-                                {/* Armazenamento / Backpack Toggle */}
                                 <div className="inv-modal-field" style={{ flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
                                     <input
                                         type="checkbox"
@@ -846,8 +1116,6 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         />
                                     </div>
                                 )}
-
-
 
                                 <div className="inv-modal-row">
                                     <div className="inv-modal-field small">
@@ -883,34 +1151,61 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                     </div>
                                 </div>
 
-                                {/* Size selector - GM only */}
                                 {isGM && (
-                                    <div className="inv-modal-field">
-                                        <label>TAMANHO (L=Leve, M=Médio, G=Grande)</label>
-                                        <div className="inv-size-selector">
-                                            <button
-                                                type="button"
-                                                className={`size-btn size-l ${inventoryModal.item.size === 'L' ? 'active' : ''}`}
-                                                onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'L' ? undefined : 'L')}
-                                            >
-                                                L
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={`size-btn size-m ${inventoryModal.item.size === 'M' ? 'active' : ''}`}
-                                                onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'M' ? undefined : 'M')}
-                                            >
-                                                M
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={`size-btn size-g ${inventoryModal.item.size === 'G' ? 'active' : ''}`}
-                                                onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'G' ? undefined : 'G')}
-                                            >
-                                                G
-                                            </button>
+                                    <>
+                                        <div className="inv-modal-field">
+                                            <label>TAMANHO DO ITEM (L=Leve, M=Médio, G=Grande)</label>
+                                            <div className="inv-size-selector">
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-l ${inventoryModal.item.size === 'L' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'L' ? undefined : 'L')}
+                                                >
+                                                    L
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-m ${inventoryModal.item.size === 'M' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'M' ? undefined : 'M')}
+                                                >
+                                                    M
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-g ${inventoryModal.item.size === 'G' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'G' ? undefined : 'G')}
+                                                >
+                                                    G
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
+                                        <div className="inv-modal-field" style={{ marginTop: '12px' }}>
+                                            <label>RESTRIÇÃO DO SLOT (Opcional - L, M, G)</label>
+                                            <div className="inv-size-selector">
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-l ${inventoryModal.item.maxSize === 'L' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('maxSize', inventoryModal.item.maxSize === 'L' ? undefined : 'L')}
+                                                >
+                                                    L
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-m ${inventoryModal.item.maxSize === 'M' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('maxSize', inventoryModal.item.maxSize === 'M' ? undefined : 'M')}
+                                                >
+                                                    M
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-g ${inventoryModal.item.maxSize === 'G' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('maxSize', inventoryModal.item.maxSize === 'G' ? undefined : 'G')}
+                                                >
+                                                    G
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                             </div>
 
@@ -918,51 +1213,49 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                 <button className="modal-btn save" onClick={handleSaveInventoryItem}>
                                     CONFIRMAR
                                 </button>
-                                <button className="modal-btn cancel" onClick={() => setInventoryModal(null)}>
+                                <button className="modal-btn cancel" onClick={() => {
+                                    setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+                                    setInventoryModal(null);
+                                }}>
                                     CANCELAR
                                 </button>
                             </div>
                         </div>
                     </div>
-                )
-                }
+                )}
 
                 {/* VI Selector Modal */}
-                {
-                    showVISelector && (
-                        <div className="vi-modal-overlay" onClick={() => setShowVISelector(false)}>
-                            <div className="vi-modal-content" onClick={e => e.stopPropagation()}>
-                                <div className="vi-modal-header">
-                                    <h3>SELECIONAR IMAGEM DA VI</h3>
-                                    <button onClick={() => setShowVISelector(false)}>✕</button>
-                                </div>
-                                <VIControlPanel
-                                    sessionId={sessionId}
-                                    isGM={!!isGM}
-                                    onSelect={(url) => {
-                                        if (inventoryModal) {
-                                            updateInventoryModalField('url', url);
-                                        }
-                                        setShowVISelector(false);
-                                    }}
-                                    style={{ flex: 1, overflow: 'hidden', height: 'auto' }}
-                                />
+                {showVISelector && (
+                    <div className="vi-modal-overlay" onClick={() => setShowVISelector(false)}>
+                        <div className="vi-modal-content" onClick={e => e.stopPropagation()}>
+                            <div className="vi-modal-header">
+                                <h3>SELECIONAR IMAGEM DA VI</h3>
+                                <button onClick={() => setShowVISelector(false)}>✕</button>
                             </div>
+                            <VIControlPanel
+                                sessionId={sessionId}
+                                isGM={!!isGM}
+                                onSelect={(url) => {
+                                    if (inventoryModal) {
+                                        updateInventoryModalField('url', url);
+                                    }
+                                    setShowVISelector(false);
+                                }}
+                                style={{ flex: 1, overflow: 'hidden', height: 'auto' }}
+                            />
                         </div>
-                    )
-                }
+                    </div>
+                )}
 
                 {/* Image Viewer Modal */}
-                {
-                    viewImageUrl && (
-                        <div className="image-viewer-overlay" onClick={() => setViewImageUrl(null)}>
-                            <div className="image-viewer-content" onClick={e => e.stopPropagation()}>
-                                <img src={viewImageUrl} alt="Visualização do Item" />
-                                <button className="close-viewer-btn" onClick={() => setViewImageUrl(null)}>✕</button>
-                            </div>
+                {viewImageUrl && (
+                    <div className="image-viewer-overlay" onClick={() => setViewImageUrl(null)}>
+                        <div className="image-viewer-content" onClick={e => e.stopPropagation()}>
+                            <img src={viewImageUrl} alt="Visualização do Item" />
+                            <button className="close-viewer-btn" onClick={() => setViewImageUrl(null)}>✕</button>
                         </div>
-                    )
-                }
+                    </div>
+                )}
                 <style jsx>{`
                     .inventory-tab-navigation {
                         display: flex;
@@ -1047,7 +1340,14 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                         border-color: rgba(var(--accent-rgb), 0.36);
                         background: rgba(var(--accent-rgb), 0.14);
                     }
+
+                    .inv-size-indicator.restriction {
+                        background: rgba(255, 255, 255, 0.05);
+                        border: 1px dashed rgba(var(--accent-rgb), 0.3);
+                        opacity: 0.6;
+                    }
                 `}</style>
+        </div>
         </>
     );
 }
