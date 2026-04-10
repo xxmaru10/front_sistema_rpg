@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Backpack } from "lucide-react";
-import { Character, Item } from "@/types/domain";
+import { Character, GlobalItem, Item } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { VIControlPanel } from "@/components/VIControlPanel";
+import { MentionEditor } from "@/components/MentionEditor";
 
 interface InventorySectionProps {
     character: Character;
@@ -14,9 +15,44 @@ interface InventorySectionProps {
     canEdit: boolean;
     isGM: boolean;
     isFloating?: boolean;
+    mentionEntities?: any[];
+    globalItems?: GlobalItem[];
 }
 
-export function InventorySection({ character, sessionId, actorUserId, canEdit, isGM, isFloating = true }: InventorySectionProps) {
+function normalizeComparable(value?: string | null) {
+    return (value || "").trim().toLowerCase();
+}
+
+function extractTextPreview(content?: string) {
+    if (!content) return "";
+    if (typeof window === "undefined") {
+        return content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(content, "text/html");
+    return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+}
+
+function extractMentionedItemId(content?: string) {
+    if (!content || typeof window === "undefined") return null;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(content, "text/html");
+    const match = doc.body.querySelector('[data-mention-type="ITEM"][data-mention-id]');
+    return match?.getAttribute("data-mention-id") || null;
+}
+
+export function InventorySection({
+    character,
+    sessionId,
+    actorUserId,
+    canEdit,
+    isGM,
+    isFloating = true,
+    mentionEntities = [],
+    globalItems = [],
+}: InventorySectionProps) {
     const [inventoryModal, setInventoryModal] = useState<{ index: number; item: Item; containerId: string | null } | null>(null);
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | string | null>(null);
@@ -39,6 +75,14 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
     );
     const hasStorageTabs = storageContainers.length > 0;
     const storageTabsKey = storageContainers.map((container) => container.id).join("|");
+    const globalItemsById = useMemo(
+        () => new Map((globalItems || []).map((item) => [item.id, item])),
+        [globalItems]
+    );
+    const globalItemsByName = useMemo(
+        () => new Map((globalItems || []).map((item) => [normalizeComparable(item.name), item])),
+        [globalItems]
+    );
     const createEmptyInventorySlot = (): Item => ({
         id: uuidv4(),
         name: "",
@@ -197,6 +241,44 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
             ...inventoryModal,
             item: { ...inventoryModal.item, [field]: value }
         });
+    };
+
+    const applyGlobalItemToInventoryModal = (globalItem: GlobalItem) => {
+        setInventoryModal((current) => {
+            if (!current) return current;
+
+            return {
+                ...current,
+                item: {
+                    ...current.item,
+                    name: globalItem.name,
+                    description: globalItem.description,
+                    bonus: globalItem.bonus || 0,
+                    quantityCurrent: globalItem.quantity,
+                    quantityTotal: globalItem.quantity,
+                    url: globalItem.imageUrl || current.item.url,
+                }
+            };
+        });
+    };
+
+    const handleInventoryNameChange = (nextName: string) => {
+        updateInventoryModalField("name", nextName);
+        const matchedItem = globalItemsByName.get(normalizeComparable(nextName));
+        if (matchedItem) {
+            applyGlobalItemToInventoryModal(matchedItem);
+        }
+    };
+
+    const handleInventoryDescriptionChange = (nextDescription: string) => {
+        updateInventoryModalField("description", nextDescription);
+        const mentionedItemId = extractMentionedItemId(nextDescription);
+        if (!mentionedItemId) return;
+
+        const matchedItem = globalItemsById.get(mentionedItemId);
+        if (matchedItem) {
+            applyGlobalItemToInventoryModal(matchedItem);
+        }
     };
 
     const handleUpdateItemQuantity = (index: number, delta: number, containerId: string | null = null) => {
@@ -487,7 +569,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         </div>
                                         {isFilled && item.description && (
                                             <div className="inv-description-row">
-                                                {item.description}
+                                                {extractTextPreview(item.description)}
                                             </div>
                                         )}
                                     </div>
@@ -517,7 +599,7 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         </div>
                                         {isFilled && item.description && (
                                             <div className="inv-description-row">
-                                                {item.description}
+                                                {extractTextPreview(item.description)}
                                             </div>
                                         )}
                                     </div>
@@ -751,19 +833,20 @@ export function InventorySection({ character, sessionId, actorUserId, canEdit, i
                                         className="inv-modal-input"
                                         placeholder="Nome do item..."
                                         value={inventoryModal.item.name}
-                                        onChange={e => updateInventoryModalField('name', e.target.value)}
+                                        onChange={e => handleInventoryNameChange(e.target.value)}
                                         autoFocus
                                     />
                                 </div>
 
                                 <div className="inv-modal-field">
                                     <label>DESCRIÇÃO</label>
-                                    <textarea
+                                    <MentionEditor
                                         className="inv-modal-textarea"
-                                        placeholder="Descrição do item..."
+                                        placeholder="Descricao do item..."
                                         value={inventoryModal.item.description || ''}
-                                        onChange={e => updateInventoryModalField('description', e.target.value)}
-                                        rows={3}
+                                        onChange={handleInventoryDescriptionChange}
+                                        mentionEntities={mentionEntities}
+                                        style={{ minHeight: "78px", maxHeight: "160px", overflowY: "auto" }}
                                     />
                                 </div>
 

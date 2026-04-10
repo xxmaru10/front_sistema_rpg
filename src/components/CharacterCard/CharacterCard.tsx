@@ -147,6 +147,8 @@ export function CharacterCard({
                         canEdit={canEdit}
                         isGM={isGM}
                         isFloating={false}
+                        mentionEntities={mentionEntities}
+                        globalItems={sessionState?.items || []}
                     />
                 </div>
             );
