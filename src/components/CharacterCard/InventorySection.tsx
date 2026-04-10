@@ -680,7 +680,7 @@ export function InventorySection({
             {Array.from({ length }).map((_, i) => {
                 const item = items?.[i];
                 const isFilled = !!item?.name?.length;
-                const sizeClass = item?.size ? `size-${item.size.toLowerCase()}` : "";
+                const sizeClass = item?.maxSize ? `size-${item.maxSize.toLowerCase()}` : "";
                 const slotId = containerId ? `container-${containerId}-${i}` : `main-${i}`;
                 const isSlotActive = activeSlotIndex === slotId;
                 const usedStorageSlots = item?.isContainer
@@ -713,12 +713,7 @@ export function InventorySection({
                                             </div>
                                         )}
                                     </div>
-                                    {isFilled && item.size && (
-                                        <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
-                                            {item.size}
-                                        </div>
-                                    )}
-                                    {!isFilled && item?.maxSize && (
+                                    {item?.maxSize && (
                                         <div className={`inv-size-indicator restriction size-${item.maxSize.toLowerCase()}`} title={`Restrição: Máximo ${item.maxSize}`}>
                                             {item.maxSize}
                                         </div>
@@ -748,12 +743,7 @@ export function InventorySection({
                                             </div>
                                         )}
                                     </div>
-                                    {isFilled && item.size && (
-                                        <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
-                                            {item.size}
-                                        </div>
-                                    )}
-                                    {!isFilled && item?.maxSize && (
+                                    {item?.maxSize && (
                                         <div className={`inv-size-indicator restriction size-${item.maxSize.toLowerCase()}`} title={`Restrição: Máximo ${item.maxSize}`}>
                                             {item.maxSize}
                                         </div>
