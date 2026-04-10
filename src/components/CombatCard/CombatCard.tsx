@@ -300,14 +300,14 @@ export function CombatCard({
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
                             {/* Impulse - Top Left Over Image */}
-                            <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 10 }}>
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.6rem', textShadow: '0 0 5px var(--card-accent)' }}>➤</span>)}
                                 </div>
                                 {isGM && (
                                     <div style={{ display: 'flex', gap: '6px', opacity: 0.6 }}>
-                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }} disabled={impulseCount===0}>-</button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>+</button>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.7rem', cursor: 'pointer', pointerEvents: 'auto' }} disabled={impulseCount===0}>-</button>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.7rem', cursor: 'pointer', pointerEvents: 'auto' }}>+</button>
                                     </div>
                                 )}
                             </div>

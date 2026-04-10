@@ -50,6 +50,32 @@ export function RollerInputs({
     isGM,
     activeChar
 }: RollerInputsProps) {
+    const actionLabelMap: Record<RollerInputsProps["actionType"], string> = {
+        OVERCOME: "SUPERAR",
+        ATTACK: "ATACAR",
+        CREATE_ADVANTAGE: "VANTAGEM",
+        DEFEND: "DEFENDER",
+    };
+
+    const selectedSkillLabel = selectedSkill ? selectedSkill.toUpperCase() : "PERÍCIA";
+    const selectedActionLabel = actionLabelMap[actionType] || "SUPERAR";
+    const selectedItemLabel = selectedItemId
+        ? (allItems.find(item => item.id === selectedItemId)?.name?.toUpperCase() || "INVENTÁRIO")
+        : "INVENTÁRIO";
+
+    const computeIntegratedWidth = (baseLabel: string, currentLabel: string, maxCh = 14) => {
+        const base = baseLabel.length + 1;
+        const current = currentLabel.length + 1;
+        return `${Math.min(Math.max(base, current), maxCh)}ch`;
+    };
+
+    const skillWidth = computeIntegratedWidth("PERÍCIA", selectedSkillLabel, 14);
+    const actionWidth = computeIntegratedWidth("SUPERAR", selectedActionLabel, 12);
+    const itemWidth = computeIntegratedWidth("INVENTÁRIO", selectedItemLabel, 16);
+    const bonusWidth = manualBonus === 0
+        ? "8ch"
+        : `${Math.min(Math.max(String(manualBonus).length + 2, 3), 8)}ch`;
+
     return (
         <div className={`matrix-inputs flex-stagger ${isIntegrated ? 'integrated' : ''}`}>
             {!fixedCharacterId && (
@@ -72,11 +98,12 @@ export function RollerInputs({
                     <div className="matrix-field">
                         {!isIntegrated && <label>PERÍCIA</label>}
                         <div className="field-row">
-                            <Sparkles size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />
+                            {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
                             <select
                                 value={selectedSkill}
                                 onChange={(e) => handleSkillSelect(e.target.value)}
                                 className="mystic-input select-ritual"
+                                style={isIntegrated ? { width: skillWidth, maxWidth: '14ch' } : undefined}
                             >
                                 <option value="">{isIntegrated ? "PERÍCIA" : "ROLAGEM PURA"}</option>
                                 {(() => {
@@ -116,11 +143,12 @@ export function RollerInputs({
                     <div className="matrix-field">
                         {!isIntegrated && <label>AÇÃO</label>}
                         <div className="field-row">
-                            <Zap size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />
+                            {!isIntegrated && <Zap size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
                             <select
                                 value={actionType}
                                 onChange={(e) => setActionType(e.target.value as any)}
                                 className="mystic-input select-ritual"
+                                style={isIntegrated ? { width: actionWidth, maxWidth: '12ch' } : undefined}
                             >
                                 <option value="OVERCOME">SUPERAR</option>
                                 <option value="ATTACK">ATACAR</option>
@@ -148,18 +176,20 @@ export function RollerInputs({
                     <div className="matrix-field item-field-container">
                         {!isIntegrated && <label>ITEM</label>}
                         <div className="field-row">
-                            <Backpack size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />
+                            {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
                             <select
                                 value={selectedItemId}
                                 onChange={(e) => setSelectedItemId(e.target.value)}
                                 className="mystic-input select-ritual"
                                 style={{
+                                    width: isIntegrated ? itemWidth : undefined,
+                                    maxWidth: isIntegrated ? '16ch' : undefined,
                                     textAlign: 'center',
                                     textIndent: '0',
                                     padding: '8px 16px'
                                 }}
                             >
-                                <option value="">( VAZIO )</option>
+                                <option value="">INVENTÁRIO</option>
                                 {allItems.filter(i => i.name && i.bonus > 0).map(item => (
                                     <option key={item.id} value={item.id}>
                                         {item.name.toUpperCase()} ({item.bonus >= 0 ? `+${item.bonus}` : item.bonus})
@@ -170,9 +200,9 @@ export function RollerInputs({
                     </div>
 
                     <div className="matrix-field bonus-field-container">
-                        <label>BÔNUS</label>
+                        {!isIntegrated && <label>BÔNUS</label>}
                         <div className="field-row">
-                            <Plus size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />
+                            {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
                             <input
                                 type="number"
                                 placeholder="BÔNUS"
@@ -182,6 +212,7 @@ export function RollerInputs({
                                     setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
                                 }}
                                 className="mystic-input input-ritual bonus-input"
+                                style={isIntegrated ? { width: bonusWidth, maxWidth: '8ch' } : undefined}
                             />
                         </div>
                     </div>
@@ -319,7 +350,7 @@ export function RollerInputs({
 
                 .control-panel-grid.integrated-mode .field-row {
                     width: auto;
-                    gap: 4px;
+                    gap: 0;
                 }
 
                 .select-ritual, 
@@ -349,7 +380,7 @@ export function RollerInputs({
                 .control-panel-grid.integrated-mode .input-ritual {
                     font-size: 0.64rem !important;
                     letter-spacing: 0.06em !important;
-                    padding: 3px 10px !important;
+                    padding: 3px 8px !important;
                     border-radius: 12px !important;
                     min-height: 30px;
                     box-shadow: 0 0 14px var(--accent-glow), inset 0 0 10px var(--accent-glow) !important;
@@ -384,7 +415,8 @@ export function RollerInputs({
                 }
 
                 .control-panel-grid.integrated-mode .bonus-input {
-                    width: 62px !important;
+                    width: auto !important;
+                    min-width: 3ch;
                 }
 
                 .target-selection-area {

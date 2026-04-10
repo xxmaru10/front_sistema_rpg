@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-10 (story-38/follow-up-top-strip-fixo-rolagem-e-cards-largos)
+last_updated: 2026-04-10 (story-38/follow-up-impulsos-e-rolagem-compacta)
 status: ativo
 ---
 
@@ -80,6 +80,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Gaveta de Ameacas para a Esquerda + Rolagem Horizontal Compacta (Story 38 follow-up) | A gaveta lateral de ameacas passou a ancorar no lado direito com expansao visual para a esquerda (desktop e mobile), e a zona integrada de rolagem foi convertida para faixa horizontal compacta no topo da coluna central. O botao de rolar no modo integrado virou icone de dado, o campo de bonus passou a usar placeholder textual ("BONUS"), e o bloco de logs foi reduzido para acompanhar a nova densidade visual sem alterar fluxo de eventos/rolagem. | 2026-04-10 |
 | Logs Sob Demanda em Faixa Horizontal + Fix de Ancoragem Esquerda (Story 38 follow-up) | A visualizacao de logs na Arena passou a iniciar oculta e ser expandida por botao dedicado, em formato horizontal compacto alinhado a barra de rolagem. A gaveta esquerda deixou de deslocar ao expandir o menu lateral global (remocao de offset por `nav-expanded`), e a hierarquia de z-index foi ajustada para evitar sobreposicao dos cards sobre a barra de rolagem. | 2026-04-10 |
 | Top Strip Fixo de Rolagem + Escala Horizontal dos Cards (Story 38 follow-up) | A zona de rolagem integrada foi reposicionada para um strip superior fixo da Arena (`combat-top-strip`), fora da coluna central, evitando sobreposicao com cards e mantendo logs como expansao horizontal sob demanda. Cards e gavetas expandidas receberam aumento significativo de largura horizontal para suportar o rework visual sem alterar Event Sourcing. | 2026-04-10 |
+| Ajustes de Usabilidade na Rolagem Integrada e Logs (Story 38 follow-up) | Controles integrados de rolagem passaram a operar sem iconografia lateral, com largura dinamica/truncada por conteudo (pericia, acao, inventario e bonus). O resultado compacto exibido na barra superior foi simplificado para valor numerico puro (sem mini-dados 3D), e o log compacto foi reformulado para linhas horizontais por evento para leitura rapida. Controles de impulso no card receberam reforco de camada de clique (z-index/pointer-events) mantendo visual e posicao. | 2026-04-10 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 

@@ -17,32 +17,34 @@ export function DiceChamber({
 }: DiceChamberProps) {
     return (
         <div className={`void-chamber ornate-border ${isIntegrated ? 'integrated' : ''}`}>
-            <div className={`scene-3d ${isIntegrated ? 'integrated' : ''}`}>
-                <div className={`dice-row-3d ${isIntegrated ? 'integrated' : ''}`}>
-                    {diceRotations.map((rot, i) => (
-                        <div key={i} className={`dice-unit ${isIntegrated ? 'integrated' : ''}`}>
-                            <div
-                                className="alchemical-cube"
-                                style={{
-                                    transform: `rotateX(${rot.x}deg) rotateY(${rot.y}deg)`,
-                                    transition: isRolling ? 'none' : 'transform 1s cubic-bezier(0.19, 1, 0.22, 1)'
-                                }}
-                            >
-                                <div className="face front">+</div>
-                                <div className="face back">+</div>
-                                <div className="face right">−</div>
-                                <div className="face left">−</div>
-                                <div className="face top">●</div>
-                                <div className="face bottom">●</div>
+            {!isIntegrated && (
+                <div className={`scene-3d ${isIntegrated ? 'integrated' : ''}`}>
+                    <div className={`dice-row-3d ${isIntegrated ? 'integrated' : ''}`}>
+                        {diceRotations.map((rot, i) => (
+                            <div key={i} className={`dice-unit ${isIntegrated ? 'integrated' : ''}`}>
+                                <div
+                                    className="alchemical-cube"
+                                    style={{
+                                        transform: `rotateX(${rot.x}deg) rotateY(${rot.y}deg)`,
+                                        transition: isRolling ? 'none' : 'transform 1s cubic-bezier(0.19, 1, 0.22, 1)'
+                                    }}
+                                >
+                                    <div className="face front">+</div>
+                                    <div className="face back">+</div>
+                                    <div className="face right">−</div>
+                                    <div className="face left">−</div>
+                                    <div className="face top">●</div>
+                                    <div className="face bottom">●</div>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {lastTotal !== null && !isRolling && (
                 <div className={`quantum-result animate-pop ${isIntegrated ? 'integrated' : ''}`}>
-                    <div className="res-ladder">{getLadderLabel(lastTotal).toUpperCase()}</div>
+                    {!isIntegrated && <div className="res-ladder">{getLadderLabel(lastTotal).toUpperCase()}</div>}
                     <div className={`res-value ${lastTotal > 0 ? 'pos' : lastTotal < 0 ? 'neg' : ''}`}>
                         {lastTotal > 0 ? `+${lastTotal}` : lastTotal}
                     </div>
@@ -65,12 +67,12 @@ export function DiceChamber({
                 }
 
                 .void-chamber.integrated {
-                    height: 42px;
-                    min-width: 172px;
+                    height: 34px;
+                    min-width: 58px;
                     margin: 0;
                     border-radius: 10px;
-                    justify-content: flex-start;
-                    padding: 0 10px;
+                    justify-content: center;
+                    padding: 0 8px;
                 }
 
                 .scene-3d { perspective: 1000px; z-index: 2; margin-bottom: 20px; }
@@ -136,9 +138,9 @@ export function DiceChamber({
 
                 .quantum-result.integrated {
                     position: absolute;
-                    right: 8px;
+                    right: 50%;
                     top: 50%;
-                    transform: translateY(-50%);
+                    transform: translate(50%, -50%);
                     display: flex;
                     align-items: center;
                     justify-content: flex-end;
@@ -171,7 +173,7 @@ export function DiceChamber({
                 }
 
                 .quantum-result.integrated .res-value {
-                    font-size: 0.95rem;
+                    font-size: 0.88rem;
                 }
 
                 .quantum-result.integrated .res-ladder {

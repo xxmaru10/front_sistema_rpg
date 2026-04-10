@@ -31,6 +31,57 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         return event.actorUserId.toUpperCase();
     };
 
+    const getActionLabel = (actionType: string) => {
+        if (actionType === "OVERCOME") return "SUPERAR";
+        if (actionType === "ATTACK") return "ATACAR";
+        if (actionType === "DEFEND") return "DEFENDER";
+        if (actionType === "CREATE_ADVANTAGE") return "VANTAGEM";
+        return actionType;
+    };
+
+    const getCompactSummary = (event: ActionEvent) => {
+        if (event.type === "ROLL_RESOLVED") {
+            const payload = event.payload as any;
+            const action = getActionLabel(payload.actionType || "");
+            const targetLabel = payload.challengeDescription
+                || payload.targetCharacterIds?.map((id: string) => characters[id]?.name.toUpperCase() || "ALVO").join(", ")
+                || (payload.targetCharacterId ? characters[payload.targetCharacterId]?.name.toUpperCase() || "ALVO" : "");
+            const diceFaces = Array.isArray(payload.dice)
+                ? payload.dice.map((d: number) => d > 0 ? "+" : d < 0 ? "-" : "0").join("")
+                : "";
+            const skillMod = payload.skill?.rank ? ` Per ${payload.skill.rank >= 0 ? `+${payload.skill.rank}` : payload.skill.rank}` : "";
+            const itemMod = payload.item?.bonus ? ` Item ${payload.item.bonus >= 0 ? `+${payload.item.bonus}` : payload.item.bonus}` : "";
+            const bonusMod = payload.manualBonus ? ` Bônus ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}` : "";
+
+            let outcome = "";
+            if (payload.targetDiff !== undefined) {
+                const diff = payload.total - (payload.targetDiff || 0);
+                outcome = diff >= 0 ? "Sucesso" : "Fracasso";
+            }
+
+            return `${action}${targetLabel ? ` • ${targetLabel}` : ""} • ${diceFaces}${skillMod}${itemMod}${bonusMod}${outcome ? ` • ${outcome}` : ""}`;
+        }
+
+        if (event.type === "FP_SPENT") return `Gasta PD ${(event.payload as any).amount}`;
+        if (event.type === "FP_GAINED") return `Ganha PD ${(event.payload as any).amount}`;
+        if (event.type === "CHARACTER_CREATED") return `Novo combatente ${(event.payload as any).name?.toUpperCase() || ""}`;
+        if (event.type === "STRESS_MARKED") {
+            const p = event.payload as any;
+            return `Dano ${p.track === "PHYSICAL" ? "FÍSICO" : "MENTAL"} em ${p.characterId ? characters[p.characterId]?.name?.toUpperCase() || "ALVO" : "ALVO"}`;
+        }
+        if (event.type.includes("ASPECT_CREATED")) return `Novo aspecto ${(event.payload as any).name?.toUpperCase() || ""}`;
+        if (event.type === "COMBAT_OUTCOME") return (event.payload as any).message || "Desfecho de combate";
+        return event.type;
+    };
+
+    const displayedEvents = currentSessionEvents
+        .filter(e =>
+            ["ROLL_RESOLVED", "FP_SPENT", "FP_GAINED", "CHARACTER_CREATED", "STRESS_MARKED", "COMBAT_OUTCOME"].includes(e.type) ||
+            e.type.includes("ASPECT_CREATED")
+        )
+        .slice()
+        .reverse();
+
     return (
         <div className={`combat-log-container solid ornate-border ${compact ? "compact-mode" : ""}`}>
             <div className="log-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -75,14 +126,19 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 </div>
             )}
             <div className="log-entries-scroll">
-                {currentSessionEvents
-                    .filter(e =>
-                        ["ROLL_RESOLVED", "FP_SPENT", "FP_GAINED", "CHARACTER_CREATED", "STRESS_MARKED", "COMBAT_OUTCOME"].includes(e.type) ||
-                        e.type.includes("ASPECT_CREATED")
-                    )
-                    .slice()
-                    .reverse()
-                    .map(event => (
+                {displayedEvents.map(event => (
+                    compact ? (
+                        <div key={event.id} className="combat-entry compact-line animate-fade-in">
+                            <span className="compact-time">{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                            <span className="compact-actor">{getActorName(event)}</span>
+                            <span className="compact-summary">{getCompactSummary(event)}</span>
+                            {event.type === "ROLL_RESOLVED" && (
+                                <span className="compact-total">
+                                    {(event.payload as any).total >= 0 ? `+${(event.payload as any).total}` : (event.payload as any).total}
+                                </span>
+                            )}
+                        </div>
+                    ) : (
                         <div key={event.id} className="combat-entry animate-fade-in">
                             <div className="entry-meta">
                                 <span className="time">{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
@@ -213,11 +269,9 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                 )}
                             </div>
                         </div>
-                    ))}
-                {currentSessionEvents.filter(e =>
-                    ["ROLL_RESOLVED", "FP_SPENT", "FP_GAINED", "CHARACTER_CREATED", "STRESS_MARKED", "COMBAT_OUTCOME"].includes(e.type) ||
-                    e.type.includes("ASPECT_CREATED")
-                ).length === 0 && (
+                    )
+                ))}
+                {displayedEvents.length === 0 && (
                     <div className="empty-log">Aguardando reverberações do destino...</div>
                 )}
             </div>
@@ -281,12 +335,12 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .combat-log-container.compact-mode .log-entries-scroll {
                     display: flex;
-                    flex-direction: row;
+                    flex-direction: column;
                     align-items: stretch;
-                    gap: 10px;
-                    padding: 8px 10px;
-                    overflow-x: auto;
-                    overflow-y: hidden;
+                    gap: 4px;
+                    padding: 6px 8px;
+                    overflow-x: hidden;
+                    overflow-y: auto;
                 }
 
                 .combat-entry {
@@ -295,15 +349,15 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 }
 
                 .combat-log-container.compact-mode .combat-entry {
-                    min-width: 250px;
-                    max-width: 320px;
-                    padding-right: 8px;
-                    border-bottom: none;
-                    border-right: 1px solid rgba(197, 160, 89, 0.08);
+                    min-width: 0;
+                    max-width: none;
+                    padding: 4px 6px;
+                    border-right: none;
+                    border-bottom: 1px solid rgba(197, 160, 89, 0.08);
                 }
 
                 .combat-log-container.compact-mode .combat-entry:last-child {
-                    border-right: none;
+                    border-bottom: none;
                 }
 
                 .combat-log-container.compact-mode .entry-meta {
@@ -317,6 +371,46 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .combat-log-container.compact-mode .roll-data {
                     padding: 8px;
+                }
+
+                .compact-line {
+                    display: grid;
+                    grid-template-columns: auto auto minmax(0, 1fr) auto;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .compact-time {
+                    font-family: var(--font-header);
+                    font-size: 0.5rem;
+                    color: rgba(255, 255, 255, 0.58);
+                    letter-spacing: 0.08em;
+                    white-space: nowrap;
+                }
+
+                .compact-actor {
+                    font-family: var(--font-header);
+                    font-size: 0.56rem;
+                    color: var(--accent-color);
+                    letter-spacing: 0.08em;
+                    white-space: nowrap;
+                }
+
+                .compact-summary {
+                    font-family: var(--font-main);
+                    font-size: 0.65rem;
+                    color: rgba(255, 255, 255, 0.88);
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                .compact-total {
+                    font-family: var(--font-header);
+                    font-size: 0.7rem;
+                    color: var(--accent-color);
+                    letter-spacing: 0.05em;
+                    white-space: nowrap;
                 }
 
                 .entry-meta {
