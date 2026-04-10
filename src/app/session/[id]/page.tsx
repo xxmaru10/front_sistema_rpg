@@ -617,7 +617,7 @@ export default function SessionPage() {
 
             {!isTheaterMode && (
                 <div className={`session-container animate-reveal${activeTab === "combat" ? " in-combat" : ""}`}>
-                                        <div className={`main-command-layout${isNavExpanded ? " nav-expanded" : ""}${activeTab === "combat" ? " combat-tab-active" : ""}`} style={{ position: "relative", zIndex: 1 }}>
+                    <div className={`main-command-layout${isNavExpanded ? " nav-expanded" : ""}`} style={{ position: "relative", zIndex: 1 }}>
                         <nav
                             className={`tactical-nav${isNavExpanded ? " is-expanded" : ""}`}
                             onMouseEnter={openNavOnHover}
@@ -630,7 +630,12 @@ export default function SessionPage() {
                                 aria-label={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
                                 title={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
                             >
-                                <span className="d20-glyph">d20</span>
+                                <span className="d20-glyph" aria-hidden="true">
+                                    <svg viewBox="0 0 100 100" role="presentation" focusable="false">
+                                        <polygon points="50,6 82,16 96,48 86,80 50,94 14,80 4,48 18,16" />
+                                        <path d="M50 6 L50 94 M18 16 L82 16 M14 80 L86 80 M4 48 L50 60 L96 48 M18 16 L50 60 L82 16 M14 80 L50 60 L86 80" />
+                                    </svg>
+                                </span>
                             </button>
 
                             <div className={`nav-expanded-shell${isNavExpanded ? " is-open" : ""}`}>
@@ -669,8 +674,11 @@ export default function SessionPage() {
                                                 <div className="nav-label">NOTAS</div>
                                             </button>
                                             <button
-                                                className={`nav-artifact ${activeTab === "bestiary" ? "active" : ""}`}
+                                                className={`nav-artifact icon-only ${activeTab === "bestiary" ? "active" : ""}`}
                                                 onClick={() => switchTabFromNav("bestiary")}
+                                                data-tooltip="BESTIARIO"
+                                                title="BESTIARIO"
+                                                aria-label="Abrir Bestiario"
                                             >
                                                 <div className="nav-icon"><PawPrint size={20} /></div>
                                                 <div className="nav-label">BESTIARIO</div>
@@ -683,8 +691,11 @@ export default function SessionPage() {
                                                 <div className="nav-label">LOGS</div>
                                             </button>
                                             <button
-                                                className={`nav-artifact ${activeTab === "vi" ? "active" : ""}`}
+                                                className={`nav-artifact icon-only ${activeTab === "vi" ? "active" : ""}`}
                                                 onClick={() => switchTabFromNav("vi")}
+                                                data-tooltip="CONFIGURACOES"
+                                                title="CONFIGURACOES"
+                                                aria-label="Abrir Configuracoes"
                                             >
                                                 <div className="nav-icon"><Settings size={20} /></div>
                                                 <div className="nav-label">CONFIGURACOES</div>
