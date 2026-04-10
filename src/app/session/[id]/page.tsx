@@ -465,7 +465,6 @@ export default function SessionPage() {
                 title={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
             >
                 <span className="d20-glyph" aria-hidden="true">
-                    <img src="/interface/dice_menu.png" alt="" />
                 </span>
             </button>
 
@@ -478,7 +477,6 @@ export default function SessionPage() {
                     title="Fechar menu lateral"
                 >
                     <span className="nav-close-die" aria-hidden="true">
-                        <img src="/interface/dice_menu.png" alt="" />
                         <span className="nav-close-value">20</span>
                     </span>
                 </button>
@@ -569,7 +567,6 @@ export default function SessionPage() {
                     title="Fechar menu lateral"
                 >
                     <span className="nav-close-die" aria-hidden="true">
-                        <img src="/interface/dice_menu.png" alt="" />
                         <span className="nav-close-value">1</span>
                     </span>
                 </button>

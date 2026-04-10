@@ -34,6 +34,9 @@ export function JoinSessionCard({
 }: JoinSessionCardProps) {
     const [isSessionMenuOpen, setIsSessionMenuOpen] = useState(false);
     const sessionMenuRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const [dropdownOpenUp, setDropdownOpenUp] = useState(false);
+    const [dropdownMaxHeight, setDropdownMaxHeight] = useState(260);
 
     useEffect(() => {
         const handleOutsideClick = (event: MouseEvent) => {
@@ -46,6 +49,34 @@ export function JoinSessionCard({
         document.addEventListener("mousedown", handleOutsideClick);
         return () => document.removeEventListener("mousedown", handleOutsideClick);
     }, []);
+
+    useEffect(() => {
+        if (!isSessionMenuOpen) return;
+
+        const updateDropdownPlacement = () => {
+            if (!triggerRef.current) return;
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportPadding = 12;
+            const minListHeight = 160;
+            const maxListHeight = 360;
+            const spaceAbove = Math.max(0, rect.top - viewportPadding);
+            const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding);
+            const shouldOpenUp = spaceBelow < minListHeight && spaceAbove > spaceBelow;
+            const availableSpace = shouldOpenUp ? spaceAbove : spaceBelow;
+            const computedMaxHeight = Math.max(minListHeight, Math.min(maxListHeight, Math.floor(availableSpace)));
+
+            setDropdownOpenUp(shouldOpenUp);
+            setDropdownMaxHeight(computedMaxHeight);
+        };
+
+        updateDropdownPlacement();
+        window.addEventListener("resize", updateDropdownPlacement);
+        window.addEventListener("scroll", updateDropdownPlacement, true);
+        return () => {
+            window.removeEventListener("resize", updateDropdownPlacement);
+            window.removeEventListener("scroll", updateDropdownPlacement, true);
+        };
+    }, [isSessionMenuOpen, sessions.length]);
 
     const handleSelectSession = (session: SessionData | null) => {
         setSelectedSession(session);
@@ -75,17 +106,22 @@ export function JoinSessionCard({
                                         onClick={() => setIsSessionMenuOpen((prev) => !prev)}
                                         aria-expanded={isSessionMenuOpen}
                                         aria-haspopup="listbox"
+                                        ref={triggerRef}
                                     >
                                         <span>
                                             {selectedSession
-                                                ? `${selectedSession.name} (Mestre: ${selectedSession.gmUserId})`
+                                                ? `${selectedSession.name}`
                                                 : "Selecione uma mesa..."}
                                         </span>
                                         <ChevronDown size={16} className={`session-select-chevron ${isSessionMenuOpen ? "open" : ""}`} />
                                     </button>
 
                                     {isSessionMenuOpen && (
-                                        <div className="session-select-dropdown global-dropdown scrollbar-arcane" role="listbox">
+                                        <div
+                                            className={`session-select-dropdown global-dropdown scrollbar-arcane${dropdownOpenUp ? " up" : ""}`}
+                                            role="listbox"
+                                            style={{ maxHeight: `${dropdownMaxHeight}px` }}
+                                        >
                                             <button
                                                 type="button"
                                                 className={`session-select-option ${!selectedSession ? "selected" : ""}`}
@@ -100,7 +136,7 @@ export function JoinSessionCard({
                                                     className={`session-select-option ${selectedSession?.id === session.id ? "selected" : ""}`}
                                                     onClick={() => handleSelectSession(session)}
                                                 >
-                                                    {session.name} (Mestre: {session.gmUserId})
+                                                    {session.name}
                                                 </button>
                                             ))}
                                         </div>

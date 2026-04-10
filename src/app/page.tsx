@@ -221,7 +221,8 @@ export default function Home() {
           gap: 20px;
           position: relative;
           min-height: 100vh;
-          overflow: hidden;
+          overflow-x: hidden;
+          overflow-y: visible;
         }
 
         .mystic-select {
@@ -245,6 +246,7 @@ export default function Home() {
         .session-select-shell {
             position: relative;
             margin-bottom: 16px;
+            overflow: visible;
         }
 
         .mystic-select-trigger {
@@ -277,11 +279,18 @@ export default function Home() {
             z-index: 40;
             display: flex;
             flex-direction: column;
-            max-height: 260px;
+            max-height: min(52vh, 320px);
             overflow-y: auto;
             background: #080808;
             border: 1px solid rgba(197, 160, 89, 0.32);
             box-shadow: 0 14px 32px rgba(0, 0, 0, 0.68);
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .session-select-dropdown.up {
+            top: auto;
+            bottom: calc(100% + 6px);
         }
 
         .session-select-option {
@@ -308,6 +317,12 @@ export default function Home() {
         .session-select-option.selected {
             background: rgba(197, 160, 89, 0.16);
             color: #f7dfae;
+        }
+
+        @media (max-width: 768px) {
+            .session-select-dropdown {
+                max-height: min(58vh, 360px);
+            }
         }
 
         .role-selector {
