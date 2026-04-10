@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-09 (story-36/follow-up-itens-inventario-automenções)
+last_updated: 2026-04-10 (story-36/follow-up-tamanho-item-global)
 status: ativo
 ---
 
@@ -116,6 +116,7 @@ export type GlobalItem = {
   price: number;
   quantity: number;
   bonus?: number; // legado sem campo: fallback 0
+  size?: "L" | "M" | "G";
   requirement: string;
   imageUrl?: string;
   createdAt: string;

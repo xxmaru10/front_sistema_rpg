@@ -355,6 +355,7 @@ export type GlobalItem = {
     price: number;
     quantity: number;
     bonus?: number;
+    size?: ItemSize;
     requirement: string;
     imageUrl?: string;
     createdAt: string;

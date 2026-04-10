@@ -483,6 +483,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
         newItemPrice, setNewItemPrice,
         newItemQuantity, setNewItemQuantity,
         newItemBonus, setNewItemBonus,
+        newItemSize, setNewItemSize,
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
         editingItemId,
@@ -604,8 +605,8 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                             <div className="item-meta">
                                                 <span className="item-price gold-text">${item.price}</span>
                                                 <span className="item-qty">QTD: {item.quantity}</span>
-                                                <span className="item-qty">QTD: {item.quantity}</span>
-                                                <span className="item-qty">BÔNUS: {item.bonus || 0}</span>
+                                                <span className="item-qty">BONUS: {item.bonus || 0}</span>
+                                                <span className="item-qty">TAM: {item.size || "-"}</span>
                                                 {userRole === 'GM' && (
                                                     <div className="card-actions-mini">
                                                         <button className="edit-btn-mini" onClick={() => handleStartEditItem(item.id)} title="Editar">
@@ -715,7 +716,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             <label>DESCRIÇÃO</label>
                             <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={itemDescriptionMentionEntities} />
                         </div>
-                        <div className="form-row-double" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+                        <div className="form-row-double" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
                             <div className="form-group">
                                 <label>PREÇO ($)</label>
                                 <input type="number" value={newItemPrice} onChange={(e) => setNewItemPrice(parseInt(e.target.value))} />
@@ -725,8 +726,17 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                 <input type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(parseInt(e.target.value))} />
                             </div>
                             <div className="form-group">
-                                <label>BÔNUS</label>
+                                <label>BONUS</label>
                                 <input type="number" value={newItemBonus} onChange={(e) => setNewItemBonus(parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div className="form-group">
+                                <label>TAMANHO</label>
+                                <select value={newItemSize || ""} onChange={(e) => setNewItemSize((e.target.value || undefined) as any)}>
+                                    <option value="">SEM TAMANHO</option>
+                                    <option value="L">L</option>
+                                    <option value="M">M</option>
+                                    <option value="G">G</option>
+                                </select>
                             </div>
                         </div>
                         <div className="form-group">

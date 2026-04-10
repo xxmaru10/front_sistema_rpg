@@ -307,6 +307,7 @@ export function InventorySection({
                     name: nextName ?? globalItem.name,
                     description: globalItem.description,
                     bonus: globalItem.bonus || 0,
+                    size: globalItem.size,
                     quantityCurrent: globalItem.quantity,
                     quantityTotal: globalItem.quantity,
                     url: globalItem.imageUrl,

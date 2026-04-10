@@ -123,12 +123,14 @@ export function useSessionNotesDiary({
         const globalDescription = normalizeComparable(globalItem.description);
         const globalBonus = globalItem.bonus || 0;
         const globalImageUrl = globalItem.imageUrl || "";
+        const globalSize = globalItem.size || "";
 
         return inventory.find((item) =>
             normalizeComparable(item.name) === globalName &&
             normalizeComparable(item.description) === globalDescription &&
             (item.bonus || 0) === globalBonus &&
-            (item.url || "") === globalImageUrl
+            (item.url || "") === globalImageUrl &&
+            (item.size || "") === globalSize
         );
     };
 
@@ -154,6 +156,7 @@ export function useSessionNotesDiary({
                     name: globalItem.name,
                     description: globalItem.description,
                     bonus: globalItem.bonus || 0,
+                    size: globalItem.size,
                     quantityCurrent: (existingItem.quantityCurrent ?? existingItem.quantityTotal ?? 0) + quantity,
                     quantityTotal: (existingItem.quantityTotal ?? existingItem.quantityCurrent ?? 0) + quantity,
                     url: globalItem.imageUrl || existingItem.url
@@ -163,6 +166,7 @@ export function useSessionNotesDiary({
                     name: globalItem.name,
                     description: globalItem.description,
                     bonus: globalItem.bonus || 0,
+                    size: globalItem.size,
                     quantityCurrent: quantity,
                     quantityTotal: quantity,
                     url: globalItem.imageUrl
