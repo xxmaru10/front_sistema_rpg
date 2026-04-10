@@ -38,6 +38,7 @@ export default function Home() {
   const [step, setStep] = useState<'HOME' | 'JOIN_CHARACTER'>('HOME');
   const [availableCharacters, setAvailableCharacters] = useState<any[]>([]);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [homeError, setHomeError] = useState<string | null>(null);
 
   // Buscar sessões ao carregar
   useEffect(() => {
@@ -60,8 +61,9 @@ export default function Home() {
   };
 
   const handleCreateSession = async () => {
+    setHomeError(null);
     if (!userName.trim() || !sessionName.trim()) {
-      alert("Por favor, preencha o seu nome e o nome da sessão.");
+      setHomeError("Por favor, preencha o seu nome e o nome da sessão.");
       return;
     }
 
@@ -79,7 +81,7 @@ export default function Home() {
         gmUserId: userName.trim(),
       });
     } catch {
-      alert("Erro ao criar sessão no banco.");
+      setHomeError("Erro ao criar sessão no banco.");
       setIsActionLoading(false);
       return;
     }
@@ -104,6 +106,7 @@ export default function Home() {
   };
 
   const handleJoinSession = async () => {
+    setHomeError(null);
     if (!selectedSession || isActionLoading) return;
 
     setIsActionLoading(true);
@@ -111,7 +114,7 @@ export default function Home() {
     try {
       joinInfo = await apiClient.fetchSessionJoinInfo(selectedSession.id);
     } catch {
-      alert("Erro ao verificar dados da sessão.");
+      setHomeError("Erro ao verificar dados da sessão.");
       setIsActionLoading(false);
       return;
     }
@@ -122,7 +125,7 @@ export default function Home() {
 
     if (joinRole === 'GM') {
       if (inputCode !== expectedGmCode) {
-        alert("Código de Mestre incorreto.");
+        setHomeError("Código de Mestre incorreto.");
         setIsActionLoading(false);
         return;
       }
@@ -130,14 +133,14 @@ export default function Home() {
 
     } else {
       if (inputCode !== expectedPlayerCode) {
-        alert("Código da Mesa incorreto. Peça ao se Mestre o 'Código do Jogador'.");
+        setHomeError("Código da Mesa incorreto. Peça ao mestre o Código do Jogador.");
         setIsActionLoading(false);
         return;
       }
 
       const playableCharacters = joinInfo.characters;
       if (playableCharacters.length === 0) {
-        alert("Esta sala ainda não possui personagens jogáveis disponíveis.");
+        setHomeError("Esta sala ainda não possui personagens jogáveis disponíveis.");
         setIsActionLoading(false);
         return;
       }
@@ -172,6 +175,12 @@ export default function Home() {
         </div>
         <h1 className="main-title glitch-text" data-text="CRONOS VTT">CRONOS VTT</h1>
       </div>
+
+      {homeError && (
+        <div className="home-error-banner" role="alert" aria-live="polite">
+          {homeError}
+        </div>
+      )}
 
       {step === 'HOME' && (
         <div className="actions-grid">
@@ -425,6 +434,20 @@ export default function Home() {
             font-size: 0.8rem;
             text-align: center;
             padding: 20px;
+        }
+
+        .home-error-banner {
+            width: min(900px, 92vw);
+            border: 1px solid rgba(255, 90, 90, 0.45);
+            background: rgba(42, 6, 6, 0.86);
+            color: #ffd0d0;
+            font-family: var(--font-header);
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-align: center;
+            padding: 10px 14px;
+            margin: 4px 0 8px;
+            box-shadow: 0 0 14px rgba(255, 90, 90, 0.18);
         }
       `}</style>
     </div>
