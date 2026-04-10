@@ -197,6 +197,7 @@ export function SessionNotes({
         newItemPrice, setNewItemPrice,
         newItemQuantity, setNewItemQuantity,
         newItemBonus, setNewItemBonus,
+        newItemSize, setNewItemSize,
         newItemRequirement, setNewItemRequirement,
         newItemImageUrl, setNewItemImageUrl,
 

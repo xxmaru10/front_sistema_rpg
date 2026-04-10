@@ -46,6 +46,7 @@ function createClearedItemDraft(item?: Item, name = "", preserveStructure = fals
         isContainer: preserveStructure ? item?.isContainer : false,
         capacity: preserveStructure ? item?.capacity : undefined,
         contents: preserveStructure ? (item?.contents || []) : [],
+        maxSize: item?.maxSize,
     };
 }
 
@@ -75,12 +76,14 @@ export function InventorySection({
     }>({ active: false, query: "", position: { top: 0, left: 0 } });
     const normalizedActorUserId = actorUserId.trim().toLowerCase();
     const itemNameInputRef = useRef<HTMLInputElement>(null);
+    const [inventoryValidationError, setInventoryValidationError] = useState<string | null>(null);
 
     // Draggable Logic
     const [dragPos, setDragPos] = useState({ x: -270, y: 20 });
     const [isDragging, setIsDragging] = useState(false);
     const posRef = useRef({ x: -270, y: 20 });
     const containerRef = useRef<HTMLDivElement>(null);
+
     const storageContainers = useMemo(
         () => (character.inventory || []).filter((item) => item?.isContainer),
         [character.inventory]
@@ -191,6 +194,7 @@ export function InventorySection({
     };
 
 
+
     const handleInventoryChange = (index: number, containerId: string | null = null) => {
         let currentItem: Item;
 
@@ -201,6 +205,7 @@ export function InventorySection({
             currentItem = character.inventory?.[index] || createEmptyInventorySlot();
         }
         const linkedGlobalItem = globalItemsByName.get(normalizeComparable(currentItem.name));
+        setInventoryValidationError(null);
         setInventoryModal({
             index,
             item: { ...currentItem },
@@ -211,6 +216,30 @@ export function InventorySection({
 
     const handleSaveInventoryItem = () => {
         if (!inventoryModal) return;
+
+        // Validation Logic
+        const sizeWeights: Record<string, number> = { 'L': 1, 'M': 2, 'G': 3 };
+        
+        // Slot level restriction check
+        let slotMaxSize: string | undefined;
+        if (inventoryModal.containerId) {
+            const container = character.inventory.find(i => i.id === inventoryModal.containerId);
+            slotMaxSize = container?.contents?.[inventoryModal.index]?.maxSize;
+        } else {
+            slotMaxSize = character.inventory?.[inventoryModal.index]?.maxSize;
+        }
+
+        if (slotMaxSize && inventoryModal.item.size) {
+            const itemWeight = sizeWeights[inventoryModal.item.size] || 0;
+            const slotWeight = sizeWeights[slotMaxSize] || 0;
+            
+            if (itemWeight > slotWeight) {
+                setInventoryValidationError(`Item é tamanho [${inventoryModal.item.size}], encaixe no local correto (Máx: ${slotMaxSize})`);
+                return;
+            }
+        }
+
+        setInventoryValidationError(null);
 
         const newItem: Item = {
             id: inventoryModal.item.id || uuidv4(),
@@ -223,17 +252,16 @@ export function InventorySection({
             url: inventoryModal.item.url,
             isContainer: inventoryModal.item.isContainer,
             capacity: inventoryModal.item.capacity,
-            contents: inventoryModal.item.contents || []
+            contents: inventoryModal.item.contents || [],
+            maxSize: inventoryModal.item.maxSize
         };
 
         if (inventoryModal.containerId) {
-            // Saving item INSIDE a container
             const container = character.inventory.find(i => i.id === inventoryModal.containerId);
             if (container) {
                 const newContents = [...(container.contents || [])];
-                // Resize if needed
                 while (newContents.length <= inventoryModal.index) {
-                    newContents.push({ id: uuidv4(), name: "", bonus: 0 }); // Placeholder
+                    newContents.push(createEmptyInventorySlot());
                 }
                 newContents[inventoryModal.index] = newItem;
 
@@ -251,7 +279,6 @@ export function InventorySection({
                 } as any);
             }
         } else {
-            // Saving a root item (which might be a container)
             globalEventStore.append({
                 id: uuidv4(),
                 sessionId,
@@ -265,8 +292,10 @@ export function InventorySection({
         }
 
         setInventoryItemSuggestions({ active: false, query: "", position: { top: 0, left: 0 } });
+        setInventoryValidationError(null);
         setInventoryModal(null);
     };
+
 
     const updateInventoryModalField = (field: keyof Item, value: any) => {
         if (!inventoryModal) return;
@@ -307,7 +336,7 @@ export function InventorySection({
                     name: nextName ?? globalItem.name,
                     description: globalItem.description,
                     bonus: globalItem.bonus || 0,
-                    size: globalItem.size,
+                    size: globalItem.size as any,
                     quantityCurrent: globalItem.quantity,
                     quantityTotal: globalItem.quantity,
                     url: globalItem.imageUrl,
@@ -689,6 +718,11 @@ export function InventorySection({
                                             {item.size}
                                         </div>
                                     )}
+                                    {!isFilled && item?.maxSize && (
+                                        <div className={`inv-size-indicator restriction size-${item.maxSize.toLowerCase()}`} title={`Restrição: Máximo ${item.maxSize}`}>
+                                            {item.maxSize}
+                                        </div>
+                                    )}
                                 </button>
                             ) : (
                                 <div
@@ -717,6 +751,11 @@ export function InventorySection({
                                     {isFilled && item.size && (
                                         <div className={`inv-size-indicator size-${item.size.toLowerCase()}`}>
                                             {item.size}
+                                        </div>
+                                    )}
+                                    {!isFilled && item?.maxSize && (
+                                        <div className={`inv-size-indicator restriction size-${item.maxSize.toLowerCase()}`} title={`Restrição: Máximo ${item.maxSize}`}>
+                                            {item.maxSize}
                                         </div>
                                     )}
                                 </div>
@@ -861,6 +900,7 @@ export function InventorySection({
                         <span>INVENTÁRIO & ARSENAL</span>
                     </div>
                 </div>
+                <div className="inventory-inner">
                     {hasStorageTabs && (
                         <div className="inventory-tab-navigation">
                             <button
@@ -953,6 +993,22 @@ export function InventorySection({
                             </div>
 
                             <div className="inv-modal-form">
+                                {inventoryValidationError && (
+                                    <div className="inv-modal-error" style={{
+                                        background: 'rgba(255, 80, 80, 0.15)',
+                                        border: '1px solid #ff5050',
+                                        color: '#ff8080',
+                                        padding: '10px',
+                                        borderRadius: '4px',
+                                        marginBottom: '16px',
+                                        fontSize: '0.85rem',
+                                        fontFamily: 'var(--font-header)',
+                                        letterSpacing: '0.05em',
+                                        textAlign: 'center'
+                                    }}>
+                                        ⚠️ {inventoryValidationError.toUpperCase()}
+                                    </div>
+                                )}
                                 <div className="inv-modal-field">
                                     <label>NOME DO ITEM</label>
                                     <input
@@ -1044,7 +1100,6 @@ export function InventorySection({
                                     </div>
                                 </div>
 
-                                {/* Armazenamento / Backpack Toggle */}
                                 <div className="inv-modal-field" style={{ flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
                                     <input
                                         type="checkbox"
@@ -1071,8 +1126,6 @@ export function InventorySection({
                                         />
                                     </div>
                                 )}
-
-
 
                                 <div className="inv-modal-row">
                                     <div className="inv-modal-field small">
@@ -1108,34 +1161,61 @@ export function InventorySection({
                                     </div>
                                 </div>
 
-                                {/* Size selector - GM only */}
                                 {isGM && (
-                                    <div className="inv-modal-field">
-                                        <label>TAMANHO (L=Leve, M=Médio, G=Grande)</label>
-                                        <div className="inv-size-selector">
-                                            <button
-                                                type="button"
-                                                className={`size-btn size-l ${inventoryModal.item.size === 'L' ? 'active' : ''}`}
-                                                onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'L' ? undefined : 'L')}
-                                            >
-                                                L
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={`size-btn size-m ${inventoryModal.item.size === 'M' ? 'active' : ''}`}
-                                                onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'M' ? undefined : 'M')}
-                                            >
-                                                M
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={`size-btn size-g ${inventoryModal.item.size === 'G' ? 'active' : ''}`}
-                                                onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'G' ? undefined : 'G')}
-                                            >
-                                                G
-                                            </button>
+                                    <>
+                                        <div className="inv-modal-field">
+                                            <label>TAMANHO DO ITEM (L=Leve, M=Médio, G=Grande)</label>
+                                            <div className="inv-size-selector">
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-l ${inventoryModal.item.size === 'L' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'L' ? undefined : 'L')}
+                                                >
+                                                    L
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-m ${inventoryModal.item.size === 'M' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'M' ? undefined : 'M')}
+                                                >
+                                                    M
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-g ${inventoryModal.item.size === 'G' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('size', inventoryModal.item.size === 'G' ? undefined : 'G')}
+                                                >
+                                                    G
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
+                                        <div className="inv-modal-field" style={{ marginTop: '12px' }}>
+                                            <label>RESTRIÇÃO DO SLOT (Opcional - L, M, G)</label>
+                                            <div className="inv-size-selector">
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-l ${inventoryModal.item.maxSize === 'L' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('maxSize', inventoryModal.item.maxSize === 'L' ? undefined : 'L')}
+                                                >
+                                                    L
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-m ${inventoryModal.item.maxSize === 'M' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('maxSize', inventoryModal.item.maxSize === 'M' ? undefined : 'M')}
+                                                >
+                                                    M
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`size-btn size-g ${inventoryModal.item.maxSize === 'G' ? 'active' : ''}`}
+                                                    onClick={() => updateInventoryModalField('maxSize', inventoryModal.item.maxSize === 'G' ? undefined : 'G')}
+                                                >
+                                                    G
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                             </div>
 
@@ -1152,45 +1232,40 @@ export function InventorySection({
                             </div>
                         </div>
                     </div>
-                )
-                }
+                )}
 
                 {/* VI Selector Modal */}
-                {
-                    showVISelector && (
-                        <div className="vi-modal-overlay" onClick={() => setShowVISelector(false)}>
-                            <div className="vi-modal-content" onClick={e => e.stopPropagation()}>
-                                <div className="vi-modal-header">
-                                    <h3>SELECIONAR IMAGEM DA VI</h3>
-                                    <button onClick={() => setShowVISelector(false)}>✕</button>
-                                </div>
-                                <VIControlPanel
-                                    sessionId={sessionId}
-                                    isGM={!!isGM}
-                                    onSelect={(url) => {
-                                        if (inventoryModal) {
-                                            updateInventoryModalField('url', url);
-                                        }
-                                        setShowVISelector(false);
-                                    }}
-                                    style={{ flex: 1, overflow: 'hidden', height: 'auto' }}
-                                />
+                {showVISelector && (
+                    <div className="vi-modal-overlay" onClick={() => setShowVISelector(false)}>
+                        <div className="vi-modal-content" onClick={e => e.stopPropagation()}>
+                            <div className="vi-modal-header">
+                                <h3>SELECIONAR IMAGEM DA VI</h3>
+                                <button onClick={() => setShowVISelector(false)}>✕</button>
                             </div>
+                            <VIControlPanel
+                                sessionId={sessionId}
+                                isGM={!!isGM}
+                                onSelect={(url) => {
+                                    if (inventoryModal) {
+                                        updateInventoryModalField('url', url);
+                                    }
+                                    setShowVISelector(false);
+                                }}
+                                style={{ flex: 1, overflow: 'hidden', height: 'auto' }}
+                            />
                         </div>
-                    )
-                }
+                    </div>
+                )}
 
                 {/* Image Viewer Modal */}
-                {
-                    viewImageUrl && (
-                        <div className="image-viewer-overlay" onClick={() => setViewImageUrl(null)}>
-                            <div className="image-viewer-content" onClick={e => e.stopPropagation()}>
-                                <img src={viewImageUrl} alt="Visualização do Item" />
-                                <button className="close-viewer-btn" onClick={() => setViewImageUrl(null)}>✕</button>
-                            </div>
+                {viewImageUrl && (
+                    <div className="image-viewer-overlay" onClick={() => setViewImageUrl(null)}>
+                        <div className="image-viewer-content" onClick={e => e.stopPropagation()}>
+                            <img src={viewImageUrl} alt="Visualização do Item" />
+                            <button className="close-viewer-btn" onClick={() => setViewImageUrl(null)}>✕</button>
                         </div>
-                    )
-                }
+                    </div>
+                )}
                 <style jsx>{`
                     .inventory-tab-navigation {
                         display: flex;
@@ -1275,7 +1350,14 @@ export function InventorySection({
                         border-color: rgba(var(--accent-rgb), 0.36);
                         background: rgba(var(--accent-rgb), 0.14);
                     }
+
+                    .inv-size-indicator.restriction {
+                        background: rgba(255, 255, 255, 0.05);
+                        border: 1px dashed rgba(var(--accent-rgb), 0.3);
+                        opacity: 0.6;
+                    }
                 `}</style>
+        </div>
         </>
     );
 }

@@ -88,6 +88,7 @@ export type Item = {
   isContainer?: boolean;
   contents?: Item[];
   capacity?: number;
+  maxSize?: ItemSize;
 };
 
 export type Stunt = {

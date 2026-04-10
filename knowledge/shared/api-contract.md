@@ -187,6 +187,11 @@ type CharacterInventoryUpdated = EventEnvelope<"CHARACTER_INVENTORY_UPDATED", {
     quantityCurrent?: number;
     quantityTotal?: number;
     url?: string;
+    size?: "L" | "M" | "G";
+    maxSize?: "L" | "M" | "G";
+    isContainer?: boolean;
+    capacity?: number;
+    contents?: any[];
   };
 }>;
 ```
