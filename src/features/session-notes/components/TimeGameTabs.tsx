@@ -731,7 +731,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                             </div>
                             <div className="form-group">
                                 <label>TAMANHO</label>
-                                <select value={newItemSize || ""} onChange={(e) => setNewItemSize((e.target.value || undefined) as any)}>
+                                <select className="victorian-select" value={newItemSize || ""} onChange={(e) => setNewItemSize((e.target.value || undefined) as any)}>
                                     <option value="">SEM TAMANHO</option>
                                     <option value="L">L</option>
                                     <option value="M">M</option>

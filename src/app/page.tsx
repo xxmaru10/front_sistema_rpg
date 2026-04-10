@@ -212,7 +212,7 @@ export default function Home() {
         />
       )}
 
-      <style jsx>{`
+      <style jsx global>{`
         .home-container {
           padding-top: 40px;
           display: flex;

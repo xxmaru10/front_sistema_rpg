@@ -787,6 +787,8 @@ export function SessionNotes({
                         newItemPrice, setNewItemPrice,
                         newItemQuantity, setNewItemQuantity,
                         newItemBonus, setNewItemBonus,
+                        newItemSize, setNewItemSize,
+                        editingItemId, editingSkillId,
                         newItemRequirement, setNewItemRequirement,
                         newItemImageUrl, setNewItemImageUrl,
                         handleCreateItem, handleUpdateItem, handleDeleteItem,
