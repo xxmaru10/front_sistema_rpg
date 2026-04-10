@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-10 (story-36/follow-up-tamanho-item-global)
+last_updated: 2026-04-10 (story-37/menu-d20-lateral)
 status: ativo
 ---
 
@@ -73,6 +73,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Reestruturação da Ficha com Resumo e Abas (Story 33) | `CharacterCard` foi reorganizado em um bloco superior de Resumo sempre visível e um segundo nível de abas para Lore, Façanhas/Magia, Inventário e Notas Privadas. A implementação preserva a lógica já existente de edição/eventos, reaproveitando os mesmos componentes e mantendo notas gerais acessíveis dentro do atalho privado da ficha. | 2026-04-08 |
 | Navegação Lateral por Avatares na Arena (Story 34) | `CombatTab` passou a orquestrar abertura de cards por lado da Arena com rails laterais de retratos compactos; `CombatCard` ganhou modo compacto e o header expandido substituiu o antigo `+/-` por um botão com retrato. A mudança preserva o card completo existente, mantém hazards fora do novo fluxo e não altera Event Sourcing. | 2026-04-08 |
 | Submenus Privados e Visão por Jogador (Story 36) | Notas privadas ganharam `noteFolders` próprios por usuário, persistidos por eventos e sempre resolvidos com fallback em `Todas`. A aba Jogadores passou a navegar por submenus derivados dos personagens e as projeções de notas adotaram `upsert`/patch por `id` para evitar duplicação rara em replay/retry. | 2026-04-09 |
+| Navegacao Lateral Global em Handle d20 (Story 37) | `page.tsx` migrou de trilha fixa de botoes para menu lateral colapsado em alca `d20` semi-oculta, com expansao vertical por hover (desktop) e toque (mobile). O estado expandido ganhou caps de recolhimento (`d20` no topo e `d1` na base) e a Arena aplica deslocamento da gaveta lateral esquerda quando o menu global esta aberto para evitar colisao de clique/legibilidade. | 2026-04-10 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -146,3 +147,4 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 ## O que evitar
 - Não coloque lógica de cálculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.
 - Evite mutar o estado local sem despachar um evento se a ação for visível para outros jogadores.
+

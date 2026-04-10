@@ -80,6 +80,9 @@ export default function SessionPage() {
     const [diceVisible, setDiceVisible] = useState(false);
     const [diceParams, setDiceParams] = useState(diceSimulationStore.getParams());
     const [pendingMentionNavigation, setPendingMentionNavigation] = useState<MentionNavigationRequest | null>(null);
+    const [isNavExpanded, setIsNavExpanded] = useState(false);
+    const [isMobileNav, setIsMobileNav] = useState(false);
+    const [suppressHoverOpen, setSuppressHoverOpen] = useState(false);
 
     const handleMentionNavigate = (request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
@@ -95,7 +98,50 @@ export default function SessionPage() {
         return () => { unsub(); };
     }, []);
 
+    useEffect(() => {
+        const media = window.matchMedia("(max-width: 768px)");
+        const syncMedia = () => setIsMobileNav(media.matches);
+        syncMedia();
+        media.addEventListener("change", syncMedia);
+        return () => media.removeEventListener("change", syncMedia);
+    }, []);
+
+    useEffect(() => {
+        if (isMobileNav) setIsNavExpanded(false);
+    }, [activeTab, isMobileNav]);
+
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
+
+    const closeNavDrawer = () => {
+        setIsNavExpanded(false);
+        setSuppressHoverOpen(true);
+    };
+
+    const openNavOnHover = () => {
+        if (!isMobileNav && !suppressHoverOpen) {
+            setIsNavExpanded(true);
+        }
+    };
+
+    const handleNavMouseLeave = () => {
+        if (!isMobileNav) {
+            setIsNavExpanded(false);
+        }
+        setSuppressHoverOpen(false);
+    };
+
+    const toggleNavHandle = () => {
+        setIsNavExpanded(prev => !prev);
+        setSuppressHoverOpen(false);
+    };
+
+    const switchTabFromNav = (tab: "characters" | "combat" | "notes" | "bestiary" | "log" | "vi") => {
+        if (tab === "characters" || tab === "combat" || tab === "bestiary" || tab === "log") {
+            setViewingBestiaryCharId(null);
+        }
+        setActiveTab(tab);
+        setIsNavExpanded(false);
+    };
 
     useEffect(() => {
         const unsub = battlemapToolStore.subscribe(() => {
@@ -571,62 +617,100 @@ export default function SessionPage() {
 
             {!isTheaterMode && (
                 <div className={`session-container animate-reveal${activeTab === "combat" ? " in-combat" : ""}`}>
-                    <div className="main-command-layout" style={{ position: "relative", zIndex: 1 }}>
-                        <nav className="tactical-nav">
+                                        <div className={`main-command-layout${isNavExpanded ? " nav-expanded" : ""}${activeTab === "combat" ? " combat-tab-active" : ""}`} style={{ position: "relative", zIndex: 1 }}>
+                        <nav
+                            className={`tactical-nav${isNavExpanded ? " is-expanded" : ""}`}
+                            onMouseEnter={openNavOnHover}
+                            onMouseLeave={handleNavMouseLeave}
+                        >
                             <button
-                                className={`nav-artifact ${activeTab === "characters" ? "active" : ""}`}
-                                onClick={() => { setViewingBestiaryCharId(null); setActiveTab("characters"); }}
+                                type="button"
+                                className={`nav-d20-handle${isNavExpanded ? " is-hidden" : ""}`}
+                                onClick={toggleNavHandle}
+                                aria-label={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
+                                title={isNavExpanded ? "Fechar menu lateral" : "Abrir menu lateral"}
                             >
-                                <div className="nav-icon"><Users size={24} /></div>
-                                <div className="nav-label">PERSONAGEM</div>
+                                <span className="d20-glyph">d20</span>
                             </button>
-                            <button
-                                className={`nav-artifact ${activeTab === "combat" ? "active" : ""}`}
-                                onClick={() => { setViewingBestiaryCharId(null); setActiveTab("combat"); }}
-                            >
-                                <div className="nav-icon"><Swords size={24} /></div>
-                                <div className="nav-label">ARENA</div>
-                            </button>
-                            {userRole === "GM" ? (
-                                <>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
-                                        onClick={() => setActiveTab("notes")}
-                                    >
-                                        <div className="nav-icon"><ScrollText size={24} /></div>
-                                        <div className="nav-label">NOTAS</div>
-                                    </button>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "bestiary" ? "active" : ""}`}
-                                        onClick={() => { setViewingBestiaryCharId(null); setActiveTab("bestiary"); }}
-                                    >
-                                        <div className="nav-icon"><PawPrint size={24} /></div>
-                                        <div className="nav-label">BESTIÁRIO</div>
-                                    </button>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "log" ? "active" : ""}`}
-                                        onClick={() => { setViewingBestiaryCharId(null); setActiveTab("log"); }}
-                                    >
-                                        <div className="nav-icon"><History size={24} /></div>
-                                        <div className="nav-label">LOGS</div>
-                                    </button>
-                                    <button
-                                        className={`nav-artifact ${activeTab === "vi" ? "active" : ""}`}
-                                        onClick={() => setActiveTab("vi")}
-                                    >
-                                        <div className="nav-icon"><Settings size={24} /></div>
-                                        <div className="nav-label">CONFIGURAÇÕES</div>
-                                    </button>
-                                </>
-                            ) : (
+
+                            <div className={`nav-expanded-shell${isNavExpanded ? " is-open" : ""}`}>
                                 <button
-                                    className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("notes")}
+                                    type="button"
+                                    className="nav-close-cap nav-close-cap-top"
+                                    onClick={closeNavDrawer}
+                                    aria-label="Fechar menu lateral pelo topo"
+                                    title="Fechar menu lateral"
                                 >
-                                    <div className="nav-icon"><ScrollText size={24} /></div>
-                                    <div className="nav-label">NOTAS</div>
+                                    d20
                                 </button>
-                            )}
+
+                                <div className="nav-options-stack">
+                                    <button
+                                        className={`nav-artifact ${activeTab === "characters" ? "active" : ""}`}
+                                        onClick={() => switchTabFromNav("characters")}
+                                    >
+                                        <div className="nav-icon"><Users size={20} /></div>
+                                        <div className="nav-label">PERSONAGEM</div>
+                                    </button>
+                                    <button
+                                        className={`nav-artifact ${activeTab === "combat" ? "active" : ""}`}
+                                        onClick={() => switchTabFromNav("combat")}
+                                    >
+                                        <div className="nav-icon"><Swords size={20} /></div>
+                                        <div className="nav-label">ARENA</div>
+                                    </button>
+                                    {userRole === "GM" ? (
+                                        <>
+                                            <button
+                                                className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
+                                                onClick={() => switchTabFromNav("notes")}
+                                            >
+                                                <div className="nav-icon"><ScrollText size={20} /></div>
+                                                <div className="nav-label">NOTAS</div>
+                                            </button>
+                                            <button
+                                                className={`nav-artifact ${activeTab === "bestiary" ? "active" : ""}`}
+                                                onClick={() => switchTabFromNav("bestiary")}
+                                            >
+                                                <div className="nav-icon"><PawPrint size={20} /></div>
+                                                <div className="nav-label">BESTIARIO</div>
+                                            </button>
+                                            <button
+                                                className={`nav-artifact ${activeTab === "log" ? "active" : ""}`}
+                                                onClick={() => switchTabFromNav("log")}
+                                            >
+                                                <div className="nav-icon"><History size={20} /></div>
+                                                <div className="nav-label">LOGS</div>
+                                            </button>
+                                            <button
+                                                className={`nav-artifact ${activeTab === "vi" ? "active" : ""}`}
+                                                onClick={() => switchTabFromNav("vi")}
+                                            >
+                                                <div className="nav-icon"><Settings size={20} /></div>
+                                                <div className="nav-label">CONFIGURACOES</div>
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            className={`nav-artifact ${activeTab === "notes" ? "active" : ""}`}
+                                            onClick={() => switchTabFromNav("notes")}
+                                        >
+                                            <div className="nav-icon"><ScrollText size={20} /></div>
+                                            <div className="nav-label">NOTAS</div>
+                                        </button>
+                                    )}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="nav-close-cap nav-close-cap-bottom"
+                                    onClick={closeNavDrawer}
+                                    aria-label="Fechar menu lateral pela base"
+                                    title="Fechar menu lateral"
+                                >
+                                    d1
+                                </button>
+                            </div>
                         </nav>
 
                         <div className={`primary-display ${activeTab === "combat" || activeTab === "vi" ? "combat-mode-narrow" : ""}`}>
@@ -824,3 +908,4 @@ export default function SessionPage() {
         </div>
     );
 }
+
