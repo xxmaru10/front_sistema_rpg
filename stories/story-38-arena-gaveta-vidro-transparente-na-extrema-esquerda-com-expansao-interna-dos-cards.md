@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-10 (hotfix-loop-altura-combat-card)"
+last_updated: "2026-04-10 (follow-up-gaveta-inimigos-esquerda-e-rolagem-horizontal)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -88,3 +88,4 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Story em andamento (epico e story permanecem abertos por orientacao do usuario).
 - Fluxo base de gaveta foi implementado em iteracoes anteriores desta sessao.
 - Follow-up aplicado: hotfix no `CombatCard` para interromper crescimento infinito de altura apos expansao.
+- Follow-up aplicado: gaveta de inimigos alinhada para expandir a esquerda e zona de rolagem integrada convertida para faixa horizontal compacta no topo (com logs reduzidos), mantendo a logica de rolagem/eventos.

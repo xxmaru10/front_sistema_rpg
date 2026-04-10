@@ -5,6 +5,7 @@ import { useDiceRoller } from "@/hooks/useDiceRoller";
 import { RollerInputs } from "./DiceRoller/RollerInputs";
 import { DiceChamber } from "./DiceRoller/DiceChamber";
 import { Character } from "@/types/domain";
+import { Dices } from "lucide-react";
 
 interface DiceRollerProps {
     sessionId: string;
@@ -123,11 +124,20 @@ export function DiceRoller(props: DiceRollerProps) {
 
             <button
                 onClick={roller.handleRoll}
-                className={`matrix-trigger ${roller.isRolling ? 'rolling' : ''}`}
+                className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''}`}
                 disabled={roller.isRolling || disabled}
+                title={disabled ? "Aguarde seu turno" : "Rolar dados"}
             >
-                <div className="trigger-content">
-                    {disabled ? "AGUARDE SEU TURNO" : (roller.isRolling ? "CONVOCANDO O DESTINO..." : "ROLAR")}
+                <div className={`trigger-content ${isIntegrated ? 'integrated' : ''}`}>
+                    {disabled ? (
+                        "AGUARDE SEU TURNO"
+                    ) : roller.isRolling ? (
+                        isIntegrated ? "..." : "CONVOCANDO O DESTINO..."
+                    ) : isIntegrated ? (
+                        <Dices size={16} />
+                    ) : (
+                        "ROLAR"
+                    )}
                 </div>
                 <div className="trigger-progress" style={{ width: roller.isRolling ? '100%' : '0%' }}></div>
             </button>
@@ -145,8 +155,14 @@ export function DiceRoller(props: DiceRollerProps) {
                 }
 
                 .probability-grid.integrated {
-                    padding: 16px;
-                    gap: 12px;
+                    padding: 6px 8px;
+                    gap: 8px;
+                    width: 100%;
+                    display: flex;
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: flex-start;
                 }
 
                 .roller-brand {
@@ -185,13 +201,27 @@ export function DiceRoller(props: DiceRollerProps) {
                 .matrix-trigger {
                     position: relative;
                     height: 60px;
+                    min-width: 170px;
                     background: #000000;
                     border: 2px solid var(--accent-color);
                     border-radius: 40px;
                     cursor: pointer;
                     overflow: hidden;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
                     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
                     box-shadow: 0 0 25px var(--accent-glow), inset 0 0 20px var(--accent-glow);
+                }
+
+                .matrix-trigger.integrated {
+                    height: 34px;
+                    width: 34px;
+                    min-width: 34px;
+                    border-radius: 10px;
+                    border-width: 1px;
+                    box-shadow: 0 0 16px var(--accent-glow), inset 0 0 10px var(--accent-glow);
+                    margin-left: auto;
                 }
 
                 .trigger-content {
@@ -205,16 +235,34 @@ export function DiceRoller(props: DiceRollerProps) {
                     text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow);
                 }
 
+                .trigger-content.integrated {
+                    letter-spacing: 0;
+                    font-size: 0.85rem;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    text-shadow: 0 0 10px var(--accent-glow);
+                }
+
                 .matrix-trigger:hover .trigger-content { 
                     color: #fff; 
                     letter-spacing: 0.4em; 
                     text-shadow: 0 0 20px #fff, 0 0 40px var(--accent-glow); 
+                }
+
+                .matrix-trigger.integrated:hover .trigger-content {
+                    letter-spacing: 0;
+                    text-shadow: 0 0 14px #fff, 0 0 20px var(--accent-glow);
                 }
                 .matrix-trigger:hover { 
                     background: radial-gradient(circle at center, rgba(var(--accent-rgb), 0.6) 0%, rgba(var(--accent-rgb), 0.1) 100%);
                     box-shadow: 0 0 50px var(--accent-glow), inset 0 0 30px var(--accent-glow);
                     border-color: #fff;
                     transform: scale(1.02);
+                }
+
+                .matrix-trigger.integrated:hover {
+                    transform: scale(1.05);
                 }
 
                 .trigger-progress {

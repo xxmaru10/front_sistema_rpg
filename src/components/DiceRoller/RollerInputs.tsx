@@ -51,7 +51,7 @@ export function RollerInputs({
     activeChar
 }: RollerInputsProps) {
     return (
-        <div className="matrix-inputs flex-stagger">
+        <div className={`matrix-inputs flex-stagger ${isIntegrated ? 'integrated' : ''}`}>
             {!fixedCharacterId && (
                 <div className="matrix-field">
                     {!isIntegrated && <label>PERSONAGEM</label>}
@@ -175,9 +175,12 @@ export function RollerInputs({
                             <Plus size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />
                             <input
                                 type="number"
-                                placeholder="0"
-                                value={manualBonus}
-                                onChange={(e) => setManualBonus(parseInt(e.target.value) || 0)}
+                                placeholder="BÔNUS"
+                                value={manualBonus === 0 ? "" : manualBonus}
+                                onChange={(e) => {
+                                    const rawValue = e.target.value;
+                                    setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
+                                }}
                                 className="mystic-input input-ritual bonus-input"
                             />
                         </div>
@@ -234,7 +237,14 @@ export function RollerInputs({
                 .matrix-inputs {
                     display: flex;
                     flex-direction: column;
-                    gap: 24px;
+                    gap: 12px;
+                }
+
+                .matrix-inputs.integrated {
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 6px;
                 }
 
                 .matrix-field {
@@ -265,8 +275,10 @@ export function RollerInputs({
                 }
 
                 .control-panel-grid.integrated-mode {
-                    flex-direction: column !important;
+                    flex-direction: row !important;
                     align-items: center !important;
+                    justify-content: flex-start !important;
+                    gap: 6px;
                 }
 
                 .panel-col {
@@ -279,12 +291,33 @@ export function RollerInputs({
                     align-items: center;
                 }
 
+                .control-panel-grid.integrated-mode .panel-col {
+                    flex-direction: row;
+                    gap: 6px;
+                    flex: 0 1 auto;
+                    width: auto;
+                }
+
                 .field-row {
                     display: flex;
                     align-items: center;
                     gap: 8px;
                     justify-content: center;
                     width: 100%;
+                }
+
+                .control-panel-grid.integrated-mode .matrix-field {
+                    width: auto;
+                    gap: 4px;
+                }
+
+                .control-panel-grid.integrated-mode .matrix-field label {
+                    display: none;
+                }
+
+                .control-panel-grid.integrated-mode .field-row {
+                    width: auto;
+                    gap: 4px;
                 }
 
                 .select-ritual, 
@@ -310,6 +343,21 @@ export function RollerInputs({
                     text-overflow: ellipsis;
                 }
 
+                .control-panel-grid.integrated-mode .select-ritual,
+                .control-panel-grid.integrated-mode .input-ritual {
+                    font-size: 0.64rem !important;
+                    letter-spacing: 0.06em !important;
+                    padding: 3px 10px !important;
+                    border-radius: 12px !important;
+                    min-height: 30px;
+                    box-shadow: 0 0 14px var(--accent-glow), inset 0 0 10px var(--accent-glow) !important;
+                }
+
+                .control-panel-grid.integrated-mode :global(.field-icon) {
+                    width: 14px;
+                    height: 14px;
+                }
+
                 :global(.field-icon) {
                     color: var(--accent-color) !important;
                     stroke: var(--accent-color) !important;
@@ -331,6 +379,10 @@ export function RollerInputs({
                 .bonus-input {
                     width: 50px !important;
                     text-align: center;
+                }
+
+                .control-panel-grid.integrated-mode .bonus-input {
+                    width: 62px !important;
                 }
 
                 .target-selection-area {
@@ -409,6 +461,21 @@ export function RollerInputs({
                 .full-width {
                     width: 100%;
                     flex-basis: 100%;
+                }
+
+                .control-panel-grid.integrated-mode .full-width {
+                    width: auto;
+                    flex-basis: auto;
+                }
+
+                .control-panel-grid.integrated-mode .target-selection-area {
+                    width: auto;
+                }
+
+                .control-panel-grid.integrated-mode .target-tags {
+                    min-height: 30px;
+                    padding: 2px 4px;
+                    gap: 4px;
                 }
             `}</style>
         </div>

@@ -456,7 +456,7 @@ export function CombatTab({
 
                     {showDiceRoller && (
                         <div className="combat-dice-integrated animate-reveal">
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0', marginLeft: 'auto', alignSelf: 'flex-start' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0', position: 'absolute', top: '6px', right: '6px', zIndex: 5 }}>
                                 <button
                                     onClick={() => setShowDiceRoller(false)}
                                     style={{

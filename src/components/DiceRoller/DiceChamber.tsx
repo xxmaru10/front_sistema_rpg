@@ -65,19 +65,22 @@ export function DiceChamber({
                 }
 
                 .void-chamber.integrated {
-                    height: 70px;
-                    margin-top: 8px;
-                    margin-bottom: 8px;
+                    height: 42px;
+                    min-width: 172px;
+                    margin: 0;
+                    border-radius: 10px;
+                    justify-content: flex-start;
+                    padding: 0 10px;
                 }
 
                 .scene-3d { perspective: 1000px; z-index: 2; margin-bottom: 20px; }
                 .scene-3d.integrated { margin-bottom: 0; }
                 
                 .dice-row-3d { display: flex; gap: 24px; }
-                .dice-row-3d.integrated { gap: 12px; }
+                .dice-row-3d.integrated { gap: 6px; }
 
                 .dice-unit { width: 50px; height: 50px; }
-                .dice-unit.integrated { width: 30px; height: 30px; }
+                .dice-unit.integrated { width: 22px; height: 22px; }
 
                 .alchemical-cube {
                     width: 100%;
@@ -101,9 +104,9 @@ export function DiceChamber({
                 }
 
                 .void-chamber.integrated .face {
-                    width: 30px;
-                    height: 30px;
-                    font-size: 1rem;
+                    width: 22px;
+                    height: 22px;
+                    font-size: 0.72rem;
                 }
 
                 .face.front  { transform: rotateY(0deg) translateZ(25px); color: var(--accent-color); border-color: var(--accent-color); text-shadow: 0 0 10px var(--accent-glow); }
@@ -113,12 +116,12 @@ export function DiceChamber({
                 .face.top    { transform: rotateX(90deg) translateZ(25px); background: #111; color: var(--accent-color); }
                 .face.bottom { transform: rotateX(-90deg) translateZ(25px); background: #111; color: var(--accent-color); }
 
-                .void-chamber.integrated .face.front { transform: rotateY(0deg) translateZ(15px); }
-                .void-chamber.integrated .face.back { transform: rotateY(180deg) translateZ(15px); }
-                .void-chamber.integrated .face.right { transform: rotateY(90deg) translateZ(15px); }
-                .void-chamber.integrated .face.left { transform: rotateY(-90deg) translateZ(15px); }
-                .void-chamber.integrated .face.top { transform: rotateX(90deg) translateZ(15px); }
-                .void-chamber.integrated .face.bottom { transform: rotateX(-90deg) translateZ(15px); }
+                .void-chamber.integrated .face.front { transform: rotateY(0deg) translateZ(11px); }
+                .void-chamber.integrated .face.back { transform: rotateY(180deg) translateZ(11px); }
+                .void-chamber.integrated .face.right { transform: rotateY(90deg) translateZ(11px); }
+                .void-chamber.integrated .face.left { transform: rotateY(-90deg) translateZ(11px); }
+                .void-chamber.integrated .face.top { transform: rotateX(90deg) translateZ(11px); }
+                .void-chamber.integrated .face.bottom { transform: rotateX(-90deg) translateZ(11px); }
 
                 .quantum-result {
                     position: absolute;
@@ -133,18 +136,20 @@ export function DiceChamber({
 
                 .quantum-result.integrated {
                     position: absolute;
-                    inset: 0;
-                    transform: none;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%);
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 16px;
-                    background: rgba(0, 0, 0, 0.4);
-                    backdrop-filter: blur(4px);
-                    padding: 0;
-                    border: none;
+                    justify-content: flex-end;
+                    gap: 6px;
+                    background: rgba(0, 0, 0, 0.56);
+                    backdrop-filter: blur(6px);
+                    padding: 2px 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    border-radius: 8px;
                     z-index: 10;
-                    text-align: center;
+                    text-align: right;
                 }
 
                 .res-ladder {
@@ -166,7 +171,14 @@ export function DiceChamber({
                 }
 
                 .quantum-result.integrated .res-value {
-                    font-size: 1.5rem;
+                    font-size: 0.95rem;
+                }
+
+                .quantum-result.integrated .res-ladder {
+                    font-size: 0.45rem;
+                    letter-spacing: 0.12em;
+                    margin-bottom: 0;
+                    opacity: 0.72;
                 }
 
                 .res-value.pos { text-shadow: 0 0 30px var(--accent-glow); }
