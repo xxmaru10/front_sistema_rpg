@@ -147,10 +147,26 @@ export function CombatCard({
 
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
+    const accentColors: Record<string, string> = {
+        "own-hero-card": "rgba(197, 160, 89, 0.8)",
+        "hero-card": "rgba(100, 200, 255, 0.8)",
+        "threat-card": "rgba(255, 68, 68, 0.8)",
+        "npc-hero-card": "rgba(200, 200, 200, 0.8)",
+    };
+    const accentColor = accentColors[cardThemeClass] || "rgba(255, 255, 255, 0.2)";
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        <div 
+            style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '8px', 
+                marginBottom: '12px',
+                '--card-accent': accentColor 
+            } as any}
+        >
             {!isRestrictedThreatView && (
-                <div className="combat-external-stress">
+                <div className="combat-external-stress" style={{ marginLeft: '140px', marginBottom: '-10px', zIndex: 10 }}>
                     <CombatStressTracks
                         character={character}
                         canEditSelf={canEditSelf}
@@ -163,15 +179,23 @@ export function CombatCard({
                 className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
                 style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: 'minmax(80px, 110px) 2fr 1.5fr', 
-                    gap: '16px', 
-                    alignItems: 'start', 
-                    padding: '16px', 
-                    minWidth: '460px',
-                    borderRadius: '12px 32px 32px 12px',
-                    position: 'relative'
+                    gridTemplateColumns: '140px 2fr 1.5fr', 
+                    gap: '0', 
+                    alignItems: 'stretch', 
+                    padding: '0', 
+                    minWidth: '550px',
+                    borderRadius: '0 50px 0 0',
+                    position: 'relative',
+                    border: 'none',
+                    background: `linear-gradient(110deg, #000 0%, #000 35%, ${accentColor.replace('0.8', '0.3')} 100%)`,
+                    overflow: 'visible',
+                    boxShadow: '30px 0 60px rgba(0,0,0,0.9), inset 5px 0 15px rgba(255,255,255,0.05)',
+                    transform: 'skewX(-6deg)',
+                    marginLeft: '10px'
                 }}
             >
+                {/* De-skew content container */}
+                <div style={{ display: 'contents', transform: 'skewX(6deg)' }}>
                 {/* Dice Roller Trigger */}
                 {onToggleDiceRoller && isOwner && (
                     <button
@@ -181,24 +205,25 @@ export function CombatCard({
                         }}
                         style={{
                             position: 'absolute',
-                            top: '8px',
-                            right: '8px',
-                            background: 'rgba(59, 130, 246, 0.2)',
-                            border: '1px solid rgba(59, 130, 246, 0.4)',
+                            top: '12px',
+                            right: '20px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
                             borderRadius: '4px',
-                            color: '#60a5fa',
-                            padding: '4px',
+                            color: '#fff',
+                            padding: '8px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             transition: 'all 0.2s',
-                            zIndex: 10
+                            zIndex: 30,
+                            transform: 'skewX(6deg)'
                         }}
                         className="combat-dice-trigger"
                         title="Abrir dados"
                     >
-                        <Dices size={16} />
+                        <Dices size={20} />
                     </button>
                 )}
 
@@ -213,36 +238,34 @@ export function CombatCard({
                         title="Remover personagem da arena"
                     >✕</button>
                 )}
-
-                {/* COLUNA 1: Imagem, Destino, Impulso */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', position: 'relative' }}>
-                    <div className={`combat-header-portrait-frame ${cardThemeClass}`} style={{ width: '80px', height: '80px', margin: '0 auto', borderRadius: '16px', overflow: 'hidden' }} aria-hidden="true">
-                        <span className="combat-portrait-avatar combat-header-portrait" style={{ width: '100%', height: '100%', display: 'block' }}>
-                            {character.imageUrl ? (
-                                <img src={character.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                                <span className="combat-portrait-fallback" style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>{portraitInitials}</span>
-                            )}
-                        </span>
+                {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
+                <div style={{ position: 'relative', width: '140px', height: '100%', minHeight: '180px', transform: 'skewX(6deg)', marginLeft: '-10px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '100%', background: '#000' }}>
+                        {character.imageUrl ? (
+                            <img src={character.imageUrl} alt="" style={{ width: '120%', height: '100%', objectFit: 'cover', opacity: 0.9, marginLeft: '-10%' }} />
+                        ) : (
+                            <span className="combat-portrait-fallback" style={{ fontSize: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#111' }}>{portraitInitials}</span>
+                        )}
                     </div>
+                    
+                    {/* Persona slash effect overlay */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%)', pointerEvents: 'none' }} />
 
                     {(isGM || isOwner) && !isRestrictedThreatView && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: '4px', width: '100%' }}>
-                            <div className="combat-fate" style={{ flexDirection: 'column', padding: '4px 8px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', gap: '4px', width: '100%' }}>
-                                <div className="fate-controls" style={{ gap: '8px', justifyContent: 'center' }}>
-                                    {canEditSelf && <button onClick={() => handleFPChange(-1)} className="fate-btn">-</button>}
-                                    <span className="fate-value" style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{character.fatePoints}</span>
-                                    {canEditSelf && <button onClick={() => handleFPChange(1)} className="fate-btn">+</button>}
-                                </div>
+                        <div style={{ position: 'absolute', bottom: '12px', left: '0', right: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '0 10px', zIndex: 5 }}>
+                            <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.8)', borderRadius: '4px', padding: '4px 10px', gap: '12px', border: '1px solid var(--card-accent)' }}>
+                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px' }}>-</button>}
+                                <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#fff', textShadow: '0 0 15px var(--card-accent)' }}>{character.fatePoints}</span>
+                                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px' }}>+</button>}
                             </div>
-                            <div className="impulse-cluster" style={{ flexDirection: 'column', padding: '4px 8px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', gap: '4px', width: '100%' }}>
-                                <div className="impulse-arrows-row" style={{ minHeight: '16px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                    {impulseCount === 0 ? <span className="impulse-empty">—</span> : Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} className="impulse-arrow">➤</span>)}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '3px' }}>
+                                    {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.7rem', filter: 'drop-shadow(0 0 5px var(--card-accent))' }}>➤</span>)}
                                 </div>
                                 {isGM && (
-                                    <div className="impulse-controls" style={{ justifyContent: 'center' }}>
-                                        <button onClick={() => handleImpulseArrowsChange(-1)} className="fate-btn" disabled={impulseCount===0}>-</button>
-                                        <button onClick={() => handleImpulseArrowsChange(1)} className="fate-btn">+</button>
+                                    <div style={{ display: 'flex', gap: '12px', opacity: 0.7 }}>
+                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }} disabled={impulseCount===0}>-</button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleImpulseArrowsChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>+</button>
                                     </div>
                                 )}
                             </div>
@@ -251,9 +274,9 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 2: Nome, Conceito, Dificuldade, Expansíveis */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <h3 className="combat-name" style={{ fontSize: '1.2rem', margin: 0 }}>{character.name.toUpperCase()}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, padding: '24px 20px', transform: 'skewX(6deg)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <h3 className="combat-name" style={{ fontSize: '1.8rem', margin: 0, fontWeight: '900', letterSpacing: '-0.02em', textShadow: '4px 4px 0px rgba(0,0,0,0.5), 0 0 20px var(--card-accent)' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
                             <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff' }}>
                                 DIF {character.difficulty}
@@ -293,37 +316,37 @@ export function CombatCard({
                                 {character.stunts && character.stunts.length > 0 && (
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'stunts' ? null : 'stunts')}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'stunts' ? 'rgba(80, 166, 255, 0.25)' : 'rgba(80, 166, 255, 0.1)', border: '1px solid rgba(80, 166, 255, 0.3)', borderRadius: '4px', color: '#8bc8ff', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'stunts' ? 1 : 0.6 }}
                                         title="Façanhas"
                                     >
-                                        <Star size={14} />
+                                        <Star size={16} />
                                     </button>
                                 )}
                                 {character.spells && character.spells.length > 0 && (
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'spells' ? null : 'spells')}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'spells' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '4px', color: '#d7b6ff', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'spells' ? 1 : 0.6 }}
                                         title="Magias"
                                     >
-                                        <Sparkles size={14} />
+                                        <Sparkles size={16} />
                                     </button>
                                 )}
                                 {activeSkills.length > 0 && (
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'skills' ? null : 'skills')}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'skills' ? 'rgba(230, 90, 90, 0.25)' : 'rgba(230, 90, 90, 0.1)', border: '1px solid rgba(230, 90, 90, 0.3)', borderRadius: '4px', color: '#ffaaaa', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'skills' ? 1 : 0.6 }}
                                         title="Perícias"
                                     >
-                                        <Target size={14} />
+                                        <Target size={16} />
                                     </button>
                                 )}
                                 {mainInventoryItems.length > 0 && (
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'items' ? null : 'items')}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: expandedExtra === 'items' ? 'rgba(46, 204, 113, 0.25)' : 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.3)', borderRadius: '4px', color: '#7cfc00', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'items' ? 1 : 0.6 }}
                                         title="Itens"
                                     >
-                                        <Briefcase size={14} />
+                                        <Briefcase size={16} />
                                     </button>
                                 )}
                             </div>
@@ -373,7 +396,7 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '12px', borderLeft: '2px solid rgba(255,255,255,0.1)', paddingTop: '24px', paddingRight: '24px', transform: 'skewX(6deg)' }}>
                     {!isRestrictedThreatView && (
                         <div style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences
@@ -384,6 +407,7 @@ export function CombatCard({
                         </div>
                     )}
                 </div>
+                </div> {/* End De-skew */}
             </div>
 
             {/* Modal */}

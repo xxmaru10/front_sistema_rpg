@@ -9,8 +9,8 @@ interface CombatConsequencesProps {
 }
 
 export function CombatConsequences({ character, isGM, openConsequenceModal }: CombatConsequencesProps) {
-    const defaultSlots = ["mild", "moderate", "severe", "extreme"];
-    const slotOrder = ["mild", "mild2", "moderate", "severe", "extreme"];
+    const defaultSlots = ["mild", "moderate", "severe"];
+    const slotOrder = ["mild", "moderate", "severe"];
     const allSlots = new Set<string>(defaultSlots);
 
     Object.keys(character.consequences || {}).forEach((slot) => allSlots.add(slot));

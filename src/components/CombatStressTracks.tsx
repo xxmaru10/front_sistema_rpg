@@ -62,14 +62,17 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
 
             <style jsx>{`
                 .combat-stress-container {
-                    background: rgba(10, 10, 12, 0.4);
+                    background: rgba(0, 0, 0, 0.8);
                     backdrop-filter: blur(12px);
                     -webkit-backdrop-filter: blur(12px);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 12px;
-                    padding: 6px 12px;
+                    border: 2px solid var(--card-accent, rgba(255, 255, 255, 0.2));
+                    border-radius: 8px;
+                    padding: 8px 16px;
                     width: fit-content;
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+                    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 0, 0, 0.5);
+                    transform: translateY(-2px);
+                    position: relative;
+                    z-index: 5;
                 }
 
                 .combat-stress-section {
