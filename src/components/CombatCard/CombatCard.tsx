@@ -189,7 +189,7 @@ export function CombatCard({
                     borderRadius: '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
-                    background: `linear-gradient(110deg, #000 0%, #000 35%, ${accentColor.replace('0.8', '0.15')} 85%, transparent 100%)`,
+                    background: `linear-gradient(110deg, #000 0%, #000 35%, ${accentColor.replace('0.8', '0.4')} 80%, transparent 100%)`,
                     overflow: 'visible',
                     boxShadow: '40px 0 80px rgba(0,0,0,0.8)',
                     transform: 'skewX(-6deg)',
@@ -249,7 +249,11 @@ export function CombatCard({
                             <span className="combat-portrait-fallback" style={{ fontSize: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#111' }}>{portraitInitials}</span>
                         )}
                     </div>
-                                        {/* Persona slash effect overlay */}
+                    
+                    {/* Persona vignettes and slash effects */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 25%)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 25%)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, rgba(0,0,0,0.6) 0%, transparent 15%)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%)', pointerEvents: 'none' }} />
 
                     {(isGM || isOwner) && !isRestrictedThreatView && (

@@ -62,7 +62,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
 
             <style jsx>{`
                 .combat-stress-container {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: rgba(0, 0, 0, 0.1);
                     backdrop-filter: blur(12px);
                     -webkit-backdrop-filter: blur(12px);
                     border: none;
