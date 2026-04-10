@@ -73,6 +73,8 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     transform: translateY(-2px);
                     position: relative;
                     z-index: 5;
+                    overflow-x: auto;
+                    overflow-y: hidden;
                 }
 
                 .combat-stress-section {
@@ -117,9 +119,10 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 
                 .track-circles {
                     display: flex;
-                    flex-wrap: wrap;
+                    flex-wrap: nowrap;
                     gap: 4px;
-                    max-width: 148px;
+                    max-width: none;
+                    white-space: nowrap;
                 }
 
                 .stress-circle {

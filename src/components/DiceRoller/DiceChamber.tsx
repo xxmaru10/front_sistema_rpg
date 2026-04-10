@@ -67,12 +67,12 @@ export function DiceChamber({
                 }
 
                 .void-chamber.integrated {
-                    height: 34px;
-                    min-width: 58px;
+                    height: 40px;
+                    min-width: 112px;
                     margin: 0;
                     border-radius: 10px;
                     justify-content: center;
-                    padding: 0 8px;
+                    padding: 0 10px;
                 }
 
                 .scene-3d { perspective: 1000px; z-index: 2; margin-bottom: 20px; }
@@ -138,20 +138,18 @@ export function DiceChamber({
 
                 .quantum-result.integrated {
                     position: absolute;
-                    right: 50%;
-                    top: 50%;
-                    transform: translate(50%, -50%);
+                    inset: 0;
                     display: flex;
                     align-items: center;
-                    justify-content: flex-end;
-                    gap: 6px;
+                    justify-content: center;
+                    gap: 0;
                     background: rgba(0, 0, 0, 0.56);
-                    backdrop-filter: blur(6px);
-                    padding: 2px 8px;
-                    border: 1px solid rgba(255, 255, 255, 0.12);
-                    border-radius: 8px;
+                    backdrop-filter: blur(8px);
+                    padding: 0;
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-radius: 9px;
                     z-index: 10;
-                    text-align: right;
+                    text-align: center;
                 }
 
                 .res-ladder {
@@ -173,7 +171,10 @@ export function DiceChamber({
                 }
 
                 .quantum-result.integrated .res-value {
-                    font-size: 0.88rem;
+                    font-size: 1.35rem;
+                    font-weight: 700;
+                    letter-spacing: 0.03em;
+                    line-height: 1;
                 }
 
                 .quantum-result.integrated .res-ladder {

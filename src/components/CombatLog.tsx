@@ -39,6 +39,59 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         return actionType;
     };
 
+    const normalizeLabel = (value: string) =>
+        value
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLowerCase();
+
+    const shouldHideChallengeLabel = (value?: string) => {
+        if (!value) return false;
+        const normalized = normalizeLabel(value);
+        return normalized === "exploracao" || normalized === "combate";
+    };
+
+    const getCompactRollMeta = (event: ActionEvent) => {
+        if (event.type !== "ROLL_RESOLVED") return null;
+
+        const payload = event.payload as any;
+        const actionLabel = getActionLabel(payload.actionType || "");
+        const rawTargetLabel = payload.challengeDescription
+            || payload.targetCharacterIds?.map((id: string) => characters[id]?.name.toUpperCase() || "ALVO").join(", ")
+            || (payload.targetCharacterId ? characters[payload.targetCharacterId]?.name.toUpperCase() || "ALVO" : "");
+        const targetLabel = shouldHideChallengeLabel(rawTargetLabel) ? "" : (rawTargetLabel || "");
+        const diceFaces = Array.isArray(payload.dice)
+            ? payload.dice.map((d: number) => (d > 0 ? "+" : d < 0 ? "-" : "0")).join("")
+            : "";
+
+        const modifiers: string[] = [];
+        if (payload.skill?.rank) {
+            modifiers.push(`PER ${payload.skill.rank >= 0 ? `+${payload.skill.rank}` : payload.skill.rank}`);
+        }
+        if (payload.item?.bonus) {
+            modifiers.push(`ITEM ${payload.item.bonus >= 0 ? `+${payload.item.bonus}` : payload.item.bonus}`);
+        }
+        if (payload.manualBonus) {
+            modifiers.push(`BONUS ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}`);
+        }
+
+        const diff = payload.targetDiff !== undefined
+            ? payload.total - (payload.targetDiff || 0)
+            : payload.total;
+        const isSuccess = diff >= 0;
+
+        return {
+            actionLabel,
+            targetLabel,
+            diceFaces,
+            modifierText: modifiers.join(" "),
+            outcomeLabel: isSuccess ? "Sucesso" : "Fracasso",
+            isSuccess,
+            totalLabel: payload.total >= 0 ? `+${payload.total}` : String(payload.total),
+        };
+    };
+
     const getCompactSummary = (event: ActionEvent) => {
         if (event.type === "ROLL_RESOLVED") {
             const payload = event.payload as any;
@@ -128,15 +181,50 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             <div className="log-entries-scroll">
                 {displayedEvents.map(event => (
                     compact ? (
-                        <div key={event.id} className="combat-entry compact-line animate-fade-in">
+                        <div
+                            key={event.id}
+                            className={`combat-entry compact-line animate-fade-in ${(() => {
+                                const rollMeta = getCompactRollMeta(event);
+                                if (!rollMeta) return "";
+                                return rollMeta.isSuccess ? "roll-good" : "roll-bad";
+                            })()}`}
+                        >
                             <span className="compact-time">{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                             <span className="compact-actor">{getActorName(event)}</span>
-                            <span className="compact-summary">{getCompactSummary(event)}</span>
-                            {event.type === "ROLL_RESOLVED" && (
-                                <span className="compact-total">
-                                    {(event.payload as any).total >= 0 ? `+${(event.payload as any).total}` : (event.payload as any).total}
-                                </span>
-                            )}
+                            <span className="compact-summary">
+                                {(() => {
+                                    const rollMeta = getCompactRollMeta(event);
+                                    if (!rollMeta) return getCompactSummary(event);
+                                    return (
+                                        <>
+                                            <span className="compact-action">{rollMeta.actionLabel}</span>
+                                            {rollMeta.targetLabel && (
+                                                <>
+                                                    <span className="compact-sep"> • </span>
+                                                    <span className="compact-target">{rollMeta.targetLabel}</span>
+                                                </>
+                                            )}
+                                            <span className="compact-sep"> • </span>
+                                            <span className="compact-dice">{rollMeta.diceFaces}</span>
+                                            {rollMeta.modifierText && (
+                                                <>
+                                                    <span className="compact-sep"> </span>
+                                                    <span className="compact-mods">{rollMeta.modifierText}</span>
+                                                </>
+                                            )}
+                                            <span className="compact-sep"> • </span>
+                                            <span className={`compact-outcome ${rollMeta.isSuccess ? "good" : "bad"}`}>
+                                                {rollMeta.outcomeLabel}
+                                            </span>
+                                        </>
+                                    );
+                                })()}
+                            </span>
+                            {(() => {
+                                const rollMeta = getCompactRollMeta(event);
+                                if (!rollMeta) return <span className="compact-total muted"></span>;
+                                return <span className={`compact-total ${rollMeta.isSuccess ? "good" : "bad"}`}>{rollMeta.totalLabel}</span>;
+                            })()}
                         </div>
                     ) : (
                         <div key={event.id} className="combat-entry animate-fade-in">
@@ -380,6 +468,16 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     gap: 8px;
                 }
 
+                .combat-entry.compact-line.roll-good {
+                    border-left: 2px solid rgba(50, 213, 131, 0.75);
+                    background: linear-gradient(90deg, rgba(15, 70, 43, 0.42), rgba(15, 25, 20, 0));
+                }
+
+                .combat-entry.compact-line.roll-bad {
+                    border-left: 2px solid rgba(255, 90, 90, 0.78);
+                    background: linear-gradient(90deg, rgba(80, 18, 18, 0.42), rgba(28, 14, 14, 0));
+                }
+
                 .compact-time {
                     font-family: var(--font-header);
                     font-size: 0.5rem;
@@ -405,12 +503,53 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     white-space: nowrap;
                 }
 
+                .compact-action {
+                    font-weight: 600;
+                }
+
+                .compact-target {
+                    opacity: 0.9;
+                }
+
+                .compact-dice,
+                .compact-mods {
+                    opacity: 0.86;
+                }
+
+                .compact-sep {
+                    opacity: 0.5;
+                }
+
+                .compact-outcome.good {
+                    color: #32d583;
+                    font-weight: 700;
+                }
+
+                .compact-outcome.bad {
+                    color: #ff5a5a;
+                    font-weight: 700;
+                }
+
                 .compact-total {
                     font-family: var(--font-header);
                     font-size: 0.7rem;
                     color: var(--accent-color);
                     letter-spacing: 0.05em;
                     white-space: nowrap;
+                }
+
+                .compact-total.good {
+                    color: #32d583;
+                    text-shadow: 0 0 10px rgba(50, 213, 131, 0.28);
+                }
+
+                .compact-total.bad {
+                    color: #ff5a5a;
+                    text-shadow: 0 0 10px rgba(255, 90, 90, 0.28);
+                }
+
+                .compact-total.muted {
+                    opacity: 0.25;
                 }
 
                 .entry-meta {
