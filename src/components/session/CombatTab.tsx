@@ -150,15 +150,6 @@ export function CombatTab({
                     ) : (
                         <div className="combat-side-lane hero-side-lane">
                             <div className={`combat-avatar-drawer side-left hero-drawer${isHeroDrawerOpen ? " is-open" : ""}`}>
-                                <button
-                                    type="button"
-                                    className="combat-avatar-drawer-handle"
-                                    onClick={() => setIsHeroDrawerOpen(prev => !prev)}
-                                    aria-label={isHeroDrawerOpen ? "Recolher gaveta de aliados" : "Expandir gaveta de aliados"}
-                                    title={isHeroDrawerOpen ? "Recolher gaveta" : "Expandir gaveta"}
-                                >
-                                    <ChevronRight size={18} />
-                                </button>
 
                                 <div className="combat-avatar-panel">
                                     <div className={`combat-avatar-rail hero-avatar-rail ${isHeroDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
@@ -684,15 +675,6 @@ export function CombatTab({
 
                             {threatCombatants.length > 0 && (
                                 <div className={`combat-avatar-drawer side-right threat-drawer${isThreatDrawerOpen ? " is-open" : ""}`}>
-                                    <button
-                                        type="button"
-                                        className="combat-avatar-drawer-handle"
-                                        onClick={() => setIsThreatDrawerOpen(prev => !prev)}
-                                        aria-label={isThreatDrawerOpen ? "Recolher gaveta de inimigos" : "Expandir gaveta de inimigos"}
-                                        title={isThreatDrawerOpen ? "Recolher gaveta" : "Expandir gaveta"}
-                                    >
-                                        <ChevronLeft size={18} />
-                                    </button>
 
                                     <div className="combat-avatar-panel">
                                         <div className={`combat-avatar-rail threat-avatar-rail ${isThreatDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
