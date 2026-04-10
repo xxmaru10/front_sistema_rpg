@@ -86,7 +86,7 @@ export function InventorySection({
         [character.inventory]
     );
     const mainInventorySlots = useMemo(
-        () => Math.max(5, character.inventory?.length || 0),
+        () => Math.max(1, character.inventory?.length || 0),
         [character.inventory]
     );
     const hasStorageTabs = storageContainers.length > 0;
@@ -469,7 +469,7 @@ export function InventorySection({
 
         const currentLength = character.inventory?.length || 0;
         const lastFilledIndex = getLastFilledSlotIndex(character.inventory);
-        const nextLength = Math.max(5, currentLength - 1, lastFilledIndex + 1);
+        const nextLength = Math.max(1, currentLength - 1, lastFilledIndex + 1);
 
         if (nextLength >= currentLength) return;
 
@@ -896,7 +896,7 @@ export function InventorySection({
                                     "Principal",
                                     handleAddMainInventorySlot,
                                     handleRemoveMainInventorySlot,
-                                    { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                    { canRemove: mainInventorySlots > Math.max(1, getLastFilledSlotIndex(character.inventory) + 1) }
                                 )}
                                 {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                             </div>
@@ -909,7 +909,7 @@ export function InventorySection({
                                         "Principal",
                                         handleAddMainInventorySlot,
                                         handleRemoveMainInventorySlot,
-                                        { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                        { canRemove: mainInventorySlots > Math.max(1, getLastFilledSlotIndex(character.inventory) + 1) }
                                     )}
                                     {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                                 </div>
@@ -923,7 +923,7 @@ export function InventorySection({
                                     "Principal",
                                     handleAddMainInventorySlot,
                                     handleRemoveMainInventorySlot,
-                                    { canRemove: mainInventorySlots > Math.max(5, getLastFilledSlotIndex(character.inventory) + 1) }
+                                    { canRemove: mainInventorySlots > Math.max(1, getLastFilledSlotIndex(character.inventory) + 1) }
                                 )}
                                 {renderInventorySlots(character.inventory, mainInventorySlots, null, "SLOT VAZIO")}
                             </div>

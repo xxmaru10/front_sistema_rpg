@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-10 (story-36/follow-up-slot-inventario-menções)
+last_updated: 2026-04-10 (story-36/follow-up-slot-minimo-e-select-home)
 status: ativo
 ---
 
@@ -133,6 +133,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Opt-out persistente de auto-menção**: ao remover uma auto-menção durante a digitação, o trecho passa a ficar explicitamente suprimido no editor para não ser religado de novo no mesmo fluxo de escrita.
 - **Menções de item com efeito de inventário**: menções a `ITEM` no diário passaram a manter o cross-post atual e, adicionalmente, sincronizar uma cópia do item para o inventário do personagem-alvo, reaproveitando `CHARACTER_INVENTORY_UPDATED` e copiando nome, descrição, quantidade, bônus e imagem.
 - **Manifestação de item no slot do inventário**: o modal de edição de slot passou a sugerir itens globais no campo de nome e sincronizar automaticamente descrição, quantidade, bônus e imagem quando há correspondência exata ou seleção da sugestão, sem transformar a descrição do slot em editor de menção nem introduzir chamadas diretas de API na UI.
+- **Inventário principal com mínimo configurável até 1 slot**: o rail principal do inventário da ficha deixou de impor piso visual de 5 slots; o mestre agora pode reduzir incrementalmente até 1 slot, preservando a trava de não colapsar abaixo do último item preenchido.
 - **Bônus como parte do item global**: `GlobalItem` foi expandido com `bonus` opcional (fallback 0), preservando compatibilidade com itens legados sem migração destrutiva.
 
 ## Padrões Adotados

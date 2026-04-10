@@ -226,7 +226,7 @@ export default function Home() {
 
         .mystic-select {
             width: 100%;
-            background: rgba(197, 160, 89, 0.05);
+            background: #080808;
             border: 1px solid rgba(197, 160, 89, 0.2);
             color: var(--accent-color);
             padding: 12px;
@@ -234,10 +234,11 @@ export default function Home() {
             margin-bottom: 16px;
             outline: none;
             cursor: pointer;
+            color-scheme: dark;
         }
         
         .mystic-select option {
-            background: #000;
+            background: #080808;
             color: var(--accent-color);
         }
 
