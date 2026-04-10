@@ -117,8 +117,8 @@ export function CombatTab({
         : threatPreview ? [threatPreview] : [];
     const showChallengePanel = challengeMode && (userRole === "GM" || (state.challenge?.difficulty || 0) !== 0);
 
-    const hasExpandedHeroes = false;
-    const hasExpandedThreats = threatHazards.length > 0;
+    const hasExpandedHeroes = isHeroDrawerOpen;
+    const hasExpandedThreats = isThreatDrawerOpen || threatHazards.length > 0;
     const hasChallengePanel = showChallengePanel;
 
     useEffect(() => {
@@ -165,6 +165,7 @@ export function CombatTab({
                                                     isCurrentTurn={currentTurnActorId === char.id}
                                                     isLinkedCharacter={fixedCharacterId === char.id}
                                                     onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
+                                                    onToggleExpanded={() => setIsHeroDrawerOpen(false)}
                                                     avatarSide="left"
                                                 />
                                             ) : (
@@ -689,6 +690,7 @@ export function CombatTab({
                                                         onRemove={() => handleRemoveCharacter(char.id)}
                                                         isCurrentTurn={currentTurnActorId === char.id}
                                                         onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
+                                                        onToggleExpanded={() => setIsThreatDrawerOpen(false)}
                                                         avatarSide="right"
                                                     />
                                                 ) : (
