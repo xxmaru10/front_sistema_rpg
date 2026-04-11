@@ -172,10 +172,6 @@ const TrackerItem = ({
             {effectType === 'slash' && damage !== undefined && damage > 0 && (
                 <div className="damage-number">-{damage}</div>
             )}
-            
-            {(distance === 0 || distance === -1 || distance === 1) && (
-                <div className="char-mini-name">{char.name.split(' ')[0].toUpperCase()}</div>
-            )}
         </div>
     );
 };
@@ -406,12 +402,12 @@ export function TurnOrderTracker({
                 .semicircle-arena {
                     position: relative;
                     width: 700px;
-                    height: 180px;
+                    height: 120px;
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
-                    margin-bottom: 10px;
-                    margin-top: 10px;
+                    margin-bottom: 20px;
+                    margin-top: 5px;
                 }
 
                 .connection-arc {
@@ -421,7 +417,7 @@ export function TurnOrderTracker({
                     border: 2px solid transparent;
                     border-bottom: 2px solid rgba(255, 255, 255, 0.15);
                     border-radius: 50%;
-                    top: -190px; /* Moves the circle up so the bottom arc passes through the avatars */
+                    top: -230px; /* Moves the circle up so the bottom arc passes through the avatars */
                     left: 50%;
                     transform: translateX(-50%);
                     pointer-events: none;
@@ -451,41 +447,41 @@ export function TurnOrderTracker({
 
                 /* Posicionamento do Semicirculo invertido (Centro no fundo) */
                 :global(.tracker-item[data-distance="0"]) {
-                    transform: translate(-50%, 80px) scale(1);
+                    transform: translate(-50%, 40px) scale(1);
                     opacity: 1;
                     z-index: 20;
                 }
                 
                 :global(.tracker-item[data-distance="-1"]) {
-                    transform: translate(calc(-50% - 100px), 50px) scale(0.75);
+                    transform: translate(calc(-50% - 100px), 10px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
                 
                 :global(.tracker-item[data-distance="1"]) {
-                    transform: translate(calc(-50% + 100px), 50px) scale(0.75);
+                    transform: translate(calc(-50% + 100px), 10px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
                 
                 :global(.tracker-item[data-distance="-2"]) {
-                    transform: translate(calc(-50% - 180px), 20px) scale(0.55);
+                    transform: translate(calc(-50% - 180px), -20px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
                 
                 :global(.tracker-item[data-distance="2"]) {
-                    transform: translate(calc(-50% + 180px), 20px) scale(0.55);
+                    transform: translate(calc(-50% + 180px), -20px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
                 
                 :global(.tracker-item[data-distance="hidden"]) {
-                    transform: translate(-50%, -10px) scale(0.2);
+                    transform: translate(-50%, -50px) scale(0.2);
                     opacity: 0;
                     pointer-events: none;
                     z-index: 1;
@@ -604,28 +600,6 @@ export function TurnOrderTracker({
                     animation: skullPulse 1.5s infinite;
                 }
 
-                :global(.char-mini-name) {
-                    margin-top: 24px;
-                    font-family: var(--font-header);
-                    font-size: 0.6rem;
-                    letter-spacing: 0.1em;
-                    color: #aaa;
-                    background: rgba(0,0,0,0.6);
-                    padding: 2px 8px;
-                    border-radius: 10px;
-                    border: 1px solid rgba(255,255,255,0.1);
-                    text-shadow: 0 1px 2px #000;
-                    z-index: 25;
-                }
-
-                :global(.center-active .char-mini-name) {
-                    color: #fff;
-                    font-weight: bold;
-                    border-color: var(--side-color);
-                    box-shadow: 0 0 10px var(--side-color);
-                    font-size: 0.75rem;
-                }
-
                 /* HUD Bottom: Controles */
                 .hud-bottom {
                     display: flex;
@@ -655,7 +629,7 @@ export function TurnOrderTracker({
                     border: none;
                     color: rgba(197, 160, 89, 0.6);
                     position: absolute;
-                    top: 112px;
+                    top: 72px;
                     cursor: pointer;
                     transition: all 0.2s;
                     padding: 0;
