@@ -335,8 +335,7 @@ export function TurnOrderTracker({
                 <div className="gm-center-controls">
                     {handleNextRound && (
                         <button className="gm-round-btn" onClick={handleNextRound} title="Passar Rodada">
-                            <FastForward size={14} />
-                            PASSAR RODADA
+                            <FastForward size={16} />
                         </button>
                     )}
                     {handleEndCombat && (
@@ -389,6 +388,7 @@ export function TurnOrderTracker({
                     margin: 0 auto;
                     position: relative;
                     padding-top: 0;
+                    margin-top: -6px;
                     z-index: 50;
                 }
 
@@ -402,17 +402,13 @@ export function TurnOrderTracker({
                 }
 
                 .round-badge {
-                    background: rgba(10, 10, 10, 0.8);
-                    border: 1px solid var(--accent-color);
                     color: var(--accent-color);
-                    padding: 2px 14px;
-                    border-radius: 20px;
                     font-family: var(--font-header);
-                    letter-spacing: 0.15em;
-                    font-size: 0.75rem;
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px rgba(var(--accent-rgb), 0.2);
-                    backdrop-filter: blur(4px);
+                    letter-spacing: 0.12em;
+                    font-size: 0.72rem;
                     font-weight: bold;
+                    text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
+                    line-height: 1;
                 }
 
                 .timer-wrapper {
@@ -660,25 +656,22 @@ export function TurnOrderTracker({
                 .gm-round-btn {
                     display: flex;
                     align-items: center;
-                    gap: 6px;
+                    justify-content: center;
                     background: rgba(10, 10, 15, 0.85);
-                    border: 1px solid var(--accent-color);
-                    color: var(--accent-color);
-                    padding: 5px 16px;
-                    font-family: var(--font-header);
-                    font-size: 0.72rem;
-                    letter-spacing: 0.12em;
-                    border-radius: 20px;
+                    border: 1px solid rgba(197, 160, 89, 0.5);
+                    color: rgba(197, 160, 89, 0.7);
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
                     cursor: pointer;
-                    font-weight: bold;
                     transition: all 0.2s;
-                    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.15);
                 }
 
                 .gm-round-btn:hover {
-                    background: rgba(var(--accent-rgb), 0.2);
-                    transform: translateY(-1px);
-                    box-shadow: 0 3px 14px rgba(var(--accent-rgb), 0.35);
+                    border-color: var(--accent-color);
+                    color: var(--accent-color);
+                    background: rgba(var(--accent-rgb), 0.15);
+                    transform: scale(1.1);
                 }
 
                 .gm-trash-btn {
@@ -715,10 +708,11 @@ export function TurnOrderTracker({
                     display: flex;
                     justify-content: center;
                     color: var(--accent-color);
-                    font-size: 0.78rem;
+                    font-size: 0.8rem;
                     font-weight: bold;
                     letter-spacing: 0.08em;
-                    text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
+                    text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.9), 0 0 24px rgba(var(--accent-rgb), 0.5);
+                    filter: brightness(1.3);
                 }
 
                 .top-timer {

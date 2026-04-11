@@ -737,8 +737,7 @@ export default function SessionPage() {
                         sessionId={sessionId as string}
                         handleNextRound={() => handleNextTurn(true)}
                         handleEndCombat={() => {
-                            if (confirm("Encerrar combate e iniciar modo desafio? Todas as ameaças serão removidas.")) {
-                                handleChallengeUpdate({ isActive: true });
+                            if (confirm("Encerrar combate?")) {
                                 globalEventStore.append({
                                     id: uuidv4(),
                                     sessionId: sessionId as string,
@@ -749,8 +748,6 @@ export default function SessionPage() {
                                     visibility: "PUBLIC",
                                     payload: { characterIds: [] }
                                 } as any);
-                                const threats = characterList.filter(c => c.isNPC && c.arenaSide !== "HERO" && c.activeInArena === true);
-                                threats.forEach(t => handleRemoveCharacter(t.id));
                                 globalEventStore.append({
                                     id: uuidv4(),
                                     sessionId: sessionId as string,
