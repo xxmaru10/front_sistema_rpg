@@ -518,51 +518,16 @@ export function CombatTab({
                         ))}
                     </div>
 
-                    {/* Turn Timer Area */}
-                    {currentTurnActorId && (
-                        <div className="timer-wrapper animate-reveal">
-                            <TurnTimer
-                                startTime={lastActionTimestamp ?? ''}
-                                durationMinutes={state.isReaction ? 2 : 3}
-                                isPaused={!!state.timerPaused}
-                                pausedAt={state.timerPausedAt}
-                                isGM={userRole === "GM"}
-                                onExpire={() => {
-                                    // Disabled auto-pass per user request. Timer just rolls.
-                                    // if (isCurrentPlayerActive || userRole === "GM") {
-                                    //    handleForcePass();
-                                    // }
-                                    console.log("Timer expired, but auto-pass is disabled.");
-                                }}
-                                onTogglePause={handleTogglePause}
-                                onForcePass={handleForcePass}
-                            />
-                        </div>
-                    )}
+                    {/* Turn Timer Area foi movido para o TurnOrderTracker no page.tsx */}
 
                     {/* Combat Control Bar - Moved Here */}
 
 
                     {(!state.turnOrder || state.turnOrder.length === 0) ? null : (
                         <div className="combat-control-bar animate-reveal">
-                            <div className="round-counter">
-                                <span className="label">RODADA</span>
-                                <span className="value">{state.currentRound || 1}</span>
-                            </div>
-
-                            <div className="combat-actions">
+                            <div className="combat-actions" style={{ justifyContent: 'center', width: '100%' }}>
                                 {userRole === "GM" ? (
                                     <div className="gm-turn-controls">
-                                        <button className="nav-btn prev" onClick={handlePreviousTurn} title="Voltar Turno">
-                                            <ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} />
-                                        </button>
-                                        <span className="turn-indicator">
-                                            {(state.currentTurnIndex || 0) + 1} / {state.turnOrder.length}
-                                        </span>
-                                        <button className="nav-btn next" onClick={() => handleNextTurn(false)} title="Avançar Turno">
-                                            <ChevronRight size={20} />
-                                        </button>
-                                        <div className="divider-vt"></div>
                                         <button className="end-round-btn fancy-round-btn" onClick={() => handleNextTurn(true)}>
                                             <FastForward size={16} />
                                             PASSAR RODADA
@@ -611,110 +576,26 @@ export function CombatTab({
                                     </div>
                                 ) : (
                                     /* Player View */
-                                    <div className="player-turn-status">
-                                        {state.isReaction && state.targetId ? (() => {
-                                            const targetChar = state.characters[state.targetId];
-                                            const amITarget = targetChar?.ownerUserId?.trim().toLowerCase() === actorUserId?.trim().toLowerCase();
-
-                                            if (amITarget) {
-                                                return (
-                                                    <button
-                                                        className="end-turn-btn pulse reaction-btn"
-                                                        style={{ background: '#a855f7', color: '#fff', borderColor: '#a855f7' }}
-                                                        onClick={() => {
-                                                            globalEventStore.append({
-                                                                id: uuidv4(),
-                                                                sessionId,
-                                                                seq: 0,
-                                                                type: "COMBAT_REACTION_ENDED",
-                                                                actorUserId,
-                                                                createdAt: new Date().toISOString(),
-                                                                visibility: "PUBLIC",
-                                                                payload: {}
-                                                            } as any);
-                                                        }}
-                                                    >
-                                                        FINALIZAR REAÇÃO
-                                                    </button>
-                                                );
-                                            }
-                                            return (
-                                                <div className="turn-status-message">
-                                                    <span className="waiting-text" style={{ color: '#a855f7', opacity: 1, letterSpacing: '0.1em', fontWeight: 'bold' }}>
-                                                        AGUARDANDO REAÇÃO...
-                                                    </span>
-                                                </div>
-                                            );
-                                        })() : isCurrentPlayerActive ? (
-                                            <div className="player-active-actions" style={{ display: 'flex', gap: '8px' }}>
-                                                <button className="end-turn-btn pulse" onClick={() => handleNextTurn(false)}>
-                                                    FINALIZAR TURNO
-                                                </button>
-                                                {state.targetId && (
-                                                    <button
-                                                        className="end-turn-btn"
-                                                        style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}
-                                                        onClick={() => {
-                                                            globalEventStore.append({
-                                                                id: uuidv4(),
-                                                                sessionId,
-                                                                seq: 0,
-                                                                type: "COMBAT_TARGET_SET",
-                                                                actorUserId,
-                                                                createdAt: new Date().toISOString(),
-                                                                visibility: "PUBLIC",
-                                                                payload: { targetId: null }
-                                                            } as any);
-                                                        }}
-                                                    >
-                                                        LIMPAR ALVO
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="turn-status-message">
-                                                {/* Check if player is next (skipping dead characters) */}
-                                                {(() => {
-                                                    let nextActiveChar = null;
-                                                    const turnOrder = state.turnOrder || [];
-                                                    const currentIndex = state.currentTurnIndex || 0;
-
-                                                    // Look ahead for the next LIVING character
-                                                    for (let i = 1; i < turnOrder.length; i++) {
-                                                        const checkIndex = (currentIndex + i) % turnOrder.length;
-                                                        const charId = turnOrder[checkIndex];
-                                                        const char = state.characters[charId];
-
-                                                        // Check if character exists and is NOT eliminated
-                                                        if (char && !isCharacterEliminated(char)) {
-                                                            nextActiveChar = char;
-                                                            break;
-                                                        }
-                                                    }
-
-
-
-                                                    // Robust comparison: handle potential case differences or undefined
-                                                    const ownerId = nextActiveChar?.ownerUserId;
-                                                    const currentActorId = actorUserId;
-
-                                                    const amINext = ownerId && currentActorId && ownerId.trim().toLowerCase() === currentActorId.trim().toLowerCase();
-
-                                                    if (amINext) {
-                                                        return (
-                                                            <span className="next-up-msg animate-pulse" style={{ display: 'block', fontSize: '1rem', color: '#50a6ff', marginTop: '4px', fontWeight: 'bold', letterSpacing: '0.1em' }}>
-                                                                VOCÊ É O PRÓXIMO...
-                                                            </span>
-                                                        );
-                                                    }
-
-                                                    return (
-                                                        <span className="waiting-text" style={{ color: 'var(--accent-color)', opacity: 0.8, letterSpacing: '0.1em' }}>
-                                                            AGUARDANDO...
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </div>
+                                    <div className="player-turn-status" style={{ justifyContent: 'center' }}>
+                                        {state.targetId && (
+                                            <button
+                                                className="end-turn-btn"
+                                                style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}
+                                                onClick={() => {
+                                                    globalEventStore.append({
+                                                        id: uuidv4(),
+                                                        sessionId,
+                                                        seq: 0,
+                                                        type: "COMBAT_TARGET_SET",
+                                                        actorUserId,
+                                                        createdAt: new Date().toISOString(),
+                                                        visibility: "PUBLIC",
+                                                        payload: { targetId: null }
+                                                    } as any);
+                                                }}
+                                            >
+                                                LIMPAR ALVO
+                                            </button>
                                         )}
                                     </div>
                                 )}

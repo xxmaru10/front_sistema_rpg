@@ -723,6 +723,18 @@ export default function SessionPage() {
                         targetId={state.targetId}
                         soundSettings={state.soundSettings}
                         lastTurnChangeTimestamp={state.lastTurnChangeTimestamp}
+                        userRole={userRole}
+                        currentRound={state.currentRound || 1}
+                        handleNextTurn={() => handleNextTurn(false)}
+                        handlePreviousTurn={handlePreviousTurn}
+                        handleForcePass={handleForcePass}
+                        handleTogglePause={handleTogglePause}
+                        isReaction={state.isReaction || false}
+                        timerPaused={state.timerPaused || false}
+                        timerPausedAt={state.timerPausedAt || null}
+                        isCurrentPlayerActive={isCurrentPlayerActive || false}
+                        actorUserId={actorUserId}
+                        sessionId={sessionId as string}
                     />
                 )}
                 {showVictory && <div className="victory-announcement">VITÓRIA</div>}
