@@ -155,7 +155,7 @@ export function RollerInputs({
                         className="mystic-input select-ritual"
                     >
                         {characters.map(c => {
-                            const isEnemy = c.isNPC && c.arenaSide !== "HERO" && c.arenaSide !== "NEUTRAL";
+                            const isEnemy = c.isNPC && c.arenaSide !== "HERO";
                             const color = isEnemy ? "#ff4444" : "#3b82f6";
                             return (
                                 <option key={c.id} value={c.id} style={{ color }}>
