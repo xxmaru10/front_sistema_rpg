@@ -1,7 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { globalEventStore } from "@/lib/eventStore";
+import { computeState } from "@/lib/projections";
 import { isCharacterEliminated, calculateAbsorption } from "@/lib/gameLogic";
+import type { ActionEvent, Character } from "@/types/domain";
+
+function getCharactersFromProjectedStore(): Record<string, Character> {
+    const events = globalEventStore.getEvents();
+    const sorted = [...events].sort((a: ActionEvent, b: ActionEvent) => {
+        const seqA = a.seq || 0;
+        const seqB = b.seq || 0;
+        if (seqA > 0 && seqB > 0 && seqA !== seqB) return seqA - seqB;
+        if (seqA > 0 && seqB === 0) return -1;
+        if (seqA === 0 && seqB > 0) return 1;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+    const snapshot = globalEventStore.getSnapshotState();
+    const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+    const projectionEvents =
+        snapshot && snapshotUpToSeq >= 0
+            ? sorted.filter((e) => (e.seq || 0) === 0 || (e.seq || 0) > snapshotUpToSeq)
+            : sorted;
+    return computeState(projectionEvents, snapshot ?? undefined).characters as Record<string, Character>;
+}
 
 interface CombatAutomationParams {
     sessionId: string;
@@ -27,7 +48,7 @@ export function useCombatAutomation({
     >([]);
     const [deathTurnPassed, setDeathTurnPassed] = useState<Set<string>>(new Set());
     const [pendingDamage, setPendingDamage] = useState<
-        { defenderId: string; damage: number; track: "PHYSICAL" | "MENTAL" } | null
+        { defender: Character; damage: number; track: "PHYSICAL" | "MENTAL" } | null
     >(null);
 
     const processedOutcomeIds = useRef<Set<string>>(new Set());
@@ -167,22 +188,30 @@ export function useCombatAutomation({
         const unsubscribe = globalEventStore.subscribe((event) => {
             if (event.type !== "COMBAT_OUTCOME" || event.payload.result <= 0) return;
             if (processedOutcomeIds.current.has(event.id)) return;
-            processedOutcomeIds.current.add(event.id);
 
             const { defenderId, result } = event.payload;
             const currentState = stateRef.current;
-            // Robust check: try to find character across state sources
-            const defender = currentState.characters[defenderId];
-            
+            const projectedChars = getCharactersFromProjectedStore();
+            const defender =
+                projectedChars[defenderId] ||
+                (currentState.characters[defenderId] as Character | undefined);
+
             if (!defender) {
                 console.warn("[useCombatAutomation] Damage resolution failed: Defender not found in state", defenderId);
                 return;
             }
 
-            if (isCharacterEliminated(defender)) return;
+            if (isCharacterEliminated(defender)) {
+                processedOutcomeIds.current.add(event.id);
+                return;
+            }
 
-            const track = (event.payload as any).track || currentState.damageType || "PHYSICAL";
-            setPendingDamage({ defenderId, damage: result, track });
+            processedOutcomeIds.current.add(event.id);
+            const track =
+                (event.payload as { track?: "PHYSICAL" | "MENTAL" }).track ||
+                currentState.damageType ||
+                "PHYSICAL";
+            setPendingDamage({ defender: { ...defender }, damage: result, track });
         });
         return unsubscribe;
     }, [sessionId, actorUserId, userRole]);
@@ -200,7 +229,7 @@ export function useCombatAutomation({
         consequences: { slot: string; text: string }[];
     }) => {
         if (!pendingDamage) return;
-        const { defenderId } = pendingDamage;
+        const defenderId = pendingDamage.defender.id;
 
         applied.stressPhysical.forEach(idx => {
             globalEventStore.append({
@@ -232,12 +261,13 @@ export function useCombatAutomation({
 
     const handleDamageAutoCalculate = () => {
         if (!pendingDamage) return;
-        const { defenderId, damage, track } = pendingDamage;
+        const { defender, damage, track } = pendingDamage;
         const currentState = stateRef.current;
-        const defender = currentState.characters[defenderId];
-        if (!defender) { setPendingDamage(null); return; }
+        const liveDefender = currentState.characters[defender.id] || defender;
+        if (!liveDefender) { setPendingDamage(null); return; }
 
-        const absorption = calculateAbsorption(defender, damage, track);
+        const absorption = calculateAbsorption(liveDefender, damage, track);
+        const defenderId = defender.id;
 
         absorption.stressToMarkIndices.forEach((idx: number) => {
             globalEventStore.append({

@@ -482,7 +482,7 @@ export type ActionEvent =
   | EventEnvelope<"TURN_STEPPED", { index: number }>
   | EventEnvelope<"COMBAT_TARGET_SET", { targetId: string | null; targetIds?: string[]; damageType?: "PHYSICAL" | "MENTAL"; isReaction?: boolean }>
   | EventEnvelope<"COMBAT_REACTION_ENDED", { characterId?: string }>
-  | EventEnvelope<"COMBAT_OUTCOME", { attackerId: string; defenderId: string; attackTotal: number; defenseTotal: number; result: number; message: string }>
+  | EventEnvelope<"COMBAT_OUTCOME", { attackerId: string; defenderId: string; attackTotal: number; defenseTotal: number; result: number; message: string; track?: "PHYSICAL" | "MENTAL" }>
   | EventEnvelope<"TIMER_PAUSED", { pausedAt: string }>
   | EventEnvelope<"TIMER_RESUMED", { resumedAt: string }>
   | EventEnvelope<"TURN_FORCED_PASS", { characterId: string; isReaction: boolean }>

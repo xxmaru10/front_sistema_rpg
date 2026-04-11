@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Character } from "@/types/domain";
 import { Shield, Swords, Skull, AlertTriangle } from "lucide-react";
@@ -68,7 +68,7 @@ export function DamageResolutionModal({
     const [markedMental, setMarkedMental] = useState<Set<number>>(new Set());
     const [consequenceTexts, setConsequenceTexts] = useState<Record<string, string>>({});
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         setMounted(true);
         return () => setMounted(false);
     }, []);
@@ -344,7 +344,7 @@ export function DamageResolutionModal({
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        z-index: 10000;
+                        z-index: 2147483646;
                         backdrop-filter: blur(3px);
                     }
 

@@ -219,7 +219,8 @@ export function useDiceRoller({
                     attackTotal: lastAttackTotal,
                     defenseTotal: (event.payload as any).total,
                     result,
-                    message: outcomeMessage
+                    message: outcomeMessage,
+                    track: damageType,
                 }
             } as any);
         }

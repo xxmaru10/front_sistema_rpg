@@ -948,7 +948,7 @@ export default function SessionPage() {
             {userRole === "GM" && pendingDamage && (
                 <DamageResolutionModal
                     isOpen={!!pendingDamage}
-                    defender={pendingDamage ? state.characters[pendingDamage.defenderId] : null}
+                    defender={pendingDamage.defender}
                     damage={pendingDamage?.damage || 0}
                     track={pendingDamage?.track || "PHYSICAL"}
                     onConfirm={handleDamageConfirm}
