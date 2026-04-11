@@ -32,6 +32,9 @@ interface CombatAutomationParams {
     currentTurnActorId: string | null;
     isCurrentPlayerActive: boolean;
     challengeMode: boolean;
+    events: ActionEvent[];
+    /** Quando false, a timeline inicial já foi carregada (evita modal em desfechos antigos). */
+    isSessionEventsLoading: boolean;
 }
 
 export function useCombatAutomation({
@@ -42,6 +45,8 @@ export function useCombatAutomation({
     currentTurnActorId,
     isCurrentPlayerActive,
     challengeMode,
+    events,
+    isSessionEventsLoading,
 }: CombatAutomationParams) {
     const [consequenceQueue, setConsequenceQueue] = useState<
         { characterId: string; slot: string; damage: number; track: "PHYSICAL" | "MENTAL" }[]
@@ -56,11 +61,62 @@ export function useCombatAutomation({
     const processedTurnOrderIds = useRef<Set<string>>(new Set());
     const prevActorIdRef = useRef<string | null>(null);
     const stateRef = useRef(state);
+    const combatOutcomeHandlerRef = useRef<(event: ActionEvent) => void>(() => {});
+    const seededHistoricalCombatOutcomesRef = useRef(false);
 
     // Keep stateRef in sync for use inside subscriptions
     useEffect(() => {
         stateRef.current = state;
     }, [state]);
+
+    useEffect(() => {
+        processedOutcomeIds.current.clear();
+        seededHistoricalCombatOutcomesRef.current = false;
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (userRole !== "GM" || isSessionEventsLoading || seededHistoricalCombatOutcomesRef.current) return;
+        if (events.length === 0) return;
+        for (const e of events) {
+            if (e.type === "COMBAT_OUTCOME" && (e.seq || 0) > 0) {
+                processedOutcomeIds.current.add(e.id);
+            }
+        }
+        seededHistoricalCombatOutcomesRef.current = true;
+    }, [isSessionEventsLoading, events, userRole]);
+
+    combatOutcomeHandlerRef.current = (event: ActionEvent) => {
+        if (event.type !== "COMBAT_OUTCOME") return;
+        const raw = Number((event.payload as any)?.result);
+        if (!Number.isFinite(raw) || raw <= 0) return;
+        if (processedOutcomeIds.current.has(event.id)) return;
+
+        const defenderId = String((event.payload as any).defenderId || "");
+        if (!defenderId) return;
+
+        const currentState = stateRef.current;
+        const projectedChars = getCharactersFromProjectedStore();
+        const defender =
+            projectedChars[defenderId] ||
+            (currentState.characters[defenderId] as Character | undefined);
+
+        if (!defender) {
+            console.warn("[useCombatAutomation] Damage resolution failed: Defender not found in state", defenderId);
+            return;
+        }
+
+        if (isCharacterEliminated(defender)) {
+            processedOutcomeIds.current.add(event.id);
+            return;
+        }
+
+        processedOutcomeIds.current.add(event.id);
+        const track =
+            (event.payload as { track?: "PHYSICAL" | "MENTAL" }).track ||
+            currentState.damageType ||
+            "PHYSICAL";
+        setPendingDamage({ defender: { ...defender }, damage: raw, track });
+    };
 
     // ─── TURN ACTIONS ────────────────────────────────────────────────────────
 
@@ -184,37 +240,26 @@ export function useCombatAutomation({
 
     useEffect(() => {
         if (userRole !== "GM") return;
-
         const unsubscribe = globalEventStore.subscribe((event) => {
-            if (event.type !== "COMBAT_OUTCOME" || event.payload.result <= 0) return;
-            if (processedOutcomeIds.current.has(event.id)) return;
-
-            const { defenderId, result } = event.payload;
-            const currentState = stateRef.current;
-            const projectedChars = getCharactersFromProjectedStore();
-            const defender =
-                projectedChars[defenderId] ||
-                (currentState.characters[defenderId] as Character | undefined);
-
-            if (!defender) {
-                console.warn("[useCombatAutomation] Damage resolution failed: Defender not found in state", defenderId);
-                return;
-            }
-
-            if (isCharacterEliminated(defender)) {
-                processedOutcomeIds.current.add(event.id);
-                return;
-            }
-
-            processedOutcomeIds.current.add(event.id);
-            const track =
-                (event.payload as { track?: "PHYSICAL" | "MENTAL" }).track ||
-                currentState.damageType ||
-                "PHYSICAL";
-            setPendingDamage({ defender: { ...defender }, damage: result, track });
+            combatOutcomeHandlerRef.current(event);
         });
         return unsubscribe;
     }, [sessionId, actorUserId, userRole]);
+
+    // Reforço: quando `events` do React atualiza (ex.: merge WebSocket), reprocessa
+    // o último COMBAT_OUTCOME válido — o subscribe sozinho pode perder corrida com o estado.
+    useEffect(() => {
+        if (userRole !== "GM" || !events?.length) return;
+        for (let i = events.length - 1; i >= 0; i--) {
+            const e = events[i];
+            if (e.type !== "COMBAT_OUTCOME") continue;
+            const raw = Number((e.payload as any)?.result);
+            if (!Number.isFinite(raw) || raw <= 0) continue;
+            if (processedOutcomeIds.current.has(e.id)) continue;
+            combatOutcomeHandlerRef.current(e);
+            break;
+        }
+    }, [events, userRole]);
 
     // Pause the timer while the GM is resolving damage
     useEffect(() => {

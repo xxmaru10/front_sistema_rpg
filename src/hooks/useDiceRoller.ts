@@ -168,6 +168,7 @@ export function useDiceRoller({
 
         globalEventStore.append(event);
         setSelectedSkill("");
+        setManualBonus(0);
         setIsRolling(false);
 
         if (targetIds.length > 0 && (actionType === "ATTACK" || actionType === "CREATE_ADVANTAGE")) {
@@ -293,6 +294,9 @@ export function useDiceRoller({
                 itemBonusValue: itemBonus,
                 customModifierValue: manualBonus
             },
+            resultOverlay: targetDiff !== undefined && targetDiff !== null
+                ? { mode: "challenge", targetDifficulty: targetDiff }
+                : { mode: "combat" },
             onPreResult: () => {
                 const diceSound = soundSettings?.dice || "/audio/Effects/dados.MP3";
                 const audio = new Audio(diceSound);

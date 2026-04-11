@@ -5,6 +5,7 @@
 
 import React from "react";
 import { Play } from "lucide-react";
+import type { DiceResultOverlayMode } from "@/lib/diceSimulationStore";
 
 interface FateResultOverlayProps {
     phase: "idle" | "held" | "thrown" | "snapping" | "done";
@@ -16,6 +17,10 @@ interface FateResultOverlayProps {
         baseSkillValue?: number;
         itemBonusValue?: number;
         customModifierValue?: number;
+    };
+    resultOverlay?: {
+        mode: DiceResultOverlayMode;
+        targetDifficulty?: number;
     };
 }
 
@@ -38,6 +43,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     dangerColor,
     onAutoRoll,
     calculationBreakdown,
+    resultOverlay,
 }) => {
     const label =
         phase === "idle"     ? "CLIQUE E SEGURE PARA PEGAR OS DADOS" :
@@ -58,6 +64,19 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     
     // Show breakdown only if there's any modifier
     const hasModifiers = totalBonus !== 0 || !!calculationBreakdown;
+
+    const successGreen = "#4ade80";
+    const failRed = "#ff3333";
+    const neutralTone = accentColor;
+
+    let totalColor = neutralTone;
+    if (resultOverlay?.mode === "combat") {
+        if (grandTotal > 0) totalColor = successGreen;
+        else if (grandTotal < 0) totalColor = failRed;
+    } else if (resultOverlay?.mode === "challenge") {
+        const diff = resultOverlay.targetDifficulty ?? 0;
+        totalColor = grandTotal >= diff ? successGreen : failRed;
+    }
 
     return (
         <>
@@ -153,8 +172,43 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                 </div>
             )}
 
-            {/* Painel de resultado — face vencedora + total + escada */}
-            {phase === "done" && results && (
+            {/* Painel de resultado após 3D: compacto (Arena / desafio) */}
+            {phase === "done" && results && resultOverlay && (
+                <div style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "52.5%",
+                    transform: "translate(-50%, -50%)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                    animation: "resultReveal 0.6s cubic-bezier(0.19, 1, 0.22, 1)",
+                    background: "rgba(5, 5, 8, 0.98)",
+                    padding: "48px 72px",
+                    borderRadius: "28px",
+                    minWidth: "280px",
+                    border: `1px solid ${totalColor}66`,
+                    boxShadow: `0 0 80px rgba(0,0,0,0.9), 0 0 40px ${totalColor}33`,
+                    backdropFilter: "blur(16px)",
+                }}>
+                    <span style={{
+                        color: totalColor,
+                        fontFamily: "var(--font-header, 'Cinzel', serif)",
+                        fontSize: "clamp(3.2rem, 12vw, 5rem)",
+                        fontWeight: 700,
+                        letterSpacing: "0.06em",
+                        lineHeight: 1,
+                        textShadow: `0 0 28px ${totalColor}88, 0 0 60px rgba(0,0,0,0.85)`,
+                    }}>
+                        {grandTotal > 0 ? `+${grandTotal}` : `${grandTotal}`}
+                    </span>
+                </div>
+            )}
+
+            {/* Painel de resultado legado (sem resultOverlay) */}
+            {phase === "done" && results && !resultOverlay && (
                 <div style={{
                     position: "absolute",
                     top: "50%",
@@ -209,7 +263,6 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         })}
                     </div>
 
-                    {/* Breakdown Math */}
                     {hasModifiers && (
                         <div style={{
                             display: "flex",

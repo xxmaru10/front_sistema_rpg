@@ -295,6 +295,8 @@ export default function SessionPage() {
         sessionId: sessionId as string,
         actorUserId, userRole, state, currentTurnActorId,
         isCurrentPlayerActive, challengeMode,
+        events,
+        isSessionEventsLoading: isLoading,
     });
 
     // ─── SESSION ACTIONS ──────────────────────────────────────────────────────
@@ -1005,6 +1007,7 @@ export default function SessionPage() {
                     isVisible={true}
                     accentColor={diceParams?.accentColor}
                     calculationBreakdown={diceParams?.calculationBreakdown}
+                    resultOverlay={diceParams?.resultOverlay}
                     onSettled={(results) => {
                         diceParams?.onSettled(results);
                         diceSimulationStore.hide();

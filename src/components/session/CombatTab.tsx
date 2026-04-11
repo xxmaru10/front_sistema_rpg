@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
-import { ChevronLeft, ChevronRight, Dice5, ScrollText } from "lucide-react";
+import { ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
 import { CombatCard } from "@/components/CombatCard";
 import { DiceRoller } from "@/components/DiceRoller";
 import { CombatLog } from "@/components/CombatLog";
@@ -219,25 +219,9 @@ export function CombatTab({
             <div
                 className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
             >
-                {shouldRenderTopRollBar && userRole === "GM" && (
-                    <div className={`combat-top-strip ${showDiceRoller ? "is-open" : ""}`}>
-                        {!showDiceRoller && (
-                            <button
-                                onClick={() => {
-                                    if (userRole === "GM" || isCurrentPlayerActive) {
-                                        setShowDiceRoller(true);
-                                    }
-                                }}
-                                className="combat-top-roll-open-btn"
-                                title="Abrir zona de rolagem"
-                                aria-label="Dados"
-                            >
-                                <Dice5 size={18} />
-                            </button>
-                        )}
-
-                        {showDiceRoller && (
-                            <div className="combat-dice-integrated animate-reveal">
+                {shouldRenderTopRollBar && userRole === "GM" && showDiceRoller && (
+                    <div className={`combat-top-strip is-open`}>
+                        <div className="combat-dice-integrated animate-reveal">
 
                                 <DiceRoller
                                     sessionId={sessionId as string}
@@ -381,10 +365,9 @@ export function CombatTab({
                                         )}
                                     </div>
                                 )}
-                            </div>
-                        )}
+                        </div>
 
-                        {showDiceRoller && showCombatLogs && (
+                        {showCombatLogs && (
                             <div className="combat-log-wrapper">
                                 <CombatLog
                                     events={events}
