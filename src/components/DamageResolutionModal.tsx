@@ -86,7 +86,7 @@ export function DamageResolutionModal({
 
     const orderedSlots = useMemo(() => {
         if (!defender) return [] as string[];
-        const keys = Object.keys(defender.consequences);
+        const keys = Object.keys(defender.consequences || {});
         return keys.sort((a, b) => {
             const ia = SLOT_ORDER.indexOf(a);
             const ib = SLOT_ORDER.indexOf(b);
@@ -275,7 +275,7 @@ export function DamageResolutionModal({
                             <div className="dmg-empty">— Sem slots de consequência —</div>
                         )}
                         {orderedSlots.map(slot => {
-                            const existing = defender.consequences[slot];
+                            const existing = defender.consequences ? defender.consequences[slot] : undefined;
                             const existingText = existing?.text?.trim() || "";
                             const isOccupied = existingText.length > 0;
                             const capacity = getSlotCapacity(slot);

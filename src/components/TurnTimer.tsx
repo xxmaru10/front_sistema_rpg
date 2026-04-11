@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { Play, Pause, Save, X } from "lucide-react";
 
 
 interface TurnTimerProps {
@@ -63,6 +64,22 @@ export function TurnTimer({
         }
     }, [timeLeft, isPaused, onExpire]);
 
+    const [showSettings, setShowSettings] = useState(false);
+    const [editMinutes, setEditMinutes] = useState(0);
+    const [editSeconds, setEditSeconds] = useState(0);
+
+    const handleOpenSettings = () => {
+        if (!isGM) return;
+        setEditMinutes(Math.floor(timeLeft / 60));
+        setEditSeconds(timeLeft % 60);
+        setShowSettings(true);
+    };
+
+    const handleSaveSettings = () => {
+        setTimeLeft(editMinutes * 60 + editSeconds);
+        setShowSettings(false);
+    };
+
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
@@ -73,11 +90,51 @@ export function TurnTimer({
     const isLowTime = timeLeft < 30;
 
     return (
-        <div className={`turn-timer-container ${isLowTime ? 'low-time' : ''} ${isPaused ? 'paused' : ''}`}>
+        <div className={`turn-timer-container ${isLowTime ? 'low-time' : ''} ${isPaused ? 'paused' : ''} ${isGM ? 'gm-clickable' : ''}`} onClick={isGM ? handleOpenSettings : undefined}>
             <div className="timer-content">
                 <span className="time-display">{formatTime(timeLeft)}</span>
                 {isPaused && <span className="paused-tag">PAUSADO</span>}
             </div>
+
+            {showSettings && isGM && (
+                <div className="timer-settings-popover" onClick={e => e.stopPropagation()}>
+                    <div className="popover-header">
+                        <span className="popover-title">AJUSTAR TEMPO</span>
+                        <button type="button" className="close-btn" onClick={() => setShowSettings(false)}>
+                            <X size={14} />
+                        </button>
+                    </div>
+                    <div className="popover-body">
+                        <div className="time-inputs">
+                            <input 
+                                type="number" 
+                                value={editMinutes === null ? '' : editMinutes} 
+                                onChange={e => setEditMinutes(e.target.value === '' ? null as any : (parseInt(e.target.value) || 0))} 
+                                min="0" 
+                                className="time-input"
+                            />
+                            <span>:</span>
+                            <input 
+                                type="number" 
+                                value={editSeconds === null ? '' : editSeconds} 
+                                onChange={e => setEditSeconds(e.target.value === '' ? null as any : (parseInt(e.target.value) || 0))} 
+                                min="0" 
+                                max="59" 
+                                className="time-input"
+                            />
+                        </div>
+                        <div className="popover-actions">
+                            <button type="button" className={`action-btn ${isPaused ? 'btn-play' : 'btn-pause'}`} onClick={onTogglePause}>
+                                {isPaused ? <Play size={14}/> : <Pause size={14}/>}
+                                {isPaused ? 'PLAY' : 'PAUSE'}
+                            </button>
+                            <button type="button" className="action-btn btn-save" onClick={handleSaveSettings}>
+                                <Save size={14}/> SALVAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style jsx>{`
                 .turn-timer-container {
@@ -122,6 +179,149 @@ export function TurnTimer({
                     position: absolute;
                     bottom: -12px;
                     white-space: nowrap;
+                }
+
+                .gm-clickable {
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .gm-clickable:hover {
+                    transform: scale(1.05);
+                    text-shadow: 0 0 10px rgba(197, 160, 89, 0.5);
+                }
+
+                .timer-settings-popover {
+                    position: absolute;
+                    top: calc(100% + 15px);
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(10, 15, 25, 0.95);
+                    border: 1px solid rgba(197, 160, 89, 0.4);
+                    border-radius: 8px;
+                    padding: 12px;
+                    min-width: 180px;
+                    z-index: 1000;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+                    cursor: default;
+                    animation: pop-in 0.2s ease-out;
+                }
+
+                @keyframes pop-in {
+                    from { opacity: 0; transform: translate(-50%, -10px); }
+                    to { opacity: 1; transform: translate(-50%, 0); }
+                }
+
+                .popover-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    padding-bottom: 8px;
+                    margin-bottom: 12px;
+                }
+
+                .popover-title {
+                    font-family: var(--font-header);
+                    font-size: 0.65rem;
+                    letter-spacing: 0.1em;
+                    color: rgba(255, 255, 255, 0.7);
+                }
+
+                .close-btn {
+                    background: transparent;
+                    border: none;
+                    color: rgba(255, 255, 255, 0.5);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 4px;
+                    border-radius: 4px;
+                }
+
+                .close-btn:hover {
+                    color: #ff4444;
+                    background: rgba(255, 68, 68, 0.1);
+                }
+
+                .time-inputs {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    margin-bottom: 16px;
+                }
+
+                .time-input {
+                    width: 50px;
+                    height: 36px;
+                    background: rgba(0, 0, 0, 0.5);
+                    border: 1px solid rgba(197, 160, 89, 0.4);
+                    border-radius: 6px;
+                    color: #fff;
+                    font-family: 'Courier New', monospace;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    text-align: center;
+                }
+
+                .time-input:focus {
+                    outline: none;
+                    border-color: rgba(197, 160, 89, 1);
+                    box-shadow: 0 0 10px rgba(197, 160, 89, 0.2);
+                }
+
+                .popover-actions {
+                    display: flex;
+                    gap: 8px;
+                }
+
+                .action-btn {
+                    flex: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 4px;
+                    height: 32px;
+                    border-radius: 4px;
+                    font-family: var(--font-header);
+                    font-size: 0.65rem;
+                    letter-spacing: 0.1em;
+                    cursor: pointer;
+                    border: none;
+                    color: #fff;
+                    transition: all 0.2s;
+                }
+
+                .btn-play {
+                    background: rgba(74, 222, 128, 0.2);
+                    border: 1px solid rgba(74, 222, 128, 0.4);
+                    color: #4ade80;
+                }
+
+                .btn-play:hover {
+                    background: rgba(74, 222, 128, 0.3);
+                }
+
+                .btn-pause {
+                    background: rgba(250, 204, 21, 0.2);
+                    border: 1px solid rgba(250, 204, 21, 0.4);
+                    color: #facc15;
+                }
+
+                .btn-pause:hover {
+                    background: rgba(250, 204, 21, 0.3);
+                }
+
+                .btn-save {
+                    background: rgba(197, 160, 89, 0.2);
+                    border: 1px solid rgba(197, 160, 89, 0.4);
+                    color: #c5a059;
+                }
+
+                .btn-save:hover {
+                    background: rgba(197, 160, 89, 0.3);
                 }
             `}</style>
         </div>

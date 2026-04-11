@@ -238,7 +238,34 @@ export function CombatTab({
 
                         {showDiceRoller && (
                             <div className="combat-dice-integrated animate-reveal">
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0', position: 'absolute', top: '6px', right: '6px', zIndex: 5 }}>
+
+                                <DiceRoller
+                                    sessionId={sessionId as string}
+                                    actorUserId={actorUserId}
+                                    characters={combatantList}
+                                    fixedCharacterId={fixedCharacterId}
+                                    isIntegrated={true}
+                                    isGM={userRole === "GM"}
+                                    stateTargetId={state.targetId}
+                                    isReaction={state.isReaction}
+                                    lastAttackTotal={lastReactionAttack?.total}
+                                    stateDamageType={state.damageType}
+                                    targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
+                                    challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
+                                    disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
+                                    soundSettings={state.soundSettings}
+                                    currentTurnActorId={currentTurnActorId}
+                                />
+                                <button
+                                    type="button"
+                                    className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
+                                    onClick={() => setShowCombatLogs(prev => !prev)}
+                                    title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                    aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                >
+                                    <ScrollText size={18} />
+                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', borderLeft: '1px solid rgba(255,255,255,0.1)', marginLeft: '4px' }}>
                                     <button
                                         onClick={() => setShowDiceRoller(false)}
                                         style={{
@@ -271,31 +298,6 @@ export function CombatTab({
                                         ✕
                                     </button>
                                 </div>
-                                <DiceRoller
-                                    sessionId={sessionId as string}
-                                    actorUserId={actorUserId}
-                                    characters={combatantList}
-                                    fixedCharacterId={fixedCharacterId}
-                                    isIntegrated={true}
-                                    isGM={userRole === "GM"}
-                                    stateTargetId={state.targetId}
-                                    isReaction={state.isReaction}
-                                    lastAttackTotal={lastReactionAttack?.total}
-                                    stateDamageType={state.damageType}
-                                    targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
-                                    challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
-                                    disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
-                                    soundSettings={state.soundSettings}
-                                />
-                                <button
-                                    type="button"
-                                    className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
-                                    onClick={() => setShowCombatLogs(prev => !prev)}
-                                    title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
-                                    aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
-                                >
-                                    <ScrollText size={18} />
-                                </button>
                                 {showChallengePanel && (
                                     <div
                                         className={`combat-inline-challenge ${hasChallengeAspects || (userRole === "GM" && isChallengeAspectsOpen) ? "has-aspects" : ""}`}

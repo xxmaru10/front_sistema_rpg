@@ -30,6 +30,7 @@ interface DiceRollerProps {
         dice?: string;
         portrait?: string;
     };
+    currentTurnActorId?: string | null;
 }
 
 export function DiceRoller(props: DiceRollerProps) {
@@ -47,7 +48,8 @@ export function DiceRoller(props: DiceRollerProps) {
         isReaction = false,
         lastAttackTotal,
         stateDamageType,
-        soundSettings
+        soundSettings,
+        currentTurnActorId
     } = props;
 
     const roller = useDiceRoller({
@@ -63,7 +65,8 @@ export function DiceRoller(props: DiceRollerProps) {
         isReaction,
         lastAttackTotal,
         stateDamageType,
-        soundSettings
+        soundSettings,
+        currentTurnActorId
     });
 
     const challengeColors = useMemo(() => {

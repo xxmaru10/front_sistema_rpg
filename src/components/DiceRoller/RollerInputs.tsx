@@ -154,65 +154,21 @@ export function RollerInputs({
                         onChange={(e) => setSelectedCharId(e.target.value)}
                         className="mystic-input select-ritual"
                     >
-                        {characters.map(c => (
-                            <option key={c.id} value={c.id}>{c.name.toUpperCase()}</option>
-                        ))}
+                        {characters.map(c => {
+                            const isEnemy = c.isNPC && c.arenaSide !== "HERO" && c.arenaSide !== "NEUTRAL";
+                            const color = isEnemy ? "#ff4444" : "#3b82f6";
+                            return (
+                                <option key={c.id} value={c.id} style={{ color }}>
+                                    {c.name.toUpperCase()}
+                                </option>
+                            );
+                        })}
                     </select>
                 </div>
             )}
 
             <div className={`control-panel-grid ${isIntegrated ? "integrated-mode" : ""}`}>
                 <div className="panel-col primary">
-                    <div className="matrix-field">
-                        {!isIntegrated && <label>PERICIA</label>}
-                        <div className="field-row">
-                            {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
-                            {isIntegrated ? (
-                                <div className="icon-select-shell" title="Pericia">
-                                    <span className="icon-select-face"><Sparkles size={16} /></span>
-                                    <select
-                                        value={selectedSkill}
-                                        onChange={(e) => handleSkillSelect(e.target.value)}
-                                        className="icon-select-native"
-                                        aria-label="Pericia"
-                                    >
-                                        <option value="">PERICIA</option>
-                                        {skillOptions.ownedSkills.sort().map(skill => {
-                                            const rank = activeChar?.skills?.[skill] || 0;
-                                            return <option key={skill} value={skill}>{skill.toUpperCase()} (+{rank})</option>;
-                                        })}
-                                        {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
-                                        {skillOptions.otherSkills.sort().map(skill => {
-                                            const rank = activeChar?.skills?.[skill] || 0;
-                                            return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
-                                        })}
-                                    </select>
-                                </div>
-                            ) : (
-                                <select
-                                    value={selectedSkill}
-                                    onChange={(e) => handleSkillSelect(e.target.value)}
-                                    className="mystic-input select-ritual"
-                                >
-                                    <option value="">ROLAGEM PURA</option>
-                                    {skillOptions.ownedSkills.sort().map(skill => {
-                                        const rank = activeChar?.skills?.[skill] || 0;
-                                        return (
-                                            <option key={skill} value={skill} style={{ color: "var(--accent-color)", fontWeight: "bold" }}>
-                                                {skill.toUpperCase()} (+{rank})
-                                            </option>
-                                        );
-                                    })}
-                                    {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
-                                    {skillOptions.otherSkills.sort().map(skill => {
-                                        const rank = activeChar?.skills?.[skill] || 0;
-                                        return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
-                                    })}
-                                </select>
-                            )}
-                        </div>
-                    </div>
-
                     <div className="matrix-field" ref={attackMenuRef}>
                         {!isIntegrated && <label>ACAO</label>}
                         <div className="field-row action-field-row">
@@ -266,9 +222,77 @@ export function RollerInputs({
                             </div>
                         </div>
                     </div>
+
+                    <div className="matrix-field bonus-field-container">
+                        {!isIntegrated && <label>BONUS</label>}
+                        <div className="field-row">
+                            {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
+                            <input
+                                type="number"
+                                placeholder="BONUS"
+                                value={manualBonus === 0 ? "" : manualBonus}
+                                onChange={(e) => {
+                                    const rawValue = e.target.value;
+                                    setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
+                                }}
+                                className="mystic-input input-ritual bonus-input narrowed"
+                                style={isIntegrated ? { width: bonusWidth, maxWidth: "4ch" } : undefined}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <div className="panel-col secondary">
+                    <div className="matrix-field">
+                        {!isIntegrated && <label>PERICIA</label>}
+                        <div className="field-row">
+                            {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
+                            {isIntegrated ? (
+                                <div className="icon-select-shell" title="Pericia">
+                                    <span className="icon-select-face"><Sparkles size={16} /></span>
+                                    <select
+                                        value={selectedSkill}
+                                        onChange={(e) => handleSkillSelect(e.target.value)}
+                                        className="icon-select-native"
+                                        aria-label="Pericia"
+                                    >
+                                        <option value="">PERICIA</option>
+                                        {skillOptions.ownedSkills.sort().map(skill => {
+                                            const rank = activeChar?.skills?.[skill] || 0;
+                                            return <option key={skill} value={skill}>{skill.toUpperCase()} (+{rank})</option>;
+                                        })}
+                                        {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
+                                        {skillOptions.otherSkills.sort().map(skill => {
+                                            const rank = activeChar?.skills?.[skill] || 0;
+                                            return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
+                                        })}
+                                    </select>
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedSkill}
+                                    onChange={(e) => handleSkillSelect(e.target.value)}
+                                    className="mystic-input select-ritual"
+                                >
+                                    <option value="">ROLAGEM PURA</option>
+                                    {skillOptions.ownedSkills.sort().map(skill => {
+                                        const rank = activeChar?.skills?.[skill] || 0;
+                                        return (
+                                            <option key={skill} value={skill} style={{ color: "var(--accent-color)", fontWeight: "bold" }}>
+                                                {skill.toUpperCase()} (+{rank})
+                                            </option>
+                                        );
+                                    })}
+                                    {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
+                                    {skillOptions.otherSkills.sort().map(skill => {
+                                        const rank = activeChar?.skills?.[skill] || 0;
+                                        return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
+                                    })}
+                                </select>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="matrix-field item-field-container">
                         {!isIntegrated && <label>INVENTARIO</label>}
                         <div className="field-row">
@@ -309,24 +333,6 @@ export function RollerInputs({
                                     ))}
                                 </select>
                             )}
-                        </div>
-                    </div>
-
-                    <div className="matrix-field bonus-field-container">
-                        {!isIntegrated && <label>BONUS</label>}
-                        <div className="field-row">
-                            {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
-                            <input
-                                type="number"
-                                placeholder="BONUS"
-                                value={manualBonus === 0 ? "" : manualBonus}
-                                onChange={(e) => {
-                                    const rawValue = e.target.value;
-                                    setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
-                                }}
-                                className="mystic-input input-ritual bonus-input"
-                                style={isIntegrated ? { width: bonusWidth, maxWidth: "4ch" } : undefined}
-                            />
                         </div>
                     </div>
                 </div>
@@ -646,11 +652,15 @@ export function RollerInputs({
                 }
 
                 .control-panel-grid.integrated-mode .bonus-input {
-                    width: auto !important;
-                    min-width: 2ch;
                     font-size: 1.08rem !important;
                     font-weight: 800 !important;
                     line-height: 1;
+                    padding: 2px 4px !important;
+                    min-width: unset !important;
+                }
+                
+                .bonus-input.narrowed {
+                    width: 38px !important;
                 }
 
                 .attack-type-select {

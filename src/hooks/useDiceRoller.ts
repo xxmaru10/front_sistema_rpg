@@ -24,6 +24,7 @@ interface UseDiceRollerProps {
     soundSettings?: {
         dice?: string;
     };
+    currentTurnActorId?: string | null;
 }
 
 type ActionType = "ATTACK" | "DEFEND" | "OVERCOME" | "CREATE_ADVANTAGE";
@@ -41,7 +42,8 @@ export function useDiceRoller({
     isReaction, 
     lastAttackTotal, 
     stateDamageType,
-    soundSettings
+    soundSettings,
+    currentTurnActorId
 }: UseDiceRollerProps) {
     const [manualBonus, setManualBonus] = useState(0);
     const [selectedCharId, setSelectedCharId] = useState(fixedCharacterId || characters[0]?.id || "");
@@ -67,10 +69,14 @@ export function useDiceRoller({
             if (selectedCharId !== fixedCharacterId) {
                 setSelectedCharId(fixedCharacterId);
             }
+        } else if (isGM && currentTurnActorId) {
+            if (selectedCharId !== currentTurnActorId && characters.some(c => c.id === currentTurnActorId)) {
+                setSelectedCharId(currentTurnActorId);
+            }
         } else if (!selectedCharId && characters.length > 0) {
             setSelectedCharId(characters[0].id);
         }
-    }, [fixedCharacterId, characters, selectedCharId]);
+    }, [fixedCharacterId, characters, selectedCharId, isGM, currentTurnActorId]);
 
     // Force reaction target selection, action type and damage type when reaction starts
     useEffect(() => {

@@ -425,6 +425,21 @@ export default function SessionPage() {
         }
     }, [characterList, combatActivePcId, combatActiveNpcId, combatLastSelectedId]);
 
+    // Auto-sync droplist to whoever is active in turn
+    useEffect(() => {
+        if (currentTurnActorId) {
+            const char = characterList.find(c => c.id === currentTurnActorId);
+            if (char) {
+                if (char.isNPC) {
+                    setCombatActiveNpcId(char.id);
+                } else {
+                    setCombatActivePcId(char.id);
+                }
+                setCombatLastSelectedId(char.id);
+            }
+        }
+    }, [currentTurnActorId, characterList]);
+
     // ─── LOADING SCREEN ───────────────────────────────────────────────────────
 
     if (isLoading) {
