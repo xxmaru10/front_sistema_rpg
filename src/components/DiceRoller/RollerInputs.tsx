@@ -123,7 +123,7 @@ export function RollerInputs({
                             {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
                                 <div className="icon-select-shell" title="Pericia">
-                                    <span className="icon-select-face"><Sparkles size={14} /></span>
+                                    <span className="icon-select-face"><Sparkles size={16} /></span>
                                     <select
                                         value={selectedSkill}
                                         onChange={(e) => handleSkillSelect(e.target.value)}
@@ -194,7 +194,7 @@ export function RollerInputs({
                             {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
                                 <div className="icon-select-shell" title="Inventario">
-                                    <span className="icon-select-face"><Backpack size={14} /></span>
+                                    <span className="icon-select-face"><Backpack size={16} /></span>
                                     <select
                                         value={selectedItemId}
                                         onChange={(e) => setSelectedItemId(e.target.value)}
@@ -387,10 +387,10 @@ export function RollerInputs({
 
                 .icon-select-shell {
                     position: relative;
-                    width: 32px;
-                    min-width: 32px;
-                    height: 30px;
-                    border-radius: 10px;
+                    width: 40px;
+                    min-width: 40px;
+                    height: 36px;
+                    border-radius: 12px;
                     border: 1px solid var(--accent-color);
                     background: #000;
                     box-shadow: 0 0 14px var(--accent-glow), inset 0 0 9px var(--accent-glow);
@@ -444,11 +444,11 @@ export function RollerInputs({
 
                 .control-panel-grid.integrated-mode .select-ritual,
                 .control-panel-grid.integrated-mode .input-ritual {
-                    font-size: 0.64rem !important;
+                    font-size: 0.72rem !important;
                     letter-spacing: 0.06em !important;
-                    padding: 3px 8px !important;
+                    padding: 5px 10px !important;
                     border-radius: 12px !important;
-                    min-height: 30px;
+                    min-height: 36px;
                     box-shadow: 0 0 14px var(--accent-glow), inset 0 0 10px var(--accent-glow) !important;
                 }
 
@@ -471,6 +471,13 @@ export function RollerInputs({
                 .control-panel-grid.integrated-mode .bonus-input {
                     width: auto !important;
                     min-width: 3ch;
+                }
+
+                .select-ritual option,
+                .icon-select-native option,
+                .add-target-select option {
+                    background: #0a0d13;
+                    color: #f2f6ff;
                 }
 
                 .target-selection-area {

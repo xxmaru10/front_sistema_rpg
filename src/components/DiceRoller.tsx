@@ -227,7 +227,9 @@ export function DiceRoller(props: DiceRollerProps) {
                     min-width: 44px;
                     border-radius: 12px;
                     border-width: 1.5px;
-                    box-shadow: 0 0 22px var(--accent-glow), inset 0 0 14px var(--accent-glow), 0 0 12px rgba(255, 215, 90, 0.28);
+                    background: rgba(255, 255, 255, 0.94);
+                    border-color: rgba(255, 255, 255, 0.92);
+                    box-shadow: 0 0 22px rgba(255,255,255,0.4), inset 0 0 14px rgba(255,255,255,0.3), 0 0 12px rgba(255, 215, 90, 0.28);
                 }
 
                 .trigger-content {
@@ -247,7 +249,8 @@ export function DiceRoller(props: DiceRollerProps) {
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    text-shadow: 0 0 10px var(--accent-glow);
+                    color: #06090f;
+                    text-shadow: none;
                 }
 
                 .matrix-trigger:hover .trigger-content { 
@@ -269,7 +272,9 @@ export function DiceRoller(props: DiceRollerProps) {
 
                 .matrix-trigger.integrated:hover {
                     transform: scale(1.08);
-                    box-shadow: 0 0 36px var(--accent-glow), inset 0 0 18px var(--accent-glow), 0 0 18px rgba(255, 220, 90, 0.4);
+                    background: #ffffff;
+                    border-color: #ffffff;
+                    box-shadow: 0 0 36px rgba(255,255,255,0.5), inset 0 0 18px rgba(255,255,255,0.35), 0 0 18px rgba(255, 220, 90, 0.4);
                 }
 
                 .trigger-progress {

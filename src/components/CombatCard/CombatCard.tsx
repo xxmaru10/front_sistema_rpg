@@ -11,7 +11,7 @@ import { CombatExtras } from "@/components/CombatExtras";
 
 // Sub-components
 import { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Star, Sparkles, Briefcase, Target, Dices } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, Sparkles, Briefcase, Target, Dices, Pin, PinOff } from "lucide-react";
 import { CombatAspects } from "./CombatAspects";
 import { CombatCardStyles } from "./CombatCard.styles";
 
@@ -26,6 +26,7 @@ interface CombatCardProps {
     onToggleDiceRoller?: () => void;
     displayMode?: "expanded" | "compact" | "strip";
     onToggleExpanded?: () => void;
+    isPinned?: boolean;
     avatarSide?: "left" | "right";
 }
 
@@ -67,6 +68,7 @@ export function CombatCard({
     onToggleDiceRoller,
     displayMode = "expanded",
     onToggleExpanded,
+    isPinned = false,
     avatarSide = "left",
 }: CombatCardProps) {
     const isOwner = (actorUserId && character.ownerUserId && actorUserId.trim().toLowerCase() === character.ownerUserId.trim().toLowerCase()) || isLinkedCharacter;
@@ -91,6 +93,23 @@ export function CombatCard({
     const isRestrictedThreatView = isThreat && !isGM && !isOwner;
     const cardThemeClass = getCombatCardThemeClass(character, isOwner);
     const portraitInitials = getPortraitInitials(character.name);
+    const accentColors: Record<string, string> = {
+        "own-hero-card": "rgba(var(--accent-rgb), 0.86)",
+        "hero-card": "rgba(var(--accent-rgb), 0.82)",
+        "threat-card": "rgba(255, 68, 68, 0.82)",
+        "npc-hero-card": "rgba(var(--accent-rgb), 0.76)",
+    };
+    const accentSoftColors: Record<string, string> = {
+        "own-hero-card": "rgba(var(--accent-rgb), 0.46)",
+        "hero-card": "rgba(var(--accent-rgb), 0.42)",
+        "threat-card": "rgba(255, 68, 68, 0.42)",
+        "npc-hero-card": "rgba(var(--accent-rgb), 0.36)",
+    };
+    const accentColor = accentColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.72)";
+    const accentSoftColor = accentSoftColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.32)";
+    const arenaFocusX = Math.max(0, Math.min(100, character.arenaPortraitFocus?.x ?? 50));
+    const arenaFocusY = Math.max(0, Math.min(100, character.arenaPortraitFocus?.y ?? 30));
+    const arenaFocusZoom = Math.max(1, Math.min(3, character.arenaPortraitFocus?.zoom ?? 1));
 
     const [isAspectsExpanded, setIsAspectsExpanded] = useState(false);
     const [expandedExtra, setExpandedExtra] = useState<'stunts' | 'spells' | 'items' | 'skills' | null>(null);
@@ -180,13 +199,33 @@ export function CombatCard({
                     onClick={onToggleExpanded}
                     title={`Expandir card de ${character.name}`}
                     aria-label={`Expandir card de ${character.name}`}
+                    style={{
+                        '--card-accent': accentColor,
+                        '--card-accent-soft': accentSoftColor
+                    } as any}
                 >
                     <span className="combat-strip-image">
                         {character.imageUrl ? (
-                            <img src={character.imageUrl} alt="" />
+                            <img
+                                src={character.imageUrl}
+                                alt=""
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    objectPosition: `${arenaFocusX}% ${arenaFocusY}%`,
+                                    opacity: 0.9,
+                                    transform: `scale(${arenaFocusZoom})`,
+                                    transformOrigin: `${arenaFocusX}% ${arenaFocusY}%`
+                                }}
+                            />
                         ) : (
                             <span className="combat-portrait-fallback">{portraitInitials}</span>
                         )}
+                        <span className="combat-strip-vignette top" aria-hidden="true"></span>
+                        <span className="combat-strip-vignette bottom" aria-hidden="true"></span>
+                        <span className="combat-strip-vignette side" aria-hidden="true"></span>
+                        <span className="combat-strip-vignette slash" aria-hidden="true"></span>
                     </span>
                     <span className="combat-strip-name">{character.name.toUpperCase()}</span>
                 </button>
@@ -206,20 +245,6 @@ export function CombatCard({
 
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
-    const accentColors: Record<string, string> = {
-        "own-hero-card": "rgba(var(--accent-rgb), 0.86)",
-        "hero-card": "rgba(var(--accent-rgb), 0.82)",
-        "threat-card": "rgba(255, 68, 68, 0.82)",
-        "npc-hero-card": "rgba(var(--accent-rgb), 0.76)",
-    };
-    const accentSoftColors: Record<string, string> = {
-        "own-hero-card": "rgba(var(--accent-rgb), 0.46)",
-        "hero-card": "rgba(var(--accent-rgb), 0.42)",
-        "threat-card": "rgba(255, 68, 68, 0.42)",
-        "npc-hero-card": "rgba(var(--accent-rgb), 0.36)",
-    };
-    const accentColor = accentColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.72)";
-    const accentSoftColor = accentSoftColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.32)";
     const isCompactThreatLayout = isThreat && isGM;
     const imageColumnWidth = isCompactThreatLayout ? "clamp(176px, 20vw, 236px)" : "clamp(224px, 28vw, 322px)";
     const cardGridTemplate = isCompactThreatLayout
@@ -229,9 +254,6 @@ export function CombatCard({
     const innerSkew = isCompactThreatLayout ? 'skewX(4deg)' : 'skewX(6deg)';
     const imageSkew = isCompactThreatLayout ? 'skewX(3deg)' : 'skewX(5deg)';
     const imageMarginLeft = isCompactThreatLayout ? '-14px' : '-24px';
-    const arenaFocusX = Math.max(0, Math.min(100, character.arenaPortraitFocus?.x ?? 50));
-    const arenaFocusY = Math.max(0, Math.min(100, character.arenaPortraitFocus?.y ?? 30));
-    const arenaFocusZoom = Math.max(1, Math.min(3, character.arenaPortraitFocus?.zoom ?? 1));
 
     return (
         <div 
@@ -339,10 +361,10 @@ export function CombatCard({
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}
-                        className="combat-minimize-btn"
-                        title="Minimizar card"
+                        className="combat-pin-btn"
+                        title={isPinned ? "Soltar card" : "Fixar card"}
                     >
-                        -
+                        {isPinned ? <PinOff size={12} /> : <Pin size={12} />}
                     </button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
@@ -376,7 +398,7 @@ export function CombatCard({
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
                             {/* Impulse - Top Left Over Image */}
-                            <div style={{ position: 'absolute', top: '8px', left: '-5px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
+                            <div style={{ position: 'absolute', top: '8px', left: '10px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 65, pointerEvents: 'auto' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.75rem', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>)}
                                 </div>

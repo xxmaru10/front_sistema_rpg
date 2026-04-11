@@ -146,7 +146,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             transform: scale(1.1);
         }
 
-        .combat-minimize-btn:hover {
+        .combat-pin-btn:hover {
             color: #fff !important;
             transform: scale(1.08);
         }
@@ -223,58 +223,73 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
 
         .combat-strip-shell {
             width: 100%;
-            min-height: 66px;
-            max-height: 66px;
+            min-height: 68px;
+            max-height: 68px;
             border-radius: 0 34px 0 0;
             border: 1px solid rgba(255,255,255,0.18);
-            background: linear-gradient(110deg, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.92) 38%, rgba(255,255,255,0.08) 82%, rgba(255,255,255,0.01) 100%);
+            background: linear-gradient(110deg, #000 0%, #000 38%, var(--card-accent-soft, rgba(255,255,255,0.08)) 82%, transparent 100%);
             display: flex;
             align-items: center;
             gap: 12px;
             overflow: hidden;
             padding: 0 12px 0 0;
             cursor: pointer;
-            transition: min-height 0.22s ease, max-height 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+            transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.48);
+            transform: skewX(-5deg);
         }
 
         .combat-strip-shell:hover {
-            min-height: 142px;
-            max-height: 142px;
-            transform: scale(1.01);
-            box-shadow: 0 12px 28px rgba(0,0,0,0.52);
+            transform: skewX(-5deg) scale(1.01);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.54);
         }
 
         .combat-strip-image {
-            width: 114px;
-            min-width: 114px;
-            height: 66px;
-            border-radius: 0 10px 0 0;
+            position: relative;
+            width: clamp(138px, 24vw, 186px);
+            min-width: clamp(138px, 24vw, 186px);
+            height: 68px;
+            border-radius: 0 8px 0 0;
             overflow: hidden;
             border-right: 1px solid rgba(255,255,255,0.2);
             background: #111;
-            transition: width 0.22s ease, height 0.22s ease;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .combat-strip-shell:hover .combat-strip-image {
-            width: 162px;
-            min-width: 162px;
-            height: 142px;
+            transform: skewX(5deg);
         }
 
         .combat-strip-image img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
             display: block;
+        }
+
+        .combat-strip-vignette {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .combat-strip-vignette.top {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 25%);
+        }
+
+        .combat-strip-vignette.bottom {
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 25%);
+        }
+
+        .combat-strip-vignette.side {
+            background: linear-gradient(to left, rgba(0,0,0,0.6) 0%, transparent 15%);
+        }
+
+        .combat-strip-vignette.slash {
+            background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%);
         }
 
         .combat-strip-name {
             font-family: var(--font-header);
-            font-size: 0.98rem;
+            font-size: 0.92rem;
             letter-spacing: 0.08em;
             color: #f3e6c1;
             white-space: nowrap;
@@ -283,6 +298,12 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             min-width: 0;
             flex: 1 1 auto;
             text-align: left;
+            transform: skewX(5deg);
+        }
+
+        .combat-strip-shell.active-turn-avatar {
+            border-color: rgba(255,255,255,0.92) !important;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.25), 0 0 22px rgba(255,255,255,0.5), 0 12px 24px rgba(0,0,0,0.45) !important;
         }
 
         .combat-return-toggle:hover,

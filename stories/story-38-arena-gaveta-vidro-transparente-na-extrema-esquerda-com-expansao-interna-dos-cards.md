@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-10 (follow-up-top-strip-fixo-rolagem-e-cards-mais-largos)"
+last_updated: "2026-04-11 (follow-up-3.4-cards-pin-barra-integrada-e-seta-inimigos)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -91,3 +91,44 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado: gaveta de inimigos alinhada para expandir a esquerda e zona de rolagem integrada convertida para faixa horizontal compacta no topo (com logs reduzidos), mantendo a logica de rolagem/eventos.
 - Follow-up aplicado: logs ocultos por padrao com botao de expandir horizontal, ajustes de sobreposicao (cards nao sobre a barra de rolagem), ancoragem da gaveta esquerda sem deslocamento por menu expandido e refinamento de largura/altura visual dos cards.
 - Follow-up aplicado: barra de rolagem movida para um top-strip fixo no topo da Arena (fora da coluna central), preservando controles e botao de logs sob demanda; cards e gavetas expandidas ampliados horizontalmente para o novo rework.
+- Follow-up aplicado (commit `2fb403a`): refinamento da barra integrada (dropdowns compactos por icone em pericia/inventario, ataque fisico/mental no mesmo seletor de acao, desafio inline com aspectos na propria faixa, botao de rolagem concentrado no fluxo integrado, botao de rolagem dos cards oculto para GM).
+- Follow-up aplicado (commit `c625873`): cards nao primarios em modo colapsado com estilo mais proximo ao card completo, expansao por hover/click, botao de minimizar (`-`) no canto superior direito dos cards expandidos secundarios, ajuste de offset dos impulsos e reposicionamento da seta externa da gaveta.
+- Follow-up aplicado (iteracao 3.4): seta da gaveta de inimigos corrigida para apontar a direita e handle reposicionado para nao conflitar com a barra integrada; cards secundarios minimizados remodelados para visual de card completo (imagem/foco/vinheta + nome), com expansao por hover e fixacao/desfixacao por pin no canto superior direito; impulsos (setas e controles GM) deslocados para a direita; barra integrada recebeu botoes maiores (pericia/inventario/logs), dropdowns estilizados e botao de rolagem branco; borda/glow dourado residual da gaveta foi neutralizado para remover artefato visual solto.
+
+## Pendencias para Proxima Iteracao
+- Validar em GM/jogador (viewport menor) o clique dos impulsos sem clipping apos novo offset.
+- Validar em uso real o posicionamento final do handle externo da gaveta de inimigos com logs abertos.
+- Confirmar com o usuario o comportamento final dos cards secundarios com pin/despin antes de novos blocos do rework.
+
+## Handoff Prompt
+```text
+Voce esta continuando a Story 38 (epic-02) do rework da arena/gavetas/cards.
+
+Estado atual confirmado:
+- Gavetas em fluxo expandido com cards internos e top-strip de rolagem integrado.
+- Cards secundarios (na gaveta aberta) ficaram colapsados em formato faixa e expandem por hover/click.
+- Existe botao de minimizar (`-`) em cards secundarios expandidos.
+- Ajustes recentes de posicionamento foram aplicados em impulsos e seta externa da gaveta.
+- Story e Epic seguem abertos por orientacao do usuario.
+
+Proximo passo:
+1) Fazer validacao visual final em modo GM/jogador para clique dos impulsos e posicao da seta.
+2) Ajustar apenas offsets/layout fino sem quebrar funcionalidades atuais.
+3) Registrar o delta no story e manter escopo restrito a UI da arena/combat.
+
+Arquivos obrigatorios para carregar antes de editar:
+- /front_sistema_rpg/AI.md
+- /front_sistema_rpg/knowledge/architecture.md
+- /front_sistema_rpg/stories/story.md
+- /front_sistema_rpg/stories/story-38-arena-gaveta-vidro-transparente-na-extrema-esquerda-com-expansao-interna-dos-cards.md
+- /front_sistema_rpg/src/components/session/CombatTab.tsx
+- /front_sistema_rpg/src/components/CombatCard/CombatCard.tsx
+- /front_sistema_rpg/src/components/CombatCard/CombatCard.styles.tsx
+- /front_sistema_rpg/src/app/session/[id]/session.css
+- /front_sistema_rpg/src/components/DiceRoller.tsx
+- /front_sistema_rpg/src/components/DiceRoller/RollerInputs.tsx
+- /front_sistema_rpg/src/hooks/useDiceRoller.ts
+
+Ultimo commit funcional de referencia:
+- c625873 (3.3_adjust)
+```

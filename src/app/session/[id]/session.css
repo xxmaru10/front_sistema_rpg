@@ -1292,8 +1292,8 @@ body {
 }
 
 .combat-avatar-drawer.hero-drawer .combat-avatar-panel {
-    border-color: rgba(197, 160, 89, 0.34);
-    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45), 0 0 16px rgba(197, 160, 89, 0.15);
+    border-color: rgba(220, 228, 240, 0.24);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45), 0 0 14px rgba(220, 228, 240, 0.12);
 }
 
 .combat-avatar-drawer.threat-drawer .combat-avatar-panel {
@@ -1374,7 +1374,7 @@ body {
 
 .combat-avatar-drawer-handle {
     position: absolute;
-    top: -34px;
+    top: 8px;
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -1393,11 +1393,11 @@ body {
 }
 
 .combat-avatar-drawer.side-left .combat-avatar-drawer-handle {
-    left: -22px;
+    left: -18px;
 }
 
 .combat-avatar-drawer.side-right .combat-avatar-drawer-handle {
-    left: -22px;
+    left: -18px;
 }
 
 .combat-avatar-drawer-handle:hover {
@@ -1790,10 +1790,10 @@ body {
 }
 
 .combat-log-toggle-btn {
-    height: 30px;
-    width: 30px;
-    min-width: 30px;
-    border-radius: 9px;
+    height: 36px;
+    width: 36px;
+    min-width: 36px;
+    border-radius: 11px;
     border: 1px solid rgba(var(--accent-rgb), 0.38);
     background: rgba(10, 12, 16, 0.92);
     color: var(--accent-color);

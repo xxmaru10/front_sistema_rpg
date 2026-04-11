@@ -282,7 +282,7 @@ export function CombatTab({
                                     title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
                                     aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
                                 >
-                                    <ScrollText size={15} />
+                                    <ScrollText size={18} />
                                 </button>
                                 {showChallengePanel && (
                                     <div
@@ -426,7 +426,8 @@ export function CombatTab({
                                             }
 
                                             const isPrimaryCard = index === 0;
-                                            const isExpandedCard = isPrimaryCard || expandedHeroCardId === char.id || hoverHeroCardId === char.id;
+                                            const isPinnedCard = !isPrimaryCard && expandedHeroCardId === char.id;
+                                            const isExpandedCard = isPrimaryCard || isPinnedCard || hoverHeroCardId === char.id;
                                             if (isExpandedCard) {
                                                 return (
                                                     <div
@@ -444,7 +445,8 @@ export function CombatTab({
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             isLinkedCharacter={fixedCharacterId === char.id}
                                                             onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                            onToggleExpanded={!isPrimaryCard ? () => setExpandedHeroCardId(null) : undefined}
+                                                            onToggleExpanded={!isPrimaryCard ? () => setExpandedHeroCardId(prev => prev === char.id ? null : char.id) : undefined}
+                                                            isPinned={isPinnedCard}
                                                             avatarSide="left"
                                                         />
                                                     </div>
@@ -467,7 +469,7 @@ export function CombatTab({
                                                         isLinkedCharacter={fixedCharacterId === char.id}
                                                         displayMode="strip"
                                                         avatarSide="left"
-                                                        onToggleExpanded={() => setExpandedHeroCardId(char.id)}
+                                                        onToggleExpanded={() => setExpandedHeroCardId(prev => prev === char.id ? null : char.id)}
                                                     />
                                                 </div>
                                             );
@@ -734,7 +736,7 @@ export function CombatTab({
                                                 onClick={() => setIsThreatDrawerOpen(false)}
                                                 title="Recolher fichas"
                                             >
-                                                <ChevronLeft size={16} />
+                                                <ChevronRight size={16} />
                                             </button>
                                         )}
                                         <div className={`combat-avatar-rail threat-avatar-rail ${isThreatDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
@@ -756,7 +758,8 @@ export function CombatTab({
                                                 }
 
                                                 const isPrimaryCard = index === 0;
-                                                const isExpandedCard = isPrimaryCard || expandedThreatCardId === char.id || hoverThreatCardId === char.id;
+                                                const isPinnedCard = !isPrimaryCard && expandedThreatCardId === char.id;
+                                                const isExpandedCard = isPrimaryCard || isPinnedCard || hoverThreatCardId === char.id;
                                                 if (isExpandedCard) {
                                                     return (
                                                         <div
@@ -773,7 +776,8 @@ export function CombatTab({
                                                                 onRemove={() => handleRemoveCharacter(char.id)}
                                                                 isCurrentTurn={currentTurnActorId === char.id}
                                                                 onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                                onToggleExpanded={!isPrimaryCard ? () => setExpandedThreatCardId(null) : undefined}
+                                                                onToggleExpanded={!isPrimaryCard ? () => setExpandedThreatCardId(prev => prev === char.id ? null : char.id) : undefined}
+                                                                isPinned={isPinnedCard}
                                                                 avatarSide="right"
                                                             />
                                                         </div>
@@ -795,7 +799,7 @@ export function CombatTab({
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             displayMode="strip"
                                                             avatarSide="right"
-                                                            onToggleExpanded={() => setExpandedThreatCardId(char.id)}
+                                                            onToggleExpanded={() => setExpandedThreatCardId(prev => prev === char.id ? null : char.id)}
                                                         />
                                                     </div>
                                                 );
