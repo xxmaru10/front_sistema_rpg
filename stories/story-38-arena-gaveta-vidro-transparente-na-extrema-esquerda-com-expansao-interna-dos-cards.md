@@ -1,9 +1,9 @@
----
+﻿---
 title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expansao interna dos cards"
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.3-contencao-vertical)"
+last_updated: "2026-04-11 (follow-up-4.5-correcao-regressao-vertical-e-vinhetas)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -98,34 +98,34 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 3.6): barra integrada da rolagem foi centralizada e passou a dimensionar por conteudo (reduzindo espaco ocioso); nome do personagem migrou para faixa superior externa (canto superior esquerdo), com trilhas de estresse e botao de rolagem deslocados responsivamente para a direita; coluna central do card foi reequilibrada para ocupar o espaco liberado. Drawers/cards expandidos receberam incremento adicional de largura (~15%) para reduzir clipping lateral em expansoes verticais longas. Impulso foi reajustado (aliados 20% mais a esquerda e adversarios proporcionalmente mais a direita), droplists da barra integrada receberam reforco visual de tema e o pin ganhou glow para legibilidade.
 - Follow-up aplicado (iteracao 3.7): correcoes de estabilidade dos cards de inimigos em hover/pin (coluna de retrato com altura explicita + ajustes de camadas/z-index), com reposicionamento de pontos de destino para a base do retrato. Retratos da arena receberam inclinacao leve para reforco visual e cards passaram por responsividade dedicada para desktop menor e mobile (reflow interno das colunas + consequencias em faixa inferior). Em mobile, a ordem visual da arena foi invertida para exibir aliados antes de adversarios e a barra integrada de rolagem ganhou compactacao/reflow para evitar quebra em colunas.
 - Follow-up aplicado (iteracao 3.8): assets PNG de estresse (`fisico.png`/`mental.png`) foram integrados ao `CombatStressTracks` com colorizacao por tema via `mask-image`. Cards expandidos tiveram reducao de altura base (fallback de retrato e paddings internos) para cortar excesso vertical sem remover expansao por conteudo. No mobile, trilhas de estresse passaram a quebrar em layout vertical quando necessario para manter todas as caixas visiveis, setas de impulso foram reduzidas em ~30% e o campo de bonus da barra integrada foi estreitado em ~50% para melhorar encaixe horizontal.
-- Follow-up aplicado (iteracao 3.9): cards fechados receberam escala horizontal progressiva em piramide invertida (de 85% para baixo por nivel), com degradê preto translúcido ao longo da faixa e remocao de borda externa. A moldura de gaveta ao redor dos cards (herois/inimigos) foi removida para manter apenas cards e handles. Em mobile, cards expandidos ganharam botao `-` ao lado da seta para minimizar rapidamente. A faixa de estresse ficou mais fina verticalmente, com borda no tema e fundo preto menos opaco com blur de efeito espelhado.
+- Follow-up aplicado (iteracao 3.9): cards fechados receberam escala horizontal progressiva em piramide invertida (de 85% para baixo por nivel), com degradÃª preto translÃºcido ao longo da faixa e remocao de borda externa. A moldura de gaveta ao redor dos cards (herois/inimigos) foi removida para manter apenas cards e handles. Em mobile, cards expandidos ganharam botao `-` ao lado da seta para minimizar rapidamente. A faixa de estresse ficou mais fina verticalmente, com borda no tema e fundo preto menos opaco com blur de efeito espelhado.
 - Follow-up aplicado (iteracao 4.0): cards de inimigos receberam reducao adicional da base vertical para aproximar proporcao dos cards de aliados, e o cabecalho externo no lado de ameacas passou a inverter posicoes de nome e trilhas de estresse. Piramide de minimizados foi refinada para manter mini retrato + nome ate o final da fila (sem sumir imagem), com reducao gradual da altura por nivel. A fixacao foi expandida para o primeiro card: ele inicia fixado ao abrir a gaveta, mas pode ser desfixado e minimizado como os demais. Nas trilhas de estresse, as bolhas perderam borda e ficaram em estilo vidro.
 - Follow-up aplicado (iteracao 4.1): inimigos receberam ajuste estrutural para reduzir discrepancia vertical e melhorar preenchimento do retrato em toda a lateral (incluindo PNG com transparencias) via fallback de background no frame de imagem. A piramide de minimizados do lado inimigo passou a ancorar para a esquerda, eliminando fechamento visual para a direita. Em widescreen, a grade da arena foi recalibrada para manter colunas mais nas laterais com margem minima de seguranca; as setas de recolha foram reancoradas acima do primeiro nome (aliados no lado direito da gaveta e inimigos no extremo esquerdo).
-- Follow-up aplicado (iteracao 4.2): a gaveta em estado aberto passou a ocupar largura real da coluna (`width: 100%`) e o painel interno deixou de depender apenas de posicionamento absoluto, evitando colisao entre cards de lados opostos em telas largas. A ancoragem dos minimizados de inimigo foi revertida para a direita (padrão visual do lado adversario), e a coluna de retrato do inimigo recebeu ajuste adicional para reduzir percepcao de excesso vertical.
+- Follow-up aplicado (iteracao 4.2): a gaveta em estado aberto passou a ocupar largura real da coluna (`width: 100%`) e o painel interno deixou de depender apenas de posicionamento absoluto, evitando colisao entre cards de lados opostos em telas largas. A ancoragem dos minimizados de inimigo foi revertida para a direita (padrÃ£o visual do lado adversario), e a coluna de retrato do inimigo recebeu ajuste adicional para reduzir percepcao de excesso vertical.
 - Follow-up aplicado (iteracao 4.3): reforco de contencao vertical no card expandido: coluna de imagem passou a preencher novamente toda a altura do card (eliminando bloco preto abaixo do retrato), e o aspecto principal no miolo foi limitado a uma linha com elipse para evitar quebra letra-a-letra que inflava a altura total. As proporcoes de colunas foram recalibradas com largura mais fluida da imagem para reduzir estrangulamento da coluna central.
+- Follow-up aplicado (iteracao 4.4): usuario reportou regressao visual apos os ultimos ajustes. Estado atual em runtime: card de inimigo segue verticalmente estourado e o card de aliado (que estava aprovado) tambem piorou. Correcao permanece em aberto e virou prioridade imediata.
+- Follow-up aplicado (iteracao 4.5): correcao da regressao de verticalidade. `useLayoutEffect` agora mede APENAS a coluna de consequencias para determinar a altura do card (altura do card = consequencias + 3px top + 3px bottom); a coluna do meio so infla o card quando extras (stunts/itens/pericias/aspectos) estao abertos. `height` do grid passou de `auto+minHeight` para valor fixo derivado das consequencias. `minHeight` da coluna de imagem removido (desnecessario com height fixo no grid). Vinhetas do retrato receberam `zIndex: 3` para serem visiveis acima do `combat-image-frame` (zIndex 2) — corrige a ausencia das vinhetas superior/inferior/lateral.
 
 ## Pendencias para Proxima Iteracao
-- Validar com o usuario em widescreen se nao ha mais sobreposicao entre os lados quando ambos estao expandidos.
-- Confirmar paridade visual de altura entre card inimigo e card de jogador no estado expandido.
-- Ajustar fino de offsets das setas de recolha apenas se necessario.
+- Revalidar alinhamento de minimizados dos inimigos na direita e ausencia de colisao em widescreen.
+- Verificar se a altura do card para restricted-threat-view (fallback 96px) e adequada visualmente.
 
 ## Handoff Prompt
 ```text
-Voce esta continuando a Story 38 (epic-02) do rework da arena/gavetas/cards.
+Continue a Story 38 (epic-02) no frontend, com foco em correcao de regressao visual.
 
-Estado atual confirmado:
-- Gavetas em fluxo expandido com cards internos e top-strip de rolagem integrado.
-- Cards secundarios (na gaveta aberta) ficaram colapsados em formato faixa e expandem por hover/click.
-- Existe botao de minimizar (`-`) em cards secundarios expandidos.
-- Ajustes recentes de posicionamento foram aplicados em impulsos e seta externa da gaveta.
-- Story e Epic seguem abertos por orientacao do usuario.
+Estado atual:
+- Gavetas/cards seguem no fluxo expandido interno com top-strip de rolagem.
+- Regressao reportada: card inimigo continua verticalmente estourado e card aliado tambem degradou.
+- Minimizados de inimigos devem permanecer ancorados na direita.
+- Story e epic NAO devem ser encerrados sem comando explicito do usuario.
 
-Proximo passo:
-1) Fazer validacao visual final em modo GM/jogador para clique dos impulsos e posicao da seta.
-2) Ajustar apenas offsets/layout fino sem quebrar funcionalidades atuais.
-3) Registrar o delta no story e manter escopo restrito a UI da arena/combat.
+Proximo passo imediato:
+1) Corrigir a verticalidade dos cards expandidos (inimigos e aliados) sem quebrar o que ja estava validado.
+2) Restaurar a proporcao correta entre retrato, miolo e consequencias.
+3) Validar em widescreen que nao ha colisao entre os lados e manter inimigos minimizados na direita.
 
-Arquivos obrigatorios para carregar antes de editar:
+Arquivos obrigatorios:
 - /front_sistema_rpg/AI.md
 - /front_sistema_rpg/knowledge/architecture.md
 - /front_sistema_rpg/stories/story.md
@@ -137,7 +137,4 @@ Arquivos obrigatorios para carregar antes de editar:
 - /front_sistema_rpg/src/components/DiceRoller.tsx
 - /front_sistema_rpg/src/components/DiceRoller/RollerInputs.tsx
 - /front_sistema_rpg/src/hooks/useDiceRoller.ts
-
-Ultimo commit funcional de referencia:
-- c625873 (3.3_adjust)
 ```

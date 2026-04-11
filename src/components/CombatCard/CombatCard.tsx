@@ -124,16 +124,22 @@ export function CombatCard({
     useLayoutEffect(() => {
         const middleEl = middleContentRef.current;
         const consequencesEl = consequencesContentRef.current;
-        if (!middleEl || !consequencesEl) {
+        if (!consequencesEl) {
             setDynamicCardHeight(null);
             return;
         }
 
         const recalc = () => {
-            const middleHeight = Math.ceil(middleEl.scrollHeight || middleEl.offsetHeight || 0);
             const consequencesHeight = Math.ceil(consequencesEl.scrollHeight || consequencesEl.offsetHeight || 0);
-            const consequencesWithMargin = Math.ceil(consequencesHeight * 1.02);
-            const nextHeight = Math.max(middleHeight, consequencesWithMargin);
+            // Altura base = consequências. Só cresce além disso quando extras estão abertos.
+            const hasExtras = isAspectsExpanded || expandedExtra !== null;
+            let nextHeight: number;
+            if (hasExtras && middleEl) {
+                const middleHeight = Math.ceil(middleEl.scrollHeight || middleEl.offsetHeight || 0);
+                nextHeight = Math.max(middleHeight, consequencesHeight);
+            } else {
+                nextHeight = consequencesHeight;
+            }
             const normalizedNextHeight = nextHeight > 0 ? nextHeight : null;
             setDynamicCardHeight((prevHeight) => {
                 if (prevHeight === null && normalizedNextHeight === null) return prevHeight;
@@ -147,8 +153,8 @@ export function CombatCard({
         recalc();
 
         const observer = new ResizeObserver(() => recalc());
-        observer.observe(middleEl);
         observer.observe(consequencesEl);
+        if (middleEl) observer.observe(middleEl);
 
         return () => observer.disconnect();
     }, [isAspectsExpanded, expandedExtra, character.consequences, character.stress, isRestrictedThreatView]);
@@ -256,9 +262,9 @@ export function CombatCard({
     const isCompactThreatLayout = false;
     const imageColumnWidth = "clamp(156px, 33%, 252px)";
     const edgeColumnWidth = "minmax(116px, 0.86fr)";
-    const imageColumnBaseHeight = 154;
+    const imageColumnBaseHeight = 96; // ~3 slots consequências: 3×28px + 2×4px gap + 6px padding
     const resolvedColumnHeight = dynamicCardHeight
-        ? Math.max(imageColumnBaseHeight, Math.min(dynamicCardHeight, 236))
+        ? dynamicCardHeight + 6  // +3px topo +3px base para as consequências
         : imageColumnBaseHeight;
     const cardGridTemplate = isMirroredThreatLayout
         ? (isCompactThreatLayout
@@ -340,13 +346,12 @@ export function CombatCard({
             <div
                 className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
                 style={{ 
-                    display: 'grid', 
+                    display: 'grid',
                     gridTemplateColumns: cardGridTemplate,
-                    gap: '0', 
-                    alignItems: 'stretch', 
-                    padding: '0', 
-                    height: 'auto',
-                    minHeight: `${resolvedColumnHeight}px`,
+                    gap: '0',
+                    alignItems: 'stretch',
+                    padding: '0',
+                    height: `${resolvedColumnHeight}px`,
                     borderRadius: isMirroredThreatLayout ? '50px 0 0 0' : '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
@@ -450,7 +455,6 @@ export function CombatCard({
                     position: 'relative',
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
-                    minHeight: `${imageColumnBaseHeight}px`,
                     height: '100%',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
@@ -498,11 +502,11 @@ export function CombatCard({
                         )}
                     </div>
                     
-                    {/* Persona vignettes and slash effects */}
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 25%)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 25%)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: isMirroredThreatLayout ? 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 15%)' : 'linear-gradient(to left, rgba(0,0,0,0.6) 0%, transparent 15%)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%)', pointerEvents: 'none' }} />
+                    {/* Persona vignettes and slash effects — zIndex 3 para ficar acima do combat-image-frame (zIndex 2) */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
+                    <div style={{ position: 'absolute', inset: 0, background: isMirroredThreatLayout ? 'linear-gradient(to right, rgba(0,0,0,0.65) 0%, transparent 18%)' : 'linear-gradient(to left, rgba(0,0,0,0.65) 0%, transparent 18%)', pointerEvents: 'none', zIndex: 3 }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%)', pointerEvents: 'none', zIndex: 3 }} />
 
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
@@ -688,8 +692,8 @@ export function CombatCard({
                     paddingLeft: isMirroredThreatLayout ? '8px' : '8px',
                     borderLeft: isMirroredThreatLayout ? 'none' : '1px solid rgba(255,255,255,0.1)',
                     borderRight: isMirroredThreatLayout ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                    paddingTop: '2px',
-                    paddingBottom: '2px',
+                    paddingTop: '3px',
+                    paddingBottom: '3px',
                     paddingRight: '8px',
                     transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)',
                     justifyContent: 'flex-start',
