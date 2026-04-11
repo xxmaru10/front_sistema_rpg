@@ -280,23 +280,9 @@ export function TurnOrderTracker({
     return (
         <div className="turn-tracker-container animate-reveal-tracker">
             
-            {/* Top HUD: Round and Timer */}
+            {/* Top HUD: Round */}
             <div className="hud-top">
                 <div className="round-badge">RODADA {currentRound}</div>
-                {activeCharacterId && (
-                    <div className="timer-wrapper">
-                        <TurnTimer
-                            startTime={lastTurnChangeTimestamp ?? ''}
-                            durationMinutes={isReaction ? 2 : 3}
-                            isPaused={timerPaused}
-                            pausedAt={timerPausedAt || undefined}
-                            isGM={userRole === "GM"}
-                            onExpire={() => { console.log("Timer expired."); }}
-                            onTogglePause={handleTogglePause || (() => {})}
-                            onForcePass={handleForcePass || (() => {})}
-                        />
-                    </div>
-                )}
             </div>
 
             {/* Semicircle Carousel */}
@@ -319,7 +305,7 @@ export function TurnOrderTracker({
                 })}
             </div>
 
-            {/* Bottom HUD: Turn Controls */}
+            {/* Bottom HUD: Turn Controls & Timer */}
             <div className="hud-bottom">
                 {userRole === "GM" ? (
                     <div className="gm-turn-controls">
@@ -327,9 +313,17 @@ export function TurnOrderTracker({
                             <ChevronLeft size={24} />
                         </button>
                         
-                        <div className="gm-turn-info">
-                            <span>TURNO</span>
-                            <strong>{(currentTurnIndex || 0) + 1} / {characters.length}</strong>
+                        <div className="hud-timer-container">
+                            <TurnTimer
+                                startTime={lastTurnChangeTimestamp ?? ''}
+                                durationMinutes={isReaction ? 2 : 3}
+                                isPaused={timerPaused}
+                                pausedAt={timerPausedAt || undefined}
+                                isGM={false} // Disable own controls since we use simplified timer here
+                                onExpire={() => { console.log("Timer expired."); }}
+                                onTogglePause={handleTogglePause || (() => {})}
+                                onForcePass={handleForcePass || (() => {})}
+                            />
                         </div>
 
                         <button className="hud-nav-btn next" onClick={handleNextTurn} title="Avançar Turno">
@@ -338,6 +332,18 @@ export function TurnOrderTracker({
                     </div>
                 ) : (
                     <div className="player-turn-controls">
+                        <div className="hud-timer-container player-timer">
+                            <TurnTimer
+                                startTime={lastTurnChangeTimestamp ?? ''}
+                                durationMinutes={isReaction ? 2 : 3}
+                                isPaused={timerPaused}
+                                pausedAt={timerPausedAt || undefined}
+                                isGM={false}
+                                onExpire={() => { console.log("Timer expired."); }}
+                                onTogglePause={() => {}}
+                                onForcePass={() => {}}
+                            />
+                        </div>
                         {amITarget ? (
                             <button
                                 className="hud-action-btn highlight-reaction"
@@ -406,28 +412,28 @@ export function TurnOrderTracker({
                     width: 250px;
                 }
 
-                /* Semicircle Area */
+                /* Semicircle Area - Downward Curve */
                 .semicircle-arena {
                     position: relative;
-                    width: 600px;
-                    height: 200px;
+                    width: 700px;
+                    height: 250px;
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
-                    margin-bottom: 40px;
+                    margin-bottom: 20px;
                 }
 
                 .connection-arc {
                     position: absolute;
-                    width: 500px;
-                    height: 280px;
-                    border: 2px solid rgba(255, 255, 255, 0.15);
+                    width: 600px;
+                    height: 380px;
+                    border: 2px solid transparent;
+                    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
                     border-radius: 50%;
-                    top: -5px;
+                    top: -240px; /* Moves the circle up so the bottom arc passes through the avatars */
                     left: 50%;
                     transform: translateX(-50%);
                     pointer-events: none;
-                    clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%);
                     z-index: 5;
                 }
 
@@ -452,43 +458,43 @@ export function TurnOrderTracker({
                     filter: grayscale(0);
                 }
 
-                /* Posicionamento do Semicirculo */
+                /* Posicionamento do Semicirculo invertido (Centro no fundo) */
                 :global(.tracker-item[data-distance="0"]) {
-                    transform: translate(-50%, 0) scale(1);
+                    transform: translate(-50%, 120px) scale(1);
                     opacity: 1;
                     z-index: 20;
                 }
                 
                 :global(.tracker-item[data-distance="-1"]) {
-                    transform: translate(calc(-50% - 140px), 30px) scale(0.75);
+                    transform: translate(calc(-50% - 140px), 80px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
                 
                 :global(.tracker-item[data-distance="1"]) {
-                    transform: translate(calc(-50% + 140px), 30px) scale(0.75);
+                    transform: translate(calc(-50% + 140px), 80px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
                 
                 :global(.tracker-item[data-distance="-2"]) {
-                    transform: translate(calc(-50% - 240px), 80px) scale(0.55);
+                    transform: translate(calc(-50% - 240px), 40px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
                 
                 :global(.tracker-item[data-distance="2"]) {
-                    transform: translate(calc(-50% + 240px), 80px) scale(0.55);
+                    transform: translate(calc(-50% + 240px), 40px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
                 
                 :global(.tracker-item[data-distance="hidden"]) {
-                    transform: translate(-50%, 120px) scale(0.2);
+                    transform: translate(-50%, -20px) scale(0.2);
                     opacity: 0;
                     pointer-events: none;
                     z-index: 1;
@@ -640,59 +646,49 @@ export function TurnOrderTracker({
                 .gm-turn-controls {
                     display: flex;
                     align-items: center;
+                    justify-content: center;
                     gap: 16px;
-                    background: rgba(10, 10, 15, 0.8);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 30px;
-                    padding: 4px;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-                    backdrop-filter: blur(8px);
                 }
 
-                .gm-turn-info {
+                .hud-timer-container {
+                    min-width: 80px;
                     display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    padding: 0 12px;
-                    font-family: var(--font-header);
-                }
-                
-                .gm-turn-info span {
-                    font-size: 0.5rem;
-                    color: #888;
+                    justify-content: center;
+                    color: var(--accent-color);
+                    font-size: 1.2rem;
+                    font-weight: bold;
                     letter-spacing: 0.1em;
+                    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
                 }
 
-                .gm-turn-info strong {
-                    font-size: 0.9rem;
-                    color: #fff;
-                    letter-spacing: 0.05em;
+                .player-timer {
+                    margin-bottom: 20px;
                 }
 
                 .hud-nav-btn {
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    color: #fff;
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
+                    background: transparent;
+                    border: none;
+                    color: rgba(197, 160, 89, 0.7);
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
                     transition: all 0.2s;
+                    padding: 0;
                 }
 
                 .hud-nav-btn:hover {
-                    background: rgba(197, 160, 89, 0.2);
-                    border-color: #C5A059;
                     color: #C5A059;
                     transform: scale(1.1);
+                    filter: drop-shadow(0 0 5px rgba(197, 160, 89, 0.5));
                 }
 
                 .player-turn-controls {
                     display: flex;
+                    flex-direction: column;
+                    align-items: center;
                     justify-content: center;
+                    gap: 12px;
                 }
 
                 .hud-action-btn {
