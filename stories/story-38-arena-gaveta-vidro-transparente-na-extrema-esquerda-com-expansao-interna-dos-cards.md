@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.8-paridade-horizontal-inimigo)"
+last_updated: "2026-04-11 (follow-up-4.9-fluxo-ataque-guiado)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -99,6 +99,82 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 3.7): correcoes de estabilidade dos cards de inimigos em hover/pin (coluna de retrato com altura explicita + ajustes de camadas/z-index), com reposicionamento de pontos de destino para a base do retrato. Retratos da arena receberam inclinacao leve para reforco visual e cards passaram por responsividade dedicada para desktop menor e mobile (reflow interno das colunas + consequencias em faixa inferior). Em mobile, a ordem visual da arena foi invertida para exibir aliados antes de adversarios e a barra integrada de rolagem ganhou compactacao/reflow para evitar quebra em colunas.
 - Follow-up aplicado (iteracao 3.8): assets PNG de estresse (`fisico.png`/`mental.png`) foram integrados ao `CombatStressTracks` com colorizacao por tema via `mask-image`. Cards expandidos tiveram reducao de altura base (fallback de retrato e paddings internos) para cortar excesso vertical sem remover expansao por conteudo. No mobile, trilhas de estresse passaram a quebrar em layout vertical quando necessario para manter todas as caixas visiveis, setas de impulso foram reduzidas em ~30% e o campo de bonus da barra integrada foi estreitado em ~50% para melhorar encaixe horizontal.
 - Follow-up aplicado (iteracao 3.9): cards fechados receberam escala horizontal progressiva em piramide invertida (de 85% para baixo por nivel), com degradÃª preto translÃºcido ao longo da faixa e remocao de borda externa. A moldura de gaveta ao redor dos cards (herois/inimigos) foi removida para manter apenas cards e handles. Em mobile, cards expandidos ganharam botao `-` ao lado da seta para minimizar rapidamente. A faixa de estresse ficou mais fina verticalmente, com borda no tema e fundo preto menos opaco com blur de efeito espelhado.
+## Escopo
+
+### Fase 1 - Visual glass + ancoragem lateral
+- Aplicar estilo vidro/transparencia na gaveta lateral de personagens e inimigos, mantendo contraste e legibilidade.
+- Fixar a gaveta do lado dos personagens na extrema esquerda da Arena.
+- Manter o padrao visual coerente com o menu lateral global em d20.
+
+### Fase 2 - Handle de seta externo e estado fechado com 1 personagem
+- Separar visualmente o handle de seta do conteudo da gaveta (seta externa, sem "misturar" com o painel interno).
+- Estado fechado deve renderizar apenas 1 personagem por lado.
+- Regra de selecao no estado fechado:
+1. jogador: mostrar o personagem vinculado/logado;
+2. mestre: mostrar apenas 1 personagem (regra exata a validar na aprovacao desta Story);
+3. inimigos: mostrar apenas 1 personagem (regra exata a validar na aprovacao desta Story).
+
+### Fase 3 - Expansao com cards internos
+- Clique na seta deve "puxar" a gaveta e renderizar todos os personagens daquele lado dentro da gaveta.
+- Os cards devem abrir dentro da gaveta (substitui fluxo atual de cards abertos fora da gaveta).
+- Aplicar o mesmo fluxo para:
+1. lado de herois/aliados;
+2. lado de inimigos/ameacas.
+
+### Fase 4 - Comportamento e responsividade
+- Preservar funcionamento em desktop e mobile sem perda de clique/scroll.
+- Evitar conflito de sobreposicao entre a gaveta esquerda e o menu lateral global.
+- Garantir que o estado visual da Arena continue claro com/dessem expansao.
+
+## Arquivos Afetados
+| Arquivo | Responsabilidade no escopo |
+|---|---|
+| `src/components/session/CombatTab.tsx` | Reorquestrar estado de gaveta fechada/aberta por lado, lista de personagens exibidos por estado e renderizacao dos cards dentro da gaveta. |
+| `src/components/CombatCard/CombatCard.tsx` | Ajustar modo de exibicao para suportar renderizacao de card dentro da gaveta expandida, mantendo paridade funcional do card atual. |
+| `src/components/CombatCard/CombatHeader.tsx` | Ajustar acao de recolher/retorno conforme novo fluxo de cards internos na gaveta. |
+| `src/components/CombatCard/CombatCard.styles.tsx` | Aplicar refinos visuais glass nos cards/handles relacionados ao novo comportamento da gaveta. |
+| `src/app/session/[id]/session.css` | Redesenhar estrutura visual da gaveta (vidro, extrema esquerda, handle externo) e layout de cards internos para ambos os lados. |
+| `src/app/session/[id]/page.tsx` | Ajustes de integracao de layout, caso necessarios, para convivio entre menu lateral global e nova gaveta da Arena. |
+
+## Criterios de Aceitacao
+1. A gaveta lateral da Arena passa a usar visual transparente estilo vidro, com leitura clara de conteudo.
+2. A gaveta do lado dos personagens fica posicionada na extrema esquerda.
+3. A seta de abrir/fechar fica separada do corpo da gaveta, como handle externo.
+4. No estado fechado, o lado dos personagens exibe apenas 1 personagem.
+5. No estado fechado, o lado dos inimigos exibe apenas 1 personagem.
+6. Ao clicar na seta de um lado, a gaveta daquele lado expande e passa a exibir todos os personagens daquele lado.
+7. Com a gaveta expandida, os cards aparecem abertos dentro da gaveta (nao em pilha externa fora dela).
+8. O fluxo acima funciona igualmente para herois/aliados e para inimigos/ameacas.
+9. Abertura/recolhimento da gaveta nao quebra scroll, clique ou legibilidade da Arena em desktop.
+10. Em mobile, a interacao da gaveta continua utilizavel sem sobreposicao bloqueante.
+11. Nenhum evento novo de dominio e introduzido; mudanca restrita a UI.
+
+## Fora de Escopo
+- Alterar regras de combate, turnos, estresse, consequencias, destino ou impulso.
+- Alterar contratos de `domain.ts`, `api-contract.md`, projecoes ou Event Store.
+- Reestruturar `HazardCard` para outro fluxo fora do padrao desta Story.
+- Persistir estado aberto/fechado das gavetas entre refreshes (se nao houver validacao explicita para isso).
+
+## Dependencias e Riscos
+- Regra de "qual personagem unico aparece no estado fechado" para GM e para inimigos precisa de validacao na aprovacao.
+- Existe risco de conflito de layout/z-index com o menu global em d20 ao prender a gaveta na extrema esquerda.
+- Existe risco de regressao de densidade visual ao mover cards abertos para dentro da gaveta; requer validacao de largura minima e scroll interno.
+
+## Status de Execucao
+- Story em andamento (epico e story permanecem abertos por orientacao do usuario).
+- Fluxo base de gaveta foi implementado em iteracoes anteriores desta sessao.
+- Follow-up aplicado: hotfix no `CombatCard` para interromper crescimento infinito de altura apos expansao.
+- Follow-up aplicado: gaveta de inimigos alinhada para expandir a esquerda e zona de rolagem integrada convertida para faixa horizontal compacta no topo (com logs reduzidos), mantendo a logica de rolagem/eventos.
+- Follow-up aplicado: logs ocultos por padrao com botao de expandir horizontal, ajustes de sobreposicao (cards nao sobre a barra de rolagem), ancoragem da gaveta esquerda sem deslocamento por menu expandido e refinamento de largura/altura visual dos cards.
+- Follow-up aplicado: barra de rolagem movida para um top-strip fixo no topo da Arena (fora da coluna central), preservando controles e botao de logs sob demanda; cards e gavetas expandidas ampliados horizontalmente para o novo rework.
+- Follow-up aplicado (commit `2fb403a`): refinamento da barra integrada (dropdowns compactos por icone em pericia/inventario, ataque fisico/mental no mesmo seletor de acao, desafio inline com aspectos na propria faixa, botao de rolagem concentrado no fluxo integrado, botao de rolagem dos cards oculto para GM).
+- Follow-up aplicado (commit `c625873`): cards nao primarios em modo colapsado com estilo mais proximo ao card completo, expansao por hover/click, botao de minimizar (`-`) no canto superior direito dos cards expandidos secundarios, ajuste de offset dos impulsos e reposicionamento da seta externa da gaveta.
+- Follow-up aplicado (iteracao 3.4): seta da gaveta de inimigos corrigida para apontar a direita e handle reposicionado para nao conflitar com a barra integrada; cards secundarios minimizados remodelados para visual de card completo (imagem/foco/vinheta + nome), com expansao por hover e fixacao/desfixacao por pin no canto superior direito; impulsos (setas e controles GM) deslocados para a direita; barra integrada recebeu botoes maiores (pericia/inventario/logs), dropdowns estilizados e botao de rolagem branco; borda/glow dourado residual da gaveta foi neutralizado para remover artefato visual solto.
+- Follow-up aplicado (iteracao 3.5): cards minimizados receberam glass transparente sem tint de classe (borda no tema global), impulso foi deslocado mais para a direita, pin passou a suportar multipla fixacao simultanea (icone maior apontando esquerda/desfixado e baixo/fixado), card de inimigos ganhou botao de remocao em lixeira vermelha e o layout dos inimigos foi espelhado horizontalmente (imagem/consequencias/formato). Barra integrada de rolagem do GM teve compressao de layout para priorizar linha unica e evitar quebra excessiva (maximo 2 linhas em cenarios estreitos).
+- Follow-up aplicado (iteracao 3.6): barra integrada da rolagem foi centralizada e passou a dimensionar por conteudo (reduzindo espaco ocioso); nome do personagem migrou para faixa superior externa (canto superior esquerdo), com trilhas de estresse e botao de rolagem deslocados responsivamente para a direita; coluna central do card foi reequilibrada para ocupar o espaco liberado. Drawers/cards expandidos receberam incremento adicional de largura (~15%) para reduzir clipping lateral em expansoes verticais longas. Impulso foi reajustado (aliados 20% mais a esquerda e adversarios proporcionalmente mais a direita), droplists da barra integrada receberam reforco visual de tema e o pin ganhou glow para legibilidade.
+- Follow-up aplicado (iteracao 3.7): correcoes de estabilidade dos cards de inimigos em hover/pin (coluna de retrato com altura explicita + ajustes de camadas/z-index), com reposicionamento de pontos de destino para a base do retrato. Retratos da arena receberam inclinacao leve para reforco visual e cards passaram por responsividade dedicada para desktop menor e mobile (reflow interno das colunas + consequencias em faixa inferior). Em mobile, a ordem visual da arena foi invertida para exibir aliados antes de adversarios e a barra integrada de rolagem ganhou compactacao/reflow para evitar quebra em colunas.
+- Follow-up aplicado (iteracao 3.8): assets PNG de estresse (`fisico.png`/`mental.png`) foram integrados ao `CombatStressTracks` com colorizacao por tema via `mask-image`. Cards expandidos tiveram reducao de altura base (fallback de retrato e paddings internos) para cortar excesso vertical sem remover expansao por conteudo. No mobile, trilhas de estresse passaram a quebrar em layout vertical quando necessario para manter todas as caixas visiveis, setas de impulso foram reduzidas em ~30% e o campo de bonus da barra integrada foi estreitado em ~50% para melhorar encaixe horizontal.
+- Follow-up aplicado (iteracao 3.9): cards fechados receberam escala horizontal progressiva em piramide invertida (de 85% para baixo por nivel), com degradÃª preto translÃºcido ao longo da faixa e remocao de borda externa. A moldura de gaveta ao redor dos cards (herois/inimigos) foi removida para manter apenas cards e handles. Em mobile, cards expandidos ganharam botao `-` ao lado da seta para minimizar rapidamente. A faixa de estresse ficou mais fina verticalmente, com borda no tema e fundo preto menos opaco com blur de efeito espelhado.
 - Follow-up aplicado (iteracao 4.0): cards de inimigos receberam reducao adicional da base vertical para aproximar proporcao dos cards de aliados, e o cabecalho externo no lado de ameacas passou a inverter posicoes de nome e trilhas de estresse. Piramide de minimizados foi refinada para manter mini retrato + nome ate o final da fila (sem sumir imagem), com reducao gradual da altura por nivel. A fixacao foi expandida para o primeiro card: ele inicia fixado ao abrir a gaveta, mas pode ser desfixado e minimizado como os demais. Nas trilhas de estresse, as bolhas perderam borda e ficaram em estilo vidro.
 - Follow-up aplicado (iteracao 4.1): inimigos receberam ajuste estrutural para reduzir discrepancia vertical e melhorar preenchimento do retrato em toda a lateral (incluindo PNG com transparencias) via fallback de background no frame de imagem. A piramide de minimizados do lado inimigo passou a ancorar para a esquerda, eliminando fechamento visual para a direita. Em widescreen, a grade da arena foi recalibrada para manter colunas mais nas laterais com margem minima de seguranca; as setas de recolha foram reancoradas acima do primeiro nome (aliados no lado direito da gaveta e inimigos no extremo esquerdo).
 - Follow-up aplicado (iteracao 4.2): a gaveta em estado aberto passou a ocupar largura real da coluna (`width: 100%`) e o painel interno deixou de depender apenas de posicionamento absoluto, evitando colisao entre cards de lados opostos em telas largas. A ancoragem dos minimizados de inimigo foi revertida para a direita (padrÃ£o visual do lado adversario), e a coluna de retrato do inimigo recebeu ajuste adicional para reduzir percepcao de excesso vertical.
@@ -107,11 +183,12 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 4.5): correcao da regressao de verticalidade. `useLayoutEffect` agora mede APENAS a coluna de consequencias para determinar a altura do card (altura do card = consequencias + 3px top + 3px bottom); a coluna do meio so infla o card quando extras (stunts/itens/pericias/aspectos) estao abertos. `height` do grid passou de `auto+minHeight` para valor fixo derivado das consequencias. `minHeight` da coluna de imagem removido (desnecessario com height fixo no grid). Vinhetas do retrato receberam `zIndex: 3` para serem visiveis acima do `combat-image-frame` (zIndex 2) — corrige a ausencia das vinhetas superior/inferior/lateral.
 - Follow-up aplicado (iteracao 4.6): para recuperar alinhamento horizontal (mesma leitura dos cards de jogadores), o `CombatCard` removeu a medicao dinamica de altura (`useLayoutEffect` + refs) e voltou para altura natural com `minHeight` base. O grid principal foi simplificado para 3 colunas estaveis (consequencias | miolo | retrato no espelhado), removendo configuracoes que causavam quebra visual em "linhas" no lado inimigo. Tambem foi removido o `transform` no wrapper `display: contents` e mantido o recorte do frame da imagem (`overflow: hidden`) para evitar arte cortada/deslocada.
 - Follow-up aplicado (iteracao 4.8): paridade horizontal do card expandido de inimigos restaurada. Removida atribuicao invalida de `width`/`minWidth` que recebia strings `minmax()` (definicao de grid-track, nao de sizing de elemento), o que colapsava a coluna de imagem no lado inimigo. Grid explicito com `gridTemplateRows: '1fr'` e `gridRow: 1` em todas as 3 colunas forca o layout em linha horizontal unica (sem quebra em blocos). Removido wrapper `display: contents` (remanescente de iteracao anterior cujo closing tag ja havia sido retirado). Margem negativa da coluna de imagem espelhada para ambos os lados. Mobile recebe override com `grid-template-rows: auto auto` e `grid-row` explicitos para manter consequencias em faixa inferior.
+- Follow-up aplicado (iteracao 4.9): fluxo de ataque guiado. O dropdown de acao na rolagem integrada foi substituido por botao com sub-menu custom (glass, animacao slide-in), exibindo SUPERAR, ATACAR (sub-grupo FISICO/MENTAL com icones Swords/Brain), CRIAR VANTAGEM e DEFENDER. Ao selecionar tipo de dano, modal de selecao de alvo (React Portal em `document.body` por conventions.md Luxury Portal Selection) lista inimigos com retrato + nome. Jogador clica no alvo; modal fecha e ataque e configurado. Estilos do modal em `style jsx global`. Sub-menu com outside-click listener. Corrigido tambem caractere de impulso corrompido por normalizacao de encoding (Unicode escape `\u27A4`/`\u2022` em vez de glifos literais).
 
 ## Pendencias para Proxima Iteracao
-- Validar com o usuario em widescreen real se o card de inimigo agora exibe em horizontal puro (sem blocos/linhas verticais).
-- Confirmar que controles internos (aspectos, stunts, magias, pericias, itens, impulso, destino, estresse) funcionam no lado inimigo como no lado de jogadores.
-- Revalidar o estado minimizado dos inimigos (ancoragem a direita + sem colisao entre colunas).
+- Validar visualmente o novo fluxo de ataque com sub-menu e target picker para garantir que funciona em widescreen e mobile.
+- Testar o fluxo completo: ATACAR > FISICO/MENTAL > Selecionar alvo > Confirmar que a rolagem registra tipo de dano e alvo corretamente.
+- Confirmar que CRIAR VANTAGEM ainda usa o seletor de alvos antigo (dropdown) sem regressao.
 
 ## Handoff Prompt
 ```text
@@ -119,13 +196,14 @@ Continue a Story 38 (epic-02) no frontend, sem encerrar story/epic.
 
 Estado atual:
 - Gavetas/cards seguem no fluxo expandido interno com top-strip de rolagem.
-- Card expandido de inimigo corrigido para paridade horizontal com o card de jogador: grid de 3 colunas com `gridRow: 1` forçando uma unica linha, removido wrapper `display: contents` e corrigido sizing invalido (minmax como width).
-- Minimizados de inimigos devem permanecer ancorados na direita.
+- Card expandido de inimigo com paridade horizontal corrigida.
+- Fluxo de ataque guiado implementado: botao de acao abre sub-menu custom com FISICO/MENTAL como sub-opcoes de ATACAR. Apos escolher tipo de dano, modal Portal exibe lista de inimigos com retrato + nome para selecao rapida.
+- Minimizados de inimigos ancorados na direita.
 
 Proximo passo imediato:
-1) Validar com o usuario em widescreen real que o card inimigo exibe horizontalmente.
-2) Confirmar que todos os controles internos do inimigo funcionam.
-3) Ajustes de fino de posicionamento se necessario.
+1) Validar o fluxo de ataque guiado visualmente (sub-menu + target picker).
+2) Testar rolagem completa com alvo selecionado.
+3) Ajustes de fino de posicionamento e UX se necessario.
 
 Arquivos obrigatorios para carregar:
 - /front_sistema_rpg/AI.md

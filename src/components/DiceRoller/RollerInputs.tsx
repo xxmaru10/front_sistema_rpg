@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, Zap, Backpack, Plus, X, Swords, Brain } from "lucide-react";
 import { Character, DEFAULT_SKILLS, Item } from "@/types/domain";
 
@@ -397,8 +398,8 @@ export function RollerInputs({
                 )}
             </div>
 
-            {/* ═══ TARGET PICKER MODAL ═══ */}
-            {showTargetPicker && (
+            {/* ═══ TARGET PICKER MODAL (Portal — conventions.md: Luxury Portal Selection) ═══ */}
+            {showTargetPicker && typeof document !== 'undefined' && createPortal(
                 <div className="target-picker-overlay" onClick={handleTargetPickerClose}>
                     <div className="target-picker-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="target-picker-header">
@@ -433,7 +434,8 @@ export function RollerInputs({
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <style jsx>{`
@@ -909,7 +911,41 @@ export function RollerInputs({
                     transform: scale(1.1);
                 }
 
-                /* ═══ TARGET PICKER MODAL ═══ */
+                /* ── Mobile responsive ── */
+                @media (max-width: 768px) {
+                    .matrix-inputs.integrated {
+                        width: 100%;
+                        justify-content: center;
+                    }
+
+                    .control-panel-grid.integrated-mode {
+                        width: 100%;
+                        justify-content: center !important;
+                        gap: 6px;
+                    }
+
+                    .control-panel-grid.integrated-mode .panel-col {
+                        width: 100%;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                        row-gap: 6px;
+                    }
+
+                    .control-panel-grid.integrated-mode .field-row {
+                        max-width: 100%;
+                        flex-wrap: wrap;
+                        justify-content: center;
+                    }
+
+                    .control-panel-grid.integrated-mode .select-ritual,
+                    .control-panel-grid.integrated-mode .input-ritual {
+                        max-width: min(44vw, 170px) !important;
+                    }
+                }
+            `}</style>
+
+            {/* Portal-rendered styles — must be global */}
+            <style jsx global>{`
                 .target-picker-overlay {
                     position: fixed;
                     inset: 0;
@@ -919,10 +955,10 @@ export function RollerInputs({
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    animation: overlayFadeIn 0.2s ease-out;
+                    animation: targetPickerFadeIn 0.2s ease-out;
                 }
 
-                @keyframes overlayFadeIn {
+                @keyframes targetPickerFadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
@@ -938,10 +974,10 @@ export function RollerInputs({
                     overflow: hidden;
                     display: flex;
                     flex-direction: column;
-                    animation: modalSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+                    animation: targetPickerSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);
                 }
 
-                @keyframes modalSlideIn {
+                @keyframes targetPickerSlideIn {
                     from { opacity: 0; transform: scale(0.92) translateY(20px); }
                     to { opacity: 1; transform: scale(1) translateY(0); }
                 }
@@ -1054,35 +1090,6 @@ export function RollerInputs({
                 }
 
                 @media (max-width: 768px) {
-                    .matrix-inputs.integrated {
-                        width: 100%;
-                        justify-content: center;
-                    }
-
-                    .control-panel-grid.integrated-mode {
-                        width: 100%;
-                        justify-content: center !important;
-                        gap: 6px;
-                    }
-
-                    .control-panel-grid.integrated-mode .panel-col {
-                        width: 100%;
-                        justify-content: center;
-                        flex-wrap: wrap;
-                        row-gap: 6px;
-                    }
-
-                    .control-panel-grid.integrated-mode .field-row {
-                        max-width: 100%;
-                        flex-wrap: wrap;
-                        justify-content: center;
-                    }
-
-                    .control-panel-grid.integrated-mode .select-ritual,
-                    .control-panel-grid.integrated-mode .input-ritual {
-                        max-width: min(44vw, 170px) !important;
-                    }
-
                     .target-picker-modal {
                         min-width: 280px;
                         max-width: calc(100vw - 32px);
