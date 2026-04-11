@@ -228,8 +228,8 @@ export function CombatTab({
                                         setShowDiceRoller(true);
                                     }
                                 }}
-                                className={`combat-top-roll-open-btn${userRole === "PLAYER" && !isCurrentPlayerActive ? " dice-btn-locked" : ""}`}
-                                title={userRole === "PLAYER" && !isCurrentPlayerActive ? "Não é seu turno" : "Abrir zona de rolagem"}
+                                className="combat-top-roll-open-btn"
+                                title="Abrir zona de rolagem"
                                 aria-label="Dados"
                             >
                                 <Dice5 size={18} />

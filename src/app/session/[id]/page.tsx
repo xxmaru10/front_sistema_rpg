@@ -117,12 +117,6 @@ export default function SessionPage() {
         if (isMobileNav) setIsNavExpanded(false);
     }, [activeTab, isMobileNav]);
 
-    useEffect(() => {
-        if (userRole === "PLAYER" && isCurrentPlayerActive && !showDiceRoller) {
-            setShowDiceRoller(true);
-        }
-    }, [isCurrentPlayerActive, userRole, showDiceRoller, setShowDiceRoller]);
-
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
 
     const closeNavDrawer = () => {
@@ -268,6 +262,12 @@ export default function SessionPage() {
         deathFocusCharId,
         combatStartTimeRef,
     });
+
+    useEffect(() => {
+        if (userRole === "PLAYER" && isCurrentPlayerActive && !showDiceRoller) {
+            setShowDiceRoller(true);
+        }
+    }, [isCurrentPlayerActive, userRole, showDiceRoller, setShowDiceRoller]);
 
     // ─── SCREEN SHARE / AUDIO LIFECYCLE ──────────────────────────────────────
     // Must come before useSessionActions so screenShareManagerRef is available.
