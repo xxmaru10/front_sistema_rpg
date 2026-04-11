@@ -219,7 +219,7 @@ export function CombatTab({
             <div
                 className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
             >
-                {shouldRenderTopRollBar && (
+                {shouldRenderTopRollBar && userRole === "GM" && (
                     <div className={`combat-top-strip ${showDiceRoller ? "is-open" : ""}`}>
                         {!showDiceRoller && (
                             <button

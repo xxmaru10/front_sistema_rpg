@@ -117,6 +117,12 @@ export default function SessionPage() {
         if (isMobileNav) setIsNavExpanded(false);
     }, [activeTab, isMobileNav]);
 
+    useEffect(() => {
+        if (userRole === "PLAYER" && isCurrentPlayerActive && !showDiceRoller) {
+            setShowDiceRoller(true);
+        }
+    }, [isCurrentPlayerActive, userRole, showDiceRoller, setShowDiceRoller]);
+
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
 
     const closeNavDrawer = () => {
@@ -731,6 +737,8 @@ export default function SessionPage() {
                 onStartScreenShare={handleStartScreenShare}
                 onStopScreenShare={handleStopScreenShare}
                 connectionStatus={connectionStatus}
+                showDiceRoller={showDiceRoller}
+                onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
             >
                 {activeTab === "combat" && !challengeMode && (
                     <TurnOrderTracker

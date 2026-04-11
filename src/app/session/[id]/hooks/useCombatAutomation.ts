@@ -171,10 +171,17 @@ export function useCombatAutomation({
 
             const { defenderId, result } = event.payload;
             const currentState = stateRef.current;
+            // Robust check: try to find character across state sources
             const defender = currentState.characters[defenderId];
-            if (!defender || isCharacterEliminated(defender)) return;
+            
+            if (!defender) {
+                console.warn("[useCombatAutomation] Damage resolution failed: Defender not found in state", defenderId);
+                return;
+            }
 
-            const track = currentState.damageType || "PHYSICAL";
+            if (isCharacterEliminated(defender)) return;
+
+            const track = (event.payload as any).track || currentState.damageType || "PHYSICAL";
             setPendingDamage({ defenderId, damage: result, track });
         });
         return unsubscribe;

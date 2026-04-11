@@ -21,7 +21,8 @@ import {
     Skull,
     User,
     ChevronDown,
-    Tv
+    Tv,
+    Dice5
 } from "lucide-react";
 
 const ATMOSPHERIC_OPTIONS: { value: AtmosphericEffectType, label: string, icon: any, color?: string }[] = [
@@ -61,6 +62,8 @@ interface SessionHeaderProps {
     onStopScreenShare?: () => void;
     connectionStatus?: string;
     title?: string;
+    showDiceRoller?: boolean;
+    onToggleDiceRoller?: () => void;
 }
 
 export function SessionHeader({
@@ -82,7 +85,9 @@ export function SessionHeader({
     onStartScreenShare,
     onStopScreenShare,
     connectionStatus,
-    title
+    title,
+    showDiceRoller,
+    onToggleDiceRoller
 }: SessionHeaderProps) {
     const [showLibrary, setShowLibrary] = useState(false);
     const [showSummonMenu, setShowSummonMenu] = useState(false);
@@ -521,6 +526,26 @@ export function SessionHeader({
                             }}
                         >
                             ORDEM DE TURNO
+                        </button>
+                    )}
+
+                    {isGM && onToggleDiceRoller && (
+                        <button
+                            onClick={onToggleDiceRoller}
+                            className={`btn btn-secondary btn-sm action-btn ${showDiceRoller ? "active-dice" : ""}`}
+                            style={{
+                                background: showDiceRoller ? 'rgba(80, 166, 255, 0.2)' : 'rgba(0,0,0,0.6)',
+                                border: '1px solid rgba(80, 166, 255, 0.4)',
+                                color: showDiceRoller ? '#fff' : '#50a6ff',
+                                backdropFilter: 'blur(4px)',
+                                padding: '6px 16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                            title="Alternar zona de rolagem do mestre"
+                        >
+                            <Dice5 size={16} />
                         </button>
                     )}
 

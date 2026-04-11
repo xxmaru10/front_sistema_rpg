@@ -84,9 +84,10 @@ export function RollerInputs({
         ? `ATACAR (${damageLabel})`
         : actionLabelMap[actionType] || "SUPERAR";
 
-    const computeIntegratedWidth = (baseLabel: string, currentLabel: string, maxCh = 14) => {
+    const computeIntegratedWidth = (baseLabel: string, currentLabel: string, maxCh = 22) => {
         const base = baseLabel.length + 1;
         const current = currentLabel.length + 1;
+        // Use a more proportional expansion
         return `${Math.min(Math.max(base, current), maxCh)}ch`;
     };
 
@@ -177,7 +178,7 @@ export function RollerInputs({
                                 <button
                                     type="button"
                                     className={`mystic-input select-ritual action-btn ${actionType === "ATTACK" ? "attack-active" : ""}`}
-                                    style={isIntegrated ? { width: actionWidth, maxWidth: "18ch" } : undefined}
+                                    style={isIntegrated ? { width: actionWidth, minWidth: "120px" } : undefined}
                                     onClick={() => setShowAttackSubMenu(!showAttackSubMenu)}
                                 >
                                     {selectedActionLabel}
@@ -236,7 +237,7 @@ export function RollerInputs({
                                     setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
                                 }}
                                 className="mystic-input input-ritual bonus-input narrowed"
-                                style={isIntegrated ? { width: bonusWidth, maxWidth: "4ch" } : undefined}
+                                style={isIntegrated ? { width: bonusWidth, minWidth: "60px" } : undefined}
                             />
                         </div>
                     </div>
@@ -520,15 +521,16 @@ export function RollerInputs({
                     gap: 8px;
                     flex: 1 1 120px;
                     min-width: 0;
-                    width: auto;
+                    width: 100%;
                     align-items: center;
                 }
 
                 .control-panel-grid.integrated-mode .panel-col {
                     flex-direction: row;
                     gap: 4px;
-                    flex: 0 1 auto;
+                    flex: 1 1 auto;
                     width: auto;
+                    justify-content: flex-start;
                 }
 
                 .field-row {
@@ -598,6 +600,13 @@ export function RollerInputs({
                     border-radius: 30px !important;
                     box-shadow: 0 0 20px var(--accent-glow), inset 0 0 15px var(--accent-glow) !important;
                     color: var(--accent-color) !important;
+                    font-size: 0.8rem;
+                    height: 36px;
+                    padding: 0 14px;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    flex: 1 1 auto;
+                    min-width: 0;
+                }
                     text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow) !important;
                     transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1) !important;
                     text-align: center;
