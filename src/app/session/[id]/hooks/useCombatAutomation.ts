@@ -26,6 +26,9 @@ export function useCombatAutomation({
         { characterId: string; slot: string; damage: number; track: "PHYSICAL" | "MENTAL" }[]
     >([]);
     const [deathTurnPassed, setDeathTurnPassed] = useState<Set<string>>(new Set());
+    const [pendingDamage, setPendingDamage] = useState<
+        { defenderId: string; damage: number; track: "PHYSICAL" | "MENTAL" } | null
+    >(null);
 
     const processedOutcomeIds = useRef<Set<string>>(new Set());
     const scheduledDeletionIds = useRef<Set<string>>(new Set());
@@ -151,9 +154,15 @@ export function useCombatAutomation({
         }
     }, [state.isReaction, state.targetId, state.characters, userRole, actorUserId, sessionId]);
 
-    // ─── AUTOMATIC DAMAGE & CONSEQUENCE PROCESSING ──────────────────────────
+    // ─── DAMAGE RESOLUTION: OPEN MODAL ON COMBAT_OUTCOME (GM ONLY) ──────────
+    //
+    // The modal (DamageResolutionModal) lets the GM decide how the damage is
+    // absorbed manually, or fall back to the legacy automatic flow via the
+    // "Cálculo automático" button. Players do not see the modal.
 
     useEffect(() => {
+        if (userRole !== "GM") return;
+
         const unsubscribe = globalEventStore.subscribe((event) => {
             if (event.type !== "COMBAT_OUTCOME" || event.payload.result <= 0) return;
             if (processedOutcomeIds.current.has(event.id)) return;
@@ -165,55 +174,97 @@ export function useCombatAutomation({
             if (!defender || isCharacterEliminated(defender)) return;
 
             const track = currentState.damageType || "PHYSICAL";
-            const absorption = calculateAbsorption(defender, result, track);
-
-            absorption.stressToMarkIndices.forEach((idx: number) => {
-                globalEventStore.append({
-                    id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
-                    actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                    payload: { characterId: defenderId, track, boxIndex: idx }
-                } as any);
-            });
-
-            if (absorption.consequenceSlot) {
-                console.log("[DEBUG] Queuing consequence:", absorption.consequenceSlot, "for character:", defender.name);
-                setConsequenceQueue(prev => {
-                    const alreadyQueued = prev.some(
-                        q => q.characterId === defenderId && q.slot === absorption.consequenceSlot
-                    );
-                    if (alreadyQueued) {
-                        console.log("[DEBUG] Consequence already queued, skipping duplicate.");
-                        return prev;
-                    }
-                    const newQueue = [...prev, {
-                        characterId: defenderId,
-                        slot: absorption.consequenceSlot!,
-                        damage: result - absorption.stressToMarkIndices.length,
-                        track
-                    }];
-                    console.log("[DEBUG] New Consequence Queue:", newQueue);
-                    return newQueue;
-                });
-            } else if (absorption.remainingDamage > 0) {
-                console.log("[DEBUG] No consequence slot found. Remaining damage:", absorption.remainingDamage);
-                globalEventStore.append({
-                    id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_UPDATED",
-                    actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                    payload: { characterId: defenderId, changes: { isEliminated: true } }
-                } as any).catch(() => {
-                    const lastSlot = Object.keys(defender.consequences).pop();
-                    if (lastSlot) {
-                        globalEventStore.append({
-                            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
-                            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                            payload: { characterId: defenderId, slot: lastSlot, value: "DERROTADO" }
-                        } as any);
-                    }
-                });
-            }
+            setPendingDamage({ defenderId, damage: result, track });
         });
         return unsubscribe;
-    }, [sessionId, actorUserId]); // Stable deps only — stateRef used for current state inside
+    }, [sessionId, actorUserId, userRole]);
+
+    // Pause the timer while the GM is resolving damage
+    useEffect(() => {
+        if (pendingDamage && userRole === "GM" && !state.timerPaused) {
+            handleTogglePause();
+        }
+    }, [pendingDamage, userRole, state.timerPaused]);
+
+    const handleDamageConfirm = (applied: {
+        stressPhysical: number[];
+        stressMental: number[];
+        consequences: { slot: string; text: string }[];
+    }) => {
+        if (!pendingDamage) return;
+        const { defenderId } = pendingDamage;
+
+        applied.stressPhysical.forEach(idx => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, track: "PHYSICAL", boxIndex: idx }
+            } as any);
+        });
+
+        applied.stressMental.forEach(idx => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, track: "MENTAL", boxIndex: idx }
+            } as any);
+        });
+
+        applied.consequences.forEach(c => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, slot: c.slot, value: c.text }
+            } as any);
+        });
+
+        setPendingDamage(null);
+        if (stateRef.current.timerPaused) handleTogglePause();
+    };
+
+    const handleDamageAutoCalculate = () => {
+        if (!pendingDamage) return;
+        const { defenderId, damage, track } = pendingDamage;
+        const currentState = stateRef.current;
+        const defender = currentState.characters[defenderId];
+        if (!defender) { setPendingDamage(null); return; }
+
+        const absorption = calculateAbsorption(defender, damage, track);
+
+        absorption.stressToMarkIndices.forEach((idx: number) => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, track, boxIndex: idx }
+            } as any);
+        });
+
+        if (absorption.consequenceSlot) {
+            setConsequenceQueue(prev => {
+                const alreadyQueued = prev.some(
+                    q => q.characterId === defenderId && q.slot === absorption.consequenceSlot
+                );
+                if (alreadyQueued) return prev;
+                return [...prev, {
+                    characterId: defenderId,
+                    slot: absorption.consequenceSlot!,
+                    damage: damage - absorption.stressToMarkIndices.length,
+                    track
+                }];
+            });
+        }
+
+        setPendingDamage(null);
+        // Timer stays paused — ConsequenceModal (text prompt) will resume it on close.
+        if (!absorption.consequenceSlot && stateRef.current.timerPaused) {
+            handleTogglePause();
+        }
+    };
+
+    const handleDamageSkip = () => {
+        setPendingDamage(null);
+        if (stateRef.current.timerPaused) handleTogglePause();
+    };
 
     // ─── AUTOMATIC TURN ORDER INTEGRATION (Garbage Collector) ───────────────
 
@@ -404,5 +455,9 @@ export function useCombatAutomation({
         handleForcePass,
         handleConsequenceSave,
         handleConsequenceCancel,
+        pendingDamage,
+        handleDamageConfirm,
+        handleDamageAutoCalculate,
+        handleDamageSkip,
     };
 }

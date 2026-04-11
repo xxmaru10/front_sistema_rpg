@@ -10,6 +10,11 @@ interface FateDice3DProps {
     onPreResult?: (results: number[]) => void;
     userRole?: "GM" | "PLAYER";
     activeTab?: string;
+    calculationBreakdown?: {
+        baseSkillValue?: number;
+        itemBonusValue?: number;
+        customModifierValue?: number;
+    };
 }
 
 /**
@@ -23,6 +28,7 @@ export default function FateDice3D({
     onPreResult,
     userRole,
     activeTab,
+    calculationBreakdown,
 }: FateDice3DProps) {
     const {
         mountRef,
@@ -107,6 +113,7 @@ export default function FateDice3D({
                     accentColor={resolvedAccent}
                     dangerColor={resolvedDanger}
                     onAutoRoll={autoRoll}
+                    calculationBreakdown={calculationBreakdown}
                 />
             </div>
 

@@ -9,6 +9,11 @@ interface DiceSimulationParams {
     accentColor?: string;
     onSettled: DiceSimulationCallback;
     onPreResult?: DiceSimulationCallback;
+    calculationBreakdown?: {
+        baseSkillValue?: number;
+        itemBonusValue?: number;
+        customModifierValue?: number;
+    };
 }
 
 class DiceSimulationStore {

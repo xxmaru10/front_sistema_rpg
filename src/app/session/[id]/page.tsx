@@ -26,6 +26,7 @@ import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
+import { DamageResolutionModal } from "@/components/DamageResolutionModal";
 import { AtmosphericEffects } from "@/components/AtmosphericEffects";
 import { getThemePreset, generateThemeCSS } from "@/lib/themePresets";
 import { Battlemap } from "@/components/Battlemap";
@@ -281,6 +282,7 @@ export default function SessionPage() {
 
     const {
         activeConsequence,
+        pendingDamage, handleDamageConfirm, handleDamageAutoCalculate, handleDamageSkip,
         handleNextTurn, handlePreviousTurn, handleTogglePause,
         handleForcePass, handleConsequenceSave, handleConsequenceCancel,
     } = useCombatAutomation({
@@ -920,6 +922,18 @@ export default function SessionPage() {
                 />
             )}
 
+            {userRole === "GM" && pendingDamage && (
+                <DamageResolutionModal
+                    isOpen={!!pendingDamage}
+                    defender={pendingDamage ? state.characters[pendingDamage.defenderId] : null}
+                    damage={pendingDamage?.damage || 0}
+                    track={pendingDamage?.track || "PHYSICAL"}
+                    onConfirm={handleDamageConfirm}
+                    onAutoCalculate={handleDamageAutoCalculate}
+                    onSkip={handleDamageSkip}
+                />
+            )}
+
             {userRole === "GM" && activeConsequence && (
                 <ConsequenceModal
                     isOpen={true}
@@ -967,6 +981,7 @@ export default function SessionPage() {
                 <FateDice3D
                     isVisible={true}
                     accentColor={diceParams?.accentColor}
+                    calculationBreakdown={diceParams?.calculationBreakdown}
                     onSettled={(results) => {
                         diceParams?.onSettled(results);
                         diceSimulationStore.hide();

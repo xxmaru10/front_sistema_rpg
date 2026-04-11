@@ -275,7 +275,17 @@ export function useDiceRoller({
         setIsRolling(true);
         setLastTotal(null);
         
+        const effectiveSkills = activeChar?.skills || DEFAULT_SKILLS;
+        const skillRank = selectedSkill ? (effectiveSkills[selectedSkill] || 0) : 0;
+        const selectedItemData = selectedItemId ? allItems.find(i => i.id === selectedItemId) : undefined;
+        const itemBonus = selectedItemData?.bonus || 0;
+
         diceSimulationStore.show({
+            calculationBreakdown: {
+                baseSkillValue: skillRank,
+                itemBonusValue: itemBonus,
+                customModifierValue: manualBonus
+            },
             onPreResult: () => {
                 const diceSound = soundSettings?.dice || "/audio/Effects/dados.MP3";
                 const audio = new Audio(diceSound);

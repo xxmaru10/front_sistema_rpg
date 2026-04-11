@@ -12,6 +12,11 @@ interface FateResultOverlayProps {
     accentColor: string;
     dangerColor: string;
     onAutoRoll: () => void;
+    calculationBreakdown?: {
+        baseSkillValue?: number;
+        itemBonusValue?: number;
+        customModifierValue?: number;
+    };
 }
 
 /** Escada de resultados Fate */
@@ -32,6 +37,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     accentColor,
     dangerColor,
     onAutoRoll,
+    calculationBreakdown,
 }) => {
     const label =
         phase === "idle"     ? "CLIQUE E SEGURE PARA PEGAR OS DADOS" :
@@ -41,6 +47,17 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
         "";
 
     const diceSum = results ? results.reduce((a, b) => a + b, 0) : 0;
+    
+    // Calculate full breakdown sums
+    const totalBonus = 
+        (calculationBreakdown?.baseSkillValue || 0) + 
+        (calculationBreakdown?.itemBonusValue || 0) + 
+        (calculationBreakdown?.customModifierValue || 0);
+
+    const grandTotal = diceSum + totalBonus;
+    
+    // Show breakdown only if there's any modifier
+    const hasModifiers = totalBonus !== 0 || !!calculationBreakdown;
 
     return (
         <>
@@ -192,6 +209,36 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         })}
                     </div>
 
+                    {/* Breakdown Math */}
+                    {hasModifiers && (
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            color: accentColor,
+                            fontFamily: "var(--font-header, 'Cinzel', serif)",
+                            fontSize: "1.1rem",
+                            letterSpacing: "0.1em",
+                            opacity: 0.85,
+                            marginTop: "-8px",
+                            marginBottom: "4px"
+                        }}>
+                            <div>Dado: {diceSum > 0 ? `+${diceSum}` : diceSum}</div>
+                            
+                            {calculationBreakdown?.baseSkillValue ? (
+                                <div> + Perícia: {calculationBreakdown.baseSkillValue}</div>
+                            ) : null}
+                            
+                            {calculationBreakdown?.itemBonusValue ? (
+                                <div> + Item: {calculationBreakdown.itemBonusValue}</div>
+                            ) : null}
+
+                            {calculationBreakdown?.customModifierValue ? (
+                                <div> + Modificador: {calculationBreakdown.customModifierValue > 0 ? `+${calculationBreakdown.customModifierValue}` : calculationBreakdown.customModifierValue}</div>
+                            ) : null}
+                        </div>
+                    )}
+
                     <div style={{
                         color: accentColor,
                         fontFamily: "var(--font-header, 'Cinzel', serif)",
@@ -199,8 +246,12 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         fontWeight: "bold",
                         letterSpacing: "0.15em",
                         textShadow: `0 0 20px ${accentColor}, 0 0 40px ${accentColor}66`,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px"
                     }}>
-                        {diceSum > 0 ? `+${diceSum}` : diceSum < 0 ? `${diceSum}` : "0"}
+                        {hasModifiers && <span style={{ fontSize: "1.4rem", opacity: 0.8 }}>Total =</span>}
+                        <span>{grandTotal > 0 ? `+${grandTotal}` : grandTotal < 0 ? `${grandTotal}` : "0"}</span>
                     </div>
 
                     <div style={{
@@ -212,7 +263,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         textShadow: `0 0 12px ${accentColor}`,
                         opacity: 0.72,
                     }}>
-                        {ladderLabel(diceSum).toUpperCase()}
+                        {ladderLabel(grandTotal).toUpperCase()}
                     </div>
                 </div>
             )}
