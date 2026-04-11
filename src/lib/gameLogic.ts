@@ -4,33 +4,15 @@ export function isCharacterEliminated(character: Character): boolean {
     if (!character) return false;
 
     // DEATH RULE: A character is ONLY eliminated when ALL consequence slots are filled.
-    // Physical and Mental stress do NOT count for death - only consequences.
-
-    // Get all consequence keys (mild, moderate, severe + any extras)
+    // Stress tracks do NOT count for death — only consequences.
+    // If no consequence slots are defined, the character cannot be eliminated.
     const allConsequenceKeys = Object.keys(character.consequences);
+    if (allConsequenceKeys.length === 0) return false;
 
-    // If the character has no consequence slots defined, they cannot be eliminated by consequences.
-    // INSTEAD, they are eliminated if their Physical OR Mental stress track is fully filled.
-    if (allConsequenceKeys.length === 0) {
-        const physicalTotal = character.stress.physical.length;
-        const physicalMarked = character.stress.physical.filter(Boolean).length;
-        const physicalFull = physicalTotal > 0 && physicalMarked === physicalTotal;
-
-        const mentalTotal = character.stress.mental.length;
-        const mentalMarked = character.stress.mental.filter(Boolean).length;
-        const mentalFull = mentalTotal > 0 && mentalMarked === mentalTotal;
-
-        if (physicalFull || mentalFull) return true;
-        return false;
-    }
-
-    // Check if ALL consequence slots have text (are filled)
-    const allConsequencesFilled = allConsequenceKeys.every(key => {
+    return allConsequenceKeys.every(key => {
         const cons = character.consequences[key];
         return cons && cons.text && cons.text.trim().length > 0;
     });
-
-    return allConsequencesFilled;
 }
 
 export type DamageAbsorptionResult = {

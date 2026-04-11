@@ -388,7 +388,7 @@ export function TurnOrderTracker({
                     margin: 0 auto;
                     position: relative;
                     padding-top: 0;
-                    margin-top: -6px;
+                    margin-top: -14px;
                     z-index: 50;
                 }
 

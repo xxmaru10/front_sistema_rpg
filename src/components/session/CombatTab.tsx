@@ -143,7 +143,7 @@ export function CombatTab({
 
     const hasExpandedHeroes = isHeroDrawerOpen;
     const hasExpandedThreats = isThreatDrawerOpen || threatHazards.length > 0;
-    const shouldRenderTopRollBar = showDiceRoller || userRole === "GM";
+    const shouldRenderTopRollBar = true;
 
     useEffect(() => {
         if (heroCombatants.length === 0) setIsHeroDrawerOpen(false);
@@ -221,12 +221,16 @@ export function CombatTab({
             >
                 {shouldRenderTopRollBar && (
                     <div className={`combat-top-strip ${showDiceRoller ? "is-open" : ""}`}>
-                        {!showDiceRoller && userRole === "GM" && (
+                        {!showDiceRoller && (
                             <button
-                                onClick={() => setShowDiceRoller(true)}
-                                className="combat-top-roll-open-btn"
-                                title="Abrir zona de rolagem"
-                                aria-label="Abrir zona de rolagem"
+                                onClick={() => {
+                                    if (userRole === "GM" || isCurrentPlayerActive) {
+                                        setShowDiceRoller(true);
+                                    }
+                                }}
+                                className={`combat-top-roll-open-btn${userRole === "PLAYER" && !isCurrentPlayerActive ? " dice-btn-locked" : ""}`}
+                                title={userRole === "PLAYER" && !isCurrentPlayerActive ? "Não é seu turno" : "Abrir zona de rolagem"}
+                                aria-label="Dados"
                             >
                                 <Dice5 size={18} />
                             </button>
