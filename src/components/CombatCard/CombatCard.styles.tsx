@@ -1206,6 +1206,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
 
             .combat-card.expanded-card {
                 grid-template-columns: minmax(116px, 34vw) minmax(0, 1fr) !important;
+                grid-template-rows: auto auto !important;
                 border-radius: 18px 18px 0 0 !important;
                 transform: none !important;
             }
@@ -1213,6 +1214,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             .combat-card.expanded-card .combat-image-column,
             .combat-card.expanded-card .combat-image-column.mirrored {
                 grid-column: 1 !important;
+                grid-row: 1 !important;
                 width: min(34vw, 152px) !important;
                 min-width: min(34vw, 152px) !important;
                 min-height: 152px !important;
@@ -1224,6 +1226,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             .combat-card.expanded-card .combat-main-column,
             .combat-card.expanded-card .combat-main-column.mirrored {
                 grid-column: 2 !important;
+                grid-row: 1 !important;
                 transform: none !important;
                 padding: 6px 10px !important;
                 overflow: visible !important;
@@ -1232,6 +1235,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             .combat-card.expanded-card .combat-cons-column,
             .combat-card.expanded-card .combat-cons-column.mirrored {
                 grid-column: 1 / -1 !important;
+                grid-row: 2 !important;
                 transform: none !important;
                 border-left: none !important;
                 border-right: none !important;

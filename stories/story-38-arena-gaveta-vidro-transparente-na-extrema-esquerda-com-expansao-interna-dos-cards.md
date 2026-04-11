@@ -1,9 +1,9 @@
-﻿---
+---
 title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expansao interna dos cards"
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.5-correcao-regressao-vertical-e-vinhetas)"
+last_updated: "2026-04-11 (follow-up-4.8-paridade-horizontal-inimigo)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -105,27 +105,29 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 4.3): reforco de contencao vertical no card expandido: coluna de imagem passou a preencher novamente toda a altura do card (eliminando bloco preto abaixo do retrato), e o aspecto principal no miolo foi limitado a uma linha com elipse para evitar quebra letra-a-letra que inflava a altura total. As proporcoes de colunas foram recalibradas com largura mais fluida da imagem para reduzir estrangulamento da coluna central.
 - Follow-up aplicado (iteracao 4.4): usuario reportou regressao visual apos os ultimos ajustes. Estado atual em runtime: card de inimigo segue verticalmente estourado e o card de aliado (que estava aprovado) tambem piorou. Correcao permanece em aberto e virou prioridade imediata.
 - Follow-up aplicado (iteracao 4.5): correcao da regressao de verticalidade. `useLayoutEffect` agora mede APENAS a coluna de consequencias para determinar a altura do card (altura do card = consequencias + 3px top + 3px bottom); a coluna do meio so infla o card quando extras (stunts/itens/pericias/aspectos) estao abertos. `height` do grid passou de `auto+minHeight` para valor fixo derivado das consequencias. `minHeight` da coluna de imagem removido (desnecessario com height fixo no grid). Vinhetas do retrato receberam `zIndex: 3` para serem visiveis acima do `combat-image-frame` (zIndex 2) — corrige a ausencia das vinhetas superior/inferior/lateral.
+- Follow-up aplicado (iteracao 4.6): para recuperar alinhamento horizontal (mesma leitura dos cards de jogadores), o `CombatCard` removeu a medicao dinamica de altura (`useLayoutEffect` + refs) e voltou para altura natural com `minHeight` base. O grid principal foi simplificado para 3 colunas estaveis (consequencias | miolo | retrato no espelhado), removendo configuracoes que causavam quebra visual em "linhas" no lado inimigo. Tambem foi removido o `transform` no wrapper `display: contents` e mantido o recorte do frame da imagem (`overflow: hidden`) para evitar arte cortada/deslocada.
+- Follow-up aplicado (iteracao 4.8): paridade horizontal do card expandido de inimigos restaurada. Removida atribuicao invalida de `width`/`minWidth` que recebia strings `minmax()` (definicao de grid-track, nao de sizing de elemento), o que colapsava a coluna de imagem no lado inimigo. Grid explicito com `gridTemplateRows: '1fr'` e `gridRow: 1` em todas as 3 colunas forca o layout em linha horizontal unica (sem quebra em blocos). Removido wrapper `display: contents` (remanescente de iteracao anterior cujo closing tag ja havia sido retirado). Margem negativa da coluna de imagem espelhada para ambos os lados. Mobile recebe override com `grid-template-rows: auto auto` e `grid-row` explicitos para manter consequencias em faixa inferior.
 
 ## Pendencias para Proxima Iteracao
-- Revalidar alinhamento de minimizados dos inimigos na direita e ausencia de colisao em widescreen.
-- Verificar se a altura do card para restricted-threat-view (fallback 96px) e adequada visualmente.
+- Validar com o usuario em widescreen real se o card de inimigo agora exibe em horizontal puro (sem blocos/linhas verticais).
+- Confirmar que controles internos (aspectos, stunts, magias, pericias, itens, impulso, destino, estresse) funcionam no lado inimigo como no lado de jogadores.
+- Revalidar o estado minimizado dos inimigos (ancoragem a direita + sem colisao entre colunas).
 
 ## Handoff Prompt
 ```text
-Continue a Story 38 (epic-02) no frontend, com foco em correcao de regressao visual.
+Continue a Story 38 (epic-02) no frontend, sem encerrar story/epic.
 
 Estado atual:
 - Gavetas/cards seguem no fluxo expandido interno com top-strip de rolagem.
-- Regressao reportada: card inimigo continua verticalmente estourado e card aliado tambem degradou.
+- Card expandido de inimigo corrigido para paridade horizontal com o card de jogador: grid de 3 colunas com `gridRow: 1` forçando uma unica linha, removido wrapper `display: contents` e corrigido sizing invalido (minmax como width).
 - Minimizados de inimigos devem permanecer ancorados na direita.
-- Story e epic NAO devem ser encerrados sem comando explicito do usuario.
 
 Proximo passo imediato:
-1) Corrigir a verticalidade dos cards expandidos (inimigos e aliados) sem quebrar o que ja estava validado.
-2) Restaurar a proporcao correta entre retrato, miolo e consequencias.
-3) Validar em widescreen que nao ha colisao entre os lados e manter inimigos minimizados na direita.
+1) Validar com o usuario em widescreen real que o card inimigo exibe horizontalmente.
+2) Confirmar que todos os controles internos do inimigo funcionam.
+3) Ajustes de fino de posicionamento se necessario.
 
-Arquivos obrigatorios:
+Arquivos obrigatorios para carregar:
 - /front_sistema_rpg/AI.md
 - /front_sistema_rpg/knowledge/architecture.md
 - /front_sistema_rpg/stories/story.md

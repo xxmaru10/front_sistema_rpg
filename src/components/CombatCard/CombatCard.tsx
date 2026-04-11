@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from 'react';
 import { Character } from "@/types/domain";
@@ -218,14 +218,11 @@ export function CombatCard({
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
     const isMirroredThreatLayout = isThreat;
-    const imageColumnWidth = "minmax(170px, 240px)";
-    const edgeColumnWidth = "minmax(118px, 178px)";
-    const middleColumnWidth = "minmax(220px, 1fr)";
     const imageColumnBaseHeight = 154;
 
     const cardGridTemplate = isMirroredThreatLayout
-        ? `${edgeColumnWidth} ${middleColumnWidth} ${imageColumnWidth}`
-        : `${imageColumnWidth} ${middleColumnWidth} ${edgeColumnWidth}`;
+        ? 'minmax(118px, 178px) minmax(220px, 1fr) minmax(170px, 240px)'
+        : 'minmax(170px, 240px) minmax(220px, 1fr) minmax(118px, 178px)';
     const outerSkew = isMirroredThreatLayout ? 'skewX(5deg)' : 'skewX(-5deg)';
     const imageSkew = isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)';
     const imageNegativeOffset = '-24px';
@@ -294,6 +291,7 @@ export function CombatCard({
                 style={{ 
                     display: 'grid',
                     gridTemplateColumns: cardGridTemplate,
+                    gridTemplateRows: '1fr',
                     gap: '0',
                     alignItems: 'stretch',
                     padding: '0',
@@ -311,8 +309,7 @@ export function CombatCard({
                     marginLeft: '0px'
                 }}
             >
-                {/* De-skew content container */}
-                <div style={{ display: 'contents' }}>
+
                 {/* Remove Button for GM */}
                 {canEdit && onRemove && (
                     <button
@@ -399,14 +396,13 @@ export function CombatCard({
                     className={`combat-image-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
                     style={{
                     gridColumn: isMirroredThreatLayout ? 3 : 1,
+                    gridRow: 1,
                     position: 'relative',
-                    width: imageColumnWidth,
-                    minWidth: imageColumnWidth,
                     minHeight: `${imageColumnBaseHeight}px`,
                     height: 'auto',
                     transform: imageSkew,
-                    marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
-                    marginRight: isMirroredThreatLayout ? 0 : imageNegativeOffset,
+                    marginLeft: isMirroredThreatLayout ? imageNegativeOffset : imageNegativeOffset,
+                    marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
                     overflow: 'visible',
                     alignSelf: 'stretch',
                     zIndex: 6
@@ -503,7 +499,7 @@ export function CombatCard({
 
                 <div
                     className={`combat-main-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
-                    style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '4px 12px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'visible', justifyContent: 'flex-start', position: 'relative', zIndex: 4 }}
+                    style={{ gridColumn: 2, gridRow: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '4px 12px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'visible', justifyContent: 'flex-start', position: 'relative', zIndex: 4 }}
                 >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                     {isRestrictedThreatView && (
@@ -634,10 +630,11 @@ export function CombatCard({
                     className={`combat-cons-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
                     style={{
                     gridColumn: isMirroredThreatLayout ? 1 : 3,
+                    gridRow: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     minWidth: 0,
-                    paddingLeft: isMirroredThreatLayout ? '8px' : '8px',
+                    paddingLeft: '8px',
                     borderLeft: isMirroredThreatLayout ? 'none' : '1px solid rgba(255,255,255,0.1)',
                     borderRight: isMirroredThreatLayout ? '1px solid rgba(255,255,255,0.1)' : 'none',
                     paddingTop: '3px',
@@ -659,7 +656,6 @@ export function CombatCard({
                         </div>
                     )}
                 </div>
-                </div> {/* End De-skew */}
             </div>
 
             {/* Modal */}

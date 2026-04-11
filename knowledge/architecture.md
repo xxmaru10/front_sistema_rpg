@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-11 (story-38/follow-up-contencao-vertical-cards)
+last_updated: 2026-04-11 (story-38/follow-up-4.8-paridade-horizontal-inimigo)
 status: ativo
 ---
 
@@ -93,6 +93,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Widescreen nas Laterais + Handle Reancorado + Piramide Inimiga a Esquerda (Story 38 follow-up) | A grade da Arena ganhou ajuste dedicado para telas largas (`min-width: 1700px`), mantendo os blocos de cards mais colados nas laterais com margem de seguranca para nao conflitar com o menu. O handle de recolha foi reposicionado acima da linha do primeiro nome (aliados a direita do rail, inimigos totalmente a esquerda). Nos inimigos, os strips minimizados passaram a ancorar pela esquerda para evitar piramide invertida apontando para a direita, mantendo expansao por hover/pin. | 2026-04-11 |
 | Gaveta Aberta no Fluxo de Grid + Ancoragem Direita dos Inimigos (Story 38 follow-up) | Para reduzir colisao entre lados em monitores largos, o estado `is-open` da gaveta passou a ocupar a largura da coluna (`width: 100%`) e o painel interno foi tornado relativo, deixando de flutuar apenas com `position: absolute`. Os rails expandidos passaram a herdar largura da coluna em vez de clamps fixos. No lado de ameaças, os strips minimizados voltaram a ancorar na direita da tela, preservando leitura de piramide invertida do lado adversario. | 2026-04-11 |
 | Contencao Vertical do CombatCard na Arena (Story 38 follow-up) | O layout interno do `CombatCard` expandido recebeu ajuste de proporcao de colunas (imagem fluida por `%` em vez de `vw` duro) para evitar estrangulamento da coluna central que quebrava texto por caractere e inflava altura do card. O retrato lateral voltou a preencher toda a altura do card (removendo blocos pretos residuais abaixo da arte) e o aspecto principal foi limitado a linha unica com elipse para preservar densidade visual. | 2026-04-11 |
+| Paridade Horizontal do Card Inimigo (Story 38 follow-up) | O grid do `CombatCard` expandido de inimigos recebia incorretamente strings de grid-track (`minmax()`) como `width`/`minWidth` na coluna de imagem, causando colapso/empilhamento vertical das 3 colunas. Corrigido com remocao dessas propriedades invalidas, adicao de `gridRow: 1` em todas as colunas e `gridTemplateRows: '1fr'` no container para forcar layout em linha unica. Wrapper `display: contents` removido por estar com tag de fechamento ausente. Mobile recebe override de `grid-template-rows` e `grid-row` para preservar layout de 2 linhas (imagem+miolo | consequencias). | 2026-04-11 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
