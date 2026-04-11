@@ -146,6 +146,11 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             transform: scale(1.1);
         }
 
+        .combat-minimize-btn:hover {
+            color: #fff !important;
+            transform: scale(1.08);
+        }
+
         .combat-identity {
             flex-grow: 1;
             min-width: 0;
@@ -218,35 +223,35 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
 
         .combat-strip-shell {
             width: 100%;
-            min-height: 54px;
-            max-height: 54px;
-            border-radius: 14px;
+            min-height: 66px;
+            max-height: 66px;
+            border-radius: 0 34px 0 0;
             border: 1px solid rgba(255,255,255,0.18);
-            background: rgba(8, 10, 14, 0.72);
+            background: linear-gradient(110deg, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.92) 38%, rgba(255,255,255,0.08) 82%, rgba(255,255,255,0.01) 100%);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             overflow: hidden;
-            padding: 6px 10px;
+            padding: 0 12px 0 0;
             cursor: pointer;
             transition: min-height 0.22s ease, max-height 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
             box-shadow: 0 8px 20px rgba(0,0,0,0.45);
         }
 
         .combat-strip-shell:hover {
-            min-height: 110px;
-            max-height: 110px;
+            min-height: 142px;
+            max-height: 142px;
             transform: scale(1.01);
             box-shadow: 0 12px 28px rgba(0,0,0,0.52);
         }
 
         .combat-strip-image {
-            width: 48px;
-            min-width: 48px;
-            height: 42px;
-            border-radius: 10px;
+            width: 114px;
+            min-width: 114px;
+            height: 66px;
+            border-radius: 0 10px 0 0;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.25);
+            border-right: 1px solid rgba(255,255,255,0.2);
             background: #111;
             transition: width 0.22s ease, height 0.22s ease;
             display: inline-flex;
@@ -255,9 +260,9 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-strip-shell:hover .combat-strip-image {
-            width: 98px;
-            min-width: 98px;
-            height: 94px;
+            width: 162px;
+            min-width: 162px;
+            height: 142px;
         }
 
         .combat-strip-image img {
@@ -269,7 +274,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
 
         .combat-strip-name {
             font-family: var(--font-header);
-            font-size: 0.82rem;
+            font-size: 0.98rem;
             letter-spacing: 0.08em;
             color: #f3e6c1;
             white-space: nowrap;

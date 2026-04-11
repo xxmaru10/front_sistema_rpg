@@ -305,7 +305,7 @@ export function CombatCard({
                 {/* De-skew content container */}
                 <div style={{ display: 'contents', transform: innerSkew }}>
                 {/* Remove Button for GM */}
-                {canEdit && onRemove && (
+                                {canEdit && onRemove && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -314,7 +314,36 @@ export function CombatCard({
                         style={{ position: 'absolute', top: '4px', right: '4px', color: 'rgba(255,255,255,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', zIndex: 40 }}
                         className="combat-remove-btn"
                         title="Remover personagem da arena"
-                    >✕</button>
+                    >X</button>
+                )}
+                {onToggleExpanded && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleExpanded();
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: canEdit && onRemove ? '26px' : '4px',
+                            color: 'rgba(255,255,255,0.55)',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            zIndex: 40,
+                            fontSize: '1rem',
+                            lineHeight: 1,
+                            width: '18px',
+                            height: '18px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        className="combat-minimize-btn"
+                        title="Minimizar card"
+                    >
+                        -
+                    </button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
                 <div style={{ position: 'relative', width: imageColumnWidth, minWidth: imageColumnWidth, transform: imageSkew, marginLeft: imageMarginLeft, overflow: 'visible', alignSelf: 'stretch' }}>
@@ -347,7 +376,7 @@ export function CombatCard({
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
                             {/* Impulse - Top Left Over Image */}
-                            <div style={{ position: 'absolute', top: '8px', left: '-7px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
+                            <div style={{ position: 'absolute', top: '8px', left: '-5px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.75rem', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>)}
                                 </div>

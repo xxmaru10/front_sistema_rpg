@@ -1368,9 +1368,13 @@ body {
     margin-bottom: 0;
 }
 
+.combat-stack-slot {
+    width: 100%;
+}
+
 .combat-avatar-drawer-handle {
     position: absolute;
-    top: -20px;
+    top: -34px;
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -1389,11 +1393,11 @@ body {
 }
 
 .combat-avatar-drawer.side-left .combat-avatar-drawer-handle {
-    left: -45px;
+    left: -22px;
 }
 
 .combat-avatar-drawer.side-right .combat-avatar-drawer-handle {
-    left: -45px;
+    left: -22px;
 }
 
 .combat-avatar-drawer-handle:hover {

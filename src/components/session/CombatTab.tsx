@@ -72,6 +72,8 @@ export function CombatTab({
     const [isChallengeAspectsOpen, setIsChallengeAspectsOpen] = useState(false);
     const [expandedHeroCardId, setExpandedHeroCardId] = useState<string | null>(null);
     const [expandedThreatCardId, setExpandedThreatCardId] = useState<string | null>(null);
+    const [hoverHeroCardId, setHoverHeroCardId] = useState<string | null>(null);
+    const [hoverThreatCardId, setHoverThreatCardId] = useState<string | null>(null);
     const [challengeDiffDraft, setChallengeDiffDraft] = useState<string>("0");
 
     const heroCombatants = useMemo(
@@ -150,14 +152,20 @@ export function CombatTab({
         if (expandedHeroCardId && !heroCombatants.some(c => c.id === expandedHeroCardId)) {
             setExpandedHeroCardId(null);
         }
-    }, [heroCombatants, expandedHeroCardId]);
+        if (hoverHeroCardId && !heroCombatants.some(c => c.id === hoverHeroCardId)) {
+            setHoverHeroCardId(null);
+        }
+    }, [heroCombatants, expandedHeroCardId, hoverHeroCardId]);
 
     useEffect(() => {
         if (threatCombatants.length === 0) setIsThreatDrawerOpen(false);
         if (expandedThreatCardId && !threatCombatants.some(c => c.id === expandedThreatCardId)) {
             setExpandedThreatCardId(null);
         }
-    }, [threatCombatants, expandedThreatCardId]);
+        if (hoverThreatCardId && !threatCombatants.some(c => c.id === hoverThreatCardId)) {
+            setHoverThreatCardId(null);
+        }
+    }, [threatCombatants, expandedThreatCardId, hoverThreatCardId]);
 
     useEffect(() => {
         if (!showDiceRoller) setShowCombatLogs(false);
@@ -176,6 +184,20 @@ export function CombatTab({
     useEffect(() => {
         setChallengeDiffDraft(String(state.challenge?.difficulty ?? 0));
     }, [state.challenge?.difficulty]);
+
+    useEffect(() => {
+        if (!isHeroDrawerOpen) {
+            setExpandedHeroCardId(null);
+            setHoverHeroCardId(null);
+        }
+    }, [isHeroDrawerOpen]);
+
+    useEffect(() => {
+        if (!isThreatDrawerOpen) {
+            setExpandedThreatCardId(null);
+            setHoverThreatCardId(null);
+        }
+    }, [isThreatDrawerOpen]);
 
     return (
         <div className="combat-display animate-reveal">
@@ -403,37 +425,51 @@ export function CombatTab({
                                                 );
                                             }
 
-                                            const isExpandedCard = index === 0 || expandedHeroCardId === char.id;
+                                            const isPrimaryCard = index === 0;
+                                            const isExpandedCard = isPrimaryCard || expandedHeroCardId === char.id || hoverHeroCardId === char.id;
                                             if (isExpandedCard) {
                                                 return (
-                                                    <CombatCard
+                                                    <div
                                                         key={`${char.id}-hero-open`}
-                                                        character={char}
-                                                        sessionId={sessionId as string}
-                                                        actorUserId={actorUserId}
-                                                        isGM={userRole === "GM"}
-                                                        onRemove={char.isNPC ? () => handleRemoveCharacter(char.id) : undefined}
-                                                        isCurrentTurn={currentTurnActorId === char.id}
-                                                        isLinkedCharacter={fixedCharacterId === char.id}
-                                                        onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                        avatarSide="left"
-                                                    />
+                                                        className="combat-stack-slot"
+                                                        onMouseEnter={() => !isPrimaryCard && setHoverHeroCardId(char.id)}
+                                                        onMouseLeave={() => !isPrimaryCard && setHoverHeroCardId(prev => prev === char.id ? null : prev)}
+                                                    >
+                                                        <CombatCard
+                                                            character={char}
+                                                            sessionId={sessionId as string}
+                                                            actorUserId={actorUserId}
+                                                            isGM={userRole === "GM"}
+                                                            onRemove={char.isNPC ? () => handleRemoveCharacter(char.id) : undefined}
+                                                            isCurrentTurn={currentTurnActorId === char.id}
+                                                            isLinkedCharacter={fixedCharacterId === char.id}
+                                                            onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
+                                                            onToggleExpanded={!isPrimaryCard ? () => setExpandedHeroCardId(null) : undefined}
+                                                            avatarSide="left"
+                                                        />
+                                                    </div>
                                                 );
                                             }
 
                                             return (
-                                                <CombatCard
+                                                <div
                                                     key={`${char.id}-hero-strip`}
-                                                    character={char}
-                                                    sessionId={sessionId as string}
-                                                    actorUserId={actorUserId}
-                                                    isGM={userRole === "GM"}
-                                                    isCurrentTurn={currentTurnActorId === char.id}
-                                                    isLinkedCharacter={fixedCharacterId === char.id}
-                                                    displayMode="strip"
-                                                    avatarSide="left"
-                                                    onToggleExpanded={() => setExpandedHeroCardId(char.id)}
-                                                />
+                                                    className="combat-stack-slot"
+                                                    onMouseEnter={() => setHoverHeroCardId(char.id)}
+                                                    onMouseLeave={() => setHoverHeroCardId(prev => prev === char.id ? null : prev)}
+                                                >
+                                                    <CombatCard
+                                                        character={char}
+                                                        sessionId={sessionId as string}
+                                                        actorUserId={actorUserId}
+                                                        isGM={userRole === "GM"}
+                                                        isCurrentTurn={currentTurnActorId === char.id}
+                                                        isLinkedCharacter={fixedCharacterId === char.id}
+                                                        displayMode="strip"
+                                                        avatarSide="left"
+                                                        onToggleExpanded={() => setExpandedHeroCardId(char.id)}
+                                                    />
+                                                </div>
                                             );
                                         })}
                                     </div>
@@ -719,35 +755,49 @@ export function CombatTab({
                                                     );
                                                 }
 
-                                                const isExpandedCard = index === 0 || expandedThreatCardId === char.id;
+                                                const isPrimaryCard = index === 0;
+                                                const isExpandedCard = isPrimaryCard || expandedThreatCardId === char.id || hoverThreatCardId === char.id;
                                                 if (isExpandedCard) {
                                                     return (
-                                                        <CombatCard
+                                                        <div
                                                             key={`${char.id}-threat-open`}
-                                                            character={char}
-                                                            sessionId={sessionId as string}
-                                                            actorUserId={actorUserId}
-                                                            isGM={userRole === "GM"}
-                                                            onRemove={() => handleRemoveCharacter(char.id)}
-                                                            isCurrentTurn={currentTurnActorId === char.id}
-                                                            onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                            avatarSide="right"
-                                                        />
+                                                            className="combat-stack-slot"
+                                                            onMouseEnter={() => !isPrimaryCard && setHoverThreatCardId(char.id)}
+                                                            onMouseLeave={() => !isPrimaryCard && setHoverThreatCardId(prev => prev === char.id ? null : prev)}
+                                                        >
+                                                            <CombatCard
+                                                                character={char}
+                                                                sessionId={sessionId as string}
+                                                                actorUserId={actorUserId}
+                                                                isGM={userRole === "GM"}
+                                                                onRemove={() => handleRemoveCharacter(char.id)}
+                                                                isCurrentTurn={currentTurnActorId === char.id}
+                                                                onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
+                                                                onToggleExpanded={!isPrimaryCard ? () => setExpandedThreatCardId(null) : undefined}
+                                                                avatarSide="right"
+                                                            />
+                                                        </div>
                                                     );
                                                 }
 
                                                 return (
-                                                    <CombatCard
+                                                    <div
                                                         key={`${char.id}-threat-strip`}
-                                                        character={char}
-                                                        sessionId={sessionId as string}
-                                                        actorUserId={actorUserId}
-                                                        isGM={userRole === "GM"}
-                                                        isCurrentTurn={currentTurnActorId === char.id}
-                                                        displayMode="strip"
-                                                        avatarSide="right"
-                                                        onToggleExpanded={() => setExpandedThreatCardId(char.id)}
-                                                    />
+                                                        className="combat-stack-slot"
+                                                        onMouseEnter={() => setHoverThreatCardId(char.id)}
+                                                        onMouseLeave={() => setHoverThreatCardId(prev => prev === char.id ? null : prev)}
+                                                    >
+                                                        <CombatCard
+                                                            character={char}
+                                                            sessionId={sessionId as string}
+                                                            actorUserId={actorUserId}
+                                                            isGM={userRole === "GM"}
+                                                            isCurrentTurn={currentTurnActorId === char.id}
+                                                            displayMode="strip"
+                                                            avatarSide="right"
+                                                            onToggleExpanded={() => setExpandedThreatCardId(char.id)}
+                                                        />
+                                                    </div>
                                                 );
                                             })}
                                         </div>
