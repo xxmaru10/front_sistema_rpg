@@ -3,7 +3,7 @@ title: "Story ativa - Story 38 (Arena: gaveta vidro transparente na extrema esqu
 story_ref: "story-38-arena-gaveta-vidro-transparente-na-extrema-esquerda-com-expansao-interna-dos-cards.md"
 epic: "epic-02-rework-cards-arena-gavetas-e-interacoes"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-3.7 aplicado)"
+last_updated: "2026-04-11 (follow-up-3.8 aplicado)"
 ---
 
 ## Progresso Atual
@@ -11,12 +11,13 @@ last_updated: "2026-04-11 (follow-up-3.7 aplicado)"
 - Gavetas da arena seguem em rework com cards internos e barra de rolagem integrada no topo.
 - Cards secundarios seguem em modo colapsado (faixa) com expansao por hover/click e pin multiplo.
 - Correcao aplicada na coluna de retrato dos inimigos para hover/fixacao, com destino reposicionado na base da imagem.
-- Responsividade de cards e barra integrada refinada para desktop menor e mobile (incluindo ordem aliados > adversarios em mobile).
+- Trilhas de estresse migradas para PNGs tematicos com tint por tema, e densidade vertical dos cards reduzida para aproximar da altura util.
+- Ajustes mobile: trilhas de estresse podem empilhar para mostrar todas as caixas, impulso reduzido e barra integrada com bonus mais estreito.
 
 ## Proximo Passo
-1. Validar em sessao real (GM/jogador) que retratos de inimigos nao somem em hover/pin com multiplos cards fixos.
-2. Validar barra de rolagem integrada em mobile para confirmar reflow sem quebra de controles.
-3. Aguardar PNGs de stress/mental para substituir icones temporarios e aplicar tint por tema.
+1. Validar com o usuario a diferenca visual entre cards de aliados/adversarios apos reducao vertical aplicada.
+2. Validar em device real mobile o empilhamento das trilhas de estresse (todas as caixas visiveis).
+3. Ajustar fino final do campo de bonus na barra integrada, caso precise mais legibilidade sem perder compactacao.
 
 ## Handoff Prompt
 ```text

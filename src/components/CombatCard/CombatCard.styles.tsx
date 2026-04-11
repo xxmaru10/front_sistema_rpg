@@ -578,6 +578,14 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
         }
 
+        .impulse-arrow-inline {
+            font-size: 0.75rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .impulse-empty {
             color: rgba(255,255,255,0.45);
             font-size: 0.7rem;
@@ -1124,6 +1132,10 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             .combat-card-wrapper .combat-external-stress {
                 align-items: center !important;
                 gap: 5px !important;
+            }
+
+            .impulse-arrow-inline {
+                font-size: 0.53rem;
             }
 
             .combat-card.expanded-card {

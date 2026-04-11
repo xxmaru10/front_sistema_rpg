@@ -68,8 +68,8 @@ export function RollerInputs({
 
     const actionWidth = computeIntegratedWidth("SUPERAR", selectedActionLabel, 12);
     const bonusWidth = manualBonus === 0
-        ? "8ch"
-        : `${Math.min(Math.max(String(manualBonus).length + 2, 3), 8)}ch`;
+        ? "4ch"
+        : `${Math.min(Math.max(String(manualBonus).length + 1, 2), 4)}ch`;
 
     const handleActionChange = (value: string) => {
         setActionType(value as RollerInputsProps["actionType"]);
@@ -237,7 +237,7 @@ export function RollerInputs({
                                     setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
                                 }}
                                 className="mystic-input input-ritual bonus-input"
-                                style={isIntegrated ? { width: bonusWidth, maxWidth: "8ch" } : undefined}
+                                style={isIntegrated ? { width: bonusWidth, maxWidth: "4ch" } : undefined}
                             />
                         </div>
                     </div>
@@ -490,7 +490,7 @@ export function RollerInputs({
                 }
 
                 .bonus-input {
-                    width: 50px !important;
+                    width: 25px !important;
                     text-align: center;
                     font-size: 1rem !important;
                     font-weight: 700 !important;
@@ -498,8 +498,8 @@ export function RollerInputs({
 
                 .control-panel-grid.integrated-mode .bonus-input {
                     width: auto !important;
-                    min-width: 3ch;
-                    font-size: 1.18rem !important;
+                    min-width: 2ch;
+                    font-size: 1.08rem !important;
                     font-weight: 800 !important;
                     line-height: 1;
                 }

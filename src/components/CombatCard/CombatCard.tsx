@@ -405,8 +405,8 @@ export function CombatCard({
                     position: 'relative',
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
-                    minHeight: dynamicCardHeight ? `${Math.max(180, dynamicCardHeight)}px` : '220px',
-                    height: dynamicCardHeight ? `${Math.max(180, dynamicCardHeight)}px` : '220px',
+                    minHeight: dynamicCardHeight ? `${Math.max(126, dynamicCardHeight)}px` : '154px',
+                    height: dynamicCardHeight ? `${Math.max(126, dynamicCardHeight)}px` : '154px',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
@@ -459,7 +459,9 @@ export function CombatCard({
                                 pointerEvents: 'auto'
                             }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-                                    {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.75rem', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>)}
+                                    {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => (
+                                        <span key={`imp-${index}`} className="impulse-arrow-inline" style={{ color: '#fff', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>
+                                    ))}
                                 </div>
                                 {isGM && (
                                     <div style={{ display: 'flex', gap: '4px', opacity: 1, marginTop: '2px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: '999px', padding: '1px 4px', width: 'fit-content' }}>
@@ -490,7 +492,7 @@ export function CombatCard({
 
                 <div
                     className={`combat-main-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
-                    style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '6px 14px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start', position: 'relative', zIndex: 4 }}
+                    style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '4px 12px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start', position: 'relative', zIndex: 4 }}
                 >
                     <div ref={middleContentRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                     {isRestrictedThreatView && (
@@ -627,8 +629,8 @@ export function CombatCard({
                     paddingLeft: isMirroredThreatLayout ? '8px' : '8px',
                     borderLeft: isMirroredThreatLayout ? 'none' : '1px solid rgba(255,255,255,0.1)',
                     borderRight: isMirroredThreatLayout ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                    paddingTop: '4px',
-                    paddingBottom: '4px',
+                    paddingTop: '2px',
+                    paddingBottom: '2px',
                     paddingRight: '8px',
                     transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)',
                     justifyContent: 'flex-start',

@@ -1,7 +1,6 @@
 "use client";
 
 import { Character } from "@/types/domain";
-import { Brain, Dumbbell } from "lucide-react";
 
 interface CombatStressTracksProps {
     character: Character;
@@ -21,9 +20,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
             <div className="combat-stress-section">
                 <div className="combat-track">
                     <div className="track-display">
-                        <span className="track-icon physical" aria-hidden="true">
-                            <Dumbbell size={17} strokeWidth={1.9} />
-                        </span>
+                        <span className="track-icon physical png" aria-hidden="true" />
                         <div className="track-circles">
                             {character.stress.physical.map((box, i) => (
                                 <button
@@ -41,9 +38,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 <div className="divider" aria-hidden="true" />
                 <div className="combat-track">
                     <div className="track-display">
-                        <span className="track-icon mental" aria-hidden="true">
-                            <Brain size={17} strokeWidth={1.9} />
-                        </span>
+                        <span className="track-icon mental png" aria-hidden="true" />
                         <div className="track-circles">
                             {character.stress.mental.map((box, i) => (
                                 <button
@@ -110,11 +105,28 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.46));
                 }
 
+                .track-icon.png {
+                    width: 19px;
+                    height: 19px;
+                    background-color: rgb(var(--accent-rgb));
+                    background-color: color-mix(in srgb, rgb(var(--accent-rgb)) 76%, #ffffff 24%);
+                    -webkit-mask-image: var(--stress-icon-url);
+                    mask-image: var(--stress-icon-url);
+                    -webkit-mask-repeat: no-repeat;
+                    mask-repeat: no-repeat;
+                    -webkit-mask-position: center;
+                    mask-position: center;
+                    -webkit-mask-size: contain;
+                    mask-size: contain;
+                }
+
                 .track-icon.physical {
+                    --stress-icon-url: url('/interface/fisico.png');
                     color: color-mix(in srgb, rgb(var(--accent-rgb)) 65%, #ff8888);
                 }
 
                 .track-icon.mental {
+                    --stress-icon-url: url('/interface/mental.png');
                     color: color-mix(in srgb, rgb(var(--accent-rgb)) 62%, #a992ff);
                 }
                 
@@ -161,6 +173,39 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     border-color: #ff4444 !important;
                     color: #000 !important;
                     box-shadow: 0 0 10px rgba(255, 44, 44, 0.5);
+                }
+
+                @media (max-width: 768px) {
+                    .combat-stress-container {
+                        padding: 7px 10px;
+                        max-width: min(95vw, 320px);
+                    }
+
+                    .combat-stress-section {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 8px;
+                    }
+
+                    .divider {
+                        display: none;
+                    }
+
+                    .track-display {
+                        align-items: flex-start;
+                    }
+
+                    .track-circles {
+                        flex-wrap: wrap;
+                        row-gap: 5px;
+                        max-width: 100%;
+                    }
+
+                    .stress-circle {
+                        width: 21px;
+                        height: 21px;
+                        font-size: 0.63rem;
+                    }
                 }
             `}</style>
         </div>
