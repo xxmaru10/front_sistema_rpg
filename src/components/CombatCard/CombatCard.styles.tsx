@@ -146,9 +146,20 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             transform: scale(1.1);
         }
 
+        .combat-pin-btn {
+            color: #f3e1b3 !important;
+            text-shadow: 0 0 8px rgba(255, 230, 170, 0.78), 0 0 14px rgba(255, 215, 140, 0.46);
+            filter: drop-shadow(0 0 6px rgba(255, 220, 140, 0.55));
+        }
+
+        .combat-pin-btn svg {
+            filter: drop-shadow(0 0 7px rgba(255, 220, 140, 0.7));
+        }
+
         .combat-pin-btn:hover {
             color: #fff !important;
             transform: scale(1.08);
+            filter: drop-shadow(0 0 10px rgba(255, 240, 190, 0.9));
         }
 
         .combat-identity {

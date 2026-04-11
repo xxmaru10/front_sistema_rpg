@@ -437,6 +437,7 @@ export function RollerInputs({
                     opacity: 0;
                     cursor: pointer;
                     z-index: 2;
+                    color-scheme: dark;
                 }
 
                 .select-ritual,
@@ -507,6 +508,14 @@ export function RollerInputs({
                 .add-target-select option {
                     background: #0a0d13;
                     color: #f2f6ff;
+                    font-family: var(--font-header);
+                }
+
+                .select-ritual option:checked,
+                .icon-select-native option:checked,
+                .add-target-select option:checked {
+                    background: #1f3b61 !important;
+                    color: #ffffff !important;
                 }
 
                 .target-selection-area {

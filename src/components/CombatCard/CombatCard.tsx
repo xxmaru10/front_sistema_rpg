@@ -275,43 +275,53 @@ export function CombatCard({
                 gap: '8px', 
                 marginBottom: '12px',
                 position: 'relative',
-                width: 'min(100%, 1195px)',
+                width: 'min(100%, 1375px)',
                 '--card-accent': accentColor,
                 '--card-accent-soft': accentSoftColor
             } as any}
         >
             {!isRestrictedThreatView && (
-                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 50, display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
-                    <CombatStressTracks
-                        character={character}
-                        canEditSelf={canEditSelf}
-                        handleStressToggle={handleStressToggle}
-                    />
-                    {/* Dice Roller Trigger - Right of Stress */}
-                    {onToggleDiceRoller && isOwner && !isGM && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleDiceRoller();
-                            }}
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                borderRadius: '4px',
-                                color: '#fff',
-                                padding: '6px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s',
-                            }}
-                            className="combat-dice-trigger-outer"
-                            title="Abrir dados"
-                        >
-                            <Dices size={16} />
-                        </button>
-                    )}
+                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 70, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0, flex: '1 1 220px' }}>
+                        <h3 className="combat-name" style={{ fontSize: '1.05rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
+                        {character.difficulty !== undefined && (
+                            <span style={{ fontSize: '0.7rem', padding: '2px 4px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff', alignSelf: 'center' }}>
+                                DIF {character.difficulty}
+                            </span>
+                        )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', gap: '10px', marginLeft: 'auto', flex: '0 1 auto', flexWrap: 'wrap' }}>
+                        <CombatStressTracks
+                            character={character}
+                            canEditSelf={canEditSelf}
+                            handleStressToggle={handleStressToggle}
+                        />
+                        {/* Dice Roller Trigger - Right of Stress */}
+                        {onToggleDiceRoller && isOwner && !isGM && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleDiceRoller();
+                                }}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    borderRadius: '4px',
+                                    color: '#fff',
+                                    padding: '6px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s',
+                                }}
+                                className="combat-dice-trigger-outer"
+                                title="Abrir dados"
+                            >
+                                <Dices size={16} />
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -431,7 +441,7 @@ export function CombatCard({
                             <div style={{
                                 position: 'absolute',
                                 top: '8px',
-                                ...(isMirroredThreatLayout ? { right: 'calc(10px + 30%)' } : { left: 'calc(10px + 30%)' }),
+                                ...(isMirroredThreatLayout ? { right: 'calc(10px + 50%)' } : { left: 'calc(10px + 10%)' }),
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '2px',
@@ -470,14 +480,16 @@ export function CombatCard({
 
                 <div style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '6px 14px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
                     <div ref={middleContentRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
-                        {character.difficulty !== undefined && (
-                            <span style={{ fontSize: '0.7rem', padding: '2px 4px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff' }}>
-                                DIF {character.difficulty}
-                            </span>
-                        )}
-                    </div>
+                    {isRestrictedThreatView && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
+                            {character.difficulty !== undefined && (
+                                <span style={{ fontSize: '0.7rem', padding: '2px 4px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff' }}>
+                                    DIF {character.difficulty}
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {!isRestrictedThreatView && conceptAspect && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -505,7 +517,7 @@ export function CombatCard({
                     )}
 
                     {!isRestrictedThreatView && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
                             {/* LINHA DE ÍCONES EXPANSÍVEIS */}
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 {character.stunts && character.stunts.length > 0 && (
