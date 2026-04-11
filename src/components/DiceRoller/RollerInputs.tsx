@@ -15,6 +15,7 @@ interface RollerInputsProps {
     setActionType: (type: "ATTACK" | "DEFEND" | "OVERCOME" | "CREATE_ADVANTAGE") => void;
     damageType: "PHYSICAL" | "MENTAL";
     toggleDamageType: () => void;
+    setExplicitDamageType: (type: "PHYSICAL" | "MENTAL") => void;
     selectedItemId: string;
     setSelectedItemId: (id: string) => void;
     allItems: Item[];
@@ -38,7 +39,8 @@ export function RollerInputs({
     actionType,
     setActionType,
     damageType,
-    toggleDamageType,
+    toggleDamageType: _toggleDamageType,
+    setExplicitDamageType,
     selectedItemId,
     setSelectedItemId,
     allItems,
@@ -50,34 +52,54 @@ export function RollerInputs({
     isGM,
     activeChar
 }: RollerInputsProps) {
+    const physicalGlyph = "\u2694";
+    const mentalGlyph = "\ud83e\udde0";
+
     const actionLabelMap: Record<RollerInputsProps["actionType"], string> = {
         OVERCOME: "SUPERAR",
-        ATTACK: "ATACAR",
+        ATTACK: `ATK: ${damageType === "PHYSICAL" ? physicalGlyph : mentalGlyph}`,
         CREATE_ADVANTAGE: "VANTAGEM",
         DEFEND: "DEFENDER",
     };
 
-    const selectedSkillLabel = selectedSkill ? selectedSkill.toUpperCase() : "PERÍCIA";
     const selectedActionLabel = actionLabelMap[actionType] || "SUPERAR";
-    const selectedItemLabel = selectedItemId
-        ? (allItems.find(item => item.id === selectedItemId)?.name?.toUpperCase() || "INVENTÁRIO")
-        : "INVENTÁRIO";
-
     const computeIntegratedWidth = (baseLabel: string, currentLabel: string, maxCh = 14) => {
         const base = baseLabel.length + 1;
         const current = currentLabel.length + 1;
         return `${Math.min(Math.max(base, current), maxCh)}ch`;
     };
 
-    const skillWidth = computeIntegratedWidth("PERÍCIA", selectedSkillLabel, 14);
     const actionWidth = computeIntegratedWidth("SUPERAR", selectedActionLabel, 12);
-    const itemWidth = computeIntegratedWidth("INVENTÁRIO", selectedItemLabel, 16);
     const bonusWidth = manualBonus === 0
         ? "8ch"
         : `${Math.min(Math.max(String(manualBonus).length + 2, 3), 8)}ch`;
 
+    const actionSelectValue = actionType === "ATTACK"
+        ? (damageType === "PHYSICAL" ? "ATTACK_PHYSICAL" : "ATTACK_MENTAL")
+        : actionType;
+
+    const handleActionChange = (value: string) => {
+        if (value === "ATTACK_PHYSICAL") {
+            setActionType("ATTACK");
+            setExplicitDamageType("PHYSICAL");
+            return;
+        }
+        if (value === "ATTACK_MENTAL") {
+            setActionType("ATTACK");
+            setExplicitDamageType("MENTAL");
+            return;
+        }
+        setActionType(value as RollerInputsProps["actionType"]);
+    };
+
+    const skillOptions = (() => {
+        const ownedSkills = DEFAULT_SKILLS.filter(s => (activeChar?.skills?.[s] || 0) > 0);
+        const otherSkills = DEFAULT_SKILLS.filter(s => (activeChar?.skills?.[s] || 0) <= 0);
+        return { ownedSkills, otherSkills };
+    })();
+
     return (
-        <div className={`matrix-inputs flex-stagger ${isIntegrated ? 'integrated' : ''}`}>
+        <div className={`matrix-inputs flex-stagger ${isIntegrated ? "integrated" : ""}`}>
             {!fixedCharacterId && (
                 <div className="matrix-field">
                     {!isIntegrated && <label>PERSONAGEM</label>}
@@ -93,126 +115,136 @@ export function RollerInputs({
                 </div>
             )}
 
-            <div className={`control-panel-grid ${isIntegrated ? 'integrated-mode' : ''}`}>
+            <div className={`control-panel-grid ${isIntegrated ? "integrated-mode" : ""}`}>
                 <div className="panel-col primary">
                     <div className="matrix-field">
-                        {!isIntegrated && <label>PERÍCIA</label>}
+                        {!isIntegrated && <label>PERICIA</label>}
                         <div className="field-row">
-                            {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
-                            <select
-                                value={selectedSkill}
-                                onChange={(e) => handleSkillSelect(e.target.value)}
-                                className="mystic-input select-ritual"
-                                style={isIntegrated ? { width: skillWidth, maxWidth: '14ch' } : undefined}
-                            >
-                                <option value="">{isIntegrated ? "PERÍCIA" : "ROLAGEM PURA"}</option>
-                                {(() => {
-                                    const ownedSkills = DEFAULT_SKILLS.filter(s => (activeChar?.skills?.[s] || 0) > 0);
-                                    const otherSkills = DEFAULT_SKILLS.filter(s => (activeChar?.skills?.[s] || 0) <= 0);
-
-                                    return (
-                                        <>
-                                            {ownedSkills.sort().map(skill => {
-                                                const rank = activeChar?.skills?.[skill] || 0;
-                                                return (
-                                                    <option
-                                                        key={skill}
-                                                        value={skill}
-                                                        style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}
-                                                    >
-                                                        ⭐ {skill.toUpperCase()} (+{rank})
-                                                    </option>
-                                                );
-                                            })}
-                                            {ownedSkills.length > 0 && <option disabled>──────────</option>}
-                                            {otherSkills.sort().map(skill => {
-                                                const rank = activeChar?.skills?.[skill] || 0;
-                                                return (
-                                                    <option key={skill} value={skill}>
-                                                        {skill.toUpperCase()} ({rank})
-                                                    </option>
-                                                );
-                                            })}
-                                        </>
-                                    );
-                                })()}
-                            </select>
+                            {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
+                            {isIntegrated ? (
+                                <div className="icon-select-shell" title="Pericia">
+                                    <span className="icon-select-face"><Sparkles size={14} /></span>
+                                    <select
+                                        value={selectedSkill}
+                                        onChange={(e) => handleSkillSelect(e.target.value)}
+                                        className="icon-select-native"
+                                        aria-label="Pericia"
+                                    >
+                                        <option value="">PERICIA</option>
+                                        {skillOptions.ownedSkills.sort().map(skill => {
+                                            const rank = activeChar?.skills?.[skill] || 0;
+                                            return <option key={skill} value={skill}>{skill.toUpperCase()} (+{rank})</option>;
+                                        })}
+                                        {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
+                                        {skillOptions.otherSkills.sort().map(skill => {
+                                            const rank = activeChar?.skills?.[skill] || 0;
+                                            return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
+                                        })}
+                                    </select>
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedSkill}
+                                    onChange={(e) => handleSkillSelect(e.target.value)}
+                                    className="mystic-input select-ritual"
+                                >
+                                    <option value="">ROLAGEM PURA</option>
+                                    {skillOptions.ownedSkills.sort().map(skill => {
+                                        const rank = activeChar?.skills?.[skill] || 0;
+                                        return (
+                                            <option key={skill} value={skill} style={{ color: "var(--accent-color)", fontWeight: "bold" }}>
+                                                {skill.toUpperCase()} (+{rank})
+                                            </option>
+                                        );
+                                    })}
+                                    {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
+                                    {skillOptions.otherSkills.sort().map(skill => {
+                                        const rank = activeChar?.skills?.[skill] || 0;
+                                        return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
+                                    })}
+                                </select>
+                            )}
                         </div>
                     </div>
 
                     <div className="matrix-field">
-                        {!isIntegrated && <label>AÇÃO</label>}
+                        {!isIntegrated && <label>ACAO</label>}
                         <div className="field-row">
-                            {!isIntegrated && <Zap size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
+                            {!isIntegrated && <Zap size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             <select
-                                value={actionType}
-                                onChange={(e) => setActionType(e.target.value as any)}
+                                value={actionSelectValue}
+                                onChange={(e) => handleActionChange(e.target.value)}
                                 className="mystic-input select-ritual"
-                                style={isIntegrated ? { width: actionWidth, maxWidth: '12ch' } : undefined}
+                                style={isIntegrated ? { width: actionWidth, maxWidth: "12ch" } : undefined}
                             >
                                 <option value="OVERCOME">SUPERAR</option>
-                                <option value="ATTACK">ATACAR</option>
+                                <option value="ATTACK_PHYSICAL">{`ATK: ${physicalGlyph}`}</option>
+                                <option value="ATTACK_MENTAL">{`ATK: ${mentalGlyph}`}</option>
                                 <option value="CREATE_ADVANTAGE">CRIAR VANTAGEM</option>
                                 <option value="DEFEND">DEFENDER</option>
                             </select>
                         </div>
                     </div>
-
-                    {actionType === "ATTACK" && (
-                        <div className="matrix-field">
-                            <label>DANO</label>
-                            <button
-                                className={`mystic-input select-ritual damage-type-toggle ${damageType.toLowerCase()}`}
-                                onClick={toggleDamageType}
-                                title="Alternar entre Físico e Mental"
-                            >
-                                {damageType === "PHYSICAL" ? "💪 FÍSICO" : "🧠 MENTAL"}
-                            </button>
-                        </div>
-                    )}
                 </div>
 
                 <div className="panel-col secondary">
                     <div className="matrix-field item-field-container">
-                        {!isIntegrated && <label>ITEM</label>}
+                        {!isIntegrated && <label>INVENTARIO</label>}
                         <div className="field-row">
-                            {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
-                            <select
-                                value={selectedItemId}
-                                onChange={(e) => setSelectedItemId(e.target.value)}
-                                className="mystic-input select-ritual"
-                                style={{
-                                    width: isIntegrated ? itemWidth : undefined,
-                                    maxWidth: isIntegrated ? '16ch' : undefined,
-                                    textAlign: 'center',
-                                    textIndent: '0',
-                                    padding: '8px 16px'
-                                }}
-                            >
-                                <option value="">INVENTÁRIO</option>
-                                {allItems.filter(i => i.name && i.bonus > 0).map(item => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.name.toUpperCase()} ({item.bonus >= 0 ? `+${item.bonus}` : item.bonus})
-                                    </option>
-                                ))}
-                            </select>
+                            {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
+                            {isIntegrated ? (
+                                <div className="icon-select-shell" title="Inventario">
+                                    <span className="icon-select-face"><Backpack size={14} /></span>
+                                    <select
+                                        value={selectedItemId}
+                                        onChange={(e) => setSelectedItemId(e.target.value)}
+                                        className="icon-select-native"
+                                        aria-label="Inventario"
+                                    >
+                                        <option value="">INVENTARIO</option>
+                                        {allItems.filter(i => i.name && i.bonus > 0).map(item => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name.toUpperCase()} ({item.bonus >= 0 ? `+${item.bonus}` : item.bonus})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedItemId}
+                                    onChange={(e) => setSelectedItemId(e.target.value)}
+                                    className="mystic-input select-ritual"
+                                    style={{
+                                        textAlign: "center",
+                                        textIndent: "0",
+                                        padding: "8px 16px"
+                                    }}
+                                >
+                                    <option value="">INVENTARIO</option>
+                                    {allItems.filter(i => i.name && i.bonus > 0).map(item => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.name.toUpperCase()} ({item.bonus >= 0 ? `+${item.bonus}` : item.bonus})
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
                         </div>
                     </div>
 
                     <div className="matrix-field bonus-field-container">
-                        {!isIntegrated && <label>BÔNUS</label>}
+                        {!isIntegrated && <label>BONUS</label>}
                         <div className="field-row">
-                            {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: 'var(--accent-color)' }} />}
+                            {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             <input
                                 type="number"
-                                placeholder="BÔNUS"
+                                placeholder="BONUS"
                                 value={manualBonus === 0 ? "" : manualBonus}
                                 onChange={(e) => {
                                     const rawValue = e.target.value;
                                     setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
                                 }}
                                 className="mystic-input input-ritual bonus-input"
-                                style={isIntegrated ? { width: bonusWidth, maxWidth: '8ch' } : undefined}
+                                style={isIntegrated ? { width: bonusWidth, maxWidth: "8ch" } : undefined}
                             />
                         </div>
                     </div>
@@ -228,7 +260,7 @@ export function RollerInputs({
                                     return (
                                         <div key={tid} className="target-tag">
                                             <span>{char?.name.toUpperCase() || "???"}</span>
-                                            <button className="remove-tag" onClick={() => handleTargetRemove(tid)}>×</button>
+                                            <button className="remove-tag" onClick={() => handleTargetRemove(tid)}>x</button>
                                         </div>
                                     );
                                 })}
@@ -245,14 +277,14 @@ export function RollerInputs({
                                             .filter(c => {
                                                 if (!isGM) {
                                                     const arenaSide = c.arenaSide as string | undefined;
-                                                    const isThreat = (arenaSide === 'THREAT') || (c.isNPC && arenaSide !== 'HERO');
+                                                    const isThreat = (arenaSide === "THREAT") || (c.isNPC && arenaSide !== "HERO");
                                                     return isThreat;
                                                 }
                                                 return true;
                                             })
                                             .map(c => (
                                                 <option key={c.id} value={c.id}>
-                                                    {c.isNPC ? 'NPC :: ' : 'PC :: '}{c.name.toUpperCase()}
+                                                    {c.isNPC ? "NPC :: " : "PC :: "}{c.name.toUpperCase()}
                                                 </option>
                                             ))
                                         }
@@ -273,10 +305,10 @@ export function RollerInputs({
 
                 .matrix-inputs.integrated {
                     flex-direction: row;
-                    flex-wrap: nowrap;
+                    flex-wrap: wrap;
                     align-items: center;
                     gap: 6px;
-                    min-width: max-content;
+                    min-width: 0;
                 }
 
                 .matrix-field {
@@ -311,7 +343,7 @@ export function RollerInputs({
                     align-items: center !important;
                     justify-content: flex-start !important;
                     gap: 6px;
-                    flex-wrap: nowrap;
+                    flex-wrap: wrap;
                 }
 
                 .panel-col {
@@ -353,7 +385,41 @@ export function RollerInputs({
                     gap: 0;
                 }
 
-                .select-ritual, 
+                .icon-select-shell {
+                    position: relative;
+                    width: 32px;
+                    min-width: 32px;
+                    height: 30px;
+                    border-radius: 10px;
+                    border: 1px solid var(--accent-color);
+                    background: #000;
+                    box-shadow: 0 0 14px var(--accent-glow), inset 0 0 9px var(--accent-glow);
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                }
+
+                .icon-select-face {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: var(--accent-color);
+                    pointer-events: none;
+                    z-index: 1;
+                }
+
+                .icon-select-native {
+                    position: absolute;
+                    inset: 0;
+                    width: 100%;
+                    height: 100%;
+                    opacity: 0;
+                    cursor: pointer;
+                    z-index: 2;
+                }
+
+                .select-ritual,
                 .input-ritual {
                     background: #000000 !important;
                     border: 1px solid var(--accent-color) !important;
@@ -396,18 +462,6 @@ export function RollerInputs({
                     stroke: var(--accent-color) !important;
                     filter: drop-shadow(0 0 5px var(--accent-glow)) drop-shadow(0 0 10px var(--accent-glow));
                 }
-
-                .damage-type-toggle {
-                    cursor: pointer;
-                    text-align: center;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s ease;
-                }
-
-                .damage-type-toggle.physical { border-color: rgba(255, 100, 100, 0.4); color: #ff8888; }
-                .damage-type-toggle.mental { border-color: rgba(100, 200, 255, 0.4); color: #88ccff; }
 
                 .bonus-input {
                     width: 50px !important;
@@ -457,7 +511,7 @@ export function RollerInputs({
                     border: 1px solid rgba(255, 68, 68, 0.4);
                     color: #ff4444;
                     cursor: pointer;
-                    font-size: 1.1rem;
+                    font-size: 1rem;
                     padding: 0;
                     width: 22px;
                     height: 22px;
@@ -470,8 +524,8 @@ export function RollerInputs({
                     margin-left: 4px;
                 }
 
-                .remove-tag:hover { 
-                    background: #ff4444; 
+                .remove-tag:hover {
+                    background: #ff4444;
                     color: #fff;
                     transform: scale(1.1);
                     border-color: #ff6666;

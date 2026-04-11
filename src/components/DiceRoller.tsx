@@ -102,6 +102,7 @@ export function DiceRoller(props: DiceRollerProps) {
                 setActionType={roller.setActionType}
                 damageType={roller.damageType}
                 toggleDamageType={roller.toggleDamageType}
+                setExplicitDamageType={roller.setExplicitDamageType}
                 selectedItemId={roller.selectedItemId}
                 setSelectedItemId={roller.setSelectedItemId}
                 allItems={roller.allItems}
@@ -160,7 +161,7 @@ export function DiceRoller(props: DiceRollerProps) {
                     width: auto;
                     display: flex;
                     flex-direction: row;
-                    flex-wrap: nowrap;
+                    flex-wrap: wrap;
                     align-items: center;
                     justify-content: flex-start;
                     overflow: visible;

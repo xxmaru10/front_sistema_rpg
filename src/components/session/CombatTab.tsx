@@ -70,6 +70,9 @@ export function CombatTab({
     const [isThreatDrawerOpen, setIsThreatDrawerOpen] = useState(false);
     const [showCombatLogs, setShowCombatLogs] = useState(false);
     const [isChallengeAspectsOpen, setIsChallengeAspectsOpen] = useState(false);
+    const [expandedHeroCardId, setExpandedHeroCardId] = useState<string | null>(null);
+    const [expandedThreatCardId, setExpandedThreatCardId] = useState<string | null>(null);
+    const [challengeDiffDraft, setChallengeDiffDraft] = useState<string>("0");
 
     const heroCombatants = useMemo(
         () => combatantList.filter(c => !c.isHazard && (c.arenaSide === "HERO" || (!c.isNPC && !c.arenaSide))),
@@ -144,11 +147,17 @@ export function CombatTab({
 
     useEffect(() => {
         if (heroCombatants.length === 0) setIsHeroDrawerOpen(false);
-    }, [heroCombatants.length]);
+        if (expandedHeroCardId && !heroCombatants.some(c => c.id === expandedHeroCardId)) {
+            setExpandedHeroCardId(null);
+        }
+    }, [heroCombatants, expandedHeroCardId]);
 
     useEffect(() => {
         if (threatCombatants.length === 0) setIsThreatDrawerOpen(false);
-    }, [threatCombatants.length]);
+        if (expandedThreatCardId && !threatCombatants.some(c => c.id === expandedThreatCardId)) {
+            setExpandedThreatCardId(null);
+        }
+    }, [threatCombatants, expandedThreatCardId]);
 
     useEffect(() => {
         if (!showDiceRoller) setShowCombatLogs(false);
@@ -163,6 +172,10 @@ export function CombatTab({
             setIsChallengeAspectsOpen(true);
         }
     }, [showChallengePanel, hasChallengeAspects]);
+
+    useEffect(() => {
+        setChallengeDiffDraft(String(state.challenge?.difficulty ?? 0));
+    }, [state.challenge?.difficulty]);
 
     return (
         <div className="combat-display animate-reveal">
@@ -240,6 +253,15 @@ export function CombatTab({
                                     disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
                                     soundSettings={state.soundSettings}
                                 />
+                                <button
+                                    type="button"
+                                    className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
+                                    onClick={() => setShowCombatLogs(prev => !prev)}
+                                    title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                    aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                >
+                                    <ScrollText size={15} />
+                                </button>
                                 {showChallengePanel && (
                                     <div
                                         className={`combat-inline-challenge ${hasChallengeAspects || (userRole === "GM" && isChallengeAspectsOpen) ? "has-aspects" : ""}`}
@@ -252,10 +274,24 @@ export function CombatTab({
                                             <div className="combat-inline-diff-box">
                                                 <span className="combat-inline-diff-label">DIF</span>
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     className="combat-inline-diff-input"
-                                                    value={state.challenge?.difficulty || 0}
-                                                    onChange={(e) => userRole === "GM" && handleChallengeUpdate({ difficulty: parseInt(e.target.value) || 0 })}
+                                                    inputMode="numeric"
+                                                    value={challengeDiffDraft}
+                                                    onChange={(e) => {
+                                                        const rawValue = e.target.value;
+                                                        if (!/^-?\d*$/.test(rawValue)) return;
+                                                        setChallengeDiffDraft(rawValue);
+                                                        if (rawValue !== "" && rawValue !== "-" && userRole === "GM") {
+                                                            handleChallengeUpdate({ difficulty: parseInt(rawValue, 10) });
+                                                        }
+                                                    }}
+                                                    onBlur={() => {
+                                                        if (challengeDiffDraft === "" || challengeDiffDraft === "-") {
+                                                            setChallengeDiffDraft("0");
+                                                            if (userRole === "GM") handleChallengeUpdate({ difficulty: 0 });
+                                                        }
+                                                    }}
                                                     readOnly={userRole !== "GM"}
                                                 />
                                             </div>
@@ -309,15 +345,6 @@ export function CombatTab({
                                         )}
                                     </div>
                                 )}
-                                <button
-                                    type="button"
-                                    className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
-                                    onClick={() => setShowCombatLogs(prev => !prev)}
-                                    title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
-                                    aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
-                                >
-                                    <ScrollText size={15} />
-                                </button>
                             </div>
                         )}
 
@@ -358,36 +385,57 @@ export function CombatTab({
                                         </button>
                                     )}
                                     <div className={`combat-avatar-rail hero-avatar-rail ${isHeroDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
-                                        {heroDrawerCards.map(char => (
-                                            isHeroDrawerOpen ? (
+                                        {heroDrawerCards.map((char, index) => {
+                                            if (!isHeroDrawerOpen) {
+                                                return (
+                                                    <CombatCard
+                                                        key={`${char.id}-hero-preview`}
+                                                        character={char}
+                                                        sessionId={sessionId as string}
+                                                        actorUserId={actorUserId}
+                                                        isGM={userRole === "GM"}
+                                                        isCurrentTurn={currentTurnActorId === char.id}
+                                                        isLinkedCharacter={fixedCharacterId === char.id}
+                                                        displayMode="compact"
+                                                        avatarSide="left"
+                                                        onToggleExpanded={() => setIsHeroDrawerOpen(true)}
+                                                    />
+                                                );
+                                            }
+
+                                            const isExpandedCard = index === 0 || expandedHeroCardId === char.id;
+                                            if (isExpandedCard) {
+                                                return (
+                                                    <CombatCard
+                                                        key={`${char.id}-hero-open`}
+                                                        character={char}
+                                                        sessionId={sessionId as string}
+                                                        actorUserId={actorUserId}
+                                                        isGM={userRole === "GM"}
+                                                        onRemove={char.isNPC ? () => handleRemoveCharacter(char.id) : undefined}
+                                                        isCurrentTurn={currentTurnActorId === char.id}
+                                                        isLinkedCharacter={fixedCharacterId === char.id}
+                                                        onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
+                                                        avatarSide="left"
+                                                    />
+                                                );
+                                            }
+
+                                            return (
                                                 <CombatCard
-                                                    key={`${char.id}-hero-open`}
+                                                    key={`${char.id}-hero-strip`}
                                                     character={char}
                                                     sessionId={sessionId as string}
                                                     actorUserId={actorUserId}
                                                     isGM={userRole === "GM"}
-                                                    onRemove={char.isNPC ? () => handleRemoveCharacter(char.id) : undefined}
                                                     isCurrentTurn={currentTurnActorId === char.id}
                                                     isLinkedCharacter={fixedCharacterId === char.id}
-                                                    onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                    onToggleExpanded={() => setIsHeroDrawerOpen(false)}
+                                                    displayMode="strip"
                                                     avatarSide="left"
+                                                    onToggleExpanded={() => setExpandedHeroCardId(char.id)}
                                                 />
-                                            ) : (
-                                                <CombatCard
-                                                    key={`${char.id}-hero-preview`}
-                                                    character={char}
-                                                    sessionId={sessionId as string}
-                                                    actorUserId={actorUserId}
-                                                    isGM={userRole === "GM"}
-                                                    isCurrentTurn={currentTurnActorId === char.id}
-                                                    isLinkedCharacter={fixedCharacterId === char.id}
-                                                    displayMode="compact"
-                                                    avatarSide="left"
-                                                    onToggleExpanded={() => setIsHeroDrawerOpen(true)}
-                                                />
-                                            )
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
@@ -654,34 +702,54 @@ export function CombatTab({
                                             </button>
                                         )}
                                         <div className={`combat-avatar-rail threat-avatar-rail ${isThreatDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
-                                            {threatDrawerCards.map(char => (
-                                                isThreatDrawerOpen ? (
+                                            {threatDrawerCards.map((char, index) => {
+                                                if (!isThreatDrawerOpen) {
+                                                    return (
+                                                        <CombatCard
+                                                            key={`${char.id}-threat-preview`}
+                                                            character={char}
+                                                            sessionId={sessionId as string}
+                                                            actorUserId={actorUserId}
+                                                            isGM={userRole === "GM"}
+                                                            isCurrentTurn={currentTurnActorId === char.id}
+                                                            displayMode="compact"
+                                                            avatarSide="right"
+                                                            onToggleExpanded={() => setIsThreatDrawerOpen(true)}
+                                                        />
+                                                    );
+                                                }
+
+                                                const isExpandedCard = index === 0 || expandedThreatCardId === char.id;
+                                                if (isExpandedCard) {
+                                                    return (
+                                                        <CombatCard
+                                                            key={`${char.id}-threat-open`}
+                                                            character={char}
+                                                            sessionId={sessionId as string}
+                                                            actorUserId={actorUserId}
+                                                            isGM={userRole === "GM"}
+                                                            onRemove={() => handleRemoveCharacter(char.id)}
+                                                            isCurrentTurn={currentTurnActorId === char.id}
+                                                            onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
+                                                            avatarSide="right"
+                                                        />
+                                                    );
+                                                }
+
+                                                return (
                                                     <CombatCard
-                                                        key={`${char.id}-threat-open`}
+                                                        key={`${char.id}-threat-strip`}
                                                         character={char}
                                                         sessionId={sessionId as string}
                                                         actorUserId={actorUserId}
                                                         isGM={userRole === "GM"}
-                                                        onRemove={() => handleRemoveCharacter(char.id)}
                                                         isCurrentTurn={currentTurnActorId === char.id}
-                                                        onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                        onToggleExpanded={() => setIsThreatDrawerOpen(false)}
+                                                        displayMode="strip"
                                                         avatarSide="right"
+                                                        onToggleExpanded={() => setExpandedThreatCardId(char.id)}
                                                     />
-                                                ) : (
-                                                    <CombatCard
-                                                        key={`${char.id}-threat-preview`}
-                                                        character={char}
-                                                        sessionId={sessionId as string}
-                                                        actorUserId={actorUserId}
-                                                        isGM={userRole === "GM"}
-                                                        isCurrentTurn={currentTurnActorId === char.id}
-                                                        displayMode="compact"
-                                                        avatarSide="right"
-                                                        onToggleExpanded={() => setIsThreatDrawerOpen(true)}
-                                                    />
-                                                )
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>

@@ -24,7 +24,7 @@ interface CombatCardProps {
     isCurrentTurn?: boolean;
     isLinkedCharacter?: boolean;
     onToggleDiceRoller?: () => void;
-    displayMode?: "expanded" | "compact";
+    displayMode?: "expanded" | "compact" | "strip";
     onToggleExpanded?: () => void;
     avatarSide?: "left" | "right";
 }
@@ -166,6 +166,30 @@ export function CombatCard({
                     </span>
                 </button>
 
+                    <CombatCardStyles isGM={isGM} />
+            </>
+        );
+    }
+
+    if (displayMode === "strip") {
+        return (
+            <>
+                <button
+                    type="button"
+                    className={`combat-strip-shell ${cardThemeClass} ${avatarSide === "right" ? "side-right" : "side-left"} ${isCurrentTurn ? "active-turn-avatar" : ""}`}
+                    onClick={onToggleExpanded}
+                    title={`Expandir card de ${character.name}`}
+                    aria-label={`Expandir card de ${character.name}`}
+                >
+                    <span className="combat-strip-image">
+                        {character.imageUrl ? (
+                            <img src={character.imageUrl} alt="" />
+                        ) : (
+                            <span className="combat-portrait-fallback">{portraitInitials}</span>
+                        )}
+                    </span>
+                    <span className="combat-strip-name">{character.name.toUpperCase()}</span>
+                </button>
                 <CombatCardStyles isGM={isGM} />
             </>
         );
@@ -231,7 +255,7 @@ export function CombatCard({
                         handleStressToggle={handleStressToggle}
                     />
                     {/* Dice Roller Trigger - Right of Stress */}
-                    {onToggleDiceRoller && isOwner && (
+                    {onToggleDiceRoller && isOwner && !isGM && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -323,7 +347,7 @@ export function CombatCard({
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
                             {/* Impulse - Top Left Over Image */}
-                            <div style={{ position: 'absolute', top: '8px', left: '-14px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
+                            <div style={{ position: 'absolute', top: '8px', left: '-7px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.75rem', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>)}
                                 </div>

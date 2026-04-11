@@ -1430,6 +1430,12 @@ body {
     align-items: flex-end;
 }
 
+@media (max-width: 1460px) {
+    .combat-avatar-rail.is-expanded .combat-card-wrapper {
+        zoom: 0.65;
+    }
+}
+
 @media (max-width: 1024px) {
     .combat-arena-layout {
         grid-template-columns: 1fr;
@@ -1513,6 +1519,10 @@ body {
         max-height: 340px;
     }
 
+    .combat-avatar-rail.is-expanded .combat-card-wrapper {
+        zoom: 1;
+    }
+
     .combat-expanded-stack,
     .combat-side-lane.threat-side-lane .combat-expanded-stack {
         width: 100%;
@@ -1524,7 +1534,9 @@ body {
 .combat-dice-integrated {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
+    row-gap: 6px;
     width: 100%;
     min-height: 46px;
     background: rgba(0, 0, 0, 0.08);
@@ -1541,7 +1553,7 @@ body {
 
 .combat-dice-integrated .probability-grid.integrated {
     width: auto;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     min-width: 0;
 }
 
