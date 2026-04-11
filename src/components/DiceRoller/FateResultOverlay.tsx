@@ -17,11 +17,17 @@ interface FateResultOverlayProps {
         baseSkillValue?: number;
         itemBonusValue?: number;
         customModifierValue?: number;
+        itemName?: string;
     };
     resultOverlay?: {
         mode: DiceResultOverlayMode;
         targetDifficulty?: number;
     };
+}
+
+function fmtSigned(n: number): string {
+    if (n > 0) return `+${n}`;
+    return `${n}`;
 }
 
 /** Escada de resultados Fate */
@@ -183,16 +189,70 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
+                    gap: "18px",
                     pointerEvents: "none",
                     animation: "resultReveal 0.6s cubic-bezier(0.19, 1, 0.22, 1)",
                     background: "rgba(5, 5, 8, 0.98)",
-                    padding: "48px 72px",
+                    padding: "36px 56px 44px",
                     borderRadius: "28px",
                     minWidth: "280px",
                     border: `1px solid ${totalColor}66`,
                     boxShadow: `0 0 80px rgba(0,0,0,0.9), 0 0 40px ${totalColor}33`,
                     backdropFilter: "blur(16px)",
                 }}>
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "8px",
+                        color: "rgba(230, 225, 210, 0.88)",
+                        fontFamily: "var(--font-header, 'Cinzel', serif)",
+                        fontSize: "0.82rem",
+                        letterSpacing: "0.08em",
+                        lineHeight: 1.45,
+                        textAlign: "center",
+                        maxWidth: "420px",
+                    }}>
+                        {results && results.length > 0 && (
+                            <div style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                gap: "4px 8px",
+                                fontSize: "0.78rem",
+                                opacity: 0.95,
+                            }}>
+                                {results.map((v, i) => (
+                                    <span key={i} style={{ fontVariantNumeric: "tabular-nums" }}>
+                                        {i > 0 ? <span style={{ opacity: 0.35 }}> · </span> : null}
+                                        {v === 1 ? "+1" : v === -1 ? "−1" : "0"}
+                                    </span>
+                                ))}
+                                <span style={{ opacity: 0.45, marginLeft: "2px" }}>→</span>
+                                <span style={{ fontWeight: 600 }}>dado {fmtSigned(diceSum)}</span>
+                            </div>
+                        )}
+                        {calculationBreakdown && (
+                            <>
+                                <div>Perícia ({fmtSigned(calculationBreakdown.baseSkillValue ?? 0)})</div>
+                                {(calculationBreakdown.itemName ||
+                                    (calculationBreakdown.itemBonusValue ?? 0) !== 0) && (
+                                    <div>
+                                        {calculationBreakdown.itemName
+                                            ? `${calculationBreakdown.itemName} (${fmtSigned(
+                                                  calculationBreakdown.itemBonusValue ?? 0
+                                              )})`
+                                            : `Item (${fmtSigned(calculationBreakdown.itemBonusValue ?? 0)})`}
+                                    </div>
+                                )}
+                                <div>Bônus manual ({fmtSigned(calculationBreakdown.customModifierValue ?? 0)})</div>
+                            </>
+                        )}
+                        {!calculationBreakdown && (
+                            <div>Dado ({fmtSigned(diceSum)})</div>
+                        )}
+                    </div>
                     <span style={{
                         color: totalColor,
                         fontFamily: "var(--font-header, 'Cinzel', serif)",
@@ -263,32 +323,47 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         })}
                     </div>
 
-                    {hasModifiers && (
+                    {(hasModifiers || calculationBreakdown) && (
                         <div style={{
                             display: "flex",
+                            flexDirection: "column",
                             alignItems: "center",
-                            gap: "12px",
+                            gap: "6px",
                             color: accentColor,
                             fontFamily: "var(--font-header, 'Cinzel', serif)",
-                            fontSize: "1.1rem",
-                            letterSpacing: "0.1em",
-                            opacity: 0.85,
-                            marginTop: "-8px",
-                            marginBottom: "4px"
+                            fontSize: "0.95rem",
+                            letterSpacing: "0.08em",
+                            opacity: 0.9,
+                            marginTop: "-4px",
+                            marginBottom: "4px",
+                            textAlign: "center",
                         }}>
-                            <div>Dado: {diceSum > 0 ? `+${diceSum}` : diceSum}</div>
-                            
-                            {calculationBreakdown?.baseSkillValue ? (
-                                <div> + Perícia: {calculationBreakdown.baseSkillValue}</div>
-                            ) : null}
-                            
-                            {calculationBreakdown?.itemBonusValue ? (
-                                <div> + Item: {calculationBreakdown.itemBonusValue}</div>
-                            ) : null}
-
-                            {calculationBreakdown?.customModifierValue ? (
-                                <div> + Modificador: {calculationBreakdown.customModifierValue > 0 ? `+${calculationBreakdown.customModifierValue}` : calculationBreakdown.customModifierValue}</div>
-                            ) : null}
+                            <div>
+                                {results.map((v, i) => (
+                                    <span key={i} style={{ fontVariantNumeric: "tabular-nums" }}>
+                                        {i > 0 ? <span style={{ opacity: 0.35 }}> · </span> : null}
+                                        {v === 1 ? "+1" : v === -1 ? "−1" : "0"}
+                                    </span>
+                                ))}
+                                <span style={{ opacity: 0.45 }}> → </span>
+                                <span>dado {fmtSigned(diceSum)}</span>
+                            </div>
+                            {calculationBreakdown && (
+                                <>
+                                    <div>Perícia {fmtSigned(calculationBreakdown.baseSkillValue ?? 0)}</div>
+                                    {(calculationBreakdown.itemName ||
+                                        (calculationBreakdown.itemBonusValue ?? 0) !== 0) && (
+                                        <div>
+                                            {calculationBreakdown.itemName
+                                                ? `${calculationBreakdown.itemName} ${fmtSigned(
+                                                      calculationBreakdown.itemBonusValue ?? 0
+                                                  )}`
+                                                : `Item ${fmtSigned(calculationBreakdown.itemBonusValue ?? 0)}`}
+                                        </div>
+                                    )}
+                                    <div>Bônus manual {fmtSigned(calculationBreakdown.customModifierValue ?? 0)}</div>
+                                </>
+                            )}
                         </div>
                     )}
 
@@ -303,7 +378,9 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         alignItems: "center",
                         gap: "10px"
                     }}>
-                        {hasModifiers && <span style={{ fontSize: "1.4rem", opacity: 0.8 }}>Total =</span>}
+                        {(hasModifiers || calculationBreakdown) && (
+                            <span style={{ fontSize: "1.4rem", opacity: 0.8 }}>Total =</span>
+                        )}
                         <span>{grandTotal > 0 ? `+${grandTotal}` : grandTotal < 0 ? `${grandTotal}` : "0"}</span>
                     </div>
 

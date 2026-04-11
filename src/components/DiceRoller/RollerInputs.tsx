@@ -28,6 +28,8 @@ interface RollerInputsProps {
     handleTargetRemove: (id: string) => void;
     isGM: boolean;
     activeChar: Character | undefined;
+    isReaction?: boolean;
+    onRequestRollAttention?: () => void;
 }
 
 export function RollerInputs({
@@ -52,13 +54,62 @@ export function RollerInputs({
     handleTargetAdd,
     handleTargetRemove,
     isGM,
-    activeChar
+    activeChar,
+    isReaction = false,
+    onRequestRollAttention,
 }: RollerInputsProps) {
+    const guideEnabled = isIntegrated && !isReaction;
+    const bonusSelectRef = useRef<HTMLSelectElement>(null);
+    const skillSelectRef = useRef<HTMLSelectElement>(null);
+    const itemSelectRef = useRef<HTMLSelectElement>(null);
+    const gmCharGuideInit = useRef(false);
+
+    const focusBonusSoon = () => {
+        if (!guideEnabled) return;
+        requestAnimationFrame(() => {
+            bonusSelectRef.current?.focus();
+        });
+    };
+
+    const focusSkillSoon = () => {
+        if (!guideEnabled) return;
+        requestAnimationFrame(() => {
+            skillSelectRef.current?.focus();
+        });
+    };
+
+    const afterSkillChosen = (skill: string) => {
+        handleSkillSelect(skill);
+        if (!guideEnabled) return;
+        if (!skill) return;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const items = allItems.filter(i => i.name && i.bonus > 0);
+                if (items.length > 0) {
+                    itemSelectRef.current?.focus();
+                } else {
+                    onRequestRollAttention?.();
+                }
+            });
+        });
+    };
+
     // ── Attack sub-menu state ──
     const [showAttackSubMenu, setShowAttackSubMenu] = useState(false);
     const [showTargetPicker, setShowTargetPicker] = useState(false);
     const [pendingDamageType, setPendingDamageType] = useState<"PHYSICAL" | "MENTAL" | null>(null);
     const attackMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!guideEnabled || !isGM || fixedCharacterId) return;
+        if (!gmCharGuideInit.current) {
+            gmCharGuideInit.current = true;
+            return;
+        }
+        focusBonusSoon();
+        // Intencional: reação só ao trocar personagem (GM), não incluir focusBonusSoon nas deps.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCharId, guideEnabled, isGM, fixedCharacterId]);
 
     // Close sub-menu on outside click
     useEffect(() => {
@@ -115,6 +166,7 @@ export function RollerInputs({
         }
         setShowAttackSubMenu(false);
         setActionType(value as RollerInputsProps["actionType"]);
+        focusBonusSoon();
     };
 
     const handleDamageTypeSelected = (type: "PHYSICAL" | "MENTAL") => {
@@ -125,6 +177,8 @@ export function RollerInputs({
         // Open target picker if there are available targets
         if (availableTargets.length > 0) {
             setShowTargetPicker(true);
+        } else {
+            focusBonusSoon();
         }
     };
 
@@ -132,6 +186,7 @@ export function RollerInputs({
         handleTargetAdd(targetId);
         setShowTargetPicker(false);
         setPendingDamageType(null);
+        focusBonusSoon();
     };
 
     const handleTargetPickerClose = () => {
@@ -228,17 +283,38 @@ export function RollerInputs({
                         {!isIntegrated && <label>BONUS</label>}
                         <div className="field-row">
                             {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
-                            <input
-                                type="number"
-                                placeholder="BONUS"
-                                value={manualBonus === 0 ? "" : manualBonus}
-                                onChange={(e) => {
-                                    const rawValue = e.target.value;
-                                    setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
-                                }}
-                                className="mystic-input input-ritual bonus-input narrowed"
-                                style={isIntegrated ? { width: bonusWidth, minWidth: "60px" } : undefined}
-                            />
+                            {isIntegrated ? (
+                                <div className="icon-select-shell" title="Bônus (0–20)">
+                                    <span className="icon-select-face"><Plus size={16} /></span>
+                                    <select
+                                        ref={bonusSelectRef}
+                                        value={manualBonus}
+                                        onChange={(e) => {
+                                            const v = parseInt(e.target.value, 10);
+                                            setManualBonus(Number.isFinite(v) ? Math.max(0, Math.min(20, v)) : 0);
+                                            focusSkillSoon();
+                                        }}
+                                        className="icon-select-native"
+                                        aria-label="Bônus"
+                                    >
+                                        {Array.from({ length: 21 }, (_, i) => (
+                                            <option key={i} value={i}>{i}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : (
+                                <input
+                                    type="number"
+                                    placeholder="BONUS"
+                                    value={manualBonus === 0 ? "" : manualBonus}
+                                    onChange={(e) => {
+                                        const rawValue = e.target.value;
+                                        setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
+                                    }}
+                                    className="mystic-input input-ritual bonus-input narrowed"
+                                    style={{ width: bonusWidth, minWidth: "60px" }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -252,8 +328,9 @@ export function RollerInputs({
                                 <div className="icon-select-shell" title="Pericia">
                                     <span className="icon-select-face"><Sparkles size={16} /></span>
                                     <select
+                                        ref={skillSelectRef}
                                         value={selectedSkill}
-                                        onChange={(e) => handleSkillSelect(e.target.value)}
+                                        onChange={(e) => afterSkillChosen(e.target.value)}
                                         className="icon-select-native"
                                         aria-label="Pericia"
                                     >
@@ -302,6 +379,7 @@ export function RollerInputs({
                                 <div className="icon-select-shell" title="Inventario">
                                     <span className="icon-select-face"><Backpack size={16} /></span>
                                     <select
+                                        ref={itemSelectRef}
                                         value={selectedItemId}
                                         onChange={(e) => setSelectedItemId(e.target.value)}
                                         className="icon-select-native"

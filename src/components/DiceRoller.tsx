@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState, useCallback } from "react";
 import { useDiceRoller } from "@/hooks/useDiceRoller";
 import { RollerInputs } from "./DiceRoller/RollerInputs";
 import { DiceChamber } from "./DiceRoller/DiceChamber";
@@ -79,6 +79,13 @@ export function DiceRoller(props: DiceRollerProps) {
         return { primary: '#4ade80', glow: 'rgba(74, 222, 128, 0.3)', bg: 'rgba(10, 35, 20, 1)' };
     }, [targetDiff]);
 
+    const rollTriggerRef = useRef<HTMLButtonElement>(null);
+    const [rollNudge, setRollNudge] = useState(false);
+    const requestRollAttention = useCallback(() => {
+        if (!isIntegrated) return;
+        setRollNudge(true);
+    }, [isIntegrated]);
+
     if (characters.length === 0) return null;
 
     return (
@@ -122,6 +129,8 @@ export function DiceRoller(props: DiceRollerProps) {
                         handleTargetRemove={roller.handleTargetRemove}
                         isGM={isGM}
                         activeChar={roller.activeChar}
+                        isReaction={isReaction}
+                        onRequestRollAttention={requestRollAttention}
                     />
 
                     <DiceChamber
@@ -133,8 +142,12 @@ export function DiceRoller(props: DiceRollerProps) {
                     />
 
                     <button
-                        onClick={roller.handleRoll}
-                        className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''}`}
+                        ref={rollTriggerRef}
+                        onClick={() => {
+                            setRollNudge(false);
+                            roller.handleRoll();
+                        }}
+                        className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''} ${rollNudge ? 'roll-nudge' : ''}`}
                         disabled={roller.isRolling}
                         title="Rolar dados"
                     >
@@ -320,6 +333,19 @@ export function DiceRoller(props: DiceRollerProps) {
                     letter-spacing: 0.2em;
                     margin-left: auto;
                     text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+                }
+
+                .matrix-trigger.integrated.roll-nudge {
+                    animation: rollNudgePulse 0.55s ease-in-out infinite;
+                    box-shadow: 0 0 22px rgba(250, 204, 21, 0.55), 0 0 44px rgba(250, 120, 40, 0.35);
+                }
+
+                @keyframes rollNudgePulse {
+                    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                    20% { transform: translate(-2px, 1px) rotate(-4deg); }
+                    40% { transform: translate(2px, -1px) rotate(4deg); }
+                    60% { transform: translate(-1px, -1px) rotate(-3deg); }
+                    80% { transform: translate(1px, 1px) rotate(3deg); }
                 }
             `}</style>
         </div>

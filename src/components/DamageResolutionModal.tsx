@@ -125,7 +125,8 @@ export function DamageResolutionModal({
         return damage - absorbed;
     }, [defender, damage, markedPhysical, markedMental, consequenceTexts, orderedSlots]);
 
-    const canConfirm = remainingDamage <= 0;
+    const overAbsorbed = remainingDamage < 0;
+    const canConfirm = remainingDamage === 0;
 
     if (!isOpen || !mounted || !defender) return null;
 
@@ -154,7 +155,7 @@ export function DamageResolutionModal({
     };
 
     const handleConfirmClick = () => {
-        if (!canConfirm) return;
+        if (!canConfirm || overAbsorbed) return;
         const consequences = orderedSlots
             .map(slot => ({ slot, text: (consequenceTexts[slot] || "").trim() }))
             .filter(c => c.text.length > 0);
@@ -170,12 +171,23 @@ export function DamageResolutionModal({
     const isThreat = (arenaSide === "THREAT") || (defender.isNPC && arenaSide !== "HERO");
     const sideColor = isHazard ? "#a855f7" : isThreat ? "#ff4444" : "#3b82f6";
 
-    const damageNumberColor =
-        remainingDamage <= 0 ? "#6ee7b7" : remainingDamage <= 2 ? "#fde047" : "#ff4d4d";
+    const damageNumberColor = overAbsorbed
+        ? "#fb923c"
+        : remainingDamage === 0
+          ? "#6ee7b7"
+          : remainingDamage <= 2
+            ? "#fde047"
+            : "#ff4d4d";
 
     return createPortal(
-        <div className="dmg-modal-overlay">
-            <div className="dmg-modal" onClick={e => e.stopPropagation()}>
+        <div className="dmg-modal-overlay" role="presentation">
+            <div
+                className="dmg-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="dmg-modal-title"
+                onClick={e => e.stopPropagation()}
+            >
                 {/* Header: Diamond + Name */}
                 <div className="dmg-header">
                     <div
@@ -200,19 +212,48 @@ export function DamageResolutionModal({
                             )}
                         </div>
                     </div>
-                    <div className="dmg-name">{defender.name}</div>
+                    <div id="dmg-modal-title" className="dmg-name">
+                        {defender.name}
+                    </div>
                     <div className="dmg-track-label">
                         DANO {track === "PHYSICAL" ? "FÍSICO" : "MENTAL"}
                     </div>
                 </div>
 
-                {/* Remaining Damage */}
-                <div className="dmg-remaining">
-                    <span className="dmg-label">DANO RESTANTE</span>
-                    <span className="dmg-number" style={{ color: damageNumberColor }}>
-                        {Math.max(0, remainingDamage)}
-                    </span>
+                {isNPC && (
+                    <p className="dmg-hint-npc">
+                        Personagem NPC: aloque estresse e/ou consequências até o dano restante chegar a zero,
+                        ou use <strong>Cálculo automático</strong>.
+                    </p>
+                )}
+                {!isNPC && (
+                    <p className="dmg-hint-pc">
+                        Personagem de jogador: você pode resolver aqui ou usar <strong>Não fazer nada</strong> para o
+                        jogador marcar na ficha.
+                    </p>
+                )}
+
+                <div className="dmg-received-row">
+                    <div className="dmg-received-block">
+                        <span className="dmg-label">DANO RECEBIDO</span>
+                        <span className="dmg-number dmg-number-sm" style={{ color: "#fca5a5" }}>
+                            {damage}
+                        </span>
+                    </div>
+                    <div className="dmg-received-block">
+                        <span className="dmg-label">DANO RESTANTE</span>
+                        <span className="dmg-number" style={{ color: damageNumberColor }}>
+                            {remainingDamage}
+                        </span>
+                    </div>
                 </div>
+
+                {overAbsorbed && (
+                    <div className="dmg-overwarn">
+                        A absorção ultrapassa o dano recebido. Desmarque caixas ou apague texto de consequência até o
+                        restante bater em zero.
+                    </div>
+                )}
 
                 {/* Stress Tracks */}
                 <div className="dmg-section">
@@ -313,8 +354,14 @@ export function DamageResolutionModal({
                     <button
                         className="dmg-btn confirm"
                         onClick={handleConfirmClick}
-                        disabled={!canConfirm}
-                        title={canConfirm ? "Aplicar dano" : "Reduza o dano a 0 para confirmar"}
+                        disabled={!canConfirm || overAbsorbed}
+                        title={
+                            canConfirm
+                                ? "Aplicar marcações na ficha"
+                                : overAbsorbed
+                                  ? "Absorção acima do dano — ajuste as seleções"
+                                  : "Reduza o dano restante exatamente a 0 para confirmar"
+                        }
                     >
                         CONFIRMAR
                     </button>
@@ -428,6 +475,53 @@ export function DamageResolutionModal({
                         color: var(--accent-color);
                         opacity: 0.7;
                         letter-spacing: 0.18em;
+                    }
+
+                    .dmg-hint-npc,
+                    .dmg-hint-pc {
+                        margin: 0;
+                        font-size: 0.78rem;
+                        line-height: 1.45;
+                        color: rgba(230, 225, 210, 0.72);
+                        text-align: center;
+                        padding: 0 4px;
+                    }
+
+                    .dmg-hint-npc strong,
+                    .dmg-hint-pc strong {
+                        color: var(--accent-color);
+                        font-weight: 600;
+                    }
+
+                    .dmg-received-row {
+                        display: flex;
+                        flex-wrap: wrap;
+                        justify-content: center;
+                        gap: 28px;
+                        padding: 8px 0 4px;
+                    }
+
+                    .dmg-received-block {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 4px;
+                        min-width: 140px;
+                    }
+
+                    .dmg-overwarn {
+                        background: rgba(180, 40, 40, 0.2);
+                        border: 1px solid rgba(255, 100, 100, 0.45);
+                        color: #fecaca;
+                        font-size: 0.8rem;
+                        line-height: 1.4;
+                        padding: 10px 14px;
+                        border-radius: 6px;
+                        text-align: center;
+                    }
+
+                    .dmg-number-sm {
+                        font-size: 2.4rem !important;
                     }
 
                     /* Remaining damage */

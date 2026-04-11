@@ -15,6 +15,8 @@ interface DiceSimulationParams {
         baseSkillValue?: number;
         itemBonusValue?: number;
         customModifierValue?: number;
+        /** Nome do item equipado/selecionado (só exibição no overlay). */
+        itemName?: string;
     };
     /** Como colorir o total final após os dados 3D (Arena vs desafio). */
     resultOverlay?: {

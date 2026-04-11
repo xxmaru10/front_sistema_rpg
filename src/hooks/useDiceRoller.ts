@@ -171,7 +171,17 @@ export function useDiceRoller({
         setManualBonus(0);
         setIsRolling(false);
 
-        if (targetIds.length > 0 && (actionType === "ATTACK" || actionType === "CREATE_ADVANTAGE")) {
+        const attackTotal = (event.payload as any).total as number;
+        const attackForcesDefense =
+            actionType === "ATTACK" &&
+            targetIds.length > 0 &&
+            Number.isFinite(attackTotal) &&
+            attackTotal > 0;
+
+        if (
+            targetIds.length > 0 &&
+            (actionType === "CREATE_ADVANTAGE" || attackForcesDefense)
+        ) {
             const firstTargetId = targetIds[0];
             const targetChar = characters.find(c => c.id === firstTargetId);
 
@@ -292,7 +302,8 @@ export function useDiceRoller({
             calculationBreakdown: {
                 baseSkillValue: skillRank,
                 itemBonusValue: itemBonus,
-                customModifierValue: manualBonus
+                customModifierValue: manualBonus,
+                itemName: selectedItemData?.name,
             },
             resultOverlay: targetDiff !== undefined && targetDiff !== null
                 ? { mode: "challenge", targetDifficulty: targetDiff }

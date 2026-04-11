@@ -15,6 +15,7 @@ interface FateDice3DProps {
         baseSkillValue?: number;
         itemBonusValue?: number;
         customModifierValue?: number;
+        itemName?: string;
     };
     resultOverlay?: {
         mode: DiceResultOverlayMode;
