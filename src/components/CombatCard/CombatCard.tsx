@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from 'react';
 import { Character } from "@/types/domain";
@@ -10,7 +10,7 @@ import { CombatConsequences } from "@/components/CombatConsequences";
 import { CombatExtras } from "@/components/CombatExtras";
 
 // Sub-components
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronDown, Star, Sparkles, Briefcase, Target, Dices, Trash2 } from "lucide-react";
 import { CombatAspects } from "./CombatAspects";
 import { CombatCardStyles } from "./CombatCard.styles";
@@ -117,47 +117,6 @@ export function CombatCard({
 
     const [isAspectsExpanded, setIsAspectsExpanded] = useState(false);
     const [expandedExtra, setExpandedExtra] = useState<'stunts' | 'spells' | 'items' | 'skills' | null>(null);
-    const middleContentRef = useRef<HTMLDivElement | null>(null);
-    const consequencesContentRef = useRef<HTMLDivElement | null>(null);
-    const [dynamicCardHeight, setDynamicCardHeight] = useState<number | null>(null);
-
-    useLayoutEffect(() => {
-        const middleEl = middleContentRef.current;
-        const consequencesEl = consequencesContentRef.current;
-        if (!consequencesEl) {
-            setDynamicCardHeight(null);
-            return;
-        }
-
-        const recalc = () => {
-            const consequencesHeight = Math.ceil(consequencesEl.scrollHeight || consequencesEl.offsetHeight || 0);
-            // Altura base = consequências. Só cresce além disso quando extras estão abertos.
-            const hasExtras = isAspectsExpanded || expandedExtra !== null;
-            let nextHeight: number;
-            if (hasExtras && middleEl) {
-                const middleHeight = Math.ceil(middleEl.scrollHeight || middleEl.offsetHeight || 0);
-                nextHeight = Math.max(middleHeight, consequencesHeight);
-            } else {
-                nextHeight = consequencesHeight;
-            }
-            const normalizedNextHeight = nextHeight > 0 ? nextHeight : null;
-            setDynamicCardHeight((prevHeight) => {
-                if (prevHeight === null && normalizedNextHeight === null) return prevHeight;
-                if (prevHeight !== null && normalizedNextHeight !== null && Math.abs(prevHeight - normalizedNextHeight) <= 1) {
-                    return prevHeight;
-                }
-                return normalizedNextHeight;
-            });
-        };
-
-        recalc();
-
-        const observer = new ResizeObserver(() => recalc());
-        observer.observe(consequencesEl);
-        if (middleEl) observer.observe(middleEl);
-
-        return () => observer.disconnect();
-    }, [isAspectsExpanded, expandedExtra, character.consequences, character.stress, isRestrictedThreatView]);
 
     if (isHazard) {
         return (
@@ -262,8 +221,8 @@ export function CombatCard({
     const isCompactThreatLayout = false;
     const imageColumnWidth = "clamp(156px, 33%, 252px)";
     const edgeColumnWidth = "minmax(116px, 0.86fr)";
-    const imageColumnBaseHeight = 154; // mínimo para o retrato aparecer com boa proporção
-    const resolvedColumnHeight = Math.max(imageColumnBaseHeight, (dynamicCardHeight ?? 0) + 6);
+    const imageColumnBaseHeight = 154; // mÃ­nimo para o retrato aparecer com boa proporÃ§Ã£o
+    
     const cardGridTemplate = isMirroredThreatLayout
         ? (isCompactThreatLayout
             ? `${edgeColumnWidth} minmax(0, 1.2fr) ${imageColumnWidth}`
@@ -349,7 +308,8 @@ export function CombatCard({
                     gap: '0',
                     alignItems: 'stretch',
                     padding: '0',
-                    height: `${resolvedColumnHeight}px`,
+                    minHeight: `${imageColumnBaseHeight}px`,
+                    height: 'auto',
                     borderRadius: isMirroredThreatLayout ? '50px 0 0 0' : '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
@@ -453,10 +413,11 @@ export function CombatCard({
                     position: 'relative',
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
+                    minHeight: `${imageColumnBaseHeight}px`,
                     height: '100%',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
-                    marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
+                    marginRight: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     overflow: 'visible',
                     alignSelf: 'stretch',
                     zIndex: 6
@@ -500,7 +461,7 @@ export function CombatCard({
                         )}
                     </div>
                     
-                    {/* Persona vignettes and slash effects — zIndex 3 para ficar acima do combat-image-frame (zIndex 2) */}
+                    {/* Persona vignettes and slash effects â€” zIndex 3 para ficar acima do combat-image-frame (zIndex 2) */}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
                     <div style={{ position: 'absolute', inset: 0, background: isMirroredThreatLayout ? 'linear-gradient(to right, rgba(0,0,0,0.65) 0%, transparent 18%)' : 'linear-gradient(to left, rgba(0,0,0,0.65) 0%, transparent 18%)', pointerEvents: 'none', zIndex: 3 }} />
@@ -521,7 +482,7 @@ export function CombatCard({
                             }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => (
-                                        <span key={`imp-${index}`} className="impulse-arrow-inline" style={{ color: '#fff', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>
+                                        <span key={`imp-${index}`} className="impulse-arrow-inline" style={{ color: '#fff', textShadow: '0 0 8px var(--card-accent)' }}>âž¤</span>
                                     ))}
                                 </div>
                                 {isGM && (
@@ -553,9 +514,9 @@ export function CombatCard({
 
                 <div
                     className={`combat-main-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
-                    style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '4px 12px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start', position: 'relative', zIndex: 4 }}
+                    style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '4px 12px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'visible', justifyContent: 'flex-start', position: 'relative', zIndex: 4 }}
                 >
-                    <div ref={middleContentRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                     {isRestrictedThreatView && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
@@ -584,7 +545,7 @@ export function CombatCard({
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '8px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
                                     {otherAspects.map((asp, idx) => (
                                         <div key={idx} style={{ fontSize: '0.75rem', color: asp.isTrouble ? '#ffaaaa' : '#aaa' }}>
-                                            • {asp.value}
+                                            â€¢ {asp.value}
                                         </div>
                                     ))}
                                 </div>
@@ -594,13 +555,13 @@ export function CombatCard({
 
                     {!isRestrictedThreatView && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
-                            {/* LINHA DE ÍCONES EXPANSÍVEIS */}
+                            {/* LINHA DE ÃCONES EXPANSÃVEIS */}
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 {character.stunts && character.stunts.length > 0 && (
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'stunts' ? null : 'stunts')}
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'stunts' ? 1 : 0.6 }}
-                                        title="Façanhas"
+                                        title="FaÃ§anhas"
                                     >
                                         <Star size={16} />
                                     </button>
@@ -618,7 +579,7 @@ export function CombatCard({
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'skills' ? null : 'skills')}
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'skills' ? 1 : 0.6 }}
-                                        title="Perícias"
+                                        title="PerÃ­cias"
                                     >
                                         <Target size={16} />
                                     </button>
@@ -634,7 +595,7 @@ export function CombatCard({
                                 )}
                             </div>
 
-                            {/* ZONA DE EXPANSÃO */}
+                            {/* ZONA DE EXPANSÃƒO */}
                             {expandedExtra === 'stunts' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', padding: '8px', background: 'rgba(80, 166, 255, 0.05)', borderRadius: '4px', border: '1px solid rgba(80, 166, 255, 0.15)' }}>
                                     {character.stunts.map(stunt => (
@@ -700,7 +661,7 @@ export function CombatCard({
                 }}
                 >
                     {!isRestrictedThreatView && (
-                        <div ref={consequencesContentRef} style={{ borderTop: 'none', paddingTop: 0 }}>
+                        <div style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences
                                 character={character}
                                 isGM={isGM}
@@ -728,3 +689,4 @@ export function CombatCard({
         </div>
     );
 }
+
