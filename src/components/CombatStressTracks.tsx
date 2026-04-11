@@ -57,14 +57,17 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
 
             <style jsx>{`
                 .combat-stress-container {
-                    background: linear-gradient(to right, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
-                    backdrop-filter: blur(12px);
-                    -webkit-backdrop-filter: blur(12px);
-                    border: none;
+                    background:
+                        radial-gradient(circle at 22% 34%, rgba(255, 255, 255, 0.09) 0%, transparent 42%),
+                        radial-gradient(circle at 78% 68%, rgba(255, 255, 255, 0.06) 0%, transparent 45%),
+                        linear-gradient(to right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 55%, transparent 100%);
+                    backdrop-filter: blur(14px) saturate(1.08);
+                    -webkit-backdrop-filter: blur(14px) saturate(1.08);
+                    border: 1px solid rgba(var(--accent-rgb), 0.52);
                     border-radius: 8px;
-                    padding: 9px 16px;
+                    padding: 6px 14px;
                     width: fit-content;
-                    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.68), inset 0 0 14px rgba(255, 255, 255, 0.04);
                     transform: translateY(-2px);
                     position: relative;
                     z-index: 5;
@@ -81,7 +84,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
 
                 .divider {
                     width: 1px;
-                    height: 24px;
+                    height: 20px;
                     background: rgba(255, 255, 255, 0.1);
                 }
 

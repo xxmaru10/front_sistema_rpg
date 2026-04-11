@@ -28,6 +28,8 @@ interface CombatCardProps {
     onToggleExpanded?: () => void;
     isPinned?: boolean;
     avatarSide?: "left" | "right";
+    stripRank?: number;
+    stripWidthPercent?: number;
 }
 
 function getPortraitInitials(name: string) {
@@ -70,6 +72,8 @@ export function CombatCard({
     onToggleExpanded,
     isPinned = false,
     avatarSide = "left",
+    stripRank = 0,
+    stripWidthPercent = 100,
 }: CombatCardProps) {
     const isOwner = (actorUserId && character.ownerUserId && actorUserId.trim().toLowerCase() === character.ownerUserId.trim().toLowerCase()) || isLinkedCharacter;
     const canEditSelf = isGM || isOwner;
@@ -191,17 +195,20 @@ export function CombatCard({
     }
 
     if (displayMode === "strip") {
+        const stripStage = Math.min(5, Math.max(0, stripRank));
         return (
             <>
                 <button
                     type="button"
-                    className={`combat-strip-shell ${cardThemeClass} ${avatarSide === "right" ? "side-right" : "side-left"} ${isCurrentTurn ? "active-turn-avatar" : ""}`}
+                    className={`combat-strip-shell strip-stage-${stripStage} ${cardThemeClass} ${avatarSide === "right" ? "side-right" : "side-left"} ${isCurrentTurn ? "active-turn-avatar" : ""}`}
                     onClick={onToggleExpanded}
                     title={`Expandir card de ${character.name}`}
                     aria-label={`Expandir card de ${character.name}`}
+                    data-strip-rank={stripStage}
                     style={{
                         '--card-accent': accentColor,
-                        '--card-accent-soft': accentSoftColor
+                        '--card-accent-soft': accentSoftColor,
+                        '--strip-width': `${Math.max(16, Math.min(100, stripWidthPercent))}%`
                     } as any}
                 >
                     <span className="combat-strip-image">
@@ -367,35 +374,68 @@ export function CombatCard({
                     </button>
                 )}
                 {onToggleExpanded && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleExpanded();
-                        }}
-                        style={{
-                            position: 'absolute',
-                            top: '4px',
-                            ...(isMirroredThreatLayout
-                                ? { left: canEdit && onRemove ? '34px' : '4px' }
-                                : { right: canEdit && onRemove ? '34px' : '4px' }),
-                            color: 'rgba(255,255,255,0.55)',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            zIndex: 40,
-                            fontSize: '1rem',
-                            lineHeight: 1,
-                            width: '27px',
-                            height: '27px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        className="combat-pin-btn"
-                        title={isPinned ? "Soltar card" : "Fixar card"}
-                    >
-                        {isPinned ? <ChevronDown size={18} /> : <ChevronLeft size={18} />}
-                    </button>
+                    <>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleExpanded();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                top: '4px',
+                                ...(isMirroredThreatLayout
+                                    ? { left: canEdit && onRemove ? '34px' : '4px' }
+                                    : { right: canEdit && onRemove ? '34px' : '4px' }),
+                                color: 'rgba(255,255,255,0.55)',
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                zIndex: 40,
+                                fontSize: '1rem',
+                                lineHeight: 1,
+                                width: '27px',
+                                height: '27px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            className="combat-pin-btn"
+                            title={isPinned ? "Soltar card" : "Fixar card"}
+                        >
+                            {isPinned ? <ChevronDown size={18} /> : <ChevronLeft size={18} />}
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleExpanded();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                top: '4px',
+                                ...(isMirroredThreatLayout
+                                    ? { left: canEdit && onRemove ? '62px' : '32px' }
+                                    : { right: canEdit && onRemove ? '62px' : '32px' }),
+                                color: 'rgba(255,255,255,0.78)',
+                                background: 'rgba(0,0,0,0.38)',
+                                border: '1px solid rgba(255,255,255,0.28)',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                zIndex: 41,
+                                fontSize: '1rem',
+                                lineHeight: 1,
+                                width: '24px',
+                                height: '24px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            className="combat-pin-btn combat-mobile-minimize-btn"
+                            title="Minimizar card"
+                            aria-label="Minimizar card"
+                        >
+                            -
+                        </button>
+                    </>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
                 <div

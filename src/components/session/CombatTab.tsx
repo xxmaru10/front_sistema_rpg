@@ -403,7 +403,9 @@ export function CombatTab({
                                         </button>
                                     )}
                                     <div className={`combat-avatar-rail hero-avatar-rail ${isHeroDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
-                                        {heroDrawerCards.map((char, index) => {
+                                        {(() => {
+                                            let heroStripRank = 0;
+                                            return heroDrawerCards.map((char, index) => {
                                             if (!isHeroDrawerOpen) {
                                                 return (
                                                     <CombatCard
@@ -453,6 +455,10 @@ export function CombatTab({
                                                 );
                                             }
 
+                                            const stripWidthPercent = Math.max(16, 85 - (heroStripRank * 15));
+                                            const stripRank = heroStripRank;
+                                            heroStripRank += 1;
+
                                             return (
                                                 <div
                                                     key={`${char.id}-hero-strip`}
@@ -469,6 +475,8 @@ export function CombatTab({
                                                         isLinkedCharacter={fixedCharacterId === char.id}
                                                         displayMode="strip"
                                                         avatarSide="left"
+                                                        stripRank={stripRank}
+                                                        stripWidthPercent={stripWidthPercent}
                                                         onToggleExpanded={() => setPinnedHeroCardIds((prev) => (
                                                             prev.includes(char.id)
                                                                 ? prev.filter((id) => id !== char.id)
@@ -477,7 +485,8 @@ export function CombatTab({
                                                     />
                                                 </div>
                                             );
-                                        })}
+                                        });
+                                        })()}
                                     </div>
                                 </div>
                             </div>
@@ -744,7 +753,9 @@ export function CombatTab({
                                             </button>
                                         )}
                                         <div className={`combat-avatar-rail threat-avatar-rail ${isThreatDrawerOpen ? "is-expanded" : "is-collapsed"}`}>
-                                            {threatDrawerCards.map((char, index) => {
+                                            {(() => {
+                                                let threatStripRank = 0;
+                                                return threatDrawerCards.map((char, index) => {
                                                 if (!isThreatDrawerOpen) {
                                                     return (
                                                         <CombatCard
@@ -792,6 +803,10 @@ export function CombatTab({
                                                     );
                                                 }
 
+                                                const stripWidthPercent = Math.max(16, 85 - (threatStripRank * 15));
+                                                const stripRank = threatStripRank;
+                                                threatStripRank += 1;
+
                                                 return (
                                                     <div
                                                         key={`${char.id}-threat-strip`}
@@ -807,6 +822,8 @@ export function CombatTab({
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             displayMode="strip"
                                                             avatarSide="right"
+                                                            stripRank={stripRank}
+                                                            stripWidthPercent={stripWidthPercent}
                                                             onToggleExpanded={() => setPinnedThreatCardIds((prev) => (
                                                                 prev.includes(char.id)
                                                                     ? prev.filter((id) => id !== char.id)
@@ -815,7 +832,8 @@ export function CombatTab({
                                                         />
                                                     </div>
                                                 );
-                                            })}
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 </div>

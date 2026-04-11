@@ -162,6 +162,10 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             filter: drop-shadow(0 0 10px rgba(255, 240, 190, 0.9));
         }
 
+        .combat-mobile-minimize-btn {
+            display: none !important;
+        }
+
         .combat-image-frame {
             clip-path: polygon(0 0, 96% 0, 100% 100%, 0 100%);
         }
@@ -254,35 +258,50 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-strip-shell {
-            width: 100%;
-            min-height: 68px;
-            max-height: 68px;
-            border-radius: 0 34px 0 0;
-            border: 1px solid rgba(var(--accent-rgb), 0.5);
-            background: linear-gradient(110deg, rgba(8, 12, 18, 0.24) 0%, rgba(8, 12, 18, 0.16) 38%, rgba(255,255,255,0.08) 82%, rgba(255,255,255,0.02) 100%);
-            backdrop-filter: blur(14px) saturate(1.15);
-            -webkit-backdrop-filter: blur(14px) saturate(1.15);
+            width: var(--strip-width, 100%);
+            min-width: fit-content;
+            max-width: 100%;
+            min-height: 62px;
+            max-height: 62px;
+            border-radius: 0 28px 0 0;
+            border: none;
+            background: transparent;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             overflow: hidden;
-            padding: 0 12px 0 0;
+            padding: 0 10px 0 0;
             cursor: pointer;
-            transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-            box-shadow: 0 8px 22px rgba(0,0,0,0.48);
+            transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.42);
             transform: skewX(-5deg);
+            opacity: 0.96;
+            position: relative;
+        }
+
+        .combat-strip-shell::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(90deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.78) 34%, rgba(0,0,0,0.02) 100%);
+            z-index: 0;
         }
 
         .combat-strip-shell.side-right {
             flex-direction: row-reverse;
-            border-radius: 34px 0 0 0;
-            padding: 0 0 0 12px;
+            border-radius: 28px 0 0 0;
+            padding: 0 0 0 10px;
             transform: skewX(5deg);
+        }
+
+        .combat-strip-shell.side-right::before {
+            background: linear-gradient(270deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.78) 34%, rgba(0,0,0,0.02) 100%);
         }
 
         .combat-strip-shell:hover {
             transform: skewX(-5deg) scale(1.01);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.54);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.5);
         }
 
         .combat-strip-shell.side-right:hover {
@@ -291,22 +310,23 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
 
         .combat-strip-image {
             position: relative;
-            width: clamp(138px, 24vw, 186px);
-            min-width: clamp(138px, 24vw, 186px);
-            height: 68px;
+            width: clamp(116px, 22vw, 168px);
+            min-width: clamp(116px, 22vw, 168px);
+            height: 62px;
             border-radius: 0 8px 0 0;
             overflow: hidden;
-            border-right: 1px solid rgba(255,255,255,0.2);
+            border-right: none;
             background: #111;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             transform: skewX(5deg);
+            z-index: 1;
         }
 
         .combat-strip-shell.side-right .combat-strip-image {
             border-right: none;
-            border-left: 1px solid rgba(255,255,255,0.2);
+            border-left: none;
             border-radius: 8px 0 0 0;
             transform: skewX(5deg);
         }
@@ -351,6 +371,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             flex: 1 1 auto;
             text-align: left;
             transform: skewX(5deg);
+            z-index: 1;
         }
 
         .combat-strip-shell.side-right .combat-strip-name {
@@ -359,8 +380,37 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-strip-shell.active-turn-avatar {
-            border-color: rgba(255,255,255,0.92) !important;
-            box-shadow: 0 0 0 2px rgba(255,255,255,0.25), 0 0 22px rgba(255,255,255,0.5), 0 12px 24px rgba(0,0,0,0.45) !important;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 0 18px rgba(255,255,255,0.36), 0 10px 20px rgba(0,0,0,0.42) !important;
+        }
+
+        .combat-strip-shell.strip-stage-1 .combat-strip-image {
+            width: clamp(98px, 18vw, 138px);
+            min-width: clamp(98px, 18vw, 138px);
+        }
+
+        .combat-strip-shell.strip-stage-2 .combat-strip-image {
+            width: clamp(72px, 14vw, 102px);
+            min-width: clamp(72px, 14vw, 102px);
+        }
+
+        .combat-strip-shell.strip-stage-3 .combat-strip-image {
+            width: clamp(52px, 10vw, 74px);
+            min-width: clamp(52px, 10vw, 74px);
+            opacity: 0.55;
+        }
+
+        .combat-strip-shell.strip-stage-4 .combat-strip-image,
+        .combat-strip-shell.strip-stage-5 .combat-strip-image {
+            width: 0;
+            min-width: 0;
+            opacity: 0;
+            margin: 0;
+        }
+
+        .combat-strip-shell.strip-stage-4,
+        .combat-strip-shell.strip-stage-5 {
+            padding-left: 8px;
+            padding-right: 8px;
         }
 
         .combat-return-toggle:hover,
@@ -492,9 +542,9 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-strip-shell.own-hero-card,
         .combat-strip-shell.npc-hero-card,
         .combat-strip-shell.threat-card {
-            border-color: rgba(var(--accent-rgb), 0.58);
-            background: linear-gradient(110deg, rgba(8, 12, 18, 0.22) 0%, rgba(8, 12, 18, 0.14) 38%, rgba(255,255,255,0.08) 82%, rgba(255,255,255,0.02) 100%);
-            box-shadow: 0 8px 22px rgba(0,0,0,0.48), inset 0 0 14px rgba(var(--accent-rgb), 0.12);
+            border-color: transparent;
+            background: transparent;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.42), inset 0 0 14px rgba(var(--accent-rgb), 0.08);
         }
 
         .combat-remove-btn.threat-remove-btn:hover {
@@ -1129,6 +1179,10 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         @media (max-width: 768px) {
+            .combat-mobile-minimize-btn {
+                display: inline-flex !important;
+            }
+
             .combat-card-wrapper .combat-external-stress {
                 align-items: center !important;
                 gap: 5px !important;

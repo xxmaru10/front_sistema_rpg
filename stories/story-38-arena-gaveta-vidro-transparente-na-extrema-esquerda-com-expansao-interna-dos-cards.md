@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-3.8-png-stress-e-densidade-vertical)"
+last_updated: "2026-04-11 (follow-up-3.9-piramide-strip-e-mobile-minus)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -98,11 +98,12 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 3.6): barra integrada da rolagem foi centralizada e passou a dimensionar por conteudo (reduzindo espaco ocioso); nome do personagem migrou para faixa superior externa (canto superior esquerdo), com trilhas de estresse e botao de rolagem deslocados responsivamente para a direita; coluna central do card foi reequilibrada para ocupar o espaco liberado. Drawers/cards expandidos receberam incremento adicional de largura (~15%) para reduzir clipping lateral em expansoes verticais longas. Impulso foi reajustado (aliados 20% mais a esquerda e adversarios proporcionalmente mais a direita), droplists da barra integrada receberam reforco visual de tema e o pin ganhou glow para legibilidade.
 - Follow-up aplicado (iteracao 3.7): correcoes de estabilidade dos cards de inimigos em hover/pin (coluna de retrato com altura explicita + ajustes de camadas/z-index), com reposicionamento de pontos de destino para a base do retrato. Retratos da arena receberam inclinacao leve para reforco visual e cards passaram por responsividade dedicada para desktop menor e mobile (reflow interno das colunas + consequencias em faixa inferior). Em mobile, a ordem visual da arena foi invertida para exibir aliados antes de adversarios e a barra integrada de rolagem ganhou compactacao/reflow para evitar quebra em colunas.
 - Follow-up aplicado (iteracao 3.8): assets PNG de estresse (`fisico.png`/`mental.png`) foram integrados ao `CombatStressTracks` com colorizacao por tema via `mask-image`. Cards expandidos tiveram reducao de altura base (fallback de retrato e paddings internos) para cortar excesso vertical sem remover expansao por conteudo. No mobile, trilhas de estresse passaram a quebrar em layout vertical quando necessario para manter todas as caixas visiveis, setas de impulso foram reduzidas em ~30% e o campo de bonus da barra integrada foi estreitado em ~50% para melhorar encaixe horizontal.
+- Follow-up aplicado (iteracao 3.9): cards fechados receberam escala horizontal progressiva em piramide invertida (de 85% para baixo por nivel), com degradê preto translúcido ao longo da faixa e remocao de borda externa. A moldura de gaveta ao redor dos cards (herois/inimigos) foi removida para manter apenas cards e handles. Em mobile, cards expandidos ganharam botao `-` ao lado da seta para minimizar rapidamente. A faixa de estresse ficou mais fina verticalmente, com borda no tema e fundo preto menos opaco com blur de efeito espelhado.
 
 ## Pendencias para Proxima Iteracao
-- Validar com o usuario o refinamento visual dos cards de adversarios apos reducao de densidade vertical (~30%) em diferentes quantidades de conteudo.
-- Validar em device real mobile se o empilhamento das trilhas de estresse preserva legibilidade sem estourar largura.
-- Confirmar se o novo tamanho do campo de bonus (barra integrada) atende leitura/edicao em GM e jogador.
+- Validar com o usuario a agressividade da reducao horizontal dos strips finais (nivels mais baixos da piramide).
+- Refinar caso necessario a legibilidade do nome quando o strip estiver no tamanho minimo (somente faixa de nome).
+- Ajustar posicao final dos handles se houver colisao visual apos remocao da moldura de gaveta.
 
 ## Handoff Prompt
 ```text
