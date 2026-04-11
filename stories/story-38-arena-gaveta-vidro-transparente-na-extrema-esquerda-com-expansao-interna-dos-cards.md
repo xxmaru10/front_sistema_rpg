@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.2-grid-open-sem-colisao-e-inimigo-direita)"
+last_updated: "2026-04-11 (follow-up-4.3-contencao-vertical)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -102,6 +102,7 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 4.0): cards de inimigos receberam reducao adicional da base vertical para aproximar proporcao dos cards de aliados, e o cabecalho externo no lado de ameacas passou a inverter posicoes de nome e trilhas de estresse. Piramide de minimizados foi refinada para manter mini retrato + nome ate o final da fila (sem sumir imagem), com reducao gradual da altura por nivel. A fixacao foi expandida para o primeiro card: ele inicia fixado ao abrir a gaveta, mas pode ser desfixado e minimizado como os demais. Nas trilhas de estresse, as bolhas perderam borda e ficaram em estilo vidro.
 - Follow-up aplicado (iteracao 4.1): inimigos receberam ajuste estrutural para reduzir discrepancia vertical e melhorar preenchimento do retrato em toda a lateral (incluindo PNG com transparencias) via fallback de background no frame de imagem. A piramide de minimizados do lado inimigo passou a ancorar para a esquerda, eliminando fechamento visual para a direita. Em widescreen, a grade da arena foi recalibrada para manter colunas mais nas laterais com margem minima de seguranca; as setas de recolha foram reancoradas acima do primeiro nome (aliados no lado direito da gaveta e inimigos no extremo esquerdo).
 - Follow-up aplicado (iteracao 4.2): a gaveta em estado aberto passou a ocupar largura real da coluna (`width: 100%`) e o painel interno deixou de depender apenas de posicionamento absoluto, evitando colisao entre cards de lados opostos em telas largas. A ancoragem dos minimizados de inimigo foi revertida para a direita (padrão visual do lado adversario), e a coluna de retrato do inimigo recebeu ajuste adicional para reduzir percepcao de excesso vertical.
+- Follow-up aplicado (iteracao 4.3): reforco de contencao vertical no card expandido: coluna de imagem passou a preencher novamente toda a altura do card (eliminando bloco preto abaixo do retrato), e o aspecto principal no miolo foi limitado a uma linha com elipse para evitar quebra letra-a-letra que inflava a altura total. As proporcoes de colunas foram recalibradas com largura mais fluida da imagem para reduzir estrangulamento da coluna central.
 
 ## Pendencias para Proxima Iteracao
 - Validar com o usuario em widescreen se nao ha mais sobreposicao entre os lados quando ambos estao expandidos.

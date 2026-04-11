@@ -254,18 +254,19 @@ export function CombatCard({
 
     const isMirroredThreatLayout = isThreat;
     const isCompactThreatLayout = false;
-    const imageColumnWidth = "clamp(224px, 28vw, 322px)";
+    const imageColumnWidth = "clamp(156px, 33%, 252px)";
+    const edgeColumnWidth = "minmax(116px, 0.86fr)";
     const imageColumnBaseHeight = 154;
     const resolvedColumnHeight = dynamicCardHeight
         ? Math.max(imageColumnBaseHeight, Math.min(dynamicCardHeight, 236))
         : imageColumnBaseHeight;
     const cardGridTemplate = isMirroredThreatLayout
         ? (isCompactThreatLayout
-            ? `minmax(126px, 0.86fr) minmax(0, 1.28fr) ${imageColumnWidth}`
-            : `minmax(146px, 1fr) minmax(0, 1.55fr) ${imageColumnWidth}`)
+            ? `${edgeColumnWidth} minmax(0, 1.2fr) ${imageColumnWidth}`
+            : `${edgeColumnWidth} minmax(0, 1.36fr) ${imageColumnWidth}`)
         : (isCompactThreatLayout
-            ? `${imageColumnWidth} minmax(0, 1.28fr) minmax(126px, 0.86fr)`
-            : `${imageColumnWidth} minmax(0, 1.55fr) minmax(146px, 1fr)`);
+            ? `${imageColumnWidth} minmax(0, 1.2fr) ${edgeColumnWidth}`
+            : `${imageColumnWidth} minmax(0, 1.36fr) ${edgeColumnWidth}`);
     const outerSkew = isCompactThreatLayout
         ? (isMirroredThreatLayout ? 'skewX(3deg)' : 'skewX(-3deg)')
         : (isMirroredThreatLayout ? 'skewX(5deg)' : 'skewX(-5deg)');
@@ -450,7 +451,7 @@ export function CombatCard({
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
                     minHeight: `${imageColumnBaseHeight}px`,
-                    height: 'auto',
+                    height: '100%',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
@@ -567,7 +568,7 @@ export function CombatCard({
                     {!isRestrictedThreatView && conceptAspect && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <span style={{ flex: 1, fontSize: '0.8rem', color: '#ccc', fontStyle: 'italic', whiteSpace: 'normal', wordBreak: 'break-word' }}>{conceptAspect.value}</span>
+                                <span style={{ flex: 1, fontSize: '0.8rem', color: '#ccc', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conceptAspect.value}</span>
                                 {otherAspects.length > 0 && (
                                     <button 
                                         onClick={() => setIsAspectsExpanded(!isAspectsExpanded)}

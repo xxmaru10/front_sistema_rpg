@@ -3,7 +3,7 @@ title: "Story ativa - Story 38 (Arena: gaveta vidro transparente na extrema esqu
 story_ref: "story-38-arena-gaveta-vidro-transparente-na-extrema-esquerda-com-expansao-interna-dos-cards.md"
 epic: "epic-02-rework-cards-arena-gavetas-e-interacoes"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.2-gaveta-open-no-grid-e-inimigo-direita)"
+last_updated: "2026-04-11 (follow-up-4.3-contencao-vertical-cards)"
 ---
 
 ## Progresso Atual
@@ -18,6 +18,7 @@ last_updated: "2026-04-11 (follow-up-4.2-gaveta-open-no-grid-e-inimigo-direita)"
 - Setas externas de recolha reposicionadas acima do primeiro nome (aliados no lado direito da gaveta; inimigos no extremo esquerdo).
 - Cards minimizados de inimigos voltaram a ancorar na direita da tela (piramide invertida fechando para a esquerda, conforme regra visual do lado adversario).
 - Gaveta aberta agora participa do layout da coluna (largura 100% do lado) em vez de flutuar apenas por `position: absolute`, reduzindo colisao entre lados em telas largas.
+- Contencao vertical aplicada nos cards expandidos: coluna de retrato voltou a preencher toda a lateral do card e o texto de conceito do miolo passou a usar elipse em linha unica (sem quebra letra-a-letra), reduzindo crescimento vertical anomalo em aliados e inimigos.
 
 ## Proximo Passo
 1. Validar com o usuario, em widescreen real, se a colisao lateral entre aliados/inimigos foi eliminada.
