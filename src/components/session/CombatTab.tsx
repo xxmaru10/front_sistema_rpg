@@ -833,7 +833,7 @@ export function CombatTab({
                                                             isGM={userRole === "GM"}
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             displayMode="strip"
-                                                            avatarSide="left"
+                                                            avatarSide="right"
                                                             stripRank={stripRank}
                                                             stripWidthPercent={stripWidthPercent}
                                                             onToggleExpanded={() => setPinnedThreatCardIds((prev) => (

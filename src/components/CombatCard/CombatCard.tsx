@@ -254,9 +254,11 @@ export function CombatCard({
 
     const isMirroredThreatLayout = isThreat;
     const isCompactThreatLayout = false;
-    const imageColumnWidth = isMirroredThreatLayout ? "clamp(206px, 24vw, 312px)" : "clamp(224px, 28vw, 322px)";
+    const imageColumnWidth = "clamp(224px, 28vw, 322px)";
     const imageColumnBaseHeight = 154;
-    const resolvedColumnHeight = dynamicCardHeight ? Math.max(imageColumnBaseHeight, dynamicCardHeight) : imageColumnBaseHeight;
+    const resolvedColumnHeight = dynamicCardHeight
+        ? Math.max(imageColumnBaseHeight, Math.min(dynamicCardHeight, 236))
+        : imageColumnBaseHeight;
     const cardGridTemplate = isMirroredThreatLayout
         ? (isCompactThreatLayout
             ? `minmax(126px, 0.86fr) minmax(0, 1.28fr) ${imageColumnWidth}`
@@ -447,8 +449,8 @@ export function CombatCard({
                     position: 'relative',
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
-                    minHeight: `${resolvedColumnHeight}px`,
-                    height: '100%',
+                    minHeight: `${imageColumnBaseHeight}px`,
+                    height: 'auto',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
