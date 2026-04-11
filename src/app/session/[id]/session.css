@@ -1437,7 +1437,13 @@ body {
 
 @media (max-width: 1460px) {
     .combat-avatar-rail.is-expanded .combat-card-wrapper {
-        zoom: 0.65;
+        zoom: 0.84;
+    }
+}
+
+@media (max-width: 1280px) {
+    .combat-avatar-rail.is-expanded .combat-card-wrapper {
+        zoom: 0.78;
     }
 }
 
@@ -1463,11 +1469,11 @@ body {
     }
 
     .combat-threats-column {
-        order: 2;
+        order: 3;
     }
 
     .combat-party {
-        order: 3;
+        order: 2;
     }
 
     .combat-log-wrapper { max-height: 500px; }
@@ -1520,8 +1526,8 @@ body {
     }
 
     .combat-avatar-rail.is-expanded {
-        width: min(82vw, 320px);
-        max-height: 340px;
+        width: min(96vw, 460px);
+        max-height: 420px;
     }
 
     .combat-avatar-rail.is-expanded .combat-card-wrapper {
@@ -1545,7 +1551,7 @@ body {
     gap: 4px;
     row-gap: 4px;
     width: fit-content;
-    max-width: calc(100% - 12px);
+    max-width: min(calc(100% - 12px), 1320px);
     min-height: 46px;
     background: rgba(0, 0, 0, 0.08);
     border-radius: 10px;
@@ -1662,6 +1668,10 @@ body {
 .combat-dice-integrated select,
 .combat-dice-integrated input {
     color-scheme: dark;
+}
+
+.combat-dice-integrated select {
+    background: #05080f !important;
 }
 
 .combat-dice-integrated select option,
@@ -1932,6 +1942,34 @@ body {
 
     .h-\[calc\(100vh-140px\)\] {
         height: calc(100vh - 220px) !important;
+    }
+
+    .combat-top-strip {
+        width: 100%;
+        padding: 0 4px;
+    }
+
+    .combat-dice-integrated {
+        width: 100%;
+        max-width: 100%;
+        justify-content: center;
+        align-content: flex-start;
+        padding: 7px 36px 7px 7px;
+        min-height: 44px;
+        gap: 4px;
+        row-gap: 5px;
+    }
+
+    .combat-dice-integrated .probability-grid.integrated {
+        max-width: 100%;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .combat-log-toggle-btn {
+        width: 34px;
+        min-width: 34px;
+        height: 34px;
     }
 }
 

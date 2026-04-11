@@ -52,12 +52,9 @@ export function RollerInputs({
     isGM,
     activeChar
 }: RollerInputsProps) {
-    const physicalGlyph = "\u2694";
-    const mentalGlyph = "\ud83e\udde0";
-
     const actionLabelMap: Record<RollerInputsProps["actionType"], string> = {
         OVERCOME: "SUPERAR",
-        ATTACK: `ATK: ${damageType === "PHYSICAL" ? physicalGlyph : mentalGlyph}`,
+        ATTACK: "ATACAR",
         CREATE_ADVANTAGE: "VANTAGEM",
         DEFEND: "DEFENDER",
     };
@@ -74,21 +71,7 @@ export function RollerInputs({
         ? "8ch"
         : `${Math.min(Math.max(String(manualBonus).length + 2, 3), 8)}ch`;
 
-    const actionSelectValue = actionType === "ATTACK"
-        ? (damageType === "PHYSICAL" ? "ATTACK_PHYSICAL" : "ATTACK_MENTAL")
-        : actionType;
-
     const handleActionChange = (value: string) => {
-        if (value === "ATTACK_PHYSICAL") {
-            setActionType("ATTACK");
-            setExplicitDamageType("PHYSICAL");
-            return;
-        }
-        if (value === "ATTACK_MENTAL") {
-            setActionType("ATTACK");
-            setExplicitDamageType("MENTAL");
-            return;
-        }
         setActionType(value as RollerInputsProps["actionType"]);
     };
 
@@ -172,17 +155,27 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Zap size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             <select
-                                value={actionSelectValue}
+                                value={actionType}
                                 onChange={(e) => handleActionChange(e.target.value)}
                                 className="mystic-input select-ritual"
                                 style={isIntegrated ? { width: actionWidth, maxWidth: "12ch" } : undefined}
                             >
                                 <option value="OVERCOME">SUPERAR</option>
-                                <option value="ATTACK_PHYSICAL">{`ATK: ${physicalGlyph}`}</option>
-                                <option value="ATTACK_MENTAL">{`ATK: ${mentalGlyph}`}</option>
+                                <option value="ATTACK">ATACAR</option>
                                 <option value="CREATE_ADVANTAGE">CRIAR VANTAGEM</option>
                                 <option value="DEFEND">DEFENDER</option>
                             </select>
+                            {actionType === "ATTACK" && (
+                                <select
+                                    value={damageType}
+                                    onChange={(e) => setExplicitDamageType(e.target.value as "PHYSICAL" | "MENTAL")}
+                                    className="mystic-input select-ritual attack-type-select"
+                                    style={isIntegrated ? { width: "10ch", maxWidth: "10ch" } : undefined}
+                                >
+                                    <option value="PHYSICAL">FISICO</option>
+                                    <option value="MENTAL">MENTAL</option>
+                                </select>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -402,7 +395,7 @@ export function RollerInputs({
 
                 .control-panel-grid.integrated-mode .field-row {
                     width: auto;
-                    gap: 0;
+                    gap: 4px;
                 }
 
                 .icon-select-shell {
@@ -442,6 +435,9 @@ export function RollerInputs({
 
                 .select-ritual,
                 .input-ritual {
+                    appearance: none;
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
                     background: #000000 !important;
                     border: 1px solid var(--accent-color) !important;
                     border-radius: 30px !important;
@@ -496,11 +492,20 @@ export function RollerInputs({
                 .bonus-input {
                     width: 50px !important;
                     text-align: center;
+                    font-size: 1rem !important;
+                    font-weight: 700 !important;
                 }
 
                 .control-panel-grid.integrated-mode .bonus-input {
                     width: auto !important;
                     min-width: 3ch;
+                    font-size: 1.18rem !important;
+                    font-weight: 800 !important;
+                    line-height: 1;
+                }
+
+                .attack-type-select {
+                    min-width: 90px !important;
                 }
 
                 .select-ritual option,
@@ -509,6 +514,7 @@ export function RollerInputs({
                     background: #0a0d13;
                     color: #f2f6ff;
                     font-family: var(--font-header);
+                    font-size: 0.88rem;
                 }
 
                 .select-ritual option:checked,
@@ -609,6 +615,41 @@ export function RollerInputs({
                     min-height: 30px;
                     padding: 2px 4px;
                     gap: 4px;
+                }
+
+                @media (max-width: 768px) {
+                    .matrix-inputs.integrated {
+                        width: 100%;
+                        justify-content: center;
+                    }
+
+                    .control-panel-grid.integrated-mode {
+                        width: 100%;
+                        justify-content: center !important;
+                        gap: 6px;
+                    }
+
+                    .control-panel-grid.integrated-mode .panel-col {
+                        width: 100%;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                        row-gap: 6px;
+                    }
+
+                    .control-panel-grid.integrated-mode .field-row {
+                        max-width: 100%;
+                        flex-wrap: wrap;
+                        justify-content: center;
+                    }
+
+                    .control-panel-grid.integrated-mode .select-ritual,
+                    .control-panel-grid.integrated-mode .input-ritual {
+                        max-width: min(44vw, 170px) !important;
+                    }
+
+                    .control-panel-grid.integrated-mode .attack-type-select {
+                        min-width: 92px !important;
+                    }
                 }
             `}</style>
         </div>

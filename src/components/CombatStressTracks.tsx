@@ -22,7 +22,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 <div className="combat-track">
                     <div className="track-display">
                         <span className="track-icon physical" aria-hidden="true">
-                            <Dumbbell size={12} strokeWidth={2} />
+                            <Dumbbell size={17} strokeWidth={1.9} />
                         </span>
                         <div className="track-circles">
                             {character.stress.physical.map((box, i) => (
@@ -42,7 +42,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 <div className="combat-track">
                     <div className="track-display">
                         <span className="track-icon mental" aria-hidden="true">
-                            <Brain size={12} strokeWidth={2} />
+                            <Brain size={17} strokeWidth={1.9} />
                         </span>
                         <div className="track-circles">
                             {character.stress.mental.map((box, i) => (
@@ -67,7 +67,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     -webkit-backdrop-filter: blur(12px);
                     border: none;
                     border-radius: 8px;
-                    padding: 8px 16px;
+                    padding: 9px 16px;
                     width: fit-content;
                     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 0, 0, 0.5);
                     transform: translateY(-2px);
@@ -86,7 +86,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
 
                 .divider {
                     width: 1px;
-                    height: 20px;
+                    height: 24px;
                     background: rgba(255, 255, 255, 0.1);
                 }
 
@@ -97,7 +97,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
 
                 .track-display {
                     display: flex;
-                    align-items: flex-start;
+                    align-items: center;
                     gap: 8px;
                 }
                 
@@ -106,15 +106,16 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    opacity: 0.6;
+                    opacity: 0.95;
+                    filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.46));
                 }
 
                 .track-icon.physical {
-                    color: rgba(255, 115, 115, 0.8);
+                    color: color-mix(in srgb, rgb(var(--accent-rgb)) 65%, #ff8888);
                 }
 
                 .track-icon.mental {
-                    color: rgba(181, 156, 255, 0.8);
+                    color: color-mix(in srgb, rgb(var(--accent-rgb)) 62%, #a992ff);
                 }
                 
                 .track-circles {
@@ -126,13 +127,13 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 }
 
                 .stress-circle {
-                    width: 20px;
-                    height: 20px;
+                    width: 22px;
+                    height: 22px;
                     border-radius: 50%;
                     border: 1px solid currentColor;
                     background: transparent;
                     color: inherit;
-                    font-size: 0.62rem;
+                    font-size: 0.66rem;
                     font-weight: bold;
                     display: flex;
                     align-items: center;

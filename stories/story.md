@@ -3,20 +3,20 @@ title: "Story ativa - Story 38 (Arena: gaveta vidro transparente na extrema esqu
 story_ref: "story-38-arena-gaveta-vidro-transparente-na-extrema-esquerda-com-expansao-interna-dos-cards.md"
 epic: "epic-02-rework-cards-arena-gavetas-e-interacoes"
 status: "em-andamento"
-last_updated: "2026-04-11 (handoff consolidado)"
+last_updated: "2026-04-11 (follow-up-3.7 aplicado)"
 ---
 
 ## Progresso Atual
 - Story e Epic continuam abertos por orientacao do usuario.
 - Gavetas da arena seguem em rework com cards internos e barra de rolagem integrada no topo.
-- Cards secundarios da gaveta aberta estao em modo colapsado (faixa) e expandem por hover/click.
-- Cards secundarios expandidos ganharam botao de minimizar (`-`).
-- Ajustes recentes de posicionamento foram aplicados em impulsos e na seta externa de recolher/expandir.
+- Cards secundarios seguem em modo colapsado (faixa) com expansao por hover/click e pin multiplo.
+- Correcao aplicada na coluna de retrato dos inimigos para hover/fixacao, com destino reposicionado na base da imagem.
+- Responsividade de cards e barra integrada refinada para desktop menor e mobile (incluindo ordem aliados > adversarios em mobile).
 
 ## Proximo Passo
-1. Validar visual em GM/jogador com janela menor para garantir clique dos impulsos sem clipping.
-2. Ajustar fino da posicao da seta externa para ficar entre gaveta e logs conforme pedido.
-3. Manter escopo estrito em UI/layout da arena (sem mexer em regras, dominio ou eventos).
+1. Validar em sessao real (GM/jogador) que retratos de inimigos nao somem em hover/pin com multiplos cards fixos.
+2. Validar barra de rolagem integrada em mobile para confirmar reflow sem quebra de controles.
+3. Aguardar PNGs de stress/mental para substituir icones temporarios e aplicar tint por tema.
 
 ## Handoff Prompt
 ```text

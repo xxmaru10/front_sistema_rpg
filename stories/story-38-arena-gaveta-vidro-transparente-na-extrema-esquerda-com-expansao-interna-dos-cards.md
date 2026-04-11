@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-3.6-barra-responsiva-nome-sobre-card-e-polimento-final)"
+last_updated: "2026-04-11 (follow-up-3.7-cards-inimigos-mobile-e-top-strip)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -96,11 +96,12 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 3.4): seta da gaveta de inimigos corrigida para apontar a direita e handle reposicionado para nao conflitar com a barra integrada; cards secundarios minimizados remodelados para visual de card completo (imagem/foco/vinheta + nome), com expansao por hover e fixacao/desfixacao por pin no canto superior direito; impulsos (setas e controles GM) deslocados para a direita; barra integrada recebeu botoes maiores (pericia/inventario/logs), dropdowns estilizados e botao de rolagem branco; borda/glow dourado residual da gaveta foi neutralizado para remover artefato visual solto.
 - Follow-up aplicado (iteracao 3.5): cards minimizados receberam glass transparente sem tint de classe (borda no tema global), impulso foi deslocado mais para a direita, pin passou a suportar multipla fixacao simultanea (icone maior apontando esquerda/desfixado e baixo/fixado), card de inimigos ganhou botao de remocao em lixeira vermelha e o layout dos inimigos foi espelhado horizontalmente (imagem/consequencias/formato). Barra integrada de rolagem do GM teve compressao de layout para priorizar linha unica e evitar quebra excessiva (maximo 2 linhas em cenarios estreitos).
 - Follow-up aplicado (iteracao 3.6): barra integrada da rolagem foi centralizada e passou a dimensionar por conteudo (reduzindo espaco ocioso); nome do personagem migrou para faixa superior externa (canto superior esquerdo), com trilhas de estresse e botao de rolagem deslocados responsivamente para a direita; coluna central do card foi reequilibrada para ocupar o espaco liberado. Drawers/cards expandidos receberam incremento adicional de largura (~15%) para reduzir clipping lateral em expansoes verticais longas. Impulso foi reajustado (aliados 20% mais a esquerda e adversarios proporcionalmente mais a direita), droplists da barra integrada receberam reforco visual de tema e o pin ganhou glow para legibilidade.
+- Follow-up aplicado (iteracao 3.7): correcoes de estabilidade dos cards de inimigos em hover/pin (coluna de retrato com altura explicita + ajustes de camadas/z-index), com reposicionamento de pontos de destino para a base do retrato. Retratos da arena receberam inclinacao leve para reforco visual e cards passaram por responsividade dedicada para desktop menor e mobile (reflow interno das colunas + consequencias em faixa inferior). Em mobile, a ordem visual da arena foi invertida para exibir aliados antes de adversarios e a barra integrada de rolagem ganhou compactacao/reflow para evitar quebra em colunas.
 
 ## Pendencias para Proxima Iteracao
-- Validar em GM/jogador (viewport menor) o clique dos impulsos sem clipping apos novo offset.
-- Validar em uso real o posicionamento final do handle externo da gaveta de inimigos com logs abertos.
-- Confirmar com o usuario o comportamento final dos cards secundarios com pin/despin antes de novos blocos do rework.
+- Validar em GM/jogador (desktop + viewport menor) se o retrato do inimigo permanece visivel em todos os estados (hover, fixado, multipin).
+- Validar em device real mobile a leitura da barra integrada apos o novo reflow (1-2 linhas sem quebrar os controles principais).
+- Receber os PNGs finais de stress/mental para substituir os icones temporarios e aplicar tint por tema via CSS.
 
 ## Handoff Prompt
 ```text

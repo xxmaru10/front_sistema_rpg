@@ -272,8 +272,8 @@ export function CombatCard({
             style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
-                gap: '8px', 
-                marginBottom: '12px',
+                gap: '1px', 
+                marginBottom: '10px',
                 position: 'relative',
                 width: 'min(100%, 1375px)',
                 '--card-accent': accentColor,
@@ -281,8 +281,8 @@ export function CombatCard({
             } as any}
         >
             {!isRestrictedThreatView && (
-                <div className="combat-external-stress" style={{ marginBottom: '8px', zIndex: 70, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0, flex: '1 1 220px' }}>
+                <div className="combat-external-stress" style={{ marginBottom: '0px', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 220px' }}>
                         <h3 className="combat-name" style={{ fontSize: '1.05rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
                             <span style={{ fontSize: '0.7rem', padding: '2px 4px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff', alignSelf: 'center' }}>
@@ -290,7 +290,7 @@ export function CombatCard({
                             </span>
                         )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', gap: '10px', marginLeft: 'auto', flex: '0 1 auto', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginLeft: 'auto', flex: '0 1 auto', flexWrap: 'wrap' }}>
                         <CombatStressTracks
                             character={character}
                             canEditSelf={canEditSelf}
@@ -398,29 +398,39 @@ export function CombatCard({
                     </button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{
+                <div
+                    className={`combat-image-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
+                    style={{
                     gridColumn: isMirroredThreatLayout ? 3 : 1,
                     position: 'relative',
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
+                    minHeight: dynamicCardHeight ? `${Math.max(180, dynamicCardHeight)}px` : '220px',
+                    height: dynamicCardHeight ? `${Math.max(180, dynamicCardHeight)}px` : '220px',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
                     overflow: 'visible',
-                    alignSelf: 'stretch'
-                }}>
-                    <div style={{ position: 'absolute', inset: 0, background: '#000', overflow: 'hidden' }}>
+                    alignSelf: 'stretch',
+                    zIndex: 6
+                }}
+                >
+                    <div
+                        className={`combat-image-frame${isMirroredThreatLayout ? ' mirrored' : ''}`}
+                        style={{ position: 'absolute', inset: 0, background: '#000', overflow: 'hidden', zIndex: 2 }}
+                    >
                         {character.imageUrl ? (
                             <img
                                 src={character.imageUrl}
                                 alt=""
+                                className={`combat-image-portrait${isMirroredThreatLayout ? ' mirrored' : ''}`}
                                 style={{
                                     width: '100%',
                                     height: '100%',
                                     objectFit: 'cover',
                                     objectPosition: `${arenaFocusX}% ${arenaFocusY}%`,
                                     opacity: 0.9,
-                                    transform: `scale(${arenaFocusZoom})`,
+                                    transform: `skewX(3deg) scale(${arenaFocusZoom})`,
                                     transformOrigin: `${arenaFocusX}% ${arenaFocusY}%`
                                 }}
                             />
@@ -462,11 +472,11 @@ export function CombatCard({
                             {/* Fate Points - Bottom Over Image */}
                             <div style={{
                                 position: 'absolute',
-                                bottom: '6px',
+                                bottom: '8px',
                                 ...(isMirroredThreatLayout ? { left: '10px' } : { right: '10px' }),
                                 display: 'flex',
                                 justifyContent: isMirroredThreatLayout ? 'flex-start' : 'flex-end',
-                                zIndex: 10
+                                zIndex: 35
                             }}>
                                 <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', border: 'none', background: 'transparent', padding: 0 }}>
                                     {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>-</button>}
@@ -478,7 +488,10 @@ export function CombatCard({
                     )}
                 </div>
 
-                <div style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '6px 14px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
+                <div
+                    className={`combat-main-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
+                    style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '6px 14px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start', position: 'relative', zIndex: 4 }}
+                >
                     <div ref={middleContentRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                     {isRestrictedThreatView && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -604,7 +617,9 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div style={{
+                <div
+                    className={`combat-cons-column${isMirroredThreatLayout ? ' mirrored' : ''}`}
+                    style={{
                     gridColumn: isMirroredThreatLayout ? 1 : 3,
                     display: 'flex',
                     flexDirection: 'column',
@@ -616,8 +631,11 @@ export function CombatCard({
                     paddingBottom: '4px',
                     paddingRight: '8px',
                     transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)',
-                    justifyContent: 'flex-start'
-                }}>
+                    justifyContent: 'flex-start',
+                    position: 'relative',
+                    zIndex: 5
+                }}
+                >
                     {!isRestrictedThreatView && (
                         <div ref={consequencesContentRef} style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences

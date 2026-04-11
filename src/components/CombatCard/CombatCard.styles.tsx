@@ -162,6 +162,27 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             filter: drop-shadow(0 0 10px rgba(255, 240, 190, 0.9));
         }
 
+        .combat-image-frame {
+            clip-path: polygon(0 0, 96% 0, 100% 100%, 0 100%);
+        }
+
+        .combat-image-portrait {
+            transform: skewX(-2deg) scale(1.02);
+            transform-origin: center;
+            display: block;
+        }
+
+        .combat-image-column {
+            isolation: isolate;
+        }
+
+        .combat-external-stress {
+            min-height: 28px;
+            align-items: center !important;
+            gap: 8px !important;
+            margin-bottom: 0 !important;
+        }
+
         .combat-identity {
             flex-grow: 1;
             min-width: 0;
@@ -287,7 +308,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             border-right: none;
             border-left: 1px solid rgba(255,255,255,0.2);
             border-radius: 8px 0 0 0;
-            transform: skewX(-5deg);
+            transform: skewX(5deg);
         }
 
         .combat-strip-image img {
@@ -1035,6 +1056,107 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             font-weight: bold;
             box-shadow: 0 0 10px #fff;
             pointer-events: none;
+        }
+
+        @media (max-width: 1180px) {
+            .combat-card-wrapper {
+                width: min(100%, 1240px) !important;
+            }
+
+            .combat-external-stress .combat-name {
+                font-size: 0.98rem !important;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .combat-card-wrapper {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-bottom: 8px !important;
+            }
+
+            .combat-card-wrapper .combat-external-stress {
+                gap: 6px !important;
+            }
+
+            .combat-card-wrapper .combat-name {
+                font-size: 0.92rem !important;
+                line-height: 1.02 !important;
+            }
+
+            .combat-card.expanded-card {
+                grid-template-columns: minmax(116px, 34vw) minmax(0, 1fr) !important;
+                border-radius: 18px 18px 0 0 !important;
+                transform: none !important;
+            }
+
+            .combat-card.expanded-card .combat-image-column,
+            .combat-card.expanded-card .combat-image-column.mirrored {
+                grid-column: 1 !important;
+                width: min(34vw, 152px) !important;
+                min-width: min(34vw, 152px) !important;
+                min-height: 152px !important;
+                height: auto !important;
+                margin: 0 !important;
+                transform: skewX(-2deg) !important;
+            }
+
+            .combat-card.expanded-card .combat-main-column,
+            .combat-card.expanded-card .combat-main-column.mirrored {
+                grid-column: 2 !important;
+                transform: none !important;
+                padding: 6px 10px !important;
+                overflow: visible !important;
+            }
+
+            .combat-card.expanded-card .combat-cons-column,
+            .combat-card.expanded-card .combat-cons-column.mirrored {
+                grid-column: 1 / -1 !important;
+                transform: none !important;
+                border-left: none !important;
+                border-right: none !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+                padding: 6px 10px 8px !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .combat-card-wrapper .combat-external-stress {
+                align-items: center !important;
+                gap: 5px !important;
+            }
+
+            .combat-card.expanded-card {
+                grid-template-columns: minmax(98px, 36vw) minmax(0, 1fr) !important;
+            }
+
+            .combat-card.expanded-card .combat-image-column,
+            .combat-card.expanded-card .combat-image-column.mirrored {
+                width: min(36vw, 130px) !important;
+                min-width: min(36vw, 130px) !important;
+                min-height: 132px !important;
+            }
+
+            .combat-card.expanded-card .combat-main-column,
+            .combat-card.expanded-card .combat-main-column.mirrored {
+                padding: 5px 8px !important;
+            }
+
+            .combat-card.expanded-card .combat-cons-column,
+            .combat-card.expanded-card .combat-cons-column.mirrored {
+                padding: 5px 8px 7px !important;
+            }
+
+            .combat-strip-shell {
+                min-height: 58px;
+                max-height: 58px;
+            }
+
+            .combat-strip-image {
+                height: 58px;
+                width: clamp(112px, 33vw, 146px);
+                min-width: clamp(112px, 33vw, 146px);
+            }
         }
     `}</style>
 );
