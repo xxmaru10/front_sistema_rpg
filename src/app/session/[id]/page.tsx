@@ -735,6 +735,34 @@ export default function SessionPage() {
                         isCurrentPlayerActive={isCurrentPlayerActive || false}
                         actorUserId={actorUserId}
                         sessionId={sessionId as string}
+                        handleNextRound={() => handleNextTurn(true)}
+                        handleEndCombat={() => {
+                            if (confirm("Encerrar combate e iniciar modo desafio? Todas as ameaças serão removidas.")) {
+                                handleChallengeUpdate({ isActive: true });
+                                globalEventStore.append({
+                                    id: uuidv4(),
+                                    sessionId: sessionId as string,
+                                    seq: 0,
+                                    type: "TURN_ORDER_UPDATED",
+                                    actorUserId,
+                                    createdAt: new Date().toISOString(),
+                                    visibility: "PUBLIC",
+                                    payload: { characterIds: [] }
+                                } as any);
+                                const threats = characterList.filter(c => c.isNPC && c.arenaSide !== "HERO" && c.activeInArena === true);
+                                threats.forEach(t => handleRemoveCharacter(t.id));
+                                globalEventStore.append({
+                                    id: uuidv4(),
+                                    sessionId: sessionId as string,
+                                    seq: 0,
+                                    type: "COMBAT_REACTION_ENDED",
+                                    actorUserId,
+                                    createdAt: new Date().toISOString(),
+                                    visibility: "PUBLIC",
+                                    payload: {}
+                                } as any);
+                            }
+                        }}
                     />
                 )}
                 {showVictory && <div className="victory-announcement">VITÓRIA</div>}

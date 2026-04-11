@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
-import { ChevronLeft, ChevronRight, FastForward, Trash2, Dice5, ScrollText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dice5, ScrollText } from "lucide-react";
 import { CombatCard } from "@/components/CombatCard";
-import { TurnTimer } from "@/components/TurnTimer";
 import { DiceRoller } from "@/components/DiceRoller";
 import { CombatLog } from "@/components/CombatLog";
-import { isCharacterEliminated } from "@/lib/gameLogic";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 
@@ -523,85 +521,34 @@ export function CombatTab({
                     {/* Combat Control Bar - Moved Here */}
 
 
-                    {(!state.turnOrder || state.turnOrder.length === 0) ? null : (
+                    {(!state.turnOrder || state.turnOrder.length === 0) ? null : userRole === "PLAYER" ? (
                         <div className="combat-control-bar animate-reveal">
                             <div className="combat-actions" style={{ justifyContent: 'center', width: '100%' }}>
-                                {userRole === "GM" ? (
-                                    <div className="gm-turn-controls">
-                                        <button className="end-round-btn fancy-round-btn" onClick={() => handleNextTurn(true)}>
-                                            <FastForward size={16} />
-                                            PASSAR RODADA
-                                        </button>
-                                        <div className="divider-vt"></div>
+                                <div className="player-turn-status" style={{ justifyContent: 'center' }}>
+                                    {state.targetId && (
                                         <button
-                                            className="trash-end-combat-btn"
+                                            className="end-turn-btn"
+                                            style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}
                                             onClick={() => {
-                                                if (confirm("Encerrar combate e iniciar modo desafio? Todas as ameaças serão removidas.")) {
-                                                    // 1. Activate Challenge Mode
-                                                    handleChallengeUpdate({ isActive: true });
-
-                                                    // 2. Clear Turn Order
-                                                    globalEventStore.append({
-                                                        id: uuidv4(),
-                                                        sessionId,
-                                                        seq: 0,
-                                                        type: "TURN_ORDER_UPDATED",
-                                                        actorUserId,
-                                                        createdAt: new Date().toISOString(),
-                                                        visibility: "PUBLIC",
-                                                        payload: { characterIds: [] }
-                                                    } as any);
-
-                                                    // 3. Remove all Threats from Arena
-                                                    const threats = characterList.filter(c => c.isNPC && c.arenaSide !== "HERO" && c.activeInArena === true);
-                                                    threats.forEach(t => handleRemoveCharacter(t.id));
-
-                                                    // 4. Clear any stuck reaction
-                                                    globalEventStore.append({
-                                                        id: uuidv4(),
-                                                        sessionId,
-                                                        seq: 0,
-                                                        type: "COMBAT_REACTION_ENDED",
-                                                        actorUserId,
-                                                        createdAt: new Date().toISOString(),
-                                                        visibility: "PUBLIC",
-                                                        payload: {}
-                                                    } as any);
-                                                }
+                                                globalEventStore.append({
+                                                    id: uuidv4(),
+                                                    sessionId,
+                                                    seq: 0,
+                                                    type: "COMBAT_TARGET_SET",
+                                                    actorUserId,
+                                                    createdAt: new Date().toISOString(),
+                                                    visibility: "PUBLIC",
+                                                    payload: { targetId: null }
+                                                } as any);
                                             }}
-                                            title="Encerrar combate e iniciar modo desafio"
                                         >
-                                            <Trash2 size={18} />
+                                            LIMPAR ALVO
                                         </button>
-                                    </div>
-                                ) : (
-                                    /* Player View */
-                                    <div className="player-turn-status" style={{ justifyContent: 'center' }}>
-                                        {state.targetId && (
-                                            <button
-                                                className="end-turn-btn"
-                                                style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}
-                                                onClick={() => {
-                                                    globalEventStore.append({
-                                                        id: uuidv4(),
-                                                        sessionId,
-                                                        seq: 0,
-                                                        type: "COMBAT_TARGET_SET",
-                                                        actorUserId,
-                                                        createdAt: new Date().toISOString(),
-                                                        visibility: "PUBLIC",
-                                                        payload: { targetId: null }
-                                                    } as any);
-                                                }}
-                                            >
-                                                LIMPAR ALVO
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    )}
+                    ) : null}
 
 
                 {/* Coluna 3: Ameaças (Direita) */}

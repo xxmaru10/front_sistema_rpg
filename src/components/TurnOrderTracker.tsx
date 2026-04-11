@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Character } from "@/types/domain";
-import { ChevronRight, ChevronLeft, Shield, Swords, Skull, AlertTriangle, FastForward } from "lucide-react";
+import { ChevronRight, ChevronLeft, Shield, Swords, Skull, AlertTriangle, FastForward, Trash2 } from "lucide-react";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 import { globalEventStore } from "@/lib/eventStore";
 import { supabase } from "@/lib/supabaseClient";
@@ -37,6 +37,8 @@ interface TurnOrderTrackerProps {
     isCurrentPlayerActive?: boolean;
     actorUserId?: string;
     sessionId?: string;
+    handleNextRound?: () => void;
+    handleEndCombat?: () => void;
 }
 
 const TrackerItem = ({ 
@@ -194,7 +196,9 @@ export function TurnOrderTracker({
     timerPausedAt = null,
     isCurrentPlayerActive = false,
     actorUserId,
-    sessionId = ""
+    sessionId = "",
+    handleNextRound,
+    handleEndCombat
 }: TurnOrderTrackerProps) {
     const [focusId, setFocusId] = useState<string | null>(null);
     const [effectTrigger, setEffectTrigger] = useState<{ id: string, type: 'slash' | 'shield', damage: number } | null>(null);
@@ -326,6 +330,23 @@ export function TurnOrderTracker({
                 })}
             </div>
 
+            {/* GM Controls: Below Center Diamond */}
+            {userRole === "GM" && (
+                <div className="gm-center-controls">
+                    {handleNextRound && (
+                        <button className="gm-round-btn" onClick={handleNextRound} title="Passar Rodada">
+                            <FastForward size={14} />
+                            PASSAR RODADA
+                        </button>
+                    )}
+                    {handleEndCombat && (
+                        <button className="gm-trash-btn" onClick={handleEndCombat} title="Encerrar combate">
+                            <Trash2 size={15} />
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Bottom HUD: Player Controls */}
             {userRole === "PLAYER" && (
                 <div className="hud-bottom">
@@ -367,7 +388,7 @@ export function TurnOrderTracker({
                     max-width: 800px;
                     margin: 0 auto;
                     position: relative;
-                    padding-top: 10px;
+                    padding-top: 0;
                     z-index: 50;
                 }
 
@@ -375,8 +396,8 @@ export function TurnOrderTracker({
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 8px;
-                    margin-bottom: 20px;
+                    gap: 4px;
+                    margin-bottom: 6px;
                     z-index: 60;
                 }
 
@@ -402,12 +423,12 @@ export function TurnOrderTracker({
                 .semicircle-arena {
                     position: relative;
                     width: 700px;
-                    height: 100px;
+                    height: 115px;
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
-                    margin-bottom: 20px;
-                    margin-top: -10px;
+                    margin-bottom: 4px;
+                    margin-top: -5px;
                 }
 
                 .connection-arc {
@@ -505,8 +526,8 @@ export function TurnOrderTracker({
                     width: 68px;
                     height: 68px;
                     border-width: 3px;
-                    border-color: #fff;
-                    box-shadow: 0 0 20px var(--side-color), inset 0 0 10px var(--side-color);
+                    border-color: var(--side-color);
+                    box-shadow: 0 0 28px var(--side-color), 0 0 8px var(--side-color), inset 0 0 12px var(--side-color);
                 }
 
                 :global(.is-target .diamond-portrait) {
@@ -598,6 +619,61 @@ export function TurnOrderTracker({
                 :global(.death-skull) {
                     filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
                     animation: skullPulse 1.5s infinite;
+                }
+
+                /* GM Center Controls (below main diamond) */
+                .gm-center-controls {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    z-index: 30;
+                    margin-bottom: 4px;
+                }
+
+                .gm-round-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(10, 10, 15, 0.85);
+                    border: 1px solid var(--accent-color);
+                    color: var(--accent-color);
+                    padding: 5px 16px;
+                    font-family: var(--font-header);
+                    font-size: 0.72rem;
+                    letter-spacing: 0.12em;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    transition: all 0.2s;
+                    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.15);
+                }
+
+                .gm-round-btn:hover {
+                    background: rgba(var(--accent-rgb), 0.2);
+                    transform: translateY(-1px);
+                    box-shadow: 0 3px 14px rgba(var(--accent-rgb), 0.35);
+                }
+
+                .gm-trash-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(10, 10, 15, 0.85);
+                    border: 1px solid rgba(255, 68, 68, 0.5);
+                    color: rgba(255, 68, 68, 0.7);
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .gm-trash-btn:hover {
+                    border-color: #ff4444;
+                    color: #ff4444;
+                    background: rgba(255, 68, 68, 0.15);
+                    transform: scale(1.1);
                 }
 
                 /* HUD Bottom: Controles */
