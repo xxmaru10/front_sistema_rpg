@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Character, ConsequenceDebuff } from "@/types/domain";
+import { ArenaPortraitFocus, Character, ConsequenceDebuff } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { uploadImage } from '@/lib/apiClient';
 import { v4 as uuidv4 } from "uuid";
@@ -122,8 +122,43 @@ export function useCharacterCard({
 
     // ── Image Upload / Crop ───────────────────────────────────────────────────
     const [isCropping, setIsCropping] = useState(false);
+    const [isArenaFocusCropping, setIsArenaFocusCropping] = useState(false);
     const [isImageProcessing, setIsImageProcessing] = useState(false);
     const [tempCropSrc, setTempCropSrc] = useState<string | null>(null);
+    const [arenaFocusSrc, setArenaFocusSrc] = useState<string | null>(null);
+    const [pendingPortraitBase64, setPendingPortraitBase64] = useState<string | null>(null);
+
+    const openArenaFocusStep = (base64: string) => {
+        setPendingPortraitBase64(base64);
+        setArenaFocusSrc(base64);
+        setIsArenaFocusCropping(true);
+    };
+
+    const finalizePortraitUpload = async (base64: string, focus: ArenaPortraitFocus) => {
+        const blob = await fetch(base64).then(r => r.blob());
+        const publicUrl = await uploadImage(blob, 'image/jpeg');
+
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, imageUrl: publicUrl }
+        } as any);
+
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: {
+                characterId: character.id,
+                changes: {
+                    arenaPortraitFocus: {
+                        x: Math.max(0, Math.min(100, Number.isFinite(focus.x) ? focus.x : 50)),
+                        y: Math.max(0, Math.min(100, Number.isFinite(focus.y) ? focus.y : 30)),
+                        zoom: Math.max(1, Math.min(3, Number.isFinite(focus.zoom) ? focus.zoom : 1)),
+                    }
+                }
+            }
+        } as any);
+    };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!isGM || !e.target.files?.[0]) return;
@@ -160,23 +195,9 @@ export function useCharacterCard({
                         return;
                     }
                     ctx.drawImage(img, 0, 0);
-                    // Use toBlob (async) → upload to storage → store permanent URL in event
-                    canvas.toBlob(async (blob) => {
-                        URL.revokeObjectURL(blobUrl);
-                        if (!blob) { setIsImageProcessing(false); return; }
-                        try {
-                            const publicUrl = await uploadImage(blob, 'image/jpeg');
-                            globalEventStore.append({
-                                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
-                                createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                                payload: { characterId: character.id, imageUrl: publicUrl }
-                            } as any);
-                        } catch (err) {
-                            console.error('[CharacterCard] Falha no upload da imagem:', err);
-                        } finally {
-                            setIsImageProcessing(false);
-                        }
-                    }, 'image/jpeg', 0.7);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.7);
+                    URL.revokeObjectURL(blobUrl);
+                    openArenaFocusStep(base64);
                 };
 
                 if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -194,31 +215,44 @@ export function useCharacterCard({
         img.src = blobUrl;
     };
 
-    const handleCropConfirm = async (base64: string) => {
+    const handleCropConfirm = (base64: string) => {
         if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
-        // isImageProcessing stays true until upload completes
-        try {
-            // Convert base64 data URL to Blob then upload to storage
-            const blob = await fetch(base64).then(r => r.blob());
-            const publicUrl = await uploadImage(blob, 'image/jpeg');
-            globalEventStore.append({
-                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_IMAGE_UPDATED", actorUserId: normalizedUserId,
-                createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                payload: { characterId: character.id, imageUrl: publicUrl }
-            } as any);
-        } catch (err) {
-            console.error('[CharacterCard] Falha no upload da imagem (crop):', err);
-        } finally {
-            setIsImageProcessing(false);
-        }
+        openArenaFocusStep(base64);
     };
 
     const handleCropCancel = () => {
         if (tempCropSrc?.startsWith("blob:")) URL.revokeObjectURL(tempCropSrc);
         setIsCropping(false);
         setTempCropSrc(null);
+        setIsImageProcessing(false);
+    };
+
+    const handleArenaFocusConfirm = async (focus: ArenaPortraitFocus) => {
+        const base64 = pendingPortraitBase64;
+        setIsArenaFocusCropping(false);
+        setArenaFocusSrc(null);
+        setPendingPortraitBase64(null);
+
+        if (!base64) {
+            setIsImageProcessing(false);
+            return;
+        }
+
+        try {
+            await finalizePortraitUpload(base64, focus);
+        } catch (err) {
+            console.error('[CharacterCard] Falha no upload da imagem (arena focus):', err);
+        } finally {
+            setIsImageProcessing(false);
+        }
+    };
+
+    const handleArenaFocusCancel = () => {
+        setIsArenaFocusCropping(false);
+        setArenaFocusSrc(null);
+        setPendingPortraitBase64(null);
         setIsImageProcessing(false);
     };
 
@@ -375,6 +409,7 @@ export function useCharacterCard({
         handleDeleteCharacter,
         // Cropper
         isCropping, tempCropSrc, handleCropConfirm, handleCropCancel,
+        isArenaFocusCropping, arenaFocusSrc, handleArenaFocusConfirm, handleArenaFocusCancel,
         isImageProcessing,
     };
 }

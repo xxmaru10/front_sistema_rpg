@@ -146,6 +146,55 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             transform: scale(1.1);
         }
 
+        .combat-pin-btn {
+            color: #f3e1b3 !important;
+            text-shadow: 0 0 8px rgba(255, 230, 170, 0.78), 0 0 14px rgba(255, 215, 140, 0.46);
+            filter: drop-shadow(0 0 6px rgba(255, 220, 140, 0.55));
+        }
+
+        .combat-pin-btn svg {
+            filter: drop-shadow(0 0 7px rgba(255, 220, 140, 0.7));
+        }
+
+        .combat-pin-btn:hover {
+            color: #fff !important;
+            transform: scale(1.08);
+            filter: drop-shadow(0 0 10px rgba(255, 240, 190, 0.9));
+        }
+
+        .combat-mobile-minimize-btn {
+            display: none !important;
+        }
+
+        .combat-image-frame {
+            clip-path: polygon(0 0, 96% 0, 100% 100%, 0 100%);
+        }
+
+        .combat-image-frame.mirrored {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 4% 100%);
+        }
+
+        .combat-image-portrait {
+            transform: skewX(-2deg) scale(1.02);
+            transform-origin: center;
+            display: block;
+        }
+
+        .combat-image-portrait.mirrored {
+            transform: skewX(2deg) scale(1.02);
+        }
+
+        .combat-image-column {
+            isolation: isolate;
+        }
+
+        .combat-external-stress {
+            min-height: 28px;
+            align-items: center !important;
+            gap: 8px !important;
+            margin-bottom: 0 !important;
+        }
+
         .combat-identity {
             flex-grow: 1;
             min-width: 0;
@@ -214,6 +263,216 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-avatar-shell.side-right {
             --avatar-offset: 0px;
             transform: translateX(var(--avatar-offset));
+        }
+
+        .combat-strip-shell {
+            width: var(--strip-width, 100%);
+            min-width: fit-content;
+            max-width: 100%;
+            min-height: 62px;
+            max-height: 62px;
+            border-radius: 0 28px 0 0;
+            border: none;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            padding: 0 10px 0 0;
+            cursor: pointer;
+            transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.42);
+            transform: skewX(-5deg);
+            opacity: 0.96;
+            position: relative;
+        }
+
+        .combat-strip-shell::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(90deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.78) 34%, rgba(0,0,0,0.02) 100%);
+            z-index: 0;
+        }
+
+        .combat-strip-shell.side-right {
+            flex-direction: row-reverse;
+            border-radius: 28px 0 0 0;
+            padding: 0 0 0 10px;
+            transform: skewX(5deg);
+        }
+
+        .combat-strip-shell.side-right::before {
+            background: linear-gradient(270deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.78) 34%, rgba(0,0,0,0.02) 100%);
+        }
+
+        .combat-strip-shell:hover {
+            transform: skewX(-5deg) scale(1.01);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.5);
+        }
+
+        .combat-strip-shell.side-right:hover {
+            transform: skewX(5deg) scale(1.01);
+        }
+
+        .combat-strip-image {
+            position: relative;
+            width: clamp(116px, 22vw, 168px);
+            min-width: clamp(116px, 22vw, 168px);
+            height: 62px;
+            border-radius: 0 8px 0 0;
+            overflow: hidden;
+            border-right: none;
+            background: #111;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transform: skewX(5deg);
+            z-index: 1;
+        }
+
+        .combat-strip-shell.side-right .combat-strip-image {
+            border-right: none;
+            border-left: none;
+            border-radius: 8px 0 0 0;
+            transform: skewX(5deg);
+        }
+
+        .combat-strip-image img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .combat-strip-vignette {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .combat-strip-vignette.top {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 25%);
+        }
+
+        .combat-strip-vignette.bottom {
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 25%);
+        }
+
+        .combat-strip-vignette.side {
+            background: linear-gradient(to left, rgba(0,0,0,0.6) 0%, transparent 15%);
+        }
+
+        .combat-strip-vignette.slash {
+            background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%);
+        }
+
+        .combat-strip-name {
+            font-family: var(--font-header);
+            font-size: 0.92rem;
+            letter-spacing: 0.08em;
+            color: #f3e6c1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex: 1 1 auto;
+            text-align: left;
+            transform: skewX(5deg);
+            z-index: 1;
+        }
+
+        .combat-strip-shell.side-right .combat-strip-name {
+            text-align: right;
+            transform: skewX(-5deg);
+        }
+
+        .combat-strip-shell.active-turn-avatar {
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 0 18px rgba(255,255,255,0.36), 0 10px 20px rgba(0,0,0,0.42) !important;
+        }
+
+        .combat-strip-shell.strip-stage-1 .combat-strip-image {
+            width: clamp(98px, 18vw, 138px);
+            min-width: clamp(98px, 18vw, 138px);
+            height: 56px;
+        }
+
+        .combat-strip-shell.strip-stage-2 .combat-strip-image {
+            width: clamp(72px, 14vw, 102px);
+            min-width: clamp(72px, 14vw, 102px);
+            height: 50px;
+        }
+
+        .combat-strip-shell.strip-stage-3 .combat-strip-image {
+            width: clamp(52px, 10vw, 74px);
+            min-width: clamp(52px, 10vw, 74px);
+            height: 44px;
+            opacity: 0.72;
+        }
+
+        .combat-strip-shell.strip-stage-4 .combat-strip-image {
+            width: clamp(38px, 8vw, 52px);
+            min-width: clamp(38px, 8vw, 52px);
+            height: 40px;
+            opacity: 0.8;
+        }
+
+        .combat-strip-shell.strip-stage-5 .combat-strip-image {
+            width: clamp(32px, 7vw, 42px);
+            min-width: clamp(32px, 7vw, 42px);
+            height: 36px;
+            opacity: 0.86;
+        }
+
+        .combat-strip-shell.strip-stage-4,
+        .combat-strip-shell.strip-stage-5 {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        .combat-strip-shell.strip-stage-1 {
+            min-height: 56px;
+            max-height: 56px;
+        }
+
+        .combat-strip-shell.strip-stage-2 {
+            min-height: 50px;
+            max-height: 50px;
+        }
+
+        .combat-strip-shell.strip-stage-3 {
+            min-height: 44px;
+            max-height: 44px;
+        }
+
+        .combat-strip-shell.strip-stage-4 {
+            min-height: 40px;
+            max-height: 40px;
+        }
+
+        .combat-strip-shell.strip-stage-5 {
+            min-height: 36px;
+            max-height: 36px;
+        }
+
+        .combat-strip-shell.strip-stage-1 .combat-strip-name {
+            font-size: 0.87rem;
+        }
+
+        .combat-strip-shell.strip-stage-2 .combat-strip-name {
+            font-size: 0.82rem;
+        }
+
+        .combat-strip-shell.strip-stage-3 .combat-strip-name {
+            font-size: 0.78rem;
+        }
+
+        .combat-strip-shell.strip-stage-4 .combat-strip-name {
+            font-size: 0.73rem;
+        }
+
+        .combat-strip-shell.strip-stage-5 .combat-strip-name {
+            font-size: 0.69rem;
         }
 
         .combat-return-toggle:hover,
@@ -341,6 +600,22 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             box-shadow: inset 0 0 28px rgba(255, 68, 68, 0.13), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(255, 68, 68, 0.18);
         }
 
+        .combat-strip-shell.hero-card,
+        .combat-strip-shell.own-hero-card,
+        .combat-strip-shell.npc-hero-card,
+        .combat-strip-shell.threat-card {
+            border-color: transparent;
+            background: transparent;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.42), inset 0 0 14px rgba(var(--accent-rgb), 0.08);
+        }
+
+        .combat-remove-btn.threat-remove-btn:hover {
+            color: #ffd7d7 !important;
+            border-color: rgba(255, 68, 68, 0.95) !important;
+            background: rgba(145, 14, 14, 0.88) !important;
+            transform: scale(1.08);
+        }
+
         .combat-avatar-shell.active-turn-avatar {
             border-color: rgba(255,255,255,0.92) !important;
             box-shadow: 0 0 0 2px rgba(255,255,255,0.25), 0 0 22px rgba(255,255,255,0.5), 0 12px 24px rgba(0,0,0,0.45) !important;
@@ -413,6 +688,14 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             line-height: 1;
             text-shadow: 0 0 8px rgba(255, 255, 255, 0.85), 0 0 14px rgba(255, 255, 255, 0.5);
             filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+        }
+
+        .impulse-arrow-inline {
+            font-size: 0.75rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .impulse-empty {
@@ -893,6 +1176,119 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             font-weight: bold;
             box-shadow: 0 0 10px #fff;
             pointer-events: none;
+        }
+
+        @media (max-width: 1180px) {
+            .combat-card-wrapper {
+                width: min(100%, 1240px) !important;
+            }
+
+            .combat-external-stress .combat-name {
+                font-size: 0.98rem !important;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .combat-card-wrapper {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-bottom: 8px !important;
+            }
+
+            .combat-card-wrapper .combat-external-stress {
+                gap: 6px !important;
+            }
+
+            .combat-card-wrapper .combat-name {
+                font-size: 0.92rem !important;
+                line-height: 1.02 !important;
+            }
+
+            .combat-card.expanded-card {
+                grid-template-columns: minmax(116px, 34vw) minmax(0, 1fr) !important;
+                grid-template-rows: auto auto !important;
+                border-radius: 18px 18px 0 0 !important;
+                transform: none !important;
+            }
+
+            .combat-card.expanded-card .combat-image-column,
+            .combat-card.expanded-card .combat-image-column.mirrored {
+                grid-column: 1 !important;
+                grid-row: 1 !important;
+                width: min(34vw, 152px) !important;
+                min-width: min(34vw, 152px) !important;
+                min-height: 152px !important;
+                height: auto !important;
+                margin: 0 !important;
+                transform: skewX(-2deg) !important;
+            }
+
+            .combat-card.expanded-card .combat-main-column,
+            .combat-card.expanded-card .combat-main-column.mirrored {
+                grid-column: 2 !important;
+                grid-row: 1 !important;
+                transform: none !important;
+                padding: 6px 10px !important;
+                overflow: visible !important;
+            }
+
+            .combat-card.expanded-card .combat-cons-column,
+            .combat-card.expanded-card .combat-cons-column.mirrored {
+                grid-column: 1 / -1 !important;
+                grid-row: 2 !important;
+                transform: none !important;
+                border-left: none !important;
+                border-right: none !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+                padding: 6px 10px 8px !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .combat-mobile-minimize-btn {
+                display: inline-flex !important;
+            }
+
+            .combat-card-wrapper .combat-external-stress {
+                align-items: center !important;
+                gap: 5px !important;
+            }
+
+            .impulse-arrow-inline {
+                font-size: 0.53rem;
+            }
+
+            .combat-card.expanded-card {
+                grid-template-columns: minmax(98px, 36vw) minmax(0, 1fr) !important;
+            }
+
+            .combat-card.expanded-card .combat-image-column,
+            .combat-card.expanded-card .combat-image-column.mirrored {
+                width: min(36vw, 130px) !important;
+                min-width: min(36vw, 130px) !important;
+                min-height: 132px !important;
+            }
+
+            .combat-card.expanded-card .combat-main-column,
+            .combat-card.expanded-card .combat-main-column.mirrored {
+                padding: 5px 8px !important;
+            }
+
+            .combat-card.expanded-card .combat-cons-column,
+            .combat-card.expanded-card .combat-cons-column.mirrored {
+                padding: 5px 8px 7px !important;
+            }
+
+            .combat-strip-shell {
+                min-height: 58px;
+                max-height: 58px;
+            }
+
+            .combat-strip-image {
+                height: 58px;
+                width: clamp(112px, 33vw, 146px);
+                min-width: clamp(112px, 33vw, 146px);
+            }
         }
     `}</style>
 );

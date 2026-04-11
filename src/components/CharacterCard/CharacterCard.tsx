@@ -6,6 +6,7 @@ import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
 import { useCharacterCard } from "./useCharacterCard";
 import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
+import { ArenaFocusCropper } from "@/components/ImageCropper/ArenaFocusCropper";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { CharacterLore } from "./CharacterLore";
 import { PowerTabsSection } from "./PowerTabsSection";
@@ -333,6 +334,16 @@ export function CharacterCard({
                         outputHeight={600}
                         onConfirm={hook.handleCropConfirm}
                         onCancel={hook.handleCropCancel}
+                    />
+                )}
+
+                {hook.isArenaFocusCropping && hook.arenaFocusSrc && (
+                    <ArenaFocusCropper
+                        src={hook.arenaFocusSrc}
+                        aspectRatio={1.24}
+                        initialFocus={character.arenaPortraitFocus}
+                        onConfirm={hook.handleArenaFocusConfirm}
+                        onCancel={hook.handleArenaFocusCancel}
                     />
                 )}
 

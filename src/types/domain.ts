@@ -122,6 +122,12 @@ export type StressTrackValues = {
   mental: number[];
 };
 
+export type ArenaPortraitFocus = {
+  x: number; // percent 0..100
+  y: number; // percent 0..100
+  zoom: number; // multiplier >= 1
+};
+
 export type Character = {
   id: string;
   name: string;
@@ -153,6 +159,7 @@ export type Character = {
   spells: Spell[];
   magicLevel: number; // 0-3
   imageUrl?: string;
+  arenaPortraitFocus?: ArenaPortraitFocus;
   biography?: string;
   sheetAspects?: string[]; // Array of 4 strings. Index 3 is Trouble (Red).
   activeInArena?: boolean; // If false, hidden from Arena view but still in session.

@@ -9,8 +9,8 @@ interface CombatConsequencesProps {
 }
 
 export function CombatConsequences({ character, isGM, openConsequenceModal }: CombatConsequencesProps) {
-    const defaultSlots = ["mild", "moderate", "severe", "extreme"];
-    const slotOrder = ["mild", "mild2", "moderate", "severe", "extreme"];
+    const defaultSlots = ["mild", "moderate", "severe"];
+    const slotOrder = ["mild", "moderate", "severe"];
     const allSlots = new Set<string>(defaultSlots);
 
     Object.keys(character.consequences || {}).forEach((slot) => allSlots.add(slot));
@@ -28,39 +28,42 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
         return left.localeCompare(right);
     });
 
+    const filledSlots = orderedSlots.filter(slot => {
+        const cons = character.consequences?.[slot];
+        return cons && cons.text && cons.text.trim().length > 0;
+    });
+
     return (
         <div className="combat-consequences">
-            <div className="consequences-title">CONSEQUÊNCIAS</div>
             <div className="consequences-list">
                 {orderedSlots.map((slot) => {
                     const cons = character.consequences?.[slot];
-
-                    let label = slot.toUpperCase();
-                    if (slot === "mild" || slot.includes("mild")) label = "-2 LEVE";
-                    else if (slot === "moderate" || slot.includes("moderate")) label = "-4 MODERADA";
-                    else if (slot === "severe" || slot.includes("severe")) label = "-6 GRAVE";
-                    else if (slot === "extreme" || slot.includes("extreme")) label = "-8 EXTREMA";
-
                     const isFilled = cons && cons.text && cons.text.trim().length > 0;
+                    
+                    let valueText = "";
+                    if (slot === "mild" || slot.includes("mild")) valueText = "-2";
+                    else if (slot === "moderate" || slot.includes("moderate")) valueText = "-4";
+                    else if (slot === "severe" || slot.includes("severe")) valueText = "-6";
+                    else if (slot === "extreme" || slot.includes("extreme")) valueText = "-8";
 
                     return (
                         <div
                             key={slot}
-                            className="combat-consequence-row"
+                            className={`combat-consequence-box ${isFilled ? 'filled' : 'empty'}`}
                             onClick={() => {
                                 if (!isGM) return;
                                 openConsequenceModal(slot, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value);
                             }}
+                            title={isFilled ? cons.text.toUpperCase() : `Vazio (${valueText})`}
                         >
-                            <span className="cons-label">{label}</span>
-                            <span className={`cons-value ${isFilled ? 'filled' : 'empty'}`}>
-                                {isFilled ? cons.text.toUpperCase() : "..."}
-                                {isFilled && cons.debuff && (
-                                    <span className="cons-debuff-badge">
-                                        -{cons.debuff.value} {cons.debuff.skill.slice(0, 3).toUpperCase()}
-                                    </span>
-                                )}
+                            <span className="cons-content">
+                                {isFilled ? cons.text.toUpperCase() : valueText}
                             </span>
+                            {isFilled && cons.debuff && (
+                                <span className="cons-debuff-badge">
+                                    -{cons.debuff.value} {cons.debuff.skill.slice(0, 3).toUpperCase()}
+                                </span>
+                            )}
                         </div>
                     );
                 })}
@@ -70,64 +73,72 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
                 .combat-consequences {
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 6px;
                 }
 
                 .consequences-title {
                     font-size: 0.55rem;
                     letter-spacing: 0.15em;
-                    color: rgba(255,255,255,0.2);
+                    color: rgba(255,255,255,0.4);
                     margin-bottom: 2px;
+                    font-weight: bold;
                 }
 
                 .consequences-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 4px;
                 }
 
-                .combat-consequence-row {
+                .combat-consequence-box {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
-                    font-size: 0.7rem;
+                    justify-content: center;
+                    min-height: 28px;
+                    padding: 4px 8px;
+                    background: rgba(0, 0, 0, 0.3);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 4px;
                     cursor: pointer;
-                    padding: 2px 4px;
-                }
-                .combat-consequence-row:hover {
-                    background: rgba(255,255,255,0.03);
+                    transition: all 0.2s ease;
+                    position: relative;
                 }
 
-                .cons-label {
-                    color: #c5a059;
+                .combat-consequence-box:hover {
+                    border-color: rgba(197, 160, 89, 0.5);
+                    background: rgba(197, 160, 89, 0.05);
+                }
+
+                .combat-consequence-box.filled {
+                    border-color: rgba(255, 68, 68, 0.5);
+                    background: rgba(25, 0, 0, 0.9);
+                }
+
+                .cons-content {
+                    font-size: 0.65rem;
                     font-weight: bold;
-                    min-width: 70px;
-                    font-size: 0.6rem;
+                    color: #888;
+                    text-align: center;
+                    line-height: 1.2;
+                    word-break: break-word;
                 }
 
-                .cons-value {
-                    flex: 1;
-                    color: #666;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-
-                .cons-value.filled {
-                    color: #ff4444;
-                    text-shadow: 0 0 5px rgba(255, 68, 68, 0.4);
+                .filled .cons-content {
+                    color: #ff6666;
+                    text-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
                 }
 
                 .cons-debuff-badge {
-                    background: rgba(255, 68, 68, 0.2);
-                    color: #ff8888;
-                    padding: 0 4px;
-                    border-radius: 2px;
-                    font-size: 0.6rem;
-                    border: 1px solid rgba(255, 68, 68, 0.3);
+                    position: absolute;
+                    top: -6px;
+                    right: -4px;
+                    background: #ff4444;
+                    color: white;
+                    padding: 1px 3px;
+                    border-radius: 3px;
+                    font-size: 0.5rem;
+                    font-weight: bold;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                 }
             `}</style>
         </div>

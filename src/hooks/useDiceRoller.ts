@@ -263,6 +263,11 @@ export function useDiceRoller({
         setManualDamageType(true);
     };
 
+    const setExplicitDamageType = (type: "PHYSICAL" | "MENTAL") => {
+        setDamageType(type);
+        setManualDamageType(true);
+    };
+
     const handleRoll = () => {
         if (disabled) return;
         const charId = activeChar?.id || fixedCharacterId || selectedCharId;
@@ -302,7 +307,7 @@ export function useDiceRoller({
         selectedSkill, handleSkillSelect,
         actionType, setActionType,
         targetIds, handleTargetAdd, handleTargetRemove,
-        damageType, toggleDamageType,
+        damageType, toggleDamageType, setExplicitDamageType,
         selectedItemId, setSelectedItemId,
         isRolling, 
         diceResults, diceRotations, lastTotal,

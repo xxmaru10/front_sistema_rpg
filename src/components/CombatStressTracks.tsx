@@ -1,7 +1,6 @@
 "use client";
 
 import { Character } from "@/types/domain";
-import { Brain, Dumbbell } from "lucide-react";
 
 interface CombatStressTracksProps {
     character: Character;
@@ -17,71 +16,87 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
     };
 
     return (
-        <div className="combat-stress-section">
-            <div className="combat-track">
-                <div className="track-header">
-                    <span className="track-icon physical" aria-hidden="true">
-                        <Dumbbell size={11} strokeWidth={1.9} />
-                    </span>
-                    <span>FÍSICO</span>
+        <div className="combat-stress-container">
+            <div className="combat-stress-section">
+                <div className="combat-track">
+                    <div className="track-display">
+                        <span className="track-icon physical png" aria-hidden="true" />
+                        <div className="track-circles">
+                            {character.stress.physical.map((box, i) => (
+                                <button
+                                    key={i}
+                                    className={`stress-circle ${box ? "marked" : ""}`}
+                                    onClick={() => canEditSelf && handleStressToggle("PHYSICAL", i, box)}
+                                    disabled={!canEditSelf}
+                                >
+                                    {resolveValue("physical", i)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-                <div className="track-boxes">
-                    {character.stress.physical.map((box, i) => (
-                        <button
-                            key={i}
-                            className={`stress-box ${box ? "marked" : ""}`}
-                            onClick={() => canEditSelf && handleStressToggle("PHYSICAL", i, box)}
-                            disabled={!canEditSelf}
-                        >
-                            {resolveValue("physical", i)}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <div className="combat-track">
-                <div className="track-header">
-                    <span className="track-icon mental" aria-hidden="true">
-                        <Brain size={11} strokeWidth={1.9} />
-                    </span>
-                    <span>MENTAL</span>
-                </div>
-                <div className="track-boxes">
-                    {character.stress.mental.map((box, i) => (
-                        <button
-                            key={i}
-                            className={`stress-box ${box ? "marked" : ""}`}
-                            onClick={() => canEditSelf && handleStressToggle("MENTAL", i, box)}
-                            disabled={!canEditSelf}
-                        >
-                            {resolveValue("mental", i)}
-                        </button>
-                    ))}
+                <div className="divider" aria-hidden="true" />
+                <div className="combat-track">
+                    <div className="track-display">
+                        <span className="track-icon mental png" aria-hidden="true" />
+                        <div className="track-circles">
+                            {character.stress.mental.map((box, i) => (
+                                <button
+                                    key={i}
+                                    className={`stress-circle ${box ? "marked" : ""}`}
+                                    onClick={() => canEditSelf && handleStressToggle("MENTAL", i, box)}
+                                    disabled={!canEditSelf}
+                                >
+                                    {resolveValue("mental", i)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <style jsx>{`
+                .combat-stress-container {
+                    background:
+                        radial-gradient(circle at 22% 34%, rgba(255, 255, 255, 0.09) 0%, transparent 42%),
+                        radial-gradient(circle at 78% 68%, rgba(255, 255, 255, 0.06) 0%, transparent 45%),
+                        linear-gradient(to right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 55%, transparent 100%);
+                    backdrop-filter: blur(14px) saturate(1.08);
+                    -webkit-backdrop-filter: blur(14px) saturate(1.08);
+                    border: 1px solid rgba(var(--accent-rgb), 0.52);
+                    border-radius: 8px;
+                    padding: 6px 14px;
+                    width: fit-content;
+                    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.68), inset 0 0 14px rgba(255, 255, 255, 0.04);
+                    transform: translateY(-2px);
+                    position: relative;
+                    z-index: 5;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                }
+
                 .combat-stress-section {
                     display: flex;
-                    gap: 12px;
-                    padding: 8px 0;
-                    border-top: 1px solid rgba(255,255,255,0.05);
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                    flex-direction: row;
+                    align-items: flex-start;
+                    gap: 16px;
+                }
+
+                .divider {
+                    width: 1px;
+                    height: 20px;
+                    background: rgba(255, 255, 255, 0.1);
                 }
 
                 .combat-track {
-                    flex: 1;
                     display: flex;
                     flex-direction: column;
-                    gap: 1px;
                 }
 
-                .track-header {
-                    font-size: 0.6rem;
-                    color: #888;
+                .track-display {
                     display: flex;
                     align-items: center;
-                    gap: 4px;
-                    line-height: 1.1;
+                    gap: 8px;
                 }
                 
                 .track-icon {
@@ -89,53 +104,112 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
+                    opacity: 0.95;
+                    filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.46));
+                }
+
+                .track-icon.png {
+                    width: 19px;
+                    height: 19px;
+                    background-color: rgb(var(--accent-rgb));
+                    background-color: color-mix(in srgb, rgb(var(--accent-rgb)) 76%, #ffffff 24%);
+                    -webkit-mask-image: var(--stress-icon-url);
+                    mask-image: var(--stress-icon-url);
+                    -webkit-mask-repeat: no-repeat;
+                    mask-repeat: no-repeat;
+                    -webkit-mask-position: center;
+                    mask-position: center;
+                    -webkit-mask-size: contain;
+                    mask-size: contain;
                 }
 
                 .track-icon.physical {
-                    color: rgba(255, 115, 115, 0.88);
+                    --stress-icon-url: url('/interface/fisico.png');
+                    color: color-mix(in srgb, rgb(var(--accent-rgb)) 65%, #ff8888);
                 }
 
                 .track-icon.mental {
-                    color: rgba(181, 156, 255, 0.9);
+                    --stress-icon-url: url('/interface/mental.png');
+                    color: color-mix(in srgb, rgb(var(--accent-rgb)) 62%, #a992ff);
                 }
                 
-                .track-boxes {
+                .track-circles {
                     display: flex;
+                    flex-wrap: nowrap;
                     gap: 4px;
-                    margin-top: 1px;
+                    max-width: none;
+                    white-space: nowrap;
                 }
 
-                .stress-box {
-                    min-width: 28px;
-                    width: auto;
-                    height: 20px;
-                    padding: 0 4px;
-                    border: 1px solid #333;
-                    background: #111;
-                    color: #444;
-                    font-size: 0.62rem;
+                .stress-circle {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    border: none;
+                    background: linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02));
+                    backdrop-filter: blur(6px) saturate(1.05);
+                    -webkit-backdrop-filter: blur(6px) saturate(1.05);
+                    color: inherit;
+                    font-size: 0.66rem;
+                    font-weight: bold;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
                     transition: all 0.2s;
+                    padding: 0;
+                    line-height: 1;
                 }
 
-                .stress-box:hover:not([disabled]) {
-                    border-color: #ff4444;
+                .combat-track:nth-child(1) .stress-circle {
+                    color: rgba(255, 115, 115, 0.7);
+                }
+                .combat-track:nth-child(3) .stress-circle {
+                    color: rgba(181, 156, 255, 0.7);
                 }
 
-                .stress-box.marked {
-                    color: #000;
-                    font-weight: bold;
+                .stress-circle:hover:not([disabled]) {
+                    background: rgba(255, 255, 255, 0.1);
+                    transform: scale(1.1);
                 }
 
-                /* Tema-dependent colors need to be handled via character stats or passed as props, 
-                   but since we want to keep it simple and 1:1, we'll keep the logic here */
-                .stress-box.marked {
-                    background: #c5a059;
-                    border-color: #c5a059;
-                    box-shadow: 0 0 8px rgba(197, 160, 89, 0.4);
+                .stress-circle.marked {
+                    background: linear-gradient(145deg, rgba(255, 74, 74, 0.92), rgba(195, 20, 20, 0.88)) !important;
+                    color: #000 !important;
+                    box-shadow: 0 0 10px rgba(255, 44, 44, 0.5);
+                }
+
+                @media (max-width: 768px) {
+                    .combat-stress-container {
+                        padding: 7px 10px;
+                        max-width: min(95vw, 320px);
+                    }
+
+                    .combat-stress-section {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 8px;
+                    }
+
+                    .divider {
+                        display: none;
+                    }
+
+                    .track-display {
+                        align-items: flex-start;
+                    }
+
+                    .track-circles {
+                        flex-wrap: wrap;
+                        row-gap: 5px;
+                        max-width: 100%;
+                    }
+
+                    .stress-circle {
+                        width: 21px;
+                        height: 21px;
+                        font-size: 0.63rem;
+                    }
                 }
             `}</style>
         </div>

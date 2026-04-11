@@ -17,32 +17,34 @@ export function DiceChamber({
 }: DiceChamberProps) {
     return (
         <div className={`void-chamber ornate-border ${isIntegrated ? 'integrated' : ''}`}>
-            <div className={`scene-3d ${isIntegrated ? 'integrated' : ''}`}>
-                <div className={`dice-row-3d ${isIntegrated ? 'integrated' : ''}`}>
-                    {diceRotations.map((rot, i) => (
-                        <div key={i} className={`dice-unit ${isIntegrated ? 'integrated' : ''}`}>
-                            <div
-                                className="alchemical-cube"
-                                style={{
-                                    transform: `rotateX(${rot.x}deg) rotateY(${rot.y}deg)`,
-                                    transition: isRolling ? 'none' : 'transform 1s cubic-bezier(0.19, 1, 0.22, 1)'
-                                }}
-                            >
-                                <div className="face front">+</div>
-                                <div className="face back">+</div>
-                                <div className="face right">−</div>
-                                <div className="face left">−</div>
-                                <div className="face top">●</div>
-                                <div className="face bottom">●</div>
+            {!isIntegrated && (
+                <div className={`scene-3d ${isIntegrated ? 'integrated' : ''}`}>
+                    <div className={`dice-row-3d ${isIntegrated ? 'integrated' : ''}`}>
+                        {diceRotations.map((rot, i) => (
+                            <div key={i} className={`dice-unit ${isIntegrated ? 'integrated' : ''}`}>
+                                <div
+                                    className="alchemical-cube"
+                                    style={{
+                                        transform: `rotateX(${rot.x}deg) rotateY(${rot.y}deg)`,
+                                        transition: isRolling ? 'none' : 'transform 1s cubic-bezier(0.19, 1, 0.22, 1)'
+                                    }}
+                                >
+                                    <div className="face front">+</div>
+                                    <div className="face back">+</div>
+                                    <div className="face right">−</div>
+                                    <div className="face left">−</div>
+                                    <div className="face top">●</div>
+                                    <div className="face bottom">●</div>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {lastTotal !== null && !isRolling && (
                 <div className={`quantum-result animate-pop ${isIntegrated ? 'integrated' : ''}`}>
-                    <div className="res-ladder">{getLadderLabel(lastTotal).toUpperCase()}</div>
+                    {!isIntegrated && <div className="res-ladder">{getLadderLabel(lastTotal).toUpperCase()}</div>}
                     <div className={`res-value ${lastTotal > 0 ? 'pos' : lastTotal < 0 ? 'neg' : ''}`}>
                         {lastTotal > 0 ? `+${lastTotal}` : lastTotal}
                     </div>
@@ -65,19 +67,22 @@ export function DiceChamber({
                 }
 
                 .void-chamber.integrated {
-                    height: 70px;
-                    margin-top: 8px;
-                    margin-bottom: 8px;
+                    height: 40px;
+                    min-width: 92px;
+                    margin: 0;
+                    border-radius: 10px;
+                    justify-content: center;
+                    padding: 0 8px;
                 }
 
                 .scene-3d { perspective: 1000px; z-index: 2; margin-bottom: 20px; }
                 .scene-3d.integrated { margin-bottom: 0; }
                 
                 .dice-row-3d { display: flex; gap: 24px; }
-                .dice-row-3d.integrated { gap: 12px; }
+                .dice-row-3d.integrated { gap: 6px; }
 
                 .dice-unit { width: 50px; height: 50px; }
-                .dice-unit.integrated { width: 30px; height: 30px; }
+                .dice-unit.integrated { width: 22px; height: 22px; }
 
                 .alchemical-cube {
                     width: 100%;
@@ -101,9 +106,9 @@ export function DiceChamber({
                 }
 
                 .void-chamber.integrated .face {
-                    width: 30px;
-                    height: 30px;
-                    font-size: 1rem;
+                    width: 22px;
+                    height: 22px;
+                    font-size: 0.72rem;
                 }
 
                 .face.front  { transform: rotateY(0deg) translateZ(25px); color: var(--accent-color); border-color: var(--accent-color); text-shadow: 0 0 10px var(--accent-glow); }
@@ -113,12 +118,12 @@ export function DiceChamber({
                 .face.top    { transform: rotateX(90deg) translateZ(25px); background: #111; color: var(--accent-color); }
                 .face.bottom { transform: rotateX(-90deg) translateZ(25px); background: #111; color: var(--accent-color); }
 
-                .void-chamber.integrated .face.front { transform: rotateY(0deg) translateZ(15px); }
-                .void-chamber.integrated .face.back { transform: rotateY(180deg) translateZ(15px); }
-                .void-chamber.integrated .face.right { transform: rotateY(90deg) translateZ(15px); }
-                .void-chamber.integrated .face.left { transform: rotateY(-90deg) translateZ(15px); }
-                .void-chamber.integrated .face.top { transform: rotateX(90deg) translateZ(15px); }
-                .void-chamber.integrated .face.bottom { transform: rotateX(-90deg) translateZ(15px); }
+                .void-chamber.integrated .face.front { transform: rotateY(0deg) translateZ(11px); }
+                .void-chamber.integrated .face.back { transform: rotateY(180deg) translateZ(11px); }
+                .void-chamber.integrated .face.right { transform: rotateY(90deg) translateZ(11px); }
+                .void-chamber.integrated .face.left { transform: rotateY(-90deg) translateZ(11px); }
+                .void-chamber.integrated .face.top { transform: rotateX(90deg) translateZ(11px); }
+                .void-chamber.integrated .face.bottom { transform: rotateX(-90deg) translateZ(11px); }
 
                 .quantum-result {
                     position: absolute;
@@ -134,15 +139,15 @@ export function DiceChamber({
                 .quantum-result.integrated {
                     position: absolute;
                     inset: 0;
-                    transform: none;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 16px;
-                    background: rgba(0, 0, 0, 0.4);
-                    backdrop-filter: blur(4px);
+                    gap: 0;
+                    background: rgba(0, 0, 0, 0.56);
+                    backdrop-filter: blur(8px);
                     padding: 0;
-                    border: none;
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-radius: 9px;
                     z-index: 10;
                     text-align: center;
                 }
@@ -166,7 +171,17 @@ export function DiceChamber({
                 }
 
                 .quantum-result.integrated .res-value {
-                    font-size: 1.5rem;
+                    font-size: 1.35rem;
+                    font-weight: 700;
+                    letter-spacing: 0.03em;
+                    line-height: 1;
+                }
+
+                .quantum-result.integrated .res-ladder {
+                    font-size: 0.45rem;
+                    letter-spacing: 0.12em;
+                    margin-bottom: 0;
+                    opacity: 0.72;
                 }
 
                 .res-value.pos { text-shadow: 0 0 30px var(--accent-glow); }

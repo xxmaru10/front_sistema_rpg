@@ -5,6 +5,7 @@ import { useDiceRoller } from "@/hooks/useDiceRoller";
 import { RollerInputs } from "./DiceRoller/RollerInputs";
 import { DiceChamber } from "./DiceRoller/DiceChamber";
 import { Character } from "@/types/domain";
+import { Dices } from "lucide-react";
 
 interface DiceRollerProps {
     sessionId: string;
@@ -101,6 +102,7 @@ export function DiceRoller(props: DiceRollerProps) {
                 setActionType={roller.setActionType}
                 damageType={roller.damageType}
                 toggleDamageType={roller.toggleDamageType}
+                setExplicitDamageType={roller.setExplicitDamageType}
                 selectedItemId={roller.selectedItemId}
                 setSelectedItemId={roller.setSelectedItemId}
                 allItems={roller.allItems}
@@ -123,11 +125,20 @@ export function DiceRoller(props: DiceRollerProps) {
 
             <button
                 onClick={roller.handleRoll}
-                className={`matrix-trigger ${roller.isRolling ? 'rolling' : ''}`}
+                className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''}`}
                 disabled={roller.isRolling || disabled}
+                title={disabled ? "Aguarde seu turno" : "Rolar dados"}
             >
-                <div className="trigger-content">
-                    {disabled ? "AGUARDE SEU TURNO" : (roller.isRolling ? "CONVOCANDO O DESTINO..." : "ROLAR")}
+                <div className={`trigger-content ${isIntegrated ? 'integrated' : ''}`}>
+                    {disabled ? (
+                        "AGUARDE SEU TURNO"
+                    ) : roller.isRolling ? (
+                        isIntegrated ? "..." : "CONVOCANDO O DESTINO..."
+                    ) : isIntegrated ? (
+                        <Dices size={21} />
+                    ) : (
+                        "ROLAR"
+                    )}
                 </div>
                 <div className="trigger-progress" style={{ width: roller.isRolling ? '100%' : '0%' }}></div>
             </button>
@@ -145,8 +156,20 @@ export function DiceRoller(props: DiceRollerProps) {
                 }
 
                 .probability-grid.integrated {
-                    padding: 16px;
-                    gap: 12px;
+                    padding: 6px 8px;
+                    gap: 6px;
+                    width: auto;
+                    display: flex;
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: flex-start;
+                    overflow: visible;
+                    flex: 0 0 auto;
+                }
+
+                .probability-grid.integrated > * {
+                    flex: 0 0 auto;
                 }
 
                 .roller-brand {
@@ -185,13 +208,28 @@ export function DiceRoller(props: DiceRollerProps) {
                 .matrix-trigger {
                     position: relative;
                     height: 60px;
+                    min-width: 170px;
                     background: #000000;
                     border: 2px solid var(--accent-color);
                     border-radius: 40px;
                     cursor: pointer;
                     overflow: hidden;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
                     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
                     box-shadow: 0 0 25px var(--accent-glow), inset 0 0 20px var(--accent-glow);
+                }
+
+                .matrix-trigger.integrated {
+                    height: 44px;
+                    width: 44px;
+                    min-width: 44px;
+                    border-radius: 12px;
+                    border-width: 1.5px;
+                    background: rgba(255, 255, 255, 0.94);
+                    border-color: rgba(255, 255, 255, 0.92);
+                    box-shadow: 0 0 22px rgba(255,255,255,0.4), inset 0 0 14px rgba(255,255,255,0.3), 0 0 12px rgba(255, 215, 90, 0.28);
                 }
 
                 .trigger-content {
@@ -205,16 +243,38 @@ export function DiceRoller(props: DiceRollerProps) {
                     text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow);
                 }
 
+                .trigger-content.integrated {
+                    letter-spacing: 0;
+                    font-size: 0.85rem;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #06090f;
+                    text-shadow: none;
+                }
+
                 .matrix-trigger:hover .trigger-content { 
                     color: #fff; 
                     letter-spacing: 0.4em; 
                     text-shadow: 0 0 20px #fff, 0 0 40px var(--accent-glow); 
+                }
+
+                .matrix-trigger.integrated:hover .trigger-content {
+                    letter-spacing: 0;
+                    text-shadow: 0 0 14px #fff, 0 0 20px var(--accent-glow);
                 }
                 .matrix-trigger:hover { 
                     background: radial-gradient(circle at center, rgba(var(--accent-rgb), 0.6) 0%, rgba(var(--accent-rgb), 0.1) 100%);
                     box-shadow: 0 0 50px var(--accent-glow), inset 0 0 30px var(--accent-glow);
                     border-color: #fff;
                     transform: scale(1.02);
+                }
+
+                .matrix-trigger.integrated:hover {
+                    transform: scale(1.08);
+                    background: #ffffff;
+                    border-color: #ffffff;
+                    box-shadow: 0 0 36px rgba(255,255,255,0.5), inset 0 0 18px rgba(255,255,255,0.35), 0 0 18px rgba(255, 220, 90, 0.4);
                 }
 
                 .trigger-progress {

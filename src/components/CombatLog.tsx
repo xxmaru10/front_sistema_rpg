@@ -9,11 +9,12 @@ interface CombatLogProps {
     eventSessionMap?: Record<string, number>;
     isRefreshing?: boolean;
     onRefresh?: () => void;
+    compact?: boolean;
 }
 
 import { RotateCw } from "lucide-react";
 
-export function CombatLog({ events, characters, sessionNumber, eventSessionMap, isRefreshing, onRefresh }: CombatLogProps) {
+export function CombatLog({ events, characters, sessionNumber, eventSessionMap, isRefreshing, onRefresh, compact = false }: CombatLogProps) {
     const currentSessionEvents = sessionNumber === undefined
         ? events
         : events.filter(e => (eventSessionMap?.[e.id] ?? sessionNumber ?? 1) === sessionNumber);
@@ -30,8 +31,112 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         return event.actorUserId.toUpperCase();
     };
 
+    const getActionLabel = (actionType: string) => {
+        if (actionType === "OVERCOME") return "SUPERAR";
+        if (actionType === "ATTACK") return "ATACAR";
+        if (actionType === "DEFEND") return "DEFENDER";
+        if (actionType === "CREATE_ADVANTAGE") return "VANTAGEM";
+        return actionType;
+    };
+
+    const normalizeLabel = (value: string) =>
+        value
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLowerCase();
+
+    const shouldHideChallengeLabel = (value?: string) => {
+        if (!value) return false;
+        const normalized = normalizeLabel(value);
+        return normalized === "exploracao" || normalized === "combate";
+    };
+
+    const getCompactRollMeta = (event: ActionEvent) => {
+        if (event.type !== "ROLL_RESOLVED") return null;
+
+        const payload = event.payload as any;
+        const actionLabel = getActionLabel(payload.actionType || "");
+        const rawTargetLabel = payload.challengeDescription
+            || payload.targetCharacterIds?.map((id: string) => characters[id]?.name.toUpperCase() || "ALVO").join(", ")
+            || (payload.targetCharacterId ? characters[payload.targetCharacterId]?.name.toUpperCase() || "ALVO" : "");
+        const targetLabel = shouldHideChallengeLabel(rawTargetLabel) ? "" : (rawTargetLabel || "");
+        const diceFaces = Array.isArray(payload.dice)
+            ? payload.dice.map((d: number) => (d > 0 ? "+" : d < 0 ? "-" : "0")).join("")
+            : "";
+
+        const modifiers: string[] = [];
+        if (payload.skill?.rank) {
+            modifiers.push(`PER ${payload.skill.rank >= 0 ? `+${payload.skill.rank}` : payload.skill.rank}`);
+        }
+        if (payload.item?.bonus) {
+            modifiers.push(`ITEM ${payload.item.bonus >= 0 ? `+${payload.item.bonus}` : payload.item.bonus}`);
+        }
+        if (payload.manualBonus) {
+            modifiers.push(`BONUS ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}`);
+        }
+
+        const diff = payload.targetDiff !== undefined
+            ? payload.total - (payload.targetDiff || 0)
+            : payload.total;
+        const isSuccess = diff >= 0;
+
+        return {
+            actionLabel,
+            targetLabel,
+            diceFaces,
+            modifierText: modifiers.join(" "),
+            outcomeLabel: isSuccess ? "Sucesso" : "Fracasso",
+            isSuccess,
+            totalLabel: payload.total >= 0 ? `+${payload.total}` : String(payload.total),
+        };
+    };
+
+    const getCompactSummary = (event: ActionEvent) => {
+        if (event.type === "ROLL_RESOLVED") {
+            const payload = event.payload as any;
+            const action = getActionLabel(payload.actionType || "");
+            const targetLabel = payload.challengeDescription
+                || payload.targetCharacterIds?.map((id: string) => characters[id]?.name.toUpperCase() || "ALVO").join(", ")
+                || (payload.targetCharacterId ? characters[payload.targetCharacterId]?.name.toUpperCase() || "ALVO" : "");
+            const diceFaces = Array.isArray(payload.dice)
+                ? payload.dice.map((d: number) => d > 0 ? "+" : d < 0 ? "-" : "0").join("")
+                : "";
+            const skillMod = payload.skill?.rank ? ` Per ${payload.skill.rank >= 0 ? `+${payload.skill.rank}` : payload.skill.rank}` : "";
+            const itemMod = payload.item?.bonus ? ` Item ${payload.item.bonus >= 0 ? `+${payload.item.bonus}` : payload.item.bonus}` : "";
+            const bonusMod = payload.manualBonus ? ` Bônus ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}` : "";
+
+            let outcome = "";
+            if (payload.targetDiff !== undefined) {
+                const diff = payload.total - (payload.targetDiff || 0);
+                outcome = diff >= 0 ? "Sucesso" : "Fracasso";
+            }
+
+            return `${action}${targetLabel ? ` • ${targetLabel}` : ""} • ${diceFaces}${skillMod}${itemMod}${bonusMod}${outcome ? ` • ${outcome}` : ""}`;
+        }
+
+        if (event.type === "FP_SPENT") return `Gasta PD ${(event.payload as any).amount}`;
+        if (event.type === "FP_GAINED") return `Ganha PD ${(event.payload as any).amount}`;
+        if (event.type === "CHARACTER_CREATED") return `Novo combatente ${(event.payload as any).name?.toUpperCase() || ""}`;
+        if (event.type === "STRESS_MARKED") {
+            const p = event.payload as any;
+            return `Dano ${p.track === "PHYSICAL" ? "FÍSICO" : "MENTAL"} em ${p.characterId ? characters[p.characterId]?.name?.toUpperCase() || "ALVO" : "ALVO"}`;
+        }
+        if (event.type.includes("ASPECT_CREATED")) return `Novo aspecto ${(event.payload as any).name?.toUpperCase() || ""}`;
+        if (event.type === "COMBAT_OUTCOME") return (event.payload as any).message || "Desfecho de combate";
+        return event.type;
+    };
+
+    const displayedEvents = currentSessionEvents
+        .filter(e =>
+            ["ROLL_RESOLVED", "FP_SPENT", "FP_GAINED", "CHARACTER_CREATED", "STRESS_MARKED", "COMBAT_OUTCOME"].includes(e.type) ||
+            e.type.includes("ASPECT_CREATED")
+        )
+        .slice()
+        .reverse();
+
     return (
-        <div className="combat-log-container solid ornate-border">
+        <div className={`combat-log-container solid ornate-border ${compact ? "compact-mode" : ""}`}>
             <div className="log-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {sessionNumber !== undefined && (
                     <span className="resonance-indicator">SESSÃO {sessionNumber}</span>
@@ -74,14 +179,54 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 </div>
             )}
             <div className="log-entries-scroll">
-                {currentSessionEvents
-                    .filter(e =>
-                        ["ROLL_RESOLVED", "FP_SPENT", "FP_GAINED", "CHARACTER_CREATED", "STRESS_MARKED", "COMBAT_OUTCOME"].includes(e.type) ||
-                        e.type.includes("ASPECT_CREATED")
-                    )
-                    .slice()
-                    .reverse()
-                    .map(event => (
+                {displayedEvents.map(event => (
+                    compact ? (
+                        <div
+                            key={event.id}
+                            className={`combat-entry compact-line animate-fade-in ${(() => {
+                                const rollMeta = getCompactRollMeta(event);
+                                if (!rollMeta) return "";
+                                return rollMeta.isSuccess ? "roll-good" : "roll-bad";
+                            })()}`}
+                        >
+                            <span className="compact-time">{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                            <span className="compact-actor">{getActorName(event)}</span>
+                            <span className="compact-summary">
+                                {(() => {
+                                    const rollMeta = getCompactRollMeta(event);
+                                    if (!rollMeta) return getCompactSummary(event);
+                                    return (
+                                        <>
+                                            <span className="compact-action">{rollMeta.actionLabel}</span>
+                                            {rollMeta.targetLabel && (
+                                                <>
+                                                    <span className="compact-sep"> • </span>
+                                                    <span className="compact-target">{rollMeta.targetLabel}</span>
+                                                </>
+                                            )}
+                                            <span className="compact-sep"> • </span>
+                                            <span className="compact-dice">{rollMeta.diceFaces}</span>
+                                            {rollMeta.modifierText && (
+                                                <>
+                                                    <span className="compact-sep"> </span>
+                                                    <span className="compact-mods">{rollMeta.modifierText}</span>
+                                                </>
+                                            )}
+                                            <span className="compact-sep"> • </span>
+                                            <span className={`compact-outcome ${rollMeta.isSuccess ? "good" : "bad"}`}>
+                                                {rollMeta.outcomeLabel}
+                                            </span>
+                                        </>
+                                    );
+                                })()}
+                            </span>
+                            {(() => {
+                                const rollMeta = getCompactRollMeta(event);
+                                if (!rollMeta) return <span className="compact-total muted"></span>;
+                                return <span className={`compact-total ${rollMeta.isSuccess ? "good" : "bad"}`}>{rollMeta.totalLabel}</span>;
+                            })()}
+                        </div>
+                    ) : (
                         <div key={event.id} className="combat-entry animate-fade-in">
                             <div className="entry-meta">
                                 <span className="time">{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
@@ -212,11 +357,9 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                 )}
                             </div>
                         </div>
-                    ))}
-                {currentSessionEvents.filter(e =>
-                    ["ROLL_RESOLVED", "FP_SPENT", "FP_GAINED", "CHARACTER_CREATED", "STRESS_MARKED", "COMBAT_OUTCOME"].includes(e.type) ||
-                    e.type.includes("ASPECT_CREATED")
-                ).length === 0 && (
+                    )
+                ))}
+                {displayedEvents.length === 0 && (
                     <div className="empty-log">Aguardando reverberações do destino...</div>
                 )}
             </div>
@@ -262,9 +405,151 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     gap: 16px;
                 }
 
+                .combat-log-container.compact-mode {
+                    min-height: 92px;
+                    max-height: 126px;
+                    border-radius: 10px;
+                    background: rgba(5, 5, 5, 0.84);
+                }
+
+                .combat-log-container.compact-mode .log-header {
+                    padding: 6px 10px;
+                }
+
+                .combat-log-container.compact-mode .resonance-indicator {
+                    font-size: 0.52rem;
+                    letter-spacing: 0.22em;
+                }
+
+                .combat-log-container.compact-mode .log-entries-scroll {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 4px;
+                    padding: 6px 8px;
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                }
+
                 .combat-entry {
                     padding-bottom: 8px;
                     border-bottom: 1px solid rgba(197, 160, 89, 0.05);
+                }
+
+                .combat-log-container.compact-mode .combat-entry {
+                    min-width: 0;
+                    max-width: none;
+                    padding: 4px 6px;
+                    border-right: none;
+                    border-bottom: 1px solid rgba(197, 160, 89, 0.08);
+                }
+
+                .combat-log-container.compact-mode .combat-entry:last-child {
+                    border-bottom: none;
+                }
+
+                .combat-log-container.compact-mode .entry-meta {
+                    margin-bottom: 4px;
+                    font-size: 0.5rem;
+                }
+
+                .combat-log-container.compact-mode .entry-content {
+                    font-size: 0.66rem;
+                }
+
+                .combat-log-container.compact-mode .roll-data {
+                    padding: 8px;
+                }
+
+                .compact-line {
+                    display: grid;
+                    grid-template-columns: auto auto minmax(0, 1fr) auto;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .combat-entry.compact-line.roll-good {
+                    border-left: 2px solid rgba(50, 213, 131, 0.75);
+                    background: linear-gradient(90deg, rgba(15, 70, 43, 0.42), rgba(15, 25, 20, 0));
+                }
+
+                .combat-entry.compact-line.roll-bad {
+                    border-left: 2px solid rgba(255, 90, 90, 0.78);
+                    background: linear-gradient(90deg, rgba(80, 18, 18, 0.42), rgba(28, 14, 14, 0));
+                }
+
+                .compact-time {
+                    font-family: var(--font-header);
+                    font-size: 0.5rem;
+                    color: rgba(255, 255, 255, 0.58);
+                    letter-spacing: 0.08em;
+                    white-space: nowrap;
+                }
+
+                .compact-actor {
+                    font-family: var(--font-header);
+                    font-size: 0.56rem;
+                    color: var(--accent-color);
+                    letter-spacing: 0.08em;
+                    white-space: nowrap;
+                }
+
+                .compact-summary {
+                    font-family: var(--font-main);
+                    font-size: 0.65rem;
+                    color: rgba(255, 255, 255, 0.88);
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                .compact-action {
+                    font-weight: 600;
+                }
+
+                .compact-target {
+                    opacity: 0.9;
+                }
+
+                .compact-dice,
+                .compact-mods {
+                    opacity: 0.86;
+                }
+
+                .compact-sep {
+                    opacity: 0.5;
+                }
+
+                .compact-outcome.good {
+                    color: #32d583;
+                    font-weight: 700;
+                }
+
+                .compact-outcome.bad {
+                    color: #ff5a5a;
+                    font-weight: 700;
+                }
+
+                .compact-total {
+                    font-family: var(--font-header);
+                    font-size: 0.7rem;
+                    color: var(--accent-color);
+                    letter-spacing: 0.05em;
+                    white-space: nowrap;
+                }
+
+                .compact-total.good {
+                    color: #32d583;
+                    text-shadow: 0 0 10px rgba(50, 213, 131, 0.28);
+                }
+
+                .compact-total.bad {
+                    color: #ff5a5a;
+                    text-shadow: 0 0 10px rgba(255, 90, 90, 0.28);
+                }
+
+                .compact-total.muted {
+                    opacity: 0.25;
                 }
 
                 .entry-meta {
