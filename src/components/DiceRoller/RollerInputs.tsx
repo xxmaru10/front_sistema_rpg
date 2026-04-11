@@ -1,6 +1,7 @@
 "use client";
 
-import { Sparkles, Zap, Backpack, Plus } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Sparkles, Zap, Backpack, Plus, X, Swords, Brain } from "lucide-react";
 import { Character, DEFAULT_SKILLS, Item } from "@/types/domain";
 
 interface RollerInputsProps {
@@ -52,6 +53,24 @@ export function RollerInputs({
     isGM,
     activeChar
 }: RollerInputsProps) {
+    // ── Attack sub-menu state ──
+    const [showAttackSubMenu, setShowAttackSubMenu] = useState(false);
+    const [showTargetPicker, setShowTargetPicker] = useState(false);
+    const [pendingDamageType, setPendingDamageType] = useState<"PHYSICAL" | "MENTAL" | null>(null);
+    const attackMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close sub-menu on outside click
+    useEffect(() => {
+        if (!showAttackSubMenu) return;
+        const handler = (e: MouseEvent) => {
+            if (attackMenuRef.current && !attackMenuRef.current.contains(e.target as Node)) {
+                setShowAttackSubMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [showAttackSubMenu]);
+
     const actionLabelMap: Record<RollerInputsProps["actionType"], string> = {
         OVERCOME: "SUPERAR",
         ATTACK: "ATACAR",
@@ -59,20 +78,63 @@ export function RollerInputs({
         DEFEND: "DEFENDER",
     };
 
-    const selectedActionLabel = actionLabelMap[actionType] || "SUPERAR";
+    const damageLabel = damageType === "PHYSICAL" ? "FISICO" : "MENTAL";
+    const selectedActionLabel = actionType === "ATTACK"
+        ? `ATACAR (${damageLabel})`
+        : actionLabelMap[actionType] || "SUPERAR";
+
     const computeIntegratedWidth = (baseLabel: string, currentLabel: string, maxCh = 14) => {
         const base = baseLabel.length + 1;
         const current = currentLabel.length + 1;
         return `${Math.min(Math.max(base, current), maxCh)}ch`;
     };
 
-    const actionWidth = computeIntegratedWidth("SUPERAR", selectedActionLabel, 12);
+    const actionWidth = computeIntegratedWidth("SUPERAR", selectedActionLabel, 18);
     const bonusWidth = manualBonus === 0
         ? "4ch"
         : `${Math.min(Math.max(String(manualBonus).length + 1, 2), 4)}ch`;
 
+    // Available enemy targets
+    const availableTargets = characters
+        .filter(c => c.id !== (fixedCharacterId || selectedCharId))
+        .filter(c => !targetIds.includes(c.id))
+        .filter(c => {
+            if (!isGM) {
+                const arenaSide = c.arenaSide as string | undefined;
+                return (arenaSide === "THREAT") || (c.isNPC && arenaSide !== "HERO");
+            }
+            return true;
+        });
+
     const handleActionChange = (value: string) => {
+        if (value === "ATTACK") {
+            setShowAttackSubMenu(true);
+            return;
+        }
+        setShowAttackSubMenu(false);
         setActionType(value as RollerInputsProps["actionType"]);
+    };
+
+    const handleDamageTypeSelected = (type: "PHYSICAL" | "MENTAL") => {
+        setShowAttackSubMenu(false);
+        setActionType("ATTACK");
+        setExplicitDamageType(type);
+        setPendingDamageType(type);
+        // Open target picker if there are available targets
+        if (availableTargets.length > 0) {
+            setShowTargetPicker(true);
+        }
+    };
+
+    const handleTargetSelected = (targetId: string) => {
+        handleTargetAdd(targetId);
+        setShowTargetPicker(false);
+        setPendingDamageType(null);
+    };
+
+    const handleTargetPickerClose = () => {
+        setShowTargetPicker(false);
+        setPendingDamageType(null);
     };
 
     const skillOptions = (() => {
@@ -150,32 +212,57 @@ export function RollerInputs({
                         </div>
                     </div>
 
-                    <div className="matrix-field">
+                    <div className="matrix-field" ref={attackMenuRef}>
                         {!isIntegrated && <label>ACAO</label>}
-                        <div className="field-row">
+                        <div className="field-row action-field-row">
                             {!isIntegrated && <Zap size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
-                            <select
-                                value={actionType}
-                                onChange={(e) => handleActionChange(e.target.value)}
-                                className="mystic-input select-ritual"
-                                style={isIntegrated ? { width: actionWidth, maxWidth: "12ch" } : undefined}
-                            >
-                                <option value="OVERCOME">SUPERAR</option>
-                                <option value="ATTACK">ATACAR</option>
-                                <option value="CREATE_ADVANTAGE">CRIAR VANTAGEM</option>
-                                <option value="DEFEND">DEFENDER</option>
-                            </select>
-                            {actionType === "ATTACK" && (
-                                <select
-                                    value={damageType}
-                                    onChange={(e) => setExplicitDamageType(e.target.value as "PHYSICAL" | "MENTAL")}
-                                    className="mystic-input select-ritual attack-type-select"
-                                    style={isIntegrated ? { width: "10ch", maxWidth: "10ch" } : undefined}
+                            <div className="action-dropdown-wrapper">
+                                <button
+                                    type="button"
+                                    className={`mystic-input select-ritual action-btn ${actionType === "ATTACK" ? "attack-active" : ""}`}
+                                    style={isIntegrated ? { width: actionWidth, maxWidth: "18ch" } : undefined}
+                                    onClick={() => setShowAttackSubMenu(!showAttackSubMenu)}
                                 >
-                                    <option value="PHYSICAL">FISICO</option>
-                                    <option value="MENTAL">MENTAL</option>
-                                </select>
-                            )}
+                                    {selectedActionLabel}
+                                </button>
+
+                                {showAttackSubMenu && (
+                                    <div className="action-sub-menu">
+                                        <button
+                                            type="button"
+                                            className={`action-sub-item ${actionType === "OVERCOME" ? "active" : ""}`}
+                                            onClick={() => handleActionChange("OVERCOME")}
+                                        >SUPERAR</button>
+                                        <div className="action-sub-group">
+                                            <span className="action-sub-group-label">ATACAR</span>
+                                            <button
+                                                type="button"
+                                                className="action-sub-item attack-physical"
+                                                onClick={() => handleDamageTypeSelected("PHYSICAL")}
+                                            >
+                                                <Swords size={14} /> FISICO
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="action-sub-item attack-mental"
+                                                onClick={() => handleDamageTypeSelected("MENTAL")}
+                                            >
+                                                <Brain size={14} /> MENTAL
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className={`action-sub-item ${actionType === "CREATE_ADVANTAGE" ? "active" : ""}`}
+                                            onClick={() => handleActionChange("CREATE_ADVANTAGE")}
+                                        >CRIAR VANTAGEM</button>
+                                        <button
+                                            type="button"
+                                            className={`action-sub-item ${actionType === "DEFEND" ? "active" : ""}`}
+                                            onClick={() => handleActionChange("DEFEND")}
+                                        >DEFENDER</button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -243,7 +330,40 @@ export function RollerInputs({
                     </div>
                 </div>
 
-                {(actionType === "ATTACK" || actionType === "CREATE_ADVANTAGE") && (
+                {/* Attack target tags (shown after target is selected) */}
+                {actionType === "ATTACK" && targetIds.length > 0 && (
+                    <div className="matrix-field full-width animate-reveal">
+                        <label>ALVO</label>
+                        <div className="target-selection-area">
+                            <div className="target-tags">
+                                {targetIds.map(tid => {
+                                    const char = characters.find(c => c.id === tid);
+                                    return (
+                                        <div key={tid} className="target-tag">
+                                            {char?.imageUrl && (
+                                                <div className="target-tag-portrait" style={{ backgroundImage: `url(${char.imageUrl})` }} />
+                                            )}
+                                            <span>{char?.name.toUpperCase() || "???"}</span>
+                                            <button className="remove-tag" onClick={() => handleTargetRemove(tid)}>x</button>
+                                        </div>
+                                    );
+                                })}
+                                {/* Inline add more targets */}
+                                {availableTargets.length > 0 && (
+                                    <button
+                                        type="button"
+                                        className="add-target-btn"
+                                        onClick={() => setShowTargetPicker(true)}
+                                        title="Adicionar alvo"
+                                    >+</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* CREATE_ADVANTAGE keeps old target selector */}
+                {actionType === "CREATE_ADVANTAGE" && (
                     <div className="matrix-field full-width animate-reveal">
                         <label>ALVOS</label>
                         <div className="target-selection-area">
@@ -264,23 +384,11 @@ export function RollerInputs({
                                         className="mystic-input select-ritual add-target-select"
                                     >
                                         <option value="">+</option>
-                                        {characters
-                                            .filter(c => c.id !== (fixedCharacterId || selectedCharId))
-                                            .filter(c => !targetIds.includes(c.id))
-                                            .filter(c => {
-                                                if (!isGM) {
-                                                    const arenaSide = c.arenaSide as string | undefined;
-                                                    const isThreat = (arenaSide === "THREAT") || (c.isNPC && arenaSide !== "HERO");
-                                                    return isThreat;
-                                                }
-                                                return true;
-                                            })
-                                            .map(c => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.isNPC ? "NPC :: " : "PC :: "}{c.name.toUpperCase()}
-                                                </option>
-                                            ))
-                                        }
+                                        {availableTargets.map(c => (
+                                            <option key={c.id} value={c.id}>
+                                                {c.isNPC ? "NPC :: " : "PC :: "}{c.name.toUpperCase()}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -288,6 +396,45 @@ export function RollerInputs({
                     </div>
                 )}
             </div>
+
+            {/* ═══ TARGET PICKER MODAL ═══ */}
+            {showTargetPicker && (
+                <div className="target-picker-overlay" onClick={handleTargetPickerClose}>
+                    <div className="target-picker-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="target-picker-header">
+                            <span className="target-picker-title">
+                                {pendingDamageType === "PHYSICAL" ? <Swords size={16} /> : <Brain size={16} />}
+                                ESCOLHA O ALVO
+                            </span>
+                            <button type="button" className="target-picker-close" onClick={handleTargetPickerClose}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="target-picker-list">
+                            {availableTargets.length === 0 ? (
+                                <div className="target-picker-empty">Nenhum alvo disponivel</div>
+                            ) : (
+                                availableTargets.map(c => (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        className="target-picker-item"
+                                        onClick={() => handleTargetSelected(c.id)}
+                                    >
+                                        <div
+                                            className="target-picker-portrait"
+                                            style={c.imageUrl ? { backgroundImage: `url(${c.imageUrl})` } : undefined}
+                                        >
+                                            {!c.imageUrl && <span className="target-picker-initials">{c.name.charAt(0).toUpperCase()}</span>}
+                                        </div>
+                                        <span className="target-picker-name">{c.name.toUpperCase()}</span>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style jsx>{`
                 .matrix-inputs {
@@ -617,6 +764,295 @@ export function RollerInputs({
                     gap: 4px;
                 }
 
+                /* ── Action dropdown wrapper ── */
+                .action-dropdown-wrapper {
+                    position: relative;
+                    display: inline-flex;
+                }
+
+                .action-btn {
+                    cursor: pointer;
+                    user-select: none;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    transition: all 0.3s ease;
+                }
+
+                .action-btn.attack-active {
+                    border-color: #ff4444 !important;
+                    color: #ff4444 !important;
+                    text-shadow: 0 0 10px rgba(255, 68, 68, 0.4), 0 0 20px rgba(255, 68, 68, 0.2) !important;
+                    box-shadow: 0 0 20px rgba(255, 68, 68, 0.2), inset 0 0 12px rgba(255, 68, 68, 0.1) !important;
+                }
+
+                /* ── Action sub-menu ── */
+                .action-sub-menu {
+                    position: absolute;
+                    top: calc(100% + 6px);
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 9999;
+                    background: rgba(8, 10, 14, 0.96);
+                    border: 1px solid rgba(var(--accent-rgb), 0.35);
+                    border-radius: 14px;
+                    backdrop-filter: blur(18px) saturate(1.2);
+                    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+                    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 20px rgba(var(--accent-rgb), 0.15);
+                    padding: 6px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 3px;
+                    min-width: 180px;
+                    animation: submenuReveal 0.18s ease-out;
+                }
+
+                @keyframes submenuReveal {
+                    from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+                }
+
+                .action-sub-item {
+                    background: transparent;
+                    border: none;
+                    color: rgba(255, 255, 255, 0.75);
+                    font-family: var(--font-header);
+                    font-size: 0.78rem;
+                    letter-spacing: 0.1em;
+                    padding: 10px 16px;
+                    cursor: pointer;
+                    border-radius: 10px;
+                    transition: all 0.2s ease;
+                    text-align: left;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .action-sub-item:hover {
+                    background: rgba(var(--accent-rgb), 0.15);
+                    color: #fff;
+                }
+
+                .action-sub-item.active {
+                    background: rgba(var(--accent-rgb), 0.12);
+                    color: var(--accent-color);
+                }
+
+                .action-sub-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                    padding: 4px 0;
+                    margin: 0 4px;
+                    border-left: 2px solid rgba(255, 68, 68, 0.3);
+                }
+
+                .action-sub-group-label {
+                    font-family: var(--font-header);
+                    font-size: 0.55rem;
+                    letter-spacing: 0.2em;
+                    color: rgba(255, 68, 68, 0.5);
+                    padding: 0 12px;
+                    margin-bottom: 2px;
+                }
+
+                .action-sub-item.attack-physical {
+                    color: #ff6b6b;
+                    padding-left: 12px;
+                }
+                .action-sub-item.attack-physical:hover {
+                    background: rgba(255, 68, 68, 0.15);
+                    color: #ff4444;
+                }
+
+                .action-sub-item.attack-mental {
+                    color: #c084fc;
+                    padding-left: 12px;
+                }
+                .action-sub-item.attack-mental:hover {
+                    background: rgba(168, 85, 247, 0.15);
+                    color: #a855f7;
+                }
+
+                /* ── Target tag portrait ── */
+                .target-tag-portrait {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    background-size: cover;
+                    background-position: center;
+                    border: 1px solid rgba(255, 68, 68, 0.5);
+                    flex-shrink: 0;
+                }
+
+                .add-target-btn {
+                    background: rgba(255, 68, 68, 0.1);
+                    border: 1px dashed rgba(255, 68, 68, 0.4);
+                    color: #ff6666;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+                }
+
+                .add-target-btn:hover {
+                    background: rgba(255, 68, 68, 0.25);
+                    border-color: #ff4444;
+                    transform: scale(1.1);
+                }
+
+                /* ═══ TARGET PICKER MODAL ═══ */
+                .target-picker-overlay {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 99999;
+                    background: rgba(0, 0, 0, 0.7);
+                    backdrop-filter: blur(6px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    animation: overlayFadeIn 0.2s ease-out;
+                }
+
+                @keyframes overlayFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .target-picker-modal {
+                    background: rgba(10, 12, 18, 0.97);
+                    border: 1px solid rgba(255, 68, 68, 0.35);
+                    border-radius: 20px;
+                    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 68, 68, 0.1);
+                    min-width: 320px;
+                    max-width: 480px;
+                    max-height: 70vh;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    animation: modalSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+                }
+
+                @keyframes modalSlideIn {
+                    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+
+                .target-picker-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 16px 20px;
+                    border-bottom: 1px solid rgba(255, 68, 68, 0.15);
+                }
+
+                .target-picker-title {
+                    font-family: var(--font-header);
+                    font-size: 0.75rem;
+                    letter-spacing: 0.2em;
+                    color: #ff6666;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+
+                .target-picker-close {
+                    background: transparent;
+                    border: none;
+                    color: rgba(255, 255, 255, 0.4);
+                    cursor: pointer;
+                    padding: 4px;
+                    border-radius: 6px;
+                    transition: all 0.2s;
+                    display: inline-flex;
+                }
+
+                .target-picker-close:hover {
+                    color: #ff4444;
+                    background: rgba(255, 68, 68, 0.1);
+                }
+
+                .target-picker-list {
+                    padding: 8px;
+                    overflow-y: auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    max-height: 55vh;
+                }
+
+                .target-picker-empty {
+                    padding: 24px;
+                    text-align: center;
+                    font-family: var(--font-header);
+                    font-size: 0.8rem;
+                    color: rgba(255, 255, 255, 0.3);
+                    letter-spacing: 0.1em;
+                }
+
+                .target-picker-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 10px 14px;
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(255, 255, 255, 0.06);
+                    border-radius: 14px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    color: #fff;
+                }
+
+                .target-picker-item:hover {
+                    background: rgba(255, 68, 68, 0.1);
+                    border-color: rgba(255, 68, 68, 0.4);
+                    transform: translateX(4px);
+                    box-shadow: 0 4px 18px rgba(255, 68, 68, 0.15);
+                }
+
+                .target-picker-portrait {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 12px;
+                    background-color: rgba(40, 20, 20, 0.6);
+                    background-size: cover;
+                    background-position: center top;
+                    border: 2px solid rgba(255, 68, 68, 0.3);
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                    transition: border-color 0.2s;
+                }
+
+                .target-picker-item:hover .target-picker-portrait {
+                    border-color: #ff4444;
+                    box-shadow: 0 0 12px rgba(255, 68, 68, 0.3);
+                }
+
+                .target-picker-initials {
+                    font-family: var(--font-header);
+                    font-size: 1.2rem;
+                    color: rgba(255, 68, 68, 0.5);
+                    font-weight: bold;
+                }
+
+                .target-picker-name {
+                    font-family: var(--font-header);
+                    font-size: 0.85rem;
+                    letter-spacing: 0.08em;
+                    color: rgba(255, 255, 255, 0.9);
+                }
+
                 @media (max-width: 768px) {
                     .matrix-inputs.integrated {
                         width: 100%;
@@ -647,8 +1083,10 @@ export function RollerInputs({
                         max-width: min(44vw, 170px) !important;
                     }
 
-                    .control-panel-grid.integrated-mode .attack-type-select {
-                        min-width: 92px !important;
+                    .target-picker-modal {
+                        min-width: 280px;
+                        max-width: calc(100vw - 32px);
+                        margin: 0 16px;
                     }
                 }
             `}</style>
