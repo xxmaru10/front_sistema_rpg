@@ -98,7 +98,7 @@ const TrackerItem = ({
         ? '#a855f7'
         : isThreat
             ? '#ff4444'
-            : (char.isNPC ? '#50a6ff' : '#c5a059');
+            : '#3b82f6'; // Azul para jogadores e aliados
 
     const physicalTotal = char.stress.physical.length;
     const physicalMarked = char.stress.physical.filter(Boolean).length;
@@ -402,22 +402,22 @@ export function TurnOrderTracker({
                 .semicircle-arena {
                     position: relative;
                     width: 700px;
-                    height: 120px;
+                    height: 100px;
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
                     margin-bottom: 20px;
-                    margin-top: 5px;
+                    margin-top: -10px;
                 }
 
                 .connection-arc {
                     position: absolute;
-                    width: 460px;
-                    height: 280px;
+                    width: 340px;
+                    height: 200px;
                     border: 2px solid transparent;
                     border-bottom: 2px solid rgba(255, 255, 255, 0.15);
                     border-radius: 50%;
-                    top: -230px; /* Moves the circle up so the bottom arc passes through the avatars */
+                    top: -160px; /* Moves the circle up so the bottom arc passes through the avatars */
                     left: 50%;
                     transform: translateX(-50%);
                     pointer-events: none;
@@ -447,41 +447,41 @@ export function TurnOrderTracker({
 
                 /* Posicionamento do Semicirculo invertido (Centro no fundo) */
                 :global(.tracker-item[data-distance="0"]) {
-                    transform: translate(-50%, 40px) scale(1);
+                    transform: translate(-50%, 20px) scale(1);
                     opacity: 1;
                     z-index: 20;
                 }
                 
                 :global(.tracker-item[data-distance="-1"]) {
-                    transform: translate(calc(-50% - 100px), 10px) scale(0.75);
+                    transform: translate(calc(-50% - 80px), -10px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
                 
                 :global(.tracker-item[data-distance="1"]) {
-                    transform: translate(calc(-50% + 100px), 10px) scale(0.75);
+                    transform: translate(calc(-50% + 80px), -10px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
                 
                 :global(.tracker-item[data-distance="-2"]) {
-                    transform: translate(calc(-50% - 180px), -20px) scale(0.55);
+                    transform: translate(calc(-50% - 140px), -40px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
                 
                 :global(.tracker-item[data-distance="2"]) {
-                    transform: translate(calc(-50% + 180px), -20px) scale(0.55);
+                    transform: translate(calc(-50% + 140px), -40px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
                 
                 :global(.tracker-item[data-distance="hidden"]) {
-                    transform: translate(-50%, -50px) scale(0.2);
+                    transform: translate(-50%, -60px) scale(0.2);
                     opacity: 0;
                     pointer-events: none;
                     z-index: 1;
@@ -629,7 +629,7 @@ export function TurnOrderTracker({
                     border: none;
                     color: rgba(197, 160, 89, 0.6);
                     position: absolute;
-                    top: 72px;
+                    top: 52px;
                     cursor: pointer;
                     transition: all 0.2s;
                     padding: 0;
