@@ -467,7 +467,7 @@ export function CombatCard({
                             }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => (
-                                        <span key={`imp-${index}`} className="impulse-arrow-inline" style={{ color: '#fff', textShadow: '0 0 8px var(--card-accent)' }}>âž¤</span>
+                                        <span key={`imp-${index}`} className="impulse-arrow-inline" style={{ color: '#fff', textShadow: '0 0 8px var(--card-accent)' }}>{'\u27A4'}</span>
                                     ))}
                                 </div>
                                 {isGM && (
@@ -530,7 +530,7 @@ export function CombatCard({
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '8px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
                                     {otherAspects.map((asp, idx) => (
                                         <div key={idx} style={{ fontSize: '0.75rem', color: asp.isTrouble ? '#ffaaaa' : '#aaa' }}>
-                                            â€¢ {asp.value}
+                                            {'\u2022'} {asp.value}
                                         </div>
                                     ))}
                                 </div>
