@@ -255,6 +255,7 @@ export function CombatCard({
     const isMirroredThreatLayout = isThreat;
     const isCompactThreatLayout = isThreat && isGM;
     const imageColumnWidth = isCompactThreatLayout ? "clamp(176px, 20vw, 236px)" : "clamp(224px, 28vw, 322px)";
+    const imageColumnBaseHeight = isThreat ? 112 : 154;
     const cardGridTemplate = isMirroredThreatLayout
         ? (isCompactThreatLayout
             ? `minmax(126px, 0.86fr) minmax(0, 1.28fr) ${imageColumnWidth}`
@@ -289,7 +290,7 @@ export function CombatCard({
         >
             {!isRestrictedThreatView && (
                 <div className="combat-external-stress" style={{ marginBottom: '0px', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 220px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: isThreat ? '0 1 auto' : '1 1 220px', marginLeft: isThreat ? 'auto' : 0 }}>
                         <h3 className="combat-name" style={{ fontSize: '1.05rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
                         {character.difficulty !== undefined && (
                             <span style={{ fontSize: '0.7rem', padding: '2px 4px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '4px', color: '#d7b6ff', alignSelf: 'center' }}>
@@ -297,7 +298,7 @@ export function CombatCard({
                             </span>
                         )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginLeft: 'auto', flex: '0 1 auto', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: isThreat ? 'flex-start' : 'flex-end', gap: '10px', marginLeft: isThreat ? 0 : 'auto', marginRight: isThreat ? 'auto' : 0, flex: isThreat ? '1 1 220px' : '0 1 auto', flexWrap: 'wrap', order: isThreat ? -1 : 0 }}>
                         <CombatStressTracks
                             character={character}
                             canEditSelf={canEditSelf}
@@ -445,8 +446,8 @@ export function CombatCard({
                     position: 'relative',
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
-                    minHeight: dynamicCardHeight ? `${Math.max(126, dynamicCardHeight)}px` : '154px',
-                    height: dynamicCardHeight ? `${Math.max(126, dynamicCardHeight)}px` : '154px',
+                    minHeight: dynamicCardHeight ? `${Math.max(imageColumnBaseHeight, dynamicCardHeight)}px` : `${imageColumnBaseHeight}px`,
+                    height: dynamicCardHeight ? `${Math.max(imageColumnBaseHeight, dynamicCardHeight)}px` : `${imageColumnBaseHeight}px`,
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,

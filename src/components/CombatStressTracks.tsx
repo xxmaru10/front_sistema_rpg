@@ -145,8 +145,10 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     width: 22px;
                     height: 22px;
                     border-radius: 50%;
-                    border: 1px solid currentColor;
-                    background: transparent;
+                    border: none;
+                    background: linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02));
+                    backdrop-filter: blur(6px) saturate(1.05);
+                    -webkit-backdrop-filter: blur(6px) saturate(1.05);
                     color: inherit;
                     font-size: 0.66rem;
                     font-weight: bold;
@@ -172,8 +174,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                 }
 
                 .stress-circle.marked {
-                    background: #ff4444 !important;
-                    border-color: #ff4444 !important;
+                    background: linear-gradient(145deg, rgba(255, 74, 74, 0.92), rgba(195, 20, 20, 0.88)) !important;
                     color: #000 !important;
                     box-shadow: 0 0 10px rgba(255, 44, 44, 0.5);
                 }

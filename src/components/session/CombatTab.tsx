@@ -195,6 +195,20 @@ export function CombatTab({
         }
     }, [isThreatDrawerOpen]);
 
+    useEffect(() => {
+        if (!isHeroDrawerOpen) return;
+        const firstHero = heroDrawerCards[0];
+        if (!firstHero) return;
+        setPinnedHeroCardIds((prev) => (prev.includes(firstHero.id) ? prev : [firstHero.id, ...prev]));
+    }, [isHeroDrawerOpen, heroDrawerCards]);
+
+    useEffect(() => {
+        if (!isThreatDrawerOpen) return;
+        const firstThreat = threatDrawerCards[0];
+        if (!firstThreat) return;
+        setPinnedThreatCardIds((prev) => (prev.includes(firstThreat.id) ? prev : [firstThreat.id, ...prev]));
+    }, [isThreatDrawerOpen, threatDrawerCards]);
+
     return (
         <div className="combat-display animate-reveal">
             <div className="display-header">
@@ -423,16 +437,15 @@ export function CombatTab({
                                                 );
                                             }
 
-                                            const isPrimaryCard = index === 0;
-                                            const isPinnedCard = !isPrimaryCard && pinnedHeroCardIds.includes(char.id);
-                                            const isExpandedCard = isPrimaryCard || isPinnedCard || hoverHeroCardId === char.id;
+                                            const isPinnedCard = pinnedHeroCardIds.includes(char.id);
+                                            const isExpandedCard = isPinnedCard || hoverHeroCardId === char.id;
                                             if (isExpandedCard) {
                                                 return (
                                                     <div
                                                         key={`${char.id}-hero-open`}
                                                         className="combat-stack-slot"
-                                                        onMouseEnter={() => !isPrimaryCard && setHoverHeroCardId(char.id)}
-                                                        onMouseLeave={() => !isPrimaryCard && setHoverHeroCardId(prev => prev === char.id ? null : prev)}
+                                                        onMouseEnter={() => setHoverHeroCardId(char.id)}
+                                                        onMouseLeave={() => setHoverHeroCardId(prev => prev === char.id ? null : prev)}
                                                     >
                                                         <CombatCard
                                                             character={char}
@@ -443,11 +456,11 @@ export function CombatTab({
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             isLinkedCharacter={fixedCharacterId === char.id}
                                                             onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                            onToggleExpanded={!isPrimaryCard ? () => setPinnedHeroCardIds((prev) => (
+                                                            onToggleExpanded={() => setPinnedHeroCardIds((prev) => (
                                                                 prev.includes(char.id)
                                                                     ? prev.filter((id) => id !== char.id)
                                                                     : [...prev, char.id]
-                                                            )) : undefined}
+                                                            ))}
                                                             isPinned={isPinnedCard}
                                                             avatarSide="left"
                                                         />
@@ -772,16 +785,15 @@ export function CombatTab({
                                                     );
                                                 }
 
-                                                const isPrimaryCard = index === 0;
-                                                const isPinnedCard = !isPrimaryCard && pinnedThreatCardIds.includes(char.id);
-                                                const isExpandedCard = isPrimaryCard || isPinnedCard || hoverThreatCardId === char.id;
+                                                const isPinnedCard = pinnedThreatCardIds.includes(char.id);
+                                                const isExpandedCard = isPinnedCard || hoverThreatCardId === char.id;
                                                 if (isExpandedCard) {
                                                     return (
                                                         <div
                                                             key={`${char.id}-threat-open`}
                                                             className="combat-stack-slot"
-                                                            onMouseEnter={() => !isPrimaryCard && setHoverThreatCardId(char.id)}
-                                                            onMouseLeave={() => !isPrimaryCard && setHoverThreatCardId(prev => prev === char.id ? null : prev)}
+                                                            onMouseEnter={() => setHoverThreatCardId(char.id)}
+                                                            onMouseLeave={() => setHoverThreatCardId(prev => prev === char.id ? null : prev)}
                                                         >
                                                             <CombatCard
                                                                 character={char}
@@ -791,11 +803,11 @@ export function CombatTab({
                                                                 onRemove={() => handleRemoveCharacter(char.id)}
                                                                 isCurrentTurn={currentTurnActorId === char.id}
                                                                 onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                                onToggleExpanded={!isPrimaryCard ? () => setPinnedThreatCardIds((prev) => (
+                                                                onToggleExpanded={() => setPinnedThreatCardIds((prev) => (
                                                                     prev.includes(char.id)
                                                                         ? prev.filter((id) => id !== char.id)
                                                                         : [...prev, char.id]
-                                                                )) : undefined}
+                                                                ))}
                                                                 isPinned={isPinnedCard}
                                                                 avatarSide="right"
                                                             />

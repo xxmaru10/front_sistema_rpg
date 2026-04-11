@@ -386,31 +386,85 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-strip-shell.strip-stage-1 .combat-strip-image {
             width: clamp(98px, 18vw, 138px);
             min-width: clamp(98px, 18vw, 138px);
+            height: 56px;
         }
 
         .combat-strip-shell.strip-stage-2 .combat-strip-image {
             width: clamp(72px, 14vw, 102px);
             min-width: clamp(72px, 14vw, 102px);
+            height: 50px;
         }
 
         .combat-strip-shell.strip-stage-3 .combat-strip-image {
             width: clamp(52px, 10vw, 74px);
             min-width: clamp(52px, 10vw, 74px);
-            opacity: 0.55;
+            height: 44px;
+            opacity: 0.72;
         }
 
-        .combat-strip-shell.strip-stage-4 .combat-strip-image,
+        .combat-strip-shell.strip-stage-4 .combat-strip-image {
+            width: clamp(38px, 8vw, 52px);
+            min-width: clamp(38px, 8vw, 52px);
+            height: 40px;
+            opacity: 0.8;
+        }
+
         .combat-strip-shell.strip-stage-5 .combat-strip-image {
-            width: 0;
-            min-width: 0;
-            opacity: 0;
-            margin: 0;
+            width: clamp(32px, 7vw, 42px);
+            min-width: clamp(32px, 7vw, 42px);
+            height: 36px;
+            opacity: 0.86;
         }
 
         .combat-strip-shell.strip-stage-4,
         .combat-strip-shell.strip-stage-5 {
             padding-left: 8px;
             padding-right: 8px;
+        }
+
+        .combat-strip-shell.strip-stage-1 {
+            min-height: 56px;
+            max-height: 56px;
+        }
+
+        .combat-strip-shell.strip-stage-2 {
+            min-height: 50px;
+            max-height: 50px;
+        }
+
+        .combat-strip-shell.strip-stage-3 {
+            min-height: 44px;
+            max-height: 44px;
+        }
+
+        .combat-strip-shell.strip-stage-4 {
+            min-height: 40px;
+            max-height: 40px;
+        }
+
+        .combat-strip-shell.strip-stage-5 {
+            min-height: 36px;
+            max-height: 36px;
+        }
+
+        .combat-strip-shell.strip-stage-1 .combat-strip-name {
+            font-size: 0.87rem;
+        }
+
+        .combat-strip-shell.strip-stage-2 .combat-strip-name {
+            font-size: 0.82rem;
+        }
+
+        .combat-strip-shell.strip-stage-3 .combat-strip-name {
+            font-size: 0.78rem;
+        }
+
+        .combat-strip-shell.strip-stage-4 .combat-strip-name {
+            font-size: 0.73rem;
+        }
+
+        .combat-strip-shell.strip-stage-5 .combat-strip-name {
+            font-size: 0.69rem;
         }
 
         .combat-return-toggle:hover,
