@@ -282,21 +282,7 @@ export function TurnOrderTracker({
             
             {/* Top HUD: Round & Timer */}
             <div className="hud-top">
-                <div className="round-badge">{currentRound}</div>
-                {activeCharacterId && (
-                    <div className="hud-timer-container top-timer">
-                        <TurnTimer
-                            startTime={lastTurnChangeTimestamp ?? ''}
-                            durationMinutes={isReaction ? 2 : 3}
-                            isPaused={timerPaused}
-                            pausedAt={timerPausedAt || undefined}
-                            isGM={userRole === "GM"}
-                            onExpire={() => { console.log("Timer expired."); }}
-                            onTogglePause={handleTogglePause || (() => {})}
-                            onForcePass={handleForcePass || (() => {})}
-                        />
-                    </div>
-                )}
+                <div className="round-badge">RODADA {currentRound}</div>
             </div>
 
             {/* Semicircle Carousel */}
@@ -328,6 +314,21 @@ export function TurnOrderTracker({
                         />
                     );
                 })}
+
+                {activeCharacterId && (
+                    <div className="center-timer-wrapper">
+                        <TurnTimer
+                            startTime={lastTurnChangeTimestamp ?? ''}
+                            durationMinutes={isReaction ? 2 : 3}
+                            isPaused={timerPaused}
+                            pausedAt={timerPausedAt || undefined}
+                            isGM={userRole === "GM"}
+                            onExpire={() => { console.log("Timer expired."); }}
+                            onTogglePause={handleTogglePause || (() => {})}
+                            onForcePass={handleForcePass || (() => {})}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* GM Controls: Below Center Diamond */}
@@ -411,8 +412,14 @@ export function TurnOrderTracker({
                     line-height: 1;
                 }
 
-                .timer-wrapper {
-                    width: 250px;
+                .center-timer-wrapper {
+                    position: absolute;
+                    bottom: -15px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 50;
+                    display: flex;
+                    justify-content: center;
                 }
 
                 /* Semicircle Area - Downward Curve */

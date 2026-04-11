@@ -71,7 +71,8 @@ export function useCombatAutomation({
     };
 
     const handleTogglePause = () => {
-        if (!state.timerPaused) {
+        const isPaused = stateRef.current.timerPaused;
+        if (!isPaused) {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "TIMER_PAUSED",
                 actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",

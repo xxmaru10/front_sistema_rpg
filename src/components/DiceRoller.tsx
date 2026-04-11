@@ -93,58 +93,64 @@ export function DiceRoller(props: DiceRollerProps) {
                 </div>
             )}
 
-            <RollerInputs
-                isIntegrated={isIntegrated}
-                fixedCharacterId={fixedCharacterId}
-                characters={characters}
-                selectedCharId={roller.selectedCharId}
-                setSelectedCharId={roller.setSelectedCharId}
-                selectedSkill={roller.selectedSkill}
-                handleSkillSelect={roller.handleSkillSelect}
-                actionType={roller.actionType}
-                setActionType={roller.setActionType}
-                damageType={roller.damageType}
-                toggleDamageType={roller.toggleDamageType}
-                setExplicitDamageType={roller.setExplicitDamageType}
-                selectedItemId={roller.selectedItemId}
-                setSelectedItemId={roller.setSelectedItemId}
-                allItems={roller.allItems}
-                manualBonus={roller.manualBonus}
-                setManualBonus={roller.setManualBonus}
-                targetIds={roller.targetIds}
-                handleTargetAdd={roller.handleTargetAdd}
-                handleTargetRemove={roller.handleTargetRemove}
-                isGM={isGM}
-                activeChar={roller.activeChar}
-            />
-
-            <DiceChamber
-                isRolling={roller.isRolling}
-                diceRotations={roller.diceRotations}
-                lastTotal={roller.lastTotal}
-                getLadderLabel={roller.getLadderLabel}
-                isIntegrated={isIntegrated}
-            />
-
-            <button
-                onClick={roller.handleRoll}
-                className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''}`}
-                disabled={roller.isRolling || disabled}
-                title={disabled ? "Aguarde seu turno" : "Rolar dados"}
-            >
-                <div className={`trigger-content ${isIntegrated ? 'integrated' : ''}`}>
-                    {disabled ? (
-                        "AGUARDE SEU TURNO"
-                    ) : roller.isRolling ? (
-                        isIntegrated ? "..." : "CONVOCANDO O DESTINO..."
-                    ) : isIntegrated ? (
-                        <Dices size={21} />
-                    ) : (
-                        "ROLAR"
-                    )}
+            {disabled ? (
+                <div className="disabled-overlay-message" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '0 20px', color: '#ff4444', fontWeight: 'bold', letterSpacing: '0.1em', textAlign: 'center', fontSize: isIntegrated ? '0.9rem' : '1.2rem' }}>
+                    AGUARDE A SUA VEZ
                 </div>
-                <div className="trigger-progress" style={{ width: roller.isRolling ? '100%' : '0%' }}></div>
-            </button>
+            ) : (
+                <>
+                    <RollerInputs
+                        isIntegrated={isIntegrated}
+                        fixedCharacterId={fixedCharacterId}
+                        characters={characters}
+                        selectedCharId={roller.selectedCharId}
+                        setSelectedCharId={roller.setSelectedCharId}
+                        selectedSkill={roller.selectedSkill}
+                        handleSkillSelect={roller.handleSkillSelect}
+                        actionType={roller.actionType}
+                        setActionType={roller.setActionType}
+                        damageType={roller.damageType}
+                        toggleDamageType={roller.toggleDamageType}
+                        setExplicitDamageType={roller.setExplicitDamageType}
+                        selectedItemId={roller.selectedItemId}
+                        setSelectedItemId={roller.setSelectedItemId}
+                        allItems={roller.allItems}
+                        manualBonus={roller.manualBonus}
+                        setManualBonus={roller.setManualBonus}
+                        targetIds={roller.targetIds}
+                        handleTargetAdd={roller.handleTargetAdd}
+                        handleTargetRemove={roller.handleTargetRemove}
+                        isGM={isGM}
+                        activeChar={roller.activeChar}
+                    />
+
+                    <DiceChamber
+                        isRolling={roller.isRolling}
+                        diceRotations={roller.diceRotations}
+                        lastTotal={roller.lastTotal}
+                        getLadderLabel={roller.getLadderLabel}
+                        isIntegrated={isIntegrated}
+                    />
+
+                    <button
+                        onClick={roller.handleRoll}
+                        className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''}`}
+                        disabled={roller.isRolling}
+                        title="Rolar dados"
+                    >
+                        <div className={`trigger-content ${isIntegrated ? 'integrated' : ''}`}>
+                            {roller.isRolling ? (
+                                isIntegrated ? "..." : "CONVOCANDO O DESTINO..."
+                            ) : isIntegrated ? (
+                                <Dices size={21} />
+                            ) : (
+                                "ROLAR"
+                            )}
+                        </div>
+                        <div className="trigger-progress" style={{ width: roller.isRolling ? '100%' : '0%' }}></div>
+                    </button>
+                </>
+            )}
 
             <style jsx>{`
                 .probability-grid {

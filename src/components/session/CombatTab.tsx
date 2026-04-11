@@ -531,26 +531,7 @@ export function CombatTab({
                         <div className="combat-control-bar animate-reveal">
                             <div className="combat-actions" style={{ justifyContent: 'center', width: '100%' }}>
                                 <div className="player-turn-status" style={{ justifyContent: 'center' }}>
-                                    {state.targetId && (
-                                        <button
-                                            className="end-turn-btn"
-                                            style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}
-                                            onClick={() => {
-                                                globalEventStore.append({
-                                                    id: uuidv4(),
-                                                    sessionId,
-                                                    seq: 0,
-                                                    type: "COMBAT_TARGET_SET",
-                                                    actorUserId,
-                                                    createdAt: new Date().toISOString(),
-                                                    visibility: "PUBLIC",
-                                                    payload: { targetId: null }
-                                                } as any);
-                                            }}
-                                        >
-                                            LIMPAR ALVO
-                                        </button>
-                                    )}
+                                    {/* LIMPAR ALVO removido daqui */}
                                 </div>
                             </div>
                         </div>
