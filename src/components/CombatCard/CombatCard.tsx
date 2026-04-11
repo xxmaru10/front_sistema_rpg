@@ -262,10 +262,8 @@ export function CombatCard({
     const isCompactThreatLayout = false;
     const imageColumnWidth = "clamp(156px, 33%, 252px)";
     const edgeColumnWidth = "minmax(116px, 0.86fr)";
-    const imageColumnBaseHeight = 96; // ~3 slots consequências: 3×28px + 2×4px gap + 6px padding
-    const resolvedColumnHeight = dynamicCardHeight
-        ? dynamicCardHeight + 6  // +3px topo +3px base para as consequências
-        : imageColumnBaseHeight;
+    const imageColumnBaseHeight = 154; // mínimo para o retrato aparecer com boa proporção
+    const resolvedColumnHeight = Math.max(imageColumnBaseHeight, (dynamicCardHeight ?? 0) + 6);
     const cardGridTemplate = isMirroredThreatLayout
         ? (isCompactThreatLayout
             ? `${edgeColumnWidth} minmax(0, 1.2fr) ${imageColumnWidth}`
@@ -514,7 +512,7 @@ export function CombatCard({
                             <div style={{
                                 position: 'absolute',
                                 top: '8px',
-                                ...(isMirroredThreatLayout ? { right: 'calc(10px + 50%)' } : { left: 'calc(10px + 10%)' }),
+                                ...(isMirroredThreatLayout ? { right: 'calc(10px + 10%)' } : { left: 'calc(10px + 10%)' }),
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '2px',
