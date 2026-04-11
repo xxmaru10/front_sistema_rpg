@@ -69,6 +69,7 @@ export function CombatTab({
     const [isHeroDrawerOpen, setIsHeroDrawerOpen] = useState(false);
     const [isThreatDrawerOpen, setIsThreatDrawerOpen] = useState(false);
     const [showCombatLogs, setShowCombatLogs] = useState(false);
+    const [isChallengeAspectsOpen, setIsChallengeAspectsOpen] = useState(false);
 
     const heroCombatants = useMemo(
         () => combatantList.filter(c => !c.isHazard && (c.arenaSide === "HERO" || (!c.isNPC && !c.arenaSide))),
@@ -117,10 +118,28 @@ export function CombatTab({
         ? threatCombatants
         : threatPreview ? [threatPreview] : [];
     const showChallengePanel = challengeMode && (userRole === "GM" || (state.challenge?.difficulty || 0) !== 0);
+    const challengeAspects = useMemo(
+        () => [0, 1, 2].map((idx) => (state.challenge?.aspects || [])[idx] || ""),
+        [state.challenge?.aspects]
+    );
+    const hasChallengeAspects = challengeAspects.some((aspect: string) => aspect.trim() !== "");
+    const challengeColors = useMemo(() => {
+        const diff = state.challenge?.difficulty || 0;
+        let colors = { primary: '#4ade80', glow: 'rgba(74, 222, 128, 0.3)' };
+
+        if (diff >= 8) colors = { primary: '#8000ff', glow: 'rgba(128, 0, 255, 0.3)' };
+        else if (diff === 7) colors = { primary: '#b30059', glow: 'rgba(179, 0, 89, 0.3)' };
+        else if (diff === 6) colors = { primary: '#ff0000', glow: 'rgba(255, 0, 0, 0.3)' };
+        else if (diff === 5) colors = { primary: '#ff6600', glow: 'rgba(255, 102, 0, 0.3)' };
+        else if (diff === 4) colors = { primary: '#ffaa00', glow: 'rgba(255, 170, 0, 0.3)' };
+        else if (diff === 3) colors = { primary: '#ffff00', glow: 'rgba(255, 255, 0, 0.3)' };
+        else if (diff === 2) colors = { primary: '#ccff00', glow: 'rgba(204, 255, 0, 0.3)' };
+
+        return colors;
+    }, [state.challenge?.difficulty]);
 
     const hasExpandedHeroes = isHeroDrawerOpen;
     const hasExpandedThreats = isThreatDrawerOpen || threatHazards.length > 0;
-    const hasChallengePanel = showChallengePanel;
     const shouldRenderTopRollBar = showDiceRoller || userRole === "GM";
 
     useEffect(() => {
@@ -132,13 +151,18 @@ export function CombatTab({
     }, [threatCombatants.length]);
 
     useEffect(() => {
-        if (showDiceRoller) {
-            setIsHeroDrawerOpen(false);
-            setIsThreatDrawerOpen(false);
+        if (!showDiceRoller) setShowCombatLogs(false);
+    }, [showDiceRoller]);
+
+    useEffect(() => {
+        if (!showChallengePanel) {
+            setIsChallengeAspectsOpen(false);
             return;
         }
-        setShowCombatLogs(false);
-    }, [showDiceRoller]);
+        if (hasChallengeAspects) {
+            setIsChallengeAspectsOpen(true);
+        }
+    }, [showChallengePanel, hasChallengeAspects]);
 
     return (
         <div className="combat-display animate-reveal">
@@ -150,7 +174,7 @@ export function CombatTab({
 
 
             <div
-                className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${hasChallengePanel ? " has-challenge-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
+                className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
             >
                 {shouldRenderTopRollBar && (
                     <div className={`combat-top-strip ${showDiceRoller ? "is-open" : ""}`}>
@@ -171,29 +195,29 @@ export function CombatTab({
                                     <button
                                         onClick={() => setShowDiceRoller(false)}
                                         style={{
-                                            background: 'rgba(8, 10, 14, 0.84)',
-                                            border: '1px solid rgba(255,255,255,0.2)',
-                                            color: '#ff4444',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#ff2b2b',
                                             padding: '0',
                                             cursor: 'pointer',
-                                            fontSize: '1.15rem',
+                                            fontSize: '1.28rem',
                                             fontWeight: 'bold',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             transition: 'all 0.2s',
                                             lineHeight: 1,
-                                            width: '28px',
-                                            height: '28px',
-                                            borderRadius: '8px'
+                                            width: '24px',
+                                            height: '24px',
+                                            borderRadius: 0
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'scale(1.2) rotate(90deg)';
+                                            e.currentTarget.style.transform = 'scale(1.18) rotate(90deg)';
                                             e.currentTarget.style.color = '#ff0000';
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-                                            e.currentTarget.style.color = '#ff4444';
+                                            e.currentTarget.style.color = '#ff2b2b';
                                         }}
                                         title="Fechar"
                                     >
@@ -216,6 +240,75 @@ export function CombatTab({
                                     disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
                                     soundSettings={state.soundSettings}
                                 />
+                                {showChallengePanel && (
+                                    <div
+                                        className={`combat-inline-challenge ${hasChallengeAspects || (userRole === "GM" && isChallengeAspectsOpen) ? "has-aspects" : ""}`}
+                                        style={{
+                                            '--challenge-color': challengeColors.primary,
+                                            '--challenge-glow': challengeColors.glow
+                                        } as any}
+                                    >
+                                        <div className="combat-inline-challenge-main">
+                                            <div className="combat-inline-diff-box">
+                                                <span className="combat-inline-diff-label">DIF</span>
+                                                <input
+                                                    type="number"
+                                                    className="combat-inline-diff-input"
+                                                    value={state.challenge?.difficulty || 0}
+                                                    onChange={(e) => userRole === "GM" && handleChallengeUpdate({ difficulty: parseInt(e.target.value) || 0 })}
+                                                    readOnly={userRole !== "GM"}
+                                                />
+                                            </div>
+
+                                            <input
+                                                type="text"
+                                                className="combat-inline-challenge-text"
+                                                placeholder="Desafio..."
+                                                value={state.challenge?.text || ""}
+                                                onChange={(e) => userRole === "GM" && handleChallengeUpdate({ text: e.target.value })}
+                                                readOnly={userRole !== "GM"}
+                                            />
+
+                                            {userRole === "GM" && (
+                                                <button
+                                                    type="button"
+                                                    className="combat-inline-challenge-add"
+                                                    onClick={() => setIsChallengeAspectsOpen(true)}
+                                                    title="Adicionar aspectos"
+                                                    aria-label="Adicionar aspectos"
+                                                >
+                                                    +
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {(hasChallengeAspects || (userRole === "GM" && isChallengeAspectsOpen)) && (
+                                            <div className="combat-inline-aspects-grid">
+                                                {[0, 1, 2].map(idx => {
+                                                    const aspectValue = challengeAspects[idx] || "";
+                                                    if (userRole !== "GM" && aspectValue.trim() === "") return null;
+
+                                                    return (
+                                                        <input
+                                                            key={idx}
+                                                            type="text"
+                                                            className={`combat-inline-aspect-marker ${idx === 2 ? "center" : ""}`}
+                                                            placeholder={`Aspecto ${idx + 1}`}
+                                                            value={aspectValue}
+                                                            onChange={(e) => {
+                                                                if (userRole !== "GM") return;
+                                                                const newAspects = [...(state.challenge?.aspects || ["", "", ""])];
+                                                                newAspects[idx] = e.target.value;
+                                                                handleChallengeUpdate({ aspects: newAspects });
+                                                            }}
+                                                            readOnly={userRole !== "GM"}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <button
                                     type="button"
                                     className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
@@ -522,146 +615,6 @@ export function CombatTab({
                 {/* Coluna 3: Ameaças (Direita) OU Desafio */}
                 </div>
                 <div className="combat-threats-column combat-side-column">
-                    {showChallengePanel && (() => {
-                        // Dynamic color based on difficulty level
-                        const diff = state.challenge?.difficulty || 0;
-                        let challengeColors = { primary: '#4ade80', glow: 'rgba(74, 222, 128, 0.3)', bg: 'rgba(10, 35, 20, 1)' }; // Default/1 - Green
-
-                        if (diff >= 8) challengeColors = { primary: '#8000ff', glow: 'rgba(128, 0, 255, 0.3)', bg: 'rgba(40, 0, 80, 1)' }; // 8+ - Purple
-                        else if (diff === 7) challengeColors = { primary: '#b30059', glow: 'rgba(179, 0, 89, 0.3)', bg: 'rgba(60, 0, 30, 1)' }; // 7 - Red-Purple
-                        else if (diff === 6) challengeColors = { primary: '#ff0000', glow: 'rgba(255, 0, 0, 0.3)', bg: 'rgba(60, 0, 0, 1)' }; // 6 - Red
-                        else if (diff === 5) challengeColors = { primary: '#ff6600', glow: 'rgba(255, 102, 0, 0.3)', bg: 'rgba(60, 20, 0, 1)' }; // 5 - Orange
-                        else if (diff === 4) challengeColors = { primary: '#ffaa00', glow: 'rgba(255, 170, 0, 0.3)', bg: 'rgba(60, 40, 0, 1)' }; // 4 - Orange-Yellow
-                        else if (diff === 3) challengeColors = { primary: '#ffff00', glow: 'rgba(255, 255, 0, 0.3)', bg: 'rgba(60, 60, 0, 1)' }; // 3 - Yellow
-                        else if (diff === 2) challengeColors = { primary: '#ccff00', glow: 'rgba(204, 255, 0, 0.3)', bg: 'rgba(40, 60, 0, 1)' }; // 2 - Lime
-
-                        return (
-                            <div
-                                className="challenge-panel"
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '0',
-                                    height: 'fit-content',
-                                    flexShrink: 0,
-                                    background: 'rgba(8, 10, 14, 0.18)',
-                                    border: `1px solid ${challengeColors.primary}7a`,
-                                    borderRight: `5px solid ${challengeColors.primary}`,
-                                    boxShadow: `0 8px 24px rgba(0,0,0,0.45), inset 0 0 16px rgba(255,255,255,0.06)`,
-                                    borderRadius: '8px',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    transition: 'all 0.5s ease',
-                                    marginBottom: '8px',
-                                    backdropFilter: 'blur(12px)',
-                                    WebkitBackdropFilter: 'blur(12px)',
-                                }}
-                            >
-                                <div className="challenge-content" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '8px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.8rem' }}>
-                                        <div style={{
-                                            background: 'rgba(0, 0, 0, 0.48)',
-                                            border: `1px solid ${challengeColors.primary}80`,
-                                            padding: '4px 10px',
-                                            borderRadius: '20px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            boxShadow: `0 0 12px ${challengeColors.glow}`,
-                                            minWidth: '50px'
-                                        }}>
-                                            <label style={{ fontSize: '0.35rem', color: `${challengeColors.primary}cc`, letterSpacing: '0.1em' }}>DIF</label>
-                                            <input
-                                                type="number"
-                                                style={{
-                                                    width: '35px',
-                                                    height: '24px',
-                                                    fontSize: '1.2rem',
-                                                    textAlign: 'center',
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    color: challengeColors.primary,
-                                                    fontFamily: 'var(--font-header)',
-                                                    fontWeight: 'bold',
-                                                    textShadow: `0 0 12px ${challengeColors.primary}`,
-                                                    outline: 'none',
-                                                    transition: 'all 0.3s ease'
-                                                }}
-                                                value={state.challenge?.difficulty || 0}
-                                                onChange={(e) => userRole === "GM" && handleChallengeUpdate({ difficulty: parseInt(e.target.value) || 0 })}
-                                                readOnly={userRole !== "GM"}
-                                            />
-                                        </div>
-
-                                        <div style={{ flex: 1 }}>
-                                            <textarea
-                                                style={{
-                                                    width: '100%',
-                                                    resize: 'none',
-                                                    height: '35px',
-                                                    minHeight: '35px',
-                                                    fontSize: '0.75rem',
-                                                    lineHeight: '1.2',
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    borderBottom: `1px solid ${challengeColors.primary}55`,
-                                                    color: '#fff',
-                                                    borderRadius: '0',
-                                                    outline: 'none',
-                                                    padding: '2px 0',
-                                                    fontFamily: 'var(--font-main)',
-                                                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                                                }}
-                                                placeholder="Objetivo..."
-                                                value={state.challenge?.text || ""}
-                                                onChange={(e) => userRole === "GM" && handleChallengeUpdate({ text: e.target.value })}
-                                                readOnly={userRole !== "GM"}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {(userRole === "GM" || (state.challenge?.aspects && state.challenge.aspects.some((a: string) => a.trim() !== ""))) && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <label style={{ color: challengeColors.primary, fontSize: '0.45rem', fontWeight: 'bold', letterSpacing: '0.1em', opacity: 0.72 }}>ASPECTOS DA CENA</label>
-                                            {[0, 1, 2].map(idx => {
-                                                const aspectValue = (state.challenge?.aspects || [])[idx] || "";
-                                                if (userRole !== "GM" && aspectValue.trim() === "") return null;
-
-                                                return (
-                                                    <input
-                                                        key={idx}
-                                                        type="text"
-                                                        style={{
-                                                            width: '100%',
-                                                            background: 'rgba(255,255,255,0.03)',
-                                                            border: 'none',
-                                                            borderLeft: `2px solid ${challengeColors.primary}66`,
-                                                            padding: '4px 8px',
-                                                            fontSize: '0.75rem',
-                                                            color: '#eee',
-                                                            outline: 'none',
-                                                            borderRadius: '2px',
-                                                            fontStyle: 'italic'
-                                                        }}
-                                                        placeholder={`Aspecto ${idx + 1}...`}
-                                                        value={aspectValue}
-                                                        onChange={(e) => {
-                                                            if (userRole !== "GM") return;
-                                                            const newAspects = [...(state.challenge?.aspects || ["", "", ""])];
-                                                            newAspects[idx] = e.target.value;
-                                                            handleChallengeUpdate({ aspects: newAspects });
-                                                        }}
-                                                        readOnly={userRole !== "GM"}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })()}
-
                     <div className="combat-threats">
                         <div className="combat-side-lane threat-side-lane">
                             {threatCombatants.length === 0 && threatHazards.length === 0 ? (

@@ -196,7 +196,15 @@ export function CombatCard({
     };
     const accentColor = accentColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.72)";
     const accentSoftColor = accentSoftColors[cardThemeClass] || "rgba(var(--accent-rgb), 0.32)";
-    const imageColumnWidth = "clamp(224px, 28vw, 322px)";
+    const isCompactThreatLayout = isThreat && isGM;
+    const imageColumnWidth = isCompactThreatLayout ? "clamp(176px, 20vw, 236px)" : "clamp(224px, 28vw, 322px)";
+    const cardGridTemplate = isCompactThreatLayout
+        ? `${imageColumnWidth} minmax(0, 1.28fr) minmax(126px, 0.86fr)`
+        : `${imageColumnWidth} minmax(0, 1.55fr) minmax(146px, 1fr)`;
+    const outerSkew = isCompactThreatLayout ? 'skewX(-3deg)' : 'skewX(-5deg)';
+    const innerSkew = isCompactThreatLayout ? 'skewX(4deg)' : 'skewX(6deg)';
+    const imageSkew = isCompactThreatLayout ? 'skewX(3deg)' : 'skewX(5deg)';
+    const imageMarginLeft = isCompactThreatLayout ? '-14px' : '-24px';
     const arenaFocusX = Math.max(0, Math.min(100, character.arenaPortraitFocus?.x ?? 50));
     const arenaFocusY = Math.max(0, Math.min(100, character.arenaPortraitFocus?.y ?? 30));
     const arenaFocusZoom = Math.max(1, Math.min(3, character.arenaPortraitFocus?.zoom ?? 1));
@@ -254,7 +262,7 @@ export function CombatCard({
                 className={`combat-card animate-reveal expanded-card ${cardThemeClass} ${isCurrentTurn ? 'active-turn' : ''}${isRestrictedThreatView ? ' restricted-threat-card' : ''}`}
                 style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: `${imageColumnWidth} minmax(0, 1.55fr) minmax(146px, 1fr)`,
+                    gridTemplateColumns: cardGridTemplate,
                     gap: '0', 
                     alignItems: 'stretch', 
                     padding: '0', 
@@ -266,12 +274,12 @@ export function CombatCard({
                     background: `linear-gradient(110deg, #000 0%, #000 38%, var(--card-accent-soft) 82%, transparent 100%)`,
                     overflow: 'visible',
                     boxShadow: 'none',
-                    transform: 'skewX(-5deg)',
+                    transform: outerSkew,
                     marginLeft: '0px'
                 }}
             >
                 {/* De-skew content container */}
-                <div style={{ display: 'contents', transform: 'skewX(6deg)' }}>
+                <div style={{ display: 'contents', transform: innerSkew }}>
                 {/* Remove Button for GM */}
                 {canEdit && onRemove && (
                     <button
@@ -285,8 +293,8 @@ export function CombatCard({
                     >✕</button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: imageColumnWidth, minWidth: imageColumnWidth, transform: 'skewX(5deg)', marginLeft: '-24px', overflow: 'hidden', alignSelf: 'stretch' }}>
-                    <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
+                <div style={{ position: 'relative', width: imageColumnWidth, minWidth: imageColumnWidth, transform: imageSkew, marginLeft: imageMarginLeft, overflow: 'visible', alignSelf: 'stretch' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: '#000', overflow: 'hidden' }}>
                         {character.imageUrl ? (
                             <img
                                 src={character.imageUrl}
@@ -315,7 +323,7 @@ export function CombatCard({
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
                             {/* Impulse - Top Left Over Image */}
-                            <div style={{ position: 'absolute', top: '8px', left: '0px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
+                            <div style={{ position: 'absolute', top: '8px', left: '-14px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 45, pointerEvents: 'auto' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.75rem', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>)}
                                 </div>

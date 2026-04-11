@@ -1130,15 +1130,15 @@ body {
 }
 
 .combat-arena-layout.has-expanded-right {
-    grid-template-columns: minmax(26px, max-content) minmax(320px, 1fr) clamp(320px, 34vw, 520px);
+    grid-template-columns: minmax(26px, max-content) minmax(300px, 1fr) clamp(400px, 38vw, 620px);
 }
 
 .combat-arena-layout.has-expanded-right.has-challenge-right {
-    grid-template-columns: minmax(26px, max-content) minmax(300px, 1fr) clamp(330px, 36vw, 560px);
+    grid-template-columns: minmax(26px, max-content) minmax(300px, 1fr) clamp(400px, 38vw, 620px);
 }
 
 .combat-arena-layout.has-expanded-left.has-expanded-right {
-    grid-template-columns: clamp(390px, 34vw, 620px) minmax(300px, 1fr) clamp(300px, 30vw, 470px);
+    grid-template-columns: clamp(390px, 34vw, 620px) minmax(260px, 1fr) clamp(360px, 34vw, 540px);
     column-gap: 20px;
 }
 
@@ -1299,6 +1299,7 @@ body {
 .combat-avatar-drawer.threat-drawer .combat-avatar-panel {
     border-color: rgba(255, 68, 68, 0.36);
     box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45), 0 0 16px rgba(255, 68, 68, 0.16);
+    padding: 8px;
 }
 
 .combat-avatar-rail {
@@ -1346,8 +1347,8 @@ body {
 
 .combat-avatar-rail.threat-avatar-rail.is-expanded {
     align-items: stretch;
-    width: clamp(312px, 30vw, 430px);
-    min-width: clamp(280px, 26vw, 360px);
+    width: clamp(420px, 42vw, 620px);
+    min-width: clamp(360px, 35vw, 540px);
     max-height: calc(100vh - 200px);
 }
 
@@ -1357,8 +1358,8 @@ body {
 }
 
 .combat-arena-layout.has-expanded-left.has-expanded-right .combat-avatar-rail.threat-avatar-rail.is-expanded {
-    width: clamp(280px, 26vw, 390px);
-    min-width: clamp(240px, 22vw, 320px);
+    width: clamp(360px, 34vw, 540px);
+    min-width: clamp(320px, 31vw, 470px);
 }
 
 .combat-avatar-rail.is-expanded .combat-card {
@@ -1550,6 +1551,137 @@ body {
 
 .combat-dice-integrated::before {
     content: none;
+}
+
+.combat-inline-challenge {
+    --challenge-color: #4ade80;
+    --challenge-glow: rgba(74, 222, 128, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 220px;
+    max-width: 330px;
+    flex: 1 1 260px;
+    padding: 4px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--challenge-color);
+    background: rgba(8, 10, 14, 0.34);
+    box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.04), 0 0 16px var(--challenge-glow);
+}
+
+.combat-inline-challenge.has-aspects {
+    padding-bottom: 6px;
+}
+
+.combat-inline-challenge-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.combat-inline-diff-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 6px;
+    border-radius: 999px;
+    border: 1px solid var(--challenge-color);
+    background: rgba(0, 0, 0, 0.46);
+    flex: 0 0 auto;
+}
+
+.combat-inline-diff-label {
+    font-family: var(--font-header);
+    font-size: 0.45rem;
+    letter-spacing: 0.12em;
+    color: var(--challenge-color);
+    opacity: 0.9;
+}
+
+.combat-inline-diff-input {
+    width: 26px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--challenge-color);
+    text-align: center;
+    font-family: var(--font-header);
+    font-size: 1rem;
+    font-weight: 700;
+    text-shadow: 0 0 8px var(--challenge-color);
+}
+
+.combat-inline-diff-input::-webkit-outer-spin-button,
+.combat-inline-diff-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.combat-inline-challenge-text {
+    min-width: 0;
+    flex: 1 1 auto;
+    height: 28px;
+    padding: 0 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(0, 0, 0, 0.46);
+    color: #fff;
+    font-size: 0.72rem;
+    outline: none;
+    text-overflow: ellipsis;
+}
+
+.combat-inline-challenge-text::placeholder {
+    color: rgba(255, 255, 255, 0.46);
+}
+
+.combat-inline-challenge-add {
+    width: 25px;
+    height: 25px;
+    min-width: 25px;
+    border-radius: 999px;
+    border: 1px solid var(--challenge-color);
+    background: rgba(0, 0, 0, 0.48);
+    color: var(--challenge-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+    box-shadow: 0 0 10px var(--challenge-glow);
+}
+
+.combat-inline-aspects-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 6px;
+}
+
+.combat-inline-aspect-marker {
+    min-width: 0;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(0, 0, 0, 0.42);
+    color: #f1f1f1;
+    font-size: 0.66rem;
+    padding: 0 9px;
+    outline: none;
+    text-overflow: ellipsis;
+}
+
+.combat-inline-aspect-marker::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
+.combat-inline-aspect-marker.center {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 72%;
 }
 
 .combat-cards-stack {

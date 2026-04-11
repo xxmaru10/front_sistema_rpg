@@ -134,7 +134,7 @@ export function DiceRoller(props: DiceRollerProps) {
                     ) : roller.isRolling ? (
                         isIntegrated ? "..." : "CONVOCANDO O DESTINO..."
                     ) : isIntegrated ? (
-                        <Dices size={16} />
+                        <Dices size={21} />
                     ) : (
                         "ROLAR"
                     )}
@@ -221,12 +221,12 @@ export function DiceRoller(props: DiceRollerProps) {
                 }
 
                 .matrix-trigger.integrated {
-                    height: 34px;
-                    width: 34px;
-                    min-width: 34px;
-                    border-radius: 10px;
-                    border-width: 1px;
-                    box-shadow: 0 0 16px var(--accent-glow), inset 0 0 10px var(--accent-glow);
+                    height: 44px;
+                    width: 44px;
+                    min-width: 44px;
+                    border-radius: 12px;
+                    border-width: 1.5px;
+                    box-shadow: 0 0 22px var(--accent-glow), inset 0 0 14px var(--accent-glow), 0 0 12px rgba(255, 215, 90, 0.28);
                 }
 
                 .trigger-content {
@@ -267,7 +267,8 @@ export function DiceRoller(props: DiceRollerProps) {
                 }
 
                 .matrix-trigger.integrated:hover {
-                    transform: scale(1.05);
+                    transform: scale(1.08);
+                    box-shadow: 0 0 36px var(--accent-glow), inset 0 0 18px var(--accent-glow), 0 0 18px rgba(255, 220, 90, 0.4);
                 }
 
                 .trigger-progress {
