@@ -2,8 +2,8 @@
 title: "Story ativa - Story 38 (Arena: gaveta vidro transparente na extrema esquerda com expansao interna dos cards)"
 story_ref: "story-38-arena-gaveta-vidro-transparente-na-extrema-esquerda-com-expansao-interna-dos-cards.md"
 epic: "epic-02-rework-cards-arena-gavetas-e-interacoes"
-status: "em-andamento"
-last_updated: "2026-04-11 (fluxo-ataque-guiado-submenu-target-picker)"
+status: "concluido"
+last_updated: "2026-04-11 (concluido)"
 ---
 
 ## Progresso Atual

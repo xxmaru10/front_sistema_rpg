@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-11 (story-38/fluxo-ataque-guiado-submenu-target-picker)
+last_updated: 2026-04-11 (story-38 concluida)
 status: ativo
 ---
 

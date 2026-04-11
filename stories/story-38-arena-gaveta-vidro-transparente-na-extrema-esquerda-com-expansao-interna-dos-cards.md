@@ -2,13 +2,13 @@
 title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expansao interna dos cards"
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
-status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.9-fluxo-ataque-guiado)"
+status: "concluido"
+last_updated: "2026-04-11 (concluido)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
 
-# Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expansao interna dos cards
+# Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expansao interna dos cards (CONCLUÍDO)
 
 ## Contexto
 Atualmente a Arena usa gavetas laterais (`.combat-avatar-drawer`) com rail de retratos compactos e, quando um personagem e aberto, o card completo aparece fora da gaveta na pilha externa (`.combat-expanded-stack`).
@@ -22,13 +22,6 @@ A solicitacao desta Story e mudar esse fluxo para o inicio de um rework maior:
 6. o mesmo comportamento deve existir para o lado de inimigos.
 
 Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessidade de alterar Event Sourcing, projecoes ou contratos de dominio.
-
-## Escopo
-
-### Fase 1 - Visual glass + ancoragem lateral
-- Aplicar estilo vidro/transparencia na gaveta lateral de personagens e inimigos, mantendo contraste e legibilidade.
-- Fixar a gaveta do lado dos personagens na extrema esquerda da Arena.
-- Manter o padrao visual coerente com o menu lateral global em d20.
 
 ### Fase 2 - Handle de seta externo e estado fechado com 1 personagem
 - Separar visualmente o handle de seta do conteudo da gaveta (seta externa, sem "misturar" com o painel interno).
