@@ -253,9 +253,10 @@ export function CombatCard({
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
     const isMirroredThreatLayout = isThreat;
-    const isCompactThreatLayout = isThreat && isGM;
-    const imageColumnWidth = isCompactThreatLayout ? "clamp(176px, 20vw, 236px)" : "clamp(224px, 28vw, 322px)";
-    const imageColumnBaseHeight = isThreat ? 112 : 154;
+    const isCompactThreatLayout = false;
+    const imageColumnWidth = isMirroredThreatLayout ? "clamp(206px, 24vw, 312px)" : "clamp(224px, 28vw, 322px)";
+    const imageColumnBaseHeight = 154;
+    const resolvedColumnHeight = dynamicCardHeight ? Math.max(imageColumnBaseHeight, dynamicCardHeight) : imageColumnBaseHeight;
     const cardGridTemplate = isMirroredThreatLayout
         ? (isCompactThreatLayout
             ? `minmax(126px, 0.86fr) minmax(0, 1.28fr) ${imageColumnWidth}`
@@ -342,7 +343,7 @@ export function CombatCard({
                     alignItems: 'stretch', 
                     padding: '0', 
                     height: 'auto',
-                    minHeight: dynamicCardHeight ? `${dynamicCardHeight}px` : 'fit-content',
+                    minHeight: `${resolvedColumnHeight}px`,
                     borderRadius: isMirroredThreatLayout ? '50px 0 0 0' : '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
@@ -446,8 +447,8 @@ export function CombatCard({
                     position: 'relative',
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
-                    minHeight: dynamicCardHeight ? `${Math.max(imageColumnBaseHeight, dynamicCardHeight)}px` : `${imageColumnBaseHeight}px`,
-                    height: dynamicCardHeight ? `${Math.max(imageColumnBaseHeight, dynamicCardHeight)}px` : `${imageColumnBaseHeight}px`,
+                    minHeight: `${resolvedColumnHeight}px`,
+                    height: '100%',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
@@ -458,7 +459,21 @@ export function CombatCard({
                 >
                     <div
                         className={`combat-image-frame${isMirroredThreatLayout ? ' mirrored' : ''}`}
-                        style={{ position: 'absolute', inset: 0, background: '#000', overflow: 'hidden', zIndex: 2 }}
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            backgroundColor: '#000',
+                            overflow: 'hidden',
+                            zIndex: 2,
+                            ...(character.imageUrl
+                                ? {
+                                    backgroundImage: `url(${character.imageUrl})`,
+                                    backgroundSize: 'cover',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundPosition: `${arenaFocusX}% ${arenaFocusY}%`,
+                                }
+                                : {})
+                        }}
                     >
                         {character.imageUrl ? (
                             <img
@@ -470,8 +485,8 @@ export function CombatCard({
                                     height: '100%',
                                     objectFit: 'cover',
                                     objectPosition: `${arenaFocusX}% ${arenaFocusY}%`,
-                                    opacity: 0.9,
-                                    transform: `skewX(3deg) scale(${arenaFocusZoom})`,
+                                    opacity: 0.92,
+                                    transform: `${isMirroredThreatLayout ? 'skewX(-3deg)' : 'skewX(3deg)'} scale(${arenaFocusZoom})`,
                                     transformOrigin: `${arenaFocusX}% ${arenaFocusY}%`
                                 }}
                             />

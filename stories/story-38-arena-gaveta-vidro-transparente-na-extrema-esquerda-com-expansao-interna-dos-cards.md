@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.0-inimigos-altura-e-pin-primeiro)"
+last_updated: "2026-04-11 (follow-up-4.1-widescreen-laterais-e-setas)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -100,11 +100,12 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (iteracao 3.8): assets PNG de estresse (`fisico.png`/`mental.png`) foram integrados ao `CombatStressTracks` com colorizacao por tema via `mask-image`. Cards expandidos tiveram reducao de altura base (fallback de retrato e paddings internos) para cortar excesso vertical sem remover expansao por conteudo. No mobile, trilhas de estresse passaram a quebrar em layout vertical quando necessario para manter todas as caixas visiveis, setas de impulso foram reduzidas em ~30% e o campo de bonus da barra integrada foi estreitado em ~50% para melhorar encaixe horizontal.
 - Follow-up aplicado (iteracao 3.9): cards fechados receberam escala horizontal progressiva em piramide invertida (de 85% para baixo por nivel), com degradê preto translúcido ao longo da faixa e remocao de borda externa. A moldura de gaveta ao redor dos cards (herois/inimigos) foi removida para manter apenas cards e handles. Em mobile, cards expandidos ganharam botao `-` ao lado da seta para minimizar rapidamente. A faixa de estresse ficou mais fina verticalmente, com borda no tema e fundo preto menos opaco com blur de efeito espelhado.
 - Follow-up aplicado (iteracao 4.0): cards de inimigos receberam reducao adicional da base vertical para aproximar proporcao dos cards de aliados, e o cabecalho externo no lado de ameacas passou a inverter posicoes de nome e trilhas de estresse. Piramide de minimizados foi refinada para manter mini retrato + nome ate o final da fila (sem sumir imagem), com reducao gradual da altura por nivel. A fixacao foi expandida para o primeiro card: ele inicia fixado ao abrir a gaveta, mas pode ser desfixado e minimizado como os demais. Nas trilhas de estresse, as bolhas perderam borda e ficaram em estilo vidro.
+- Follow-up aplicado (iteracao 4.1): inimigos receberam ajuste estrutural para reduzir discrepancia vertical e melhorar preenchimento do retrato em toda a lateral (incluindo PNG com transparencias) via fallback de background no frame de imagem. A piramide de minimizados do lado inimigo passou a ancorar para a esquerda, eliminando fechamento visual para a direita. Em widescreen, a grade da arena foi recalibrada para manter colunas mais nas laterais com margem minima de seguranca; as setas de recolha foram reancoradas acima do primeiro nome (aliados no lado direito da gaveta e inimigos no extremo esquerdo).
 
 ## Pendencias para Proxima Iteracao
-- Validar com o usuario a proporcao final de altura dos inimigos versus aliados apos o novo baseline vertical.
-- Confirmar se a inversao nome/estresse no lado de ameacas atende a leitura esperada em diferentes resolucoes.
-- Ajustar fino da piramide (largura/altura minima dos ultimos strips) se precisar mais contraste do mini retrato.
+- Validar com o usuario se a altura final dos inimigos ficou equivalente aos aliados em todos os personagens reais.
+- Confirmar visual da ancoragem lateral em monitores ultrawide (com menu aberto/fechado) para evitar sobreposicao.
+- Fazer microajuste de offset das setas de recolha caso o feedback de posicao fina ainda peça deslocamento adicional.
 
 ## Handoff Prompt
 ```text

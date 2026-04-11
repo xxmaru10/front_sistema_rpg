@@ -170,10 +170,18 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             clip-path: polygon(0 0, 96% 0, 100% 100%, 0 100%);
         }
 
+        .combat-image-frame.mirrored {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 4% 100%);
+        }
+
         .combat-image-portrait {
             transform: skewX(-2deg) scale(1.02);
             transform-origin: center;
             display: block;
+        }
+
+        .combat-image-portrait.mirrored {
+            transform: skewX(2deg) scale(1.02);
         }
 
         .combat-image-column {

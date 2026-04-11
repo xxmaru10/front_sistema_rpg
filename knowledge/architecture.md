@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-11 (story-38/follow-up-inimigos-altura-e-pin-primeiro)
+last_updated: 2026-04-11 (story-38/follow-up-widescreen-laterais-e-setas)
 status: ativo
 ---
 
@@ -90,6 +90,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Stress com PNG Tematico + Densidade Vertical dos Cards (Story 38 follow-up) | Trilhas de estresse migraram para assets PNG (`fisico`/`mental`) com tint dinâmico por tema usando `mask-image` em CSS. Cards da arena tiveram reducao da altura base (fallback de retrato e paddings internos) para reduzir espaco ocioso vertical e aproximar a altura inicial do limite das caixas de estresse. Em mobile, as trilhas podem quebrar em linhas para manter visibilidade total das caixas, setas de impulso foram reduzidas (~30%) e o campo de bonus da barra integrada foi estreitado para melhorar encaixe horizontal. | 2026-04-11 |
 | Piramide Invertida nos Cards Fechados + Minus Mobile (Story 38 follow-up) | Cards fechados (`strip`) passaram a usar largura progressiva em piramide invertida (85% no primeiro fechado e decaimento por nivel), com remocao de borda e degradê preto translúcido focado na faixa do nome. Em mobile, cards expandidos ganharam botao adicional de minimizar (`-`) ao lado da seta de pin/despin. A moldura de gaveta em torno dos rails de herois/ameacas foi removida (painel externo transparente, sem borda/sombra), preservando apenas os cards/handles. A faixa de estresse recebeu menor espessura vertical, borda no tema e fundo preto reduzido com blur "espelho manchado". | 2026-04-11 |
 | Ajuste de Altura dos Inimigos + Pin do Card Primario (Story 38 follow-up) | O card expandido de inimigos recebeu base vertical reduzida para alinhar densidade com os cards de aliados e o header externo passou a inverter nome/estresse no lado de ameacas. A piramide de strips fechados foi refinada para manter imagem pequena ate os ultimos niveis (nome + mini retrato), reduzindo também a altura do strip por nivel. A logica de pin foi estendida para permitir desfixar/minimizar o primeiro card: ele inicia fixado ao abrir a gaveta, mas pode ser solto como os demais. Trilhas de estresse removeram borda individual das bolhas e adotaram visual glass. | 2026-04-11 |
+| Widescreen nas Laterais + Handle Reancorado + Piramide Inimiga a Esquerda (Story 38 follow-up) | A grade da Arena ganhou ajuste dedicado para telas largas (`min-width: 1700px`), mantendo os blocos de cards mais colados nas laterais com margem de seguranca para nao conflitar com o menu. O handle de recolha foi reposicionado acima da linha do primeiro nome (aliados a direita do rail, inimigos totalmente a esquerda). Nos inimigos, os strips minimizados passaram a ancorar pela esquerda para evitar piramide invertida apontando para a direita, mantendo expansao por hover/pin. | 2026-04-11 |
 
 | Consolidação Feature-based (Session Notes) | Migração completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentação do useSessionNotes), componentes de abas e estilos em um único domínio isolado. Substituição de `confirm()` nativo por `useDeleteConfirm` (UX de exclusão segura não-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 

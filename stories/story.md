@@ -3,7 +3,7 @@ title: "Story ativa - Story 38 (Arena: gaveta vidro transparente na extrema esqu
 story_ref: "story-38-arena-gaveta-vidro-transparente-na-extrema-esquerda-com-expansao-interna-dos-cards.md"
 epic: "epic-02-rework-cards-arena-gavetas-e-interacoes"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-4.0 aplicado)"
+last_updated: "2026-04-11 (follow-up-4.1 widescreen/laterais aplicado)"
 ---
 
 ## Progresso Atual
@@ -14,11 +14,14 @@ last_updated: "2026-04-11 (follow-up-4.0 aplicado)"
 - Trilhas de estresse migradas para PNGs tematicos com tint por tema, e densidade vertical dos cards reduzida para aproximar da altura util.
 - Ajustes mobile: trilhas de estresse podem empilhar para mostrar todas as caixas, impulso reduzido e cards expandidos com botao `-` para minimizar.
 - Primeiro card de cada gaveta agora inicia fixado, mas pode ser desfixado/minimizado como os demais.
+- Ajuste widescreen aplicado para levar os blocos de cards de volta as laterais com margem de seguranca (evitando sobreposicao com menu lateral).
+- Setas externas de recolha reposicionadas acima do primeiro nome (aliados no lado direito da gaveta; inimigos no extremo esquerdo).
+- Piramide de cards minimizados dos inimigos passou a ancorar para a esquerda (evitando fechamento visual para a direita).
 
 ## Proximo Passo
-1. Validar com o usuario a comparacao final de altura entre cards de aliados e inimigos.
-2. Confirmar se a inversao de nome/estresse no lado de inimigos atende leitura esperada.
-3. Ajustar fino da piramide (mini retrato + nome nos ultimos cards) conforme preferencia visual final.
+1. Validar com o usuario se a altura final do card inimigo ficou equiparada ao dos aliados nos casos reais.
+2. Confirmar se o preenchimento da lateral de retrato dos inimigos ficou sem "buracos" em PNGs com transparencia.
+3. Fazer microajuste de offsets das setas de gaveta, se necessario, apos feedback visual final.
 
 ## Handoff Prompt
 ```text

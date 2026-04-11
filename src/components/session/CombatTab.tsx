@@ -822,7 +822,7 @@ export function CombatTab({
                                                 return (
                                                     <div
                                                         key={`${char.id}-threat-strip`}
-                                                        className="combat-stack-slot"
+                                                        className="combat-stack-slot threat-strip-slot"
                                                         onMouseEnter={() => setHoverThreatCardId(char.id)}
                                                         onMouseLeave={() => setHoverThreatCardId(prev => prev === char.id ? null : prev)}
                                                     >
@@ -833,7 +833,7 @@ export function CombatTab({
                                                             isGM={userRole === "GM"}
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             displayMode="strip"
-                                                            avatarSide="right"
+                                                            avatarSide="left"
                                                             stripRank={stripRank}
                                                             stripWidthPercent={stripWidthPercent}
                                                             onToggleExpanded={() => setPinnedThreatCardIds((prev) => (
