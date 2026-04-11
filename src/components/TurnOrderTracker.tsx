@@ -282,7 +282,7 @@ export function TurnOrderTracker({
             
             {/* Top HUD: Round & Timer */}
             <div className="hud-top">
-                <div className="round-badge">RODADA {currentRound}</div>
+                <div className="round-badge">{currentRound}</div>
                 {activeCharacterId && (
                     <div className="hud-timer-container top-timer">
                         <TurnTimer
@@ -396,8 +396,8 @@ export function TurnOrderTracker({
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 4px;
-                    margin-bottom: 6px;
+                    gap: 2px;
+                    margin-bottom: 0px;
                     z-index: 60;
                 }
 
@@ -405,11 +405,11 @@ export function TurnOrderTracker({
                     background: rgba(10, 10, 10, 0.8);
                     border: 1px solid var(--accent-color);
                     color: var(--accent-color);
-                    padding: 4px 16px;
+                    padding: 2px 14px;
                     border-radius: 20px;
                     font-family: var(--font-header);
                     letter-spacing: 0.15em;
-                    font-size: 0.8rem;
+                    font-size: 0.75rem;
                     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px rgba(var(--accent-rgb), 0.2);
                     backdrop-filter: blur(4px);
                     font-weight: bold;
@@ -423,12 +423,12 @@ export function TurnOrderTracker({
                 .semicircle-arena {
                     position: relative;
                     width: 700px;
-                    height: 115px;
+                    height: 110px;
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
                     margin-bottom: 4px;
-                    margin-top: -5px;
+                    margin-top: -8px;
                 }
 
                 .connection-arc {
@@ -438,7 +438,7 @@ export function TurnOrderTracker({
                     border: 2px solid transparent;
                     border-bottom: 2px solid rgba(255, 255, 255, 0.15);
                     border-radius: 50%;
-                    top: -160px; /* Moves the circle up so the bottom arc passes through the avatars */
+                    top: -168px; /* arco passa pelas pontas laterais dos losangos */
                     left: 50%;
                     transform: translateX(-50%);
                     pointer-events: none;
@@ -468,44 +468,70 @@ export function TurnOrderTracker({
 
                 /* Posicionamento do Semicirculo invertido (Centro no fundo) */
                 :global(.tracker-item[data-distance="0"]) {
-                    transform: translate(-50%, 20px) scale(1);
+                    transform: translate(-50%, 10px) scale(1);
                     opacity: 1;
                     z-index: 20;
                 }
-                
+
                 :global(.tracker-item[data-distance="-1"]) {
-                    transform: translate(calc(-50% - 80px), -10px) scale(0.75);
+                    transform: translate(calc(-50% - 80px), -18px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
-                
+
                 :global(.tracker-item[data-distance="1"]) {
-                    transform: translate(calc(-50% + 80px), -10px) scale(0.75);
+                    transform: translate(calc(-50% + 80px), -18px) scale(0.75);
                     opacity: 0.8;
                     z-index: 15;
                     filter: brightness(0.7) grayscale(0.4);
                 }
-                
+
                 :global(.tracker-item[data-distance="-2"]) {
-                    transform: translate(calc(-50% - 140px), -40px) scale(0.55);
+                    transform: translate(calc(-50% - 140px), -48px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
-                
+
                 :global(.tracker-item[data-distance="2"]) {
-                    transform: translate(calc(-50% + 140px), -40px) scale(0.55);
+                    transform: translate(calc(-50% + 140px), -48px) scale(0.55);
                     opacity: 0.5;
                     z-index: 10;
                     filter: brightness(0.4) grayscale(0.8);
                 }
-                
+
                 :global(.tracker-item[data-distance="hidden"]) {
                     transform: translate(-50%, -60px) scale(0.2);
                     opacity: 0;
                     pointer-events: none;
                     z-index: 1;
+                }
+
+                /* Inclinação dos losangos para seguir o arco */
+                :global(.tracker-item[data-distance="-2"] .diamond-portrait) {
+                    transform: rotate(67deg);
+                }
+                :global(.tracker-item[data-distance="-2"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-67deg);
+                }
+                :global(.tracker-item[data-distance="-1"] .diamond-portrait) {
+                    transform: rotate(57deg);
+                }
+                :global(.tracker-item[data-distance="-1"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-57deg);
+                }
+                :global(.tracker-item[data-distance="1"] .diamond-portrait) {
+                    transform: rotate(33deg);
+                }
+                :global(.tracker-item[data-distance="1"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-33deg);
+                }
+                :global(.tracker-item[data-distance="2"] .diamond-portrait) {
+                    transform: rotate(23deg);
+                }
+                :global(.tracker-item[data-distance="2"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-23deg);
                 }
 
                 /* Losango */
@@ -685,19 +711,19 @@ export function TurnOrderTracker({
                 }
 
                 .hud-timer-container {
-                    min-width: 80px;
+                    min-width: 60px;
                     display: flex;
                     justify-content: center;
                     color: var(--accent-color);
-                    font-size: 1.2rem;
+                    font-size: 0.78rem;
                     font-weight: bold;
-                    letter-spacing: 0.1em;
-                    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+                    letter-spacing: 0.08em;
+                    text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
                 }
 
                 .top-timer {
-                    margin-top: -4px;
-                    margin-bottom: 8px;
+                    margin-top: 0;
+                    margin-bottom: 0;
                 }
 
                 .hud-floating-nav {
@@ -705,7 +731,7 @@ export function TurnOrderTracker({
                     border: none;
                     color: rgba(197, 160, 89, 0.6);
                     position: absolute;
-                    top: 52px;
+                    top: 42px;
                     cursor: pointer;
                     transition: all 0.2s;
                     padding: 0;
@@ -716,11 +742,11 @@ export function TurnOrderTracker({
                 }
 
                 .hud-floating-nav.prev {
-                    left: calc(50% - 90px);
+                    left: calc(50% - 78px);
                 }
 
                 .hud-floating-nav.next {
-                    left: calc(50% + 55px);
+                    left: calc(50% + 50px);
                 }
 
                 .hud-floating-nav:hover {
