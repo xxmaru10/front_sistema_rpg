@@ -218,28 +218,17 @@ export function CombatCard({
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
     const isMirroredThreatLayout = isThreat;
-    const isCompactThreatLayout = false;
-    const imageColumnWidth = "clamp(156px, 33%, 252px)";
-    const edgeColumnWidth = "minmax(116px, 0.86fr)";
-    const imageColumnBaseHeight = 154; // mÃ­nimo para o retrato aparecer com boa proporÃ§Ã£o
-    
+    const imageColumnWidth = "minmax(170px, 240px)";
+    const edgeColumnWidth = "minmax(118px, 178px)";
+    const middleColumnWidth = "minmax(220px, 1fr)";
+    const imageColumnBaseHeight = 154;
+
     const cardGridTemplate = isMirroredThreatLayout
-        ? (isCompactThreatLayout
-            ? `${edgeColumnWidth} minmax(0, 1.2fr) ${imageColumnWidth}`
-            : `${edgeColumnWidth} minmax(0, 1.36fr) ${imageColumnWidth}`)
-        : (isCompactThreatLayout
-            ? `${imageColumnWidth} minmax(0, 1.2fr) ${edgeColumnWidth}`
-            : `${imageColumnWidth} minmax(0, 1.36fr) ${edgeColumnWidth}`);
-    const outerSkew = isCompactThreatLayout
-        ? (isMirroredThreatLayout ? 'skewX(3deg)' : 'skewX(-3deg)')
-        : (isMirroredThreatLayout ? 'skewX(5deg)' : 'skewX(-5deg)');
-    const innerSkew = isCompactThreatLayout
-        ? (isMirroredThreatLayout ? 'skewX(-4deg)' : 'skewX(4deg)')
-        : (isMirroredThreatLayout ? 'skewX(-6deg)' : 'skewX(6deg)');
-    const imageSkew = isCompactThreatLayout
-        ? (isMirroredThreatLayout ? 'skewX(-3deg)' : 'skewX(3deg)')
-        : (isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)');
-    const imageNegativeOffset = isCompactThreatLayout ? '-14px' : '-24px';
+        ? `${edgeColumnWidth} ${middleColumnWidth} ${imageColumnWidth}`
+        : `${imageColumnWidth} ${middleColumnWidth} ${edgeColumnWidth}`;
+    const outerSkew = isMirroredThreatLayout ? 'skewX(5deg)' : 'skewX(-5deg)';
+    const imageSkew = isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)';
+    const imageNegativeOffset = '-24px';
 
     return (
         <div 
@@ -323,7 +312,7 @@ export function CombatCard({
                 }}
             >
                 {/* De-skew content container */}
-                <div style={{ display: 'contents', transform: innerSkew }}>
+                <div style={{ display: 'contents' }}>
                 {/* Remove Button for GM */}
                 {canEdit && onRemove && (
                     <button
@@ -414,7 +403,7 @@ export function CombatCard({
                     width: imageColumnWidth,
                     minWidth: imageColumnWidth,
                     minHeight: `${imageColumnBaseHeight}px`,
-                    height: '100%',
+                    height: 'auto',
                     transform: imageSkew,
                     marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
                     marginRight: isMirroredThreatLayout ? 0 : imageNegativeOffset,
