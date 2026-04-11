@@ -3,7 +3,7 @@ title: "Story 38 - Arena: gaveta vidro transparente na extrema esquerda com expa
 description: "Reestruturar as gavetas laterais da Arena para visual glass, seta externa e fluxo de abrir todos os cards dentro da gaveta, iniciando com apenas um personagem visivel por lado no estado fechado."
 priority: "alta"
 status: "em-andamento"
-last_updated: "2026-04-11 (follow-up-3.4-cards-pin-barra-integrada-e-seta-inimigos)"
+last_updated: "2026-04-11 (follow-up-3.5-glass-minimizado-pin-multiplo-e-espelhamento-inimigos)"
 tags: [ui, arena, combat, cards, drawer, glass, rework]
 epic: epic-02-rework-cards-arena-gavetas-e-interacoes
 ---
@@ -94,6 +94,7 @@ Pelo `knowledge/architecture.md`, a entrega e de UI/composicao. Nao ha necessida
 - Follow-up aplicado (commit `2fb403a`): refinamento da barra integrada (dropdowns compactos por icone em pericia/inventario, ataque fisico/mental no mesmo seletor de acao, desafio inline com aspectos na propria faixa, botao de rolagem concentrado no fluxo integrado, botao de rolagem dos cards oculto para GM).
 - Follow-up aplicado (commit `c625873`): cards nao primarios em modo colapsado com estilo mais proximo ao card completo, expansao por hover/click, botao de minimizar (`-`) no canto superior direito dos cards expandidos secundarios, ajuste de offset dos impulsos e reposicionamento da seta externa da gaveta.
 - Follow-up aplicado (iteracao 3.4): seta da gaveta de inimigos corrigida para apontar a direita e handle reposicionado para nao conflitar com a barra integrada; cards secundarios minimizados remodelados para visual de card completo (imagem/foco/vinheta + nome), com expansao por hover e fixacao/desfixacao por pin no canto superior direito; impulsos (setas e controles GM) deslocados para a direita; barra integrada recebeu botoes maiores (pericia/inventario/logs), dropdowns estilizados e botao de rolagem branco; borda/glow dourado residual da gaveta foi neutralizado para remover artefato visual solto.
+- Follow-up aplicado (iteracao 3.5): cards minimizados receberam glass transparente sem tint de classe (borda no tema global), impulso foi deslocado mais para a direita, pin passou a suportar multipla fixacao simultanea (icone maior apontando esquerda/desfixado e baixo/fixado), card de inimigos ganhou botao de remocao em lixeira vermelha e o layout dos inimigos foi espelhado horizontalmente (imagem/consequencias/formato). Barra integrada de rolagem do GM teve compressao de layout para priorizar linha unica e evitar quebra excessiva (maximo 2 linhas em cenarios estreitos).
 
 ## Pendencias para Proxima Iteracao
 - Validar em GM/jogador (viewport menor) o clique dos impulsos sem clipping apos novo offset.

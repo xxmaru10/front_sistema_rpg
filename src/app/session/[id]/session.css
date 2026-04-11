@@ -1539,8 +1539,9 @@ body {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
-    row-gap: 6px;
+    align-content: flex-start;
+    gap: 4px;
+    row-gap: 4px;
     width: 100%;
     min-height: 46px;
     background: rgba(0, 0, 0, 0.08);
@@ -1557,7 +1558,8 @@ body {
 
 .combat-dice-integrated .probability-grid.integrated {
     width: auto;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
+    max-width: 100%;
     min-width: 0;
 }
 

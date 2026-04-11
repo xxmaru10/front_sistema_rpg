@@ -70,8 +70,8 @@ export function CombatTab({
     const [isThreatDrawerOpen, setIsThreatDrawerOpen] = useState(false);
     const [showCombatLogs, setShowCombatLogs] = useState(false);
     const [isChallengeAspectsOpen, setIsChallengeAspectsOpen] = useState(false);
-    const [expandedHeroCardId, setExpandedHeroCardId] = useState<string | null>(null);
-    const [expandedThreatCardId, setExpandedThreatCardId] = useState<string | null>(null);
+    const [pinnedHeroCardIds, setPinnedHeroCardIds] = useState<string[]>([]);
+    const [pinnedThreatCardIds, setPinnedThreatCardIds] = useState<string[]>([]);
     const [hoverHeroCardId, setHoverHeroCardId] = useState<string | null>(null);
     const [hoverThreatCardId, setHoverThreatCardId] = useState<string | null>(null);
     const [challengeDiffDraft, setChallengeDiffDraft] = useState<string>("0");
@@ -149,23 +149,19 @@ export function CombatTab({
 
     useEffect(() => {
         if (heroCombatants.length === 0) setIsHeroDrawerOpen(false);
-        if (expandedHeroCardId && !heroCombatants.some(c => c.id === expandedHeroCardId)) {
-            setExpandedHeroCardId(null);
-        }
+        setPinnedHeroCardIds((prev) => prev.filter((id) => heroCombatants.some((c) => c.id === id)));
         if (hoverHeroCardId && !heroCombatants.some(c => c.id === hoverHeroCardId)) {
             setHoverHeroCardId(null);
         }
-    }, [heroCombatants, expandedHeroCardId, hoverHeroCardId]);
+    }, [heroCombatants, hoverHeroCardId]);
 
     useEffect(() => {
         if (threatCombatants.length === 0) setIsThreatDrawerOpen(false);
-        if (expandedThreatCardId && !threatCombatants.some(c => c.id === expandedThreatCardId)) {
-            setExpandedThreatCardId(null);
-        }
+        setPinnedThreatCardIds((prev) => prev.filter((id) => threatCombatants.some((c) => c.id === id)));
         if (hoverThreatCardId && !threatCombatants.some(c => c.id === hoverThreatCardId)) {
             setHoverThreatCardId(null);
         }
-    }, [threatCombatants, expandedThreatCardId, hoverThreatCardId]);
+    }, [threatCombatants, hoverThreatCardId]);
 
     useEffect(() => {
         if (!showDiceRoller) setShowCombatLogs(false);
@@ -187,14 +183,14 @@ export function CombatTab({
 
     useEffect(() => {
         if (!isHeroDrawerOpen) {
-            setExpandedHeroCardId(null);
+            setPinnedHeroCardIds([]);
             setHoverHeroCardId(null);
         }
     }, [isHeroDrawerOpen]);
 
     useEffect(() => {
         if (!isThreatDrawerOpen) {
-            setExpandedThreatCardId(null);
+            setPinnedThreatCardIds([]);
             setHoverThreatCardId(null);
         }
     }, [isThreatDrawerOpen]);
@@ -426,7 +422,7 @@ export function CombatTab({
                                             }
 
                                             const isPrimaryCard = index === 0;
-                                            const isPinnedCard = !isPrimaryCard && expandedHeroCardId === char.id;
+                                            const isPinnedCard = !isPrimaryCard && pinnedHeroCardIds.includes(char.id);
                                             const isExpandedCard = isPrimaryCard || isPinnedCard || hoverHeroCardId === char.id;
                                             if (isExpandedCard) {
                                                 return (
@@ -445,7 +441,11 @@ export function CombatTab({
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             isLinkedCharacter={fixedCharacterId === char.id}
                                                             onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                            onToggleExpanded={!isPrimaryCard ? () => setExpandedHeroCardId(prev => prev === char.id ? null : char.id) : undefined}
+                                                            onToggleExpanded={!isPrimaryCard ? () => setPinnedHeroCardIds((prev) => (
+                                                                prev.includes(char.id)
+                                                                    ? prev.filter((id) => id !== char.id)
+                                                                    : [...prev, char.id]
+                                                            )) : undefined}
                                                             isPinned={isPinnedCard}
                                                             avatarSide="left"
                                                         />
@@ -469,7 +469,11 @@ export function CombatTab({
                                                         isLinkedCharacter={fixedCharacterId === char.id}
                                                         displayMode="strip"
                                                         avatarSide="left"
-                                                        onToggleExpanded={() => setExpandedHeroCardId(prev => prev === char.id ? null : char.id)}
+                                                        onToggleExpanded={() => setPinnedHeroCardIds((prev) => (
+                                                            prev.includes(char.id)
+                                                                ? prev.filter((id) => id !== char.id)
+                                                                : [...prev, char.id]
+                                                        ))}
                                                     />
                                                 </div>
                                             );
@@ -758,7 +762,7 @@ export function CombatTab({
                                                 }
 
                                                 const isPrimaryCard = index === 0;
-                                                const isPinnedCard = !isPrimaryCard && expandedThreatCardId === char.id;
+                                                const isPinnedCard = !isPrimaryCard && pinnedThreatCardIds.includes(char.id);
                                                 const isExpandedCard = isPrimaryCard || isPinnedCard || hoverThreatCardId === char.id;
                                                 if (isExpandedCard) {
                                                     return (
@@ -776,7 +780,11 @@ export function CombatTab({
                                                                 onRemove={() => handleRemoveCharacter(char.id)}
                                                                 isCurrentTurn={currentTurnActorId === char.id}
                                                                 onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
-                                                                onToggleExpanded={!isPrimaryCard ? () => setExpandedThreatCardId(prev => prev === char.id ? null : char.id) : undefined}
+                                                                onToggleExpanded={!isPrimaryCard ? () => setPinnedThreatCardIds((prev) => (
+                                                                    prev.includes(char.id)
+                                                                        ? prev.filter((id) => id !== char.id)
+                                                                        : [...prev, char.id]
+                                                                )) : undefined}
                                                                 isPinned={isPinnedCard}
                                                                 avatarSide="right"
                                                             />
@@ -799,7 +807,11 @@ export function CombatTab({
                                                             isCurrentTurn={currentTurnActorId === char.id}
                                                             displayMode="strip"
                                                             avatarSide="right"
-                                                            onToggleExpanded={() => setExpandedThreatCardId(prev => prev === char.id ? null : char.id)}
+                                                            onToggleExpanded={() => setPinnedThreatCardIds((prev) => (
+                                                                prev.includes(char.id)
+                                                                    ? prev.filter((id) => id !== char.id)
+                                                                    : [...prev, char.id]
+                                                            ))}
                                                         />
                                                     </div>
                                                 );

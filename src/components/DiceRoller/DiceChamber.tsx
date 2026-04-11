@@ -68,11 +68,11 @@ export function DiceChamber({
 
                 .void-chamber.integrated {
                     height: 40px;
-                    min-width: 112px;
+                    min-width: 92px;
                     margin: 0;
                     border-radius: 10px;
                     justify-content: center;
-                    padding: 0 10px;
+                    padding: 0 8px;
                 }
 
                 .scene-3d { perspective: 1000px; z-index: 2; margin-bottom: 20px; }

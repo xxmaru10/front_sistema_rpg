@@ -307,8 +307,25 @@ export function RollerInputs({
                     flex-direction: row;
                     flex-wrap: wrap;
                     align-items: center;
-                    gap: 6px;
+                    align-content: flex-start;
+                    gap: 4px;
                     min-width: 0;
+                    width: auto;
+                    flex: 0 1 auto;
+                }
+
+                .matrix-inputs.integrated > .matrix-field {
+                    width: auto;
+                    gap: 0;
+                    flex: 0 1 auto;
+                }
+
+                .matrix-inputs.integrated > .matrix-field label {
+                    display: none;
+                }
+
+                .matrix-inputs.integrated > .matrix-field .field-row {
+                    width: auto;
                 }
 
                 .matrix-field {
@@ -342,8 +359,11 @@ export function RollerInputs({
                     flex-direction: row !important;
                     align-items: center !important;
                     justify-content: flex-start !important;
-                    gap: 6px;
+                    gap: 4px;
                     flex-wrap: wrap;
+                    width: auto;
+                    margin: 0;
+                    flex: 0 1 auto;
                 }
 
                 .panel-col {
@@ -358,7 +378,7 @@ export function RollerInputs({
 
                 .control-panel-grid.integrated-mode .panel-col {
                     flex-direction: row;
-                    gap: 6px;
+                    gap: 4px;
                     flex: 0 1 auto;
                     width: auto;
                 }
@@ -373,7 +393,7 @@ export function RollerInputs({
 
                 .control-panel-grid.integrated-mode .matrix-field {
                     width: auto;
-                    gap: 4px;
+                    gap: 0;
                 }
 
                 .control-panel-grid.integrated-mode .matrix-field label {
@@ -444,12 +464,21 @@ export function RollerInputs({
 
                 .control-panel-grid.integrated-mode .select-ritual,
                 .control-panel-grid.integrated-mode .input-ritual {
-                    font-size: 0.72rem !important;
-                    letter-spacing: 0.06em !important;
-                    padding: 5px 10px !important;
+                    font-size: 0.66rem !important;
+                    letter-spacing: 0.05em !important;
+                    padding: 4px 8px !important;
                     border-radius: 12px !important;
-                    min-height: 36px;
+                    min-height: 34px;
                     box-shadow: 0 0 14px var(--accent-glow), inset 0 0 10px var(--accent-glow) !important;
+                }
+
+                .matrix-inputs.integrated .select-ritual,
+                .matrix-inputs.integrated .input-ritual {
+                    max-width: 16ch !important;
+                }
+
+                .control-panel-grid.integrated-mode .select-ritual {
+                    max-width: 11ch !important;
                 }
 
                 .control-panel-grid.integrated-mode :global(.field-icon) {

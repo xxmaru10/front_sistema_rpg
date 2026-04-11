@@ -11,7 +11,7 @@ import { CombatExtras } from "@/components/CombatExtras";
 
 // Sub-components
 import { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Star, Sparkles, Briefcase, Target, Dices, Pin, PinOff } from "lucide-react";
+import { ChevronLeft, ChevronDown, Star, Sparkles, Briefcase, Target, Dices, Trash2 } from "lucide-react";
 import { CombatAspects } from "./CombatAspects";
 import { CombatCardStyles } from "./CombatCard.styles";
 
@@ -245,15 +245,26 @@ export function CombatCard({
 
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
+    const isMirroredThreatLayout = isThreat;
     const isCompactThreatLayout = isThreat && isGM;
     const imageColumnWidth = isCompactThreatLayout ? "clamp(176px, 20vw, 236px)" : "clamp(224px, 28vw, 322px)";
-    const cardGridTemplate = isCompactThreatLayout
-        ? `${imageColumnWidth} minmax(0, 1.28fr) minmax(126px, 0.86fr)`
-        : `${imageColumnWidth} minmax(0, 1.55fr) minmax(146px, 1fr)`;
-    const outerSkew = isCompactThreatLayout ? 'skewX(-3deg)' : 'skewX(-5deg)';
-    const innerSkew = isCompactThreatLayout ? 'skewX(4deg)' : 'skewX(6deg)';
-    const imageSkew = isCompactThreatLayout ? 'skewX(3deg)' : 'skewX(5deg)';
-    const imageMarginLeft = isCompactThreatLayout ? '-14px' : '-24px';
+    const cardGridTemplate = isMirroredThreatLayout
+        ? (isCompactThreatLayout
+            ? `minmax(126px, 0.86fr) minmax(0, 1.28fr) ${imageColumnWidth}`
+            : `minmax(146px, 1fr) minmax(0, 1.55fr) ${imageColumnWidth}`)
+        : (isCompactThreatLayout
+            ? `${imageColumnWidth} minmax(0, 1.28fr) minmax(126px, 0.86fr)`
+            : `${imageColumnWidth} minmax(0, 1.55fr) minmax(146px, 1fr)`);
+    const outerSkew = isCompactThreatLayout
+        ? (isMirroredThreatLayout ? 'skewX(3deg)' : 'skewX(-3deg)')
+        : (isMirroredThreatLayout ? 'skewX(5deg)' : 'skewX(-5deg)');
+    const innerSkew = isCompactThreatLayout
+        ? (isMirroredThreatLayout ? 'skewX(-4deg)' : 'skewX(4deg)')
+        : (isMirroredThreatLayout ? 'skewX(-6deg)' : 'skewX(6deg)');
+    const imageSkew = isCompactThreatLayout
+        ? (isMirroredThreatLayout ? 'skewX(-3deg)' : 'skewX(3deg)')
+        : (isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)');
+    const imageNegativeOffset = isCompactThreatLayout ? '-14px' : '-24px';
 
     return (
         <div 
@@ -314,10 +325,12 @@ export function CombatCard({
                     padding: '0', 
                     height: 'auto',
                     minHeight: dynamicCardHeight ? `${dynamicCardHeight}px` : 'fit-content',
-                    borderRadius: '0 50px 0 0',
+                    borderRadius: isMirroredThreatLayout ? '50px 0 0 0' : '0 50px 0 0',
                     position: 'relative',
                     border: 'none',
-                    background: `linear-gradient(110deg, #000 0%, #000 38%, var(--card-accent-soft) 82%, transparent 100%)`,
+                    background: isMirroredThreatLayout
+                        ? `linear-gradient(250deg, #000 0%, #000 38%, var(--card-accent-soft) 82%, transparent 100%)`
+                        : `linear-gradient(110deg, #000 0%, #000 38%, var(--card-accent-soft) 82%, transparent 100%)`,
                     overflow: 'visible',
                     boxShadow: 'none',
                     transform: outerSkew,
@@ -327,16 +340,21 @@ export function CombatCard({
                 {/* De-skew content container */}
                 <div style={{ display: 'contents', transform: innerSkew }}>
                 {/* Remove Button for GM */}
-                                {canEdit && onRemove && (
+                {canEdit && onRemove && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
                             onRemove();
                         }}
-                        style={{ position: 'absolute', top: '4px', right: '4px', color: 'rgba(255,255,255,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', zIndex: 40 }}
-                        className="combat-remove-btn"
+                        style={isThreat
+                            ? { position: 'absolute', top: '4px', left: '4px', color: '#ff8b8b', background: 'rgba(90, 8, 8, 0.72)', border: '1px solid rgba(255, 68, 68, 0.65)', borderRadius: '7px', cursor: 'pointer', zIndex: 40, width: '24px', height: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
+                            : { position: 'absolute', top: '4px', right: '4px', color: 'rgba(255,255,255,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', zIndex: 40 }
+                        }
+                        className={`combat-remove-btn${isThreat ? ' threat-remove-btn' : ''}`}
                         title="Remover personagem da arena"
-                    >X</button>
+                    >
+                        {isThreat ? <Trash2 size={14} /> : 'X'}
+                    </button>
                 )}
                 {onToggleExpanded && (
                     <button
@@ -347,7 +365,9 @@ export function CombatCard({
                         style={{
                             position: 'absolute',
                             top: '4px',
-                            right: canEdit && onRemove ? '26px' : '4px',
+                            ...(isMirroredThreatLayout
+                                ? { left: canEdit && onRemove ? '34px' : '4px' }
+                                : { right: canEdit && onRemove ? '34px' : '4px' }),
                             color: 'rgba(255,255,255,0.55)',
                             background: 'transparent',
                             border: 'none',
@@ -355,8 +375,8 @@ export function CombatCard({
                             zIndex: 40,
                             fontSize: '1rem',
                             lineHeight: 1,
-                            width: '18px',
-                            height: '18px',
+                            width: '27px',
+                            height: '27px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center'
@@ -364,11 +384,21 @@ export function CombatCard({
                         className="combat-pin-btn"
                         title={isPinned ? "Soltar card" : "Fixar card"}
                     >
-                        {isPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                        {isPinned ? <ChevronDown size={18} /> : <ChevronLeft size={18} />}
                     </button>
                 )}
                 {/* COLUNA 1: Imagem, Destino, Impulso Overlaid */}
-                <div style={{ position: 'relative', width: imageColumnWidth, minWidth: imageColumnWidth, transform: imageSkew, marginLeft: imageMarginLeft, overflow: 'visible', alignSelf: 'stretch' }}>
+                <div style={{
+                    gridColumn: isMirroredThreatLayout ? 3 : 1,
+                    position: 'relative',
+                    width: imageColumnWidth,
+                    minWidth: imageColumnWidth,
+                    transform: imageSkew,
+                    marginLeft: isMirroredThreatLayout ? 0 : imageNegativeOffset,
+                    marginRight: isMirroredThreatLayout ? imageNegativeOffset : 0,
+                    overflow: 'visible',
+                    alignSelf: 'stretch'
+                }}>
                     <div style={{ position: 'absolute', inset: 0, background: '#000', overflow: 'hidden' }}>
                         {character.imageUrl ? (
                             <img
@@ -392,13 +422,22 @@ export function CombatCard({
                     {/* Persona vignettes and slash effects */}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 25%)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 25%)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, rgba(0,0,0,0.6) 0%, transparent 15%)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: isMirroredThreatLayout ? 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 15%)' : 'linear-gradient(to left, rgba(0,0,0,0.6) 0%, transparent 15%)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 45%, transparent 50%)', pointerEvents: 'none' }} />
 
                     {(isGM || isOwner) && !isRestrictedThreatView && (
                         <>
-                            {/* Impulse - Top Left Over Image */}
-                            <div style={{ position: 'absolute', top: '8px', left: '10px', display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 65, pointerEvents: 'auto' }}>
+                            {/* Impulse - Overlay */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '8px',
+                                ...(isMirroredThreatLayout ? { right: 'calc(10px + 30%)' } : { left: 'calc(10px + 30%)' }),
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '2px',
+                                zIndex: 65,
+                                pointerEvents: 'auto'
+                            }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                                     {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, index) => <span key={`imp-${index}`} style={{ color: '#fff', fontSize: '0.75rem', textShadow: '0 0 8px var(--card-accent)' }}>➤</span>)}
                                 </div>
@@ -410,8 +449,15 @@ export function CombatCard({
                                 )}
                             </div>
 
-                            {/* Fate Points - Bottom Right Over Image */}
-                            <div style={{ position: 'absolute', bottom: '6px', right: '10px', display: 'flex', justifyContent: 'flex-end', zIndex: 10 }}>
+                            {/* Fate Points - Bottom Over Image */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '6px',
+                                ...(isMirroredThreatLayout ? { left: '10px' } : { right: '10px' }),
+                                display: 'flex',
+                                justifyContent: isMirroredThreatLayout ? 'flex-start' : 'flex-end',
+                                zIndex: 10
+                            }}>
                                 <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', border: 'none', background: 'transparent', padding: 0 }}>
                                     {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>-</button>}
                                     <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints}</span>
@@ -422,7 +468,7 @@ export function CombatCard({
                     )}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '6px 14px', transform: 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
+                <div style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, padding: '6px 14px', transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)', overflow: 'hidden', justifyContent: 'flex-start' }}>
                     <div ref={middleContentRef} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <h3 className="combat-name" style={{ fontSize: '1rem', margin: 0, fontWeight: '900', letterSpacing: '0.05em', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{character.name.toUpperCase()}</h3>
@@ -546,7 +592,20 @@ export function CombatCard({
                 </div>
 
                 {/* COLUNA 3: Consequencias */}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px', paddingBottom: '4px', paddingRight: '8px', transform: 'skewX(5deg)', justifyContent: 'flex-start' }}>
+                <div style={{
+                    gridColumn: isMirroredThreatLayout ? 1 : 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0,
+                    paddingLeft: isMirroredThreatLayout ? '8px' : '8px',
+                    borderLeft: isMirroredThreatLayout ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                    borderRight: isMirroredThreatLayout ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                    paddingTop: '4px',
+                    paddingBottom: '4px',
+                    paddingRight: '8px',
+                    transform: isMirroredThreatLayout ? 'skewX(-5deg)' : 'skewX(5deg)',
+                    justifyContent: 'flex-start'
+                }}>
                     {!isRestrictedThreatView && (
                         <div ref={consequencesContentRef} style={{ borderTop: 'none', paddingTop: 0 }}>
                             <CombatConsequences
