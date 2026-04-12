@@ -44,8 +44,14 @@ export function CharacterConsequences({
     const canEdit = canEditConsequences ?? isGM;
     const defaultSlots = ["mild", "moderate", "severe"];
     const allKeys = new Set<string>();
-    defaultSlots.forEach((slot) => allKeys.add(slot));
-    if (character.consequences) {
+    
+    // Se o personagem não tem NENHUMA consequência definida no estado, mostramos as padrão inicialmente.
+    // Assim que o mestre adiciona ou remove, o estado domina a visualização (permitindo remover caixas).
+    const hasAnyKeys = character.consequences && Object.keys(character.consequences).length > 0;
+    
+    if (!hasAnyKeys) {
+        defaultSlots.forEach((slot) => allKeys.add(slot));
+    } else {
         Object.keys(character.consequences).forEach((k) => allKeys.add(k));
     }
 
@@ -124,7 +130,7 @@ export function CharacterConsequences({
                                 className={`consequence-slot ${isFilled ? "filled" : "empty"} small-slot`}
                                 style={{
                                     display: "grid",
-                                    gridTemplateColumns: canEdit ? "auto minmax(0, 1fr) auto" : "auto minmax(0, 1fr)",
+                                    gridTemplateColumns: "auto 1fr",
                                     alignItems: "center",
                                     gap: "10px",
                                     marginBottom: 0,

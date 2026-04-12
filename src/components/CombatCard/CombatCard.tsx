@@ -417,14 +417,6 @@ export function CombatCard({
                             backgroundColor: '#000',
                             overflow: 'hidden',
                             zIndex: 2,
-                            ...(character.imageUrl
-                                ? {
-                                    backgroundImage: `url(${character.imageUrl})`,
-                                    backgroundSize: 'cover',
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundPosition: `${arenaFocusX}% ${arenaFocusY}%`,
-                                }
-                                : {})
                         }}
                     >
                         {character.imageUrl ? (
