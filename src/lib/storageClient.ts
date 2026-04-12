@@ -3,21 +3,28 @@ const S3_BASE = `https://rpg-platform-free-assets-306337361114.s3.us-east-1.amaz
 
 
 export function getPublicUrl(path: string): string {
-  if (!path) return '';
-  if (path.startsWith('http')) {
-    // Already absolute URL — check if it's an S3 URL and proxy it
-    if (path.includes('s3.amazonaws.com') || path.includes('s3.us-east-1.amazonaws.com')) {
-      // Extract the key from the S3 URL
-      const match = path.match(/amazonaws\.com\/(.+)$/);
-      if (match) {
-        return `${API_BASE}/api/storage/file/${match[1]}`;
+    if (!path) return '';
+  
+    if (path.startsWith('http')) {
+      if (path.includes('amazonaws.com')) {
+        const match = path.match(/amazonaws\.com\/(.+)$/);
+        if (match) return `${API_BASE}/api/storage/file/${match[1]}`;
       }
+      return path;
     }
-    return path;
+  
+    if (path.startsWith('/audio/')) return path;
+  
+    // Legacy: missing leading slash
+    if (path.startsWith('audio/')) return `/${path}`;
+  
+    // Legacy: old Portuguese folder name → local public audio
+    if (path.startsWith('Efeitos/')) {
+      return path.replace('Efeitos/', '/audio/Effects/');
+    }
+  
+    return `${API_BASE}/api/storage/file/campaign-uploads/${path}`;
   }
-  if (path.startsWith('/audio/')) return path;
-  return `${API_BASE}/api/storage/file/campaign-uploads/${path}`;
-}
 
 export async function listFiles(path: string = ''): Promise<{
   files: any[];
