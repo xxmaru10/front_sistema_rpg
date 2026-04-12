@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
 import { ChevronLeft, ChevronRight, ScrollText, UserPlus, Skull, Zap, ListOrdered, Dices } from "lucide-react";
 import { CombatCard } from "@/components/CombatCard";
@@ -218,7 +219,7 @@ export function CombatTab({
 
     return (
         <>
-        {userRole === "GM" && (
+        {userRole === "GM" && typeof document !== "undefined" && createPortal(
             <div className="gm-sidebar-vertical">
                     <button
                         className="gm-sidebar-btn"
@@ -262,8 +263,9 @@ export function CombatTab({
                     >
                         <Dices size={18} />
                     </button>
-                </div>
-            )}
+                </div>,
+            document.body
+        )}
 
         <div className="combat-display animate-reveal">
             <div

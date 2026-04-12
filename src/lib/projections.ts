@@ -271,12 +271,31 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             };
         }
 
+        case "CHARACTER_CONSEQUENCE_SLOT_ADDED": {
+            const char = state.characters[payload.characterId];
+            if (!char) return state;
+            const extraConsequenceSlots = [...(char.extraConsequenceSlots || [])];
+            if (!extraConsequenceSlots.includes(payload.slot)) {
+                extraConsequenceSlots.push(payload.slot);
+            }
+            return {
+                ...state,
+                characters: {
+                    ...state.characters,
+                    [payload.characterId]: { ...char, extraConsequenceSlots }
+                }
+            };
+        }
+
         case "CHARACTER_CONSEQUENCE_DELETED": {
             const char = state.characters[payload.characterId];
             if (!char) return state;
 
             const newConsequences = { ...char.consequences };
             delete newConsequences[payload.slot];
+
+            // Remover de extra slots se aplicável
+            const extraConsequenceSlots = (char.extraConsequenceSlots || []).filter(s => s !== payload.slot);
 
             // Se for um slot padrão, registrar como removido para que suma da UI
             const DEFAULT_CONSEQUENCE_SLOTS = ["mild", "mild2", "moderate", "severe"];
@@ -293,6 +312,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                         ...char,
                         consequences: newConsequences,
                         removedDefaultSlots,
+                        extraConsequenceSlots,
                     }
                 }
             };

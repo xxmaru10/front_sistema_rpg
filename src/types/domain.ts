@@ -170,6 +170,7 @@ export type Character = {
   linkedNotes?: EntityNote[];
   religionId?: string;
   removedDefaultSlots?: string[]; // Slots padrão (mild/moderate/severe) removidos pelo mestre
+  extraConsequenceSlots?: string[]; // Slots extras criados pelo mestre (ex: mild_abc123)
 };
 
 // Aspect State
@@ -457,6 +458,7 @@ export type ActionEvent =
   | EventEnvelope<"SCENE_ACTIVATED", { id: string }>
   | EventEnvelope<"CHARACTER_CONSEQUENCE_UPDATED", { characterId: string; slot: string; value: string | null; debuff?: ConsequenceDebuff }>
   | EventEnvelope<"CHARACTER_CONSEQUENCE_DELETED", { characterId: string; slot: string }>
+  | EventEnvelope<"CHARACTER_CONSEQUENCE_SLOT_ADDED", { characterId: string; slot: string }>
   | EventEnvelope<"CHARACTER_INVENTORY_UPDATED", { characterId: string; item: Item }>
   | EventEnvelope<"CHARACTER_STUNT_UPDATED", { characterId: string; stunt: Stunt }>
   | EventEnvelope<"CHARACTER_STUNT_DELETED", { characterId: string; stuntId: string }>

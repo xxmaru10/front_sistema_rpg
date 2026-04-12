@@ -334,13 +334,13 @@ export function useCharacterCard({
     const handleAddConsequence = (type: "mild" | "moderate" | "severe") => {
         const uniqueId = `${type}_${uuidv4().slice(0, 8)}`;
         setShowAddConsequenceModal(false);
-        // Abre o modal de edição diretamente para o novo slot (evita emitir " " que seria trimado e deletado pela projeção)
-        setConsequenceModal({
-            slot: uniqueId,
-            current: "",
-            debuffSkill: "",
-            debuffValue: 0,
-        });
+        // Apenas cria o slot vazio — sem abrir o modal de texto
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_SLOT_ADDED",
+            actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, slot: uniqueId }
+        } as any);
     };
 
     const handleDeleteConsequence = (slot: string, e: React.MouseEvent) => {
@@ -353,6 +353,27 @@ export function useCharacterCard({
                 payload: { characterId: character.id, slot }
             } as any);
         }
+    };
+
+    const handleKillCharacter = () => {
+        if (!isGM) return;
+        const removedDefaults = character.removedDefaultSlots || [];
+        const defaultSlots = ["mild", "moderate", "severe"].filter(s => !removedDefaults.includes(s));
+        const allSlots = new Set<string>(defaultSlots);
+        (character.extraConsequenceSlots || []).forEach(s => allSlots.add(s));
+        Object.keys(character.consequences || {}).forEach(k => allSlots.add(k));
+
+        allSlots.forEach(slot => {
+            const existing = (character.consequences as any)[slot];
+            if (!existing?.text?.trim()) {
+                globalEventStore.append({
+                    id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
+                    actorUserId: normalizedUserId,
+                    createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                    payload: { characterId: character.id, slot, value: "ELIMINADO" }
+                } as any);
+            }
+        });
     };
 
     // ── Note Handlers ─────────────────────────────────────────────────────────
@@ -410,7 +431,7 @@ export function useCharacterCard({
         handleImageUpload,
 
         handleConsequenceChange, handleSaveConsequence,
-        handleAddConsequence, handleDeleteConsequence,
+        handleAddConsequence, handleDeleteConsequence, handleKillCharacter,
         handleAddNote, handleDeleteNote,
         handleDeleteCharacter,
         // Cropper

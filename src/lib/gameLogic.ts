@@ -3,14 +3,22 @@ import { Character } from "@/types/domain";
 export function isCharacterEliminated(character: Character): boolean {
     if (!character) return false;
 
-    // DEATH RULE: A character is ONLY eliminated when ALL consequence slots are filled.
-    // Stress tracks do NOT count for death — only consequences.
-    // If no consequence slots are defined, the character cannot be eliminated.
-    const allConsequenceKeys = Object.keys(character.consequences);
-    if (allConsequenceKeys.length === 0) return false;
+    // DEATH RULE: A character is ONLY eliminated when ALL available consequence slots are filled.
+    // "Available" = default slots (mild/moderate/severe) minus explicitly removed ones,
+    //               plus any extra slots created by the GM.
+    const removedDefaults = character.removedDefaultSlots || [];
+    const defaultSlots = ["mild", "moderate", "severe"].filter(s => !removedDefaults.includes(s));
 
-    return allConsequenceKeys.every(key => {
-        const cons = character.consequences[key];
+    const allSlots = new Set<string>(defaultSlots);
+    (character.extraConsequenceSlots || []).forEach(s => allSlots.add(s));
+    // Include any filled slots not already in the above (edge-case safety)
+    Object.keys(character.consequences || {}).forEach(k => allSlots.add(k));
+
+    if (allSlots.size === 0) return false;
+
+    // Eliminated only when EVERY slot has non-empty text
+    return Array.from(allSlots).every(slot => {
+        const cons = (character.consequences as any)[slot];
         return cons && cons.text && cons.text.trim().length > 0;
     });
 }

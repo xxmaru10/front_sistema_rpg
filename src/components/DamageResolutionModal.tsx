@@ -144,7 +144,7 @@ export function DamageResolutionModal({
 
     const overAbsorbed = remainingDamage < 0;
     const isLethal = remainingDamage > 0 && !hasAvailableSlots;
-    const canConfirm = remainingDamage >= 0;
+    const canConfirm = true; // O mestre pode confirmar qualquer configuração
 
     if (!mounted || !isOpen || !defender) return null;
 
@@ -173,7 +173,6 @@ export function DamageResolutionModal({
     };
 
     const handleConfirmClick = () => {
-        if (!canConfirm || overAbsorbed) return;
         const consequences = orderedSlots
             .map(slot => ({ slot, text: (consequenceTexts[slot] || "").trim() }))
             .filter(c => c.text.length > 0);
@@ -287,13 +286,6 @@ export function DamageResolutionModal({
                         </span>
                     </div>
                 </div>
-
-                {overAbsorbed && (
-                    <div className="dmg-overwarn">
-                        A absorção ultrapassa o dano recebido. Desmarque caixas ou apague texto de consequência até o
-                        restante bater em zero.
-                    </div>
-                )}
 
                 {/* Stress Tracks */}
                 <div className="dmg-section">
@@ -410,16 +402,7 @@ export function DamageResolutionModal({
                     <button
                         className={`dmg-btn confirm ${isLethal ? 'lethal' : ''}`}
                         onClick={handleConfirmClick}
-                        disabled={!canConfirm || overAbsorbed}
-                        title={
-                            isLethal
-                                ? "Confirmar DERROTA do personagem"
-                                : canConfirm
-                                  ? "Aplicar marcações na ficha"
-                                  : overAbsorbed
-                                    ? "Absorção acima do dano — ajuste as seleções"
-                                    : "Reduza o dano restante para confirmar"
-                        }
+                        title={isLethal ? "Confirmar DERROTA do personagem" : "Aplicar marcações na ficha"}
                     >
                         {isLethal ? "CONFIRMAR DERROTA" : "CONFIRMAR"}
                     </button>

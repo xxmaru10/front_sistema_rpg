@@ -39,6 +39,7 @@ interface CharacterSummarySectionProps {
     onAddConsequence: (type: "mild" | "moderate" | "severe") => void;
     onOpenAddModal: () => void;
     onCloseAddModal: () => void;
+    onKillCharacter?: () => void;
 }
 
 export function CharacterSummarySection({
@@ -68,6 +69,7 @@ export function CharacterSummarySection({
     onAddConsequence,
     onOpenAddModal,
     onCloseAddModal,
+    onKillCharacter,
 }: CharacterSummarySectionProps) {
     const initial = character.name?.trim()?.charAt(0)?.toUpperCase() || "?";
     const showFateInline = !(character.isNPC && !isGM);
@@ -466,6 +468,7 @@ export function CharacterSummarySection({
                         onAddConsequence={onAddConsequence}
                         onOpenAddModal={onOpenAddModal}
                         onCloseAddModal={onCloseAddModal}
+                        onKillCharacter={onKillCharacter}
                     />
                 </div>
             </div>
