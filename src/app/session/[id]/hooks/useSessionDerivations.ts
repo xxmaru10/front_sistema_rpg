@@ -170,7 +170,11 @@ export function useSessionDerivations({
             const targetOwner = targetChar.ownerUserId?.toLowerCase().trim();
             return targetOwner === currentActor || (userRole === "GM" && !!targetChar.isNPC);
         }
-        const owner = state.characters[currentTurnActorId]?.ownerUserId?.toLowerCase().trim();
+        const turnActor = state.characters[currentTurnActorId];
+        if (!turnActor) return false;
+        // GM is active when it's an NPC's turn (GM rolls for NPCs)
+        if (userRole === "GM" && turnActor.isNPC) return true;
+        const owner = turnActor.ownerUserId?.toLowerCase().trim();
         if (!owner) return false;
         return owner === currentActor;
     }, [currentTurnActorId, state.characters, actorUserId, fixedCharacterId, state.isReaction, state.targetId, userRole]);

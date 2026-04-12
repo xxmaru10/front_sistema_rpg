@@ -100,6 +100,25 @@ export function RollerInputs({
     const [pendingDamageType, setPendingDamageType] = useState<"PHYSICAL" | "MENTAL" | null>(null);
     const attackMenuRef = useRef<HTMLDivElement>(null);
 
+    // ── Sequential Glow State ──
+    const [interactionStep, setInteractionStep] = useState(1);
+
+    useEffect(() => {
+        setInteractionStep(1);
+    }, [selectedCharId]);
+
+    useEffect(() => {
+        if (interactionStep === 4) {
+            const hasValidItems = allItems.filter(i => i.name && i.bonus > 0).length > 0;
+            if (!hasValidItems) {
+                setInteractionStep(5);
+            }
+        }
+        if (interactionStep === 5) {
+            onRequestRollAttention?.();
+        }
+    }, [interactionStep, allItems, onRequestRollAttention]);
+
     useEffect(() => {
         if (!guideEnabled || !isGM || fixedCharacterId) return;
         if (!gmCharGuideInit.current) {
@@ -166,6 +185,7 @@ export function RollerInputs({
         }
         setShowAttackSubMenu(false);
         setActionType(value as RollerInputsProps["actionType"]);
+        if (interactionStep < 2) setInteractionStep(2);
         focusBonusSoon();
     };
 
@@ -232,9 +252,12 @@ export function RollerInputs({
                             <div className="action-dropdown-wrapper">
                                 <button
                                     type="button"
-                                    className={`mystic-input select-ritual action-btn ${actionType === "ATTACK" ? "attack-active" : ""}`}
+                                    className={`mystic-input select-ritual action-btn ${actionType === "ATTACK" ? "attack-active" : ""} ${interactionStep === 1 ? 'nudge-glow' : ''}`}
                                     style={isIntegrated ? { width: actionWidth, minWidth: "120px" } : undefined}
-                                    onClick={() => setShowAttackSubMenu(!showAttackSubMenu)}
+                                    onClick={() => {
+                                        setShowAttackSubMenu(!showAttackSubMenu);
+                                        if (interactionStep < 2) setInteractionStep(2);
+                                    }}
                                 >
                                     {selectedActionLabel}
                                 </button>
@@ -284,7 +307,7 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className="icon-select-shell" title="Bônus (0–20)">
+                                <div className={`icon-select-shell ${interactionStep === 2 ? 'nudge-glow' : ''}`} title="Bônus (0–20)">
                                     <span className="icon-select-face"><Plus size={16} /></span>
                                     <select
                                         ref={bonusSelectRef}
@@ -292,8 +315,10 @@ export function RollerInputs({
                                         onChange={(e) => {
                                             const v = parseInt(e.target.value, 10);
                                             setManualBonus(Number.isFinite(v) ? Math.max(0, Math.min(20, v)) : 0);
+                                            if (interactionStep < 3) setInteractionStep(3);
                                             focusSkillSoon();
                                         }}
+                                        onClick={() => { if (interactionStep < 3) setInteractionStep(3); }}
                                         className="icon-select-native"
                                         aria-label="Bônus"
                                     >
@@ -310,8 +335,10 @@ export function RollerInputs({
                                     onChange={(e) => {
                                         const rawValue = e.target.value;
                                         setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
+                                        if (interactionStep < 3) setInteractionStep(3);
                                     }}
-                                    className="mystic-input input-ritual bonus-input narrowed"
+                                    onClick={() => { if (interactionStep < 3) setInteractionStep(3); }}
+                                    className={`mystic-input input-ritual bonus-input narrowed ${interactionStep === 2 ? 'nudge-glow' : ''}`}
                                     style={{ width: bonusWidth, minWidth: "60px" }}
                                 />
                             )}
@@ -330,7 +357,11 @@ export function RollerInputs({
                                     <select
                                         ref={skillSelectRef}
                                         value={selectedSkill}
-                                        onChange={(e) => afterSkillChosen(e.target.value)}
+                                        onChange={(e) => {
+                                            afterSkillChosen(e.target.value);
+                                            if (interactionStep < 4) setInteractionStep(4);
+                                        }}
+                                        onClick={() => { if (interactionStep < 4) setInteractionStep(4); }}
                                         className="icon-select-native"
                                         aria-label="Pericia"
                                     >
@@ -349,8 +380,12 @@ export function RollerInputs({
                             ) : (
                                 <select
                                     value={selectedSkill}
-                                    onChange={(e) => handleSkillSelect(e.target.value)}
-                                    className="mystic-input select-ritual"
+                                    onChange={(e) => {
+                                        handleSkillSelect(e.target.value);
+                                        if (interactionStep < 4) setInteractionStep(4);
+                                    }}
+                                    onClick={() => { if (interactionStep < 4) setInteractionStep(4); }}
+                                    className={`mystic-input select-ritual ${interactionStep === 3 ? 'nudge-glow' : ''}`}
                                 >
                                     <option value="">ROLAGEM PURA</option>
                                     {skillOptions.ownedSkills.sort().map(skill => {
@@ -376,12 +411,16 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className="icon-select-shell" title="Inventario">
+                                <div className={`icon-select-shell ${interactionStep === 4 ? 'nudge-glow' : ''}`} title="Inventario">
                                     <span className="icon-select-face"><Backpack size={16} /></span>
                                     <select
                                         ref={itemSelectRef}
                                         value={selectedItemId}
-                                        onChange={(e) => setSelectedItemId(e.target.value)}
+                                        onChange={(e) => {
+                                            setSelectedItemId(e.target.value);
+                                            if (interactionStep < 5) setInteractionStep(5);
+                                        }}
+                                        onClick={() => { if (interactionStep < 5) setInteractionStep(5); }}
                                         className="icon-select-native"
                                         aria-label="Inventario"
                                     >
@@ -396,8 +435,12 @@ export function RollerInputs({
                             ) : (
                                 <select
                                     value={selectedItemId}
-                                    onChange={(e) => setSelectedItemId(e.target.value)}
-                                    className="mystic-input select-ritual"
+                                    onChange={(e) => {
+                                        setSelectedItemId(e.target.value);
+                                        if (interactionStep < 5) setInteractionStep(5);
+                                    }}
+                                    onClick={() => { if (interactionStep < 5) setInteractionStep(5); }}
+                                    className={`mystic-input select-ritual ${interactionStep === 4 ? 'nudge-glow' : ''}`}
                                     style={{
                                         textAlign: "center",
                                         textIndent: "0",
@@ -713,7 +756,7 @@ export function RollerInputs({
 
                 .matrix-inputs.integrated .select-ritual,
                 .matrix-inputs.integrated .input-ritual {
-                    max-width: 16ch !important;
+                    max-width: 24ch !important;
                 }
 
                 .control-panel-grid.integrated-mode .select-ritual {
@@ -1192,6 +1235,36 @@ export function RollerInputs({
                         max-width: calc(100vw - 32px);
                         margin: 0 16px;
                     }
+                }
+                .target-tag-portrait {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background-size: cover;
+                    background-position: center;
+                    border: 1px solid var(--accent-color);
+                }
+
+                @keyframes sequence-glow {
+                    0% {
+                        box-shadow: 0 0 5px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255, 215, 0, 0.2);
+                        border-color: rgba(255, 215, 0, 0.6);
+                    }
+                    50% {
+                        box-shadow: 0 0 15px rgba(255, 215, 0, 1), inset 0 0 10px rgba(255, 215, 0, 0.8) !important;
+                        border-color: rgba(255, 215, 0, 1) !important;
+                        transform: scale(1.05);
+                    }
+                    100% {
+                        box-shadow: 0 0 5px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255, 215, 0, 0.2);
+                        border-color: rgba(255, 215, 0, 0.6);
+                    }
+                }
+
+                .nudge-glow {
+                    animation: sequence-glow 1.5s infinite alternate !important;
+                    border-color: rgba(255, 215, 0, 1) !important;
+                    z-index: 10;
                 }
             `}</style>
         </div>

@@ -16,6 +16,7 @@ interface DiceRollerProps {
     targetDiff?: number;
     challengeDescription?: string;
     disabled?: boolean;
+    controlsHidden?: boolean;
     isGM?: boolean;
     stateTargetId?: string;
     isReaction?: boolean;
@@ -49,7 +50,8 @@ export function DiceRoller(props: DiceRollerProps) {
         lastAttackTotal,
         stateDamageType,
         soundSettings,
-        currentTurnActorId
+        currentTurnActorId,
+        controlsHidden = false
     } = props;
 
     const roller = useDiceRoller({
@@ -89,7 +91,7 @@ export function DiceRoller(props: DiceRollerProps) {
     if (characters.length === 0) return null;
 
     return (
-        <div className={`probability-grid tarot-style animate-reveal ${isIntegrated ? 'integrated' : ''} ${disabled ? 'disabled-mode' : ''} ${isReaction && !disabled ? 'reaction-active' : ''} ${roller.actionType === 'ATTACK' ? `damage-type-${roller.damageType.toLowerCase()}` : ""}`}>
+        <div className={`probability-grid tarot-style animate-reveal ${isIntegrated ? 'integrated' : ''} ${disabled ? 'disabled-mode' : ''} ${controlsHidden ? 'controls-hidden-mode' : ''} ${isReaction && !disabled ? 'reaction-active' : ''} ${roller.actionType === 'ATTACK' ? `damage-type-${roller.damageType.toLowerCase()}` : ""}`}>
             {!isIntegrated && (
                 <div className="roller-brand">
                     <div className="brand-dot"></div>
@@ -104,6 +106,11 @@ export function DiceRoller(props: DiceRollerProps) {
                 <div className="disabled-overlay-message" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '0 20px', color: '#ff4444', fontWeight: 'bold', letterSpacing: '0.1em', textAlign: 'center', fontSize: isIntegrated ? '0.9rem' : '1.2rem' }}>
                     AGUARDE A SUA VEZ
                 </div>
+            ) : controlsHidden ? (
+                /* When it's not the player's turn: keep the strip rendered
+                   but collapse all inner controls so only the log button
+                   (rendered outside this component) remains visible. */
+                null
             ) : (
                 <>
                     <RollerInputs
@@ -312,6 +319,10 @@ export function DiceRoller(props: DiceRollerProps) {
 
                 .rolling .trigger-content { color: #000; }
 
+                .probability-grid.integrated.controls-hidden-mode {
+                    /* Keep the container visible but collapse inner content */
+                }
+
                 .probability-grid.integrated.disabled-mode {
                     opacity: 0.5;
                     pointer-events: none;
@@ -335,8 +346,9 @@ export function DiceRoller(props: DiceRollerProps) {
                     text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
                 }
 
-                .matrix-trigger.integrated.roll-nudge {
+                .matrix-trigger.roll-nudge {
                     animation: rollNudgePulse 0.55s ease-in-out infinite;
+                    border-color: rgba(255, 215, 0, 1);
                     box-shadow: 0 0 22px rgba(250, 204, 21, 0.55), 0 0 44px rgba(250, 120, 40, 0.35);
                 }
 

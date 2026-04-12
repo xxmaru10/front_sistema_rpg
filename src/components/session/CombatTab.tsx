@@ -236,7 +236,8 @@ export function CombatTab({
                                     stateDamageType={state.damageType}
                                     targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
                                     challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
-                                    disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
+                                    disabled={false}
+                                    controlsHidden={!challengeMode && !!(state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive}
                                     soundSettings={state.soundSettings}
                                     currentTurnActorId={currentTurnActorId}
                                 />

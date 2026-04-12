@@ -650,13 +650,13 @@ export function TurnOrderTracker({
                     animation: skullPulse 1.5s infinite;
                 }
 
-                /* GM Center Controls (below main diamond) */
                 .gm-center-controls {
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     gap: 10px;
                     z-index: 30;
+                    margin-top: 20px;
                     margin-bottom: 4px;
                 }
 

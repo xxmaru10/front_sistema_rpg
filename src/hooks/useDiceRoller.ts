@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+
 import { v4 as uuidv4 } from "uuid";
 import { createRollEvent } from "@/lib/dice";
 import { globalEventStore } from "@/lib/eventStore";
@@ -56,6 +57,7 @@ export function useDiceRoller({
     const [lastReactionState, setLastReactionState] = useState(false);
 
     const pendingCharIdRef = useRef<string>("");
+    const finishRollRef = useRef<(charId: string, finalDice: number[]) => void>(() => {});
     const [isRolling, setIsRolling] = useState(false);
     const [diceResults, setDiceResults] = useState<number[]>([0, 0, 0, 0]);
     const [diceRotations, setDiceRotations] = useState<{ x: number, y: number }[]>([
@@ -254,6 +256,9 @@ export function useDiceRoller({
         lastAttackTotal
     ]);
 
+    // Keep the ref always pointing to the latest finishRoll
+    finishRollRef.current = finishRoll;
+
     const handleSkillSelect = (skillName: string) => {
         setSelectedSkill(skillName);
         if (!manualDamageType) {
@@ -314,7 +319,9 @@ export function useDiceRoller({
                 audio.play().catch(e => console.warn("Failed to play dice sound:", e));
             },
             onSettled: (results) => {
-                finishRoll(charId, results);
+                // Use ref to avoid stale closure — finishRoll may have been
+                // recreated with updated lastAttackTotal after handleRoll was called.
+                finishRollRef.current(charId, results);
             }
         });
 
