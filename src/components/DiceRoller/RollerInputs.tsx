@@ -29,6 +29,7 @@ interface RollerInputsProps {
     isGM: boolean;
     activeChar: Character | undefined;
     isReaction?: boolean;
+    isCombat?: boolean;
     onRequestRollAttention?: () => void;
 }
 
@@ -56,9 +57,10 @@ export function RollerInputs({
     isGM,
     activeChar,
     isReaction = false,
+    isCombat = false,
     onRequestRollAttention,
 }: RollerInputsProps) {
-    const guideEnabled = isIntegrated && !isReaction;
+    const guideEnabled = isIntegrated && !isReaction && isCombat;
     const bonusSelectRef = useRef<HTMLSelectElement>(null);
     const skillSelectRef = useRef<HTMLSelectElement>(null);
     const itemSelectRef = useRef<HTMLSelectElement>(null);
@@ -314,7 +316,7 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className={`icon-select-shell ${interactionStep === 2 ? 'nudge-glow' : ''}`} title="Bônus (0–20)">
+                                <div className={`icon-select-shell ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`} title="Bônus (0–20)">
                                     <span className="icon-select-face">
                                         {manualBonus > 0 ? (
                                             <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>+{manualBonus}</span>
@@ -351,7 +353,7 @@ export function RollerInputs({
                                         if (interactionStep < 3) setInteractionStep(3);
                                     }}
                                     onClick={() => { if (interactionStep < 3) setInteractionStep(3); }}
-                                    className={`mystic-input input-ritual bonus-input narrowed ${interactionStep === 2 ? 'nudge-glow' : ''}`}
+                                    className={`mystic-input input-ritual bonus-input narrowed ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`}
                                     style={{ width: bonusWidth, minWidth: "60px" }}
                                 />
                             )}
@@ -365,7 +367,7 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className={`icon-select-shell ${interactionStep === 3 ? 'nudge-glow' : ''}`} title="Pericia">
+                                <div className={`icon-select-shell ${(guideEnabled && interactionStep === 3) ? 'nudge-glow' : ''}`} title="Pericia">
                                     <span className="icon-select-face">
                                         {selectedSkill ? (
                                             <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#fff' }}>
@@ -406,7 +408,7 @@ export function RollerInputs({
                                         if (interactionStep < 4) setInteractionStep(4);
                                     }}
                                     onClick={() => { if (interactionStep < 4) setInteractionStep(4); }}
-                                    className={`mystic-input select-ritual ${interactionStep === 3 ? 'nudge-glow' : ''}`}
+                                    className={`mystic-input select-ritual ${(guideEnabled && interactionStep === 3) ? 'nudge-glow' : ''}`}
                                 >
                                     <option value="">ROLAGEM PURA</option>
                                     {skillOptions.ownedSkills.sort().map(skill => {
@@ -432,7 +434,7 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className={`icon-select-shell ${interactionStep === 4 ? 'nudge-glow' : ''}`} title="Inventario">
+                                <div className={`icon-select-shell ${(guideEnabled && interactionStep === 4) ? 'nudge-glow' : ''}`} title="Inventario">
                                     <span className="icon-select-face"><Backpack size={16} /></span>
                                     <select
                                         ref={itemSelectRef}
@@ -461,7 +463,7 @@ export function RollerInputs({
                                         if (interactionStep < 5) setInteractionStep(5);
                                     }}
                                     onClick={() => { if (interactionStep < 5) setInteractionStep(5); }}
-                                    className={`mystic-input select-ritual ${interactionStep === 4 ? 'nudge-glow' : ''}`}
+                                    className={`mystic-input select-ritual ${(guideEnabled && interactionStep === 4) ? 'nudge-glow' : ''}`}
                                     style={{
                                         textAlign: "center",
                                         textIndent: "0",

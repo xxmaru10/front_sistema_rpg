@@ -32,6 +32,7 @@ interface DiceRollerProps {
         portrait?: string;
     };
     currentTurnActorId?: string | null;
+    isCombat?: boolean;
 }
 
 export function DiceRoller(props: DiceRollerProps) {
@@ -51,6 +52,7 @@ export function DiceRoller(props: DiceRollerProps) {
         stateDamageType,
         soundSettings,
         currentTurnActorId,
+        isCombat = false,
         controlsHidden = false
     } = props;
 
@@ -137,6 +139,7 @@ export function DiceRoller(props: DiceRollerProps) {
                         isGM={isGM}
                         activeChar={roller.activeChar}
                         isReaction={isReaction}
+                        isCombat={isCombat}
                         onRequestRollAttention={requestRollAttention}
                     />
 
@@ -154,7 +157,7 @@ export function DiceRoller(props: DiceRollerProps) {
                             setRollNudge(false);
                             roller.handleRoll();
                         }}
-                        className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''} ${rollNudge ? 'roll-nudge' : ''}`}
+                        className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''} ${rollNudge && isCombat ? 'roll-nudge' : ''}`}
                         disabled={roller.isRolling}
                         title="Rolar dados"
                     >
