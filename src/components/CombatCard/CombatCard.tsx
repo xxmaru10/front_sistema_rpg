@@ -90,6 +90,7 @@ export function CombatCard({
         handleSaveConsequence,
         handleUpdateHazard,
         handleImpulseArrowsChange,
+        handleClearAllConsequences,
     } = useCombatCard({ character, sessionId, actorUserId, isGM });
 
     const isHazard = character.isHazard;
@@ -652,6 +653,7 @@ export function CombatCard({
                                 character={character}
                                 isGM={isGM}
                                 openConsequenceModal={openConsequenceModal}
+                                onClearAll={handleClearAllConsequences}
                             />
                         </div>
                     )}

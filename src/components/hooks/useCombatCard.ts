@@ -113,6 +113,13 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
         } as any);
     }, [isGM, character.id, character.impulseArrows, sessionId, normalizedUserId]);
 
+    const handleClearAllConsequences = useCallback(() => {
+        if (!isGM) return;
+        Object.keys(character.consequences || {}).forEach(slot => {
+            handleConsequenceChange(slot, "", undefined);
+        });
+    }, [isGM, character.consequences, handleConsequenceChange]);
+
     return {
         isCollapsed,
         setIsCollapsed,
@@ -125,5 +132,6 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
         handleSaveConsequence,
         handleUpdateHazard,
         handleImpulseArrowsChange,
+        handleClearAllConsequences,
     };
 }

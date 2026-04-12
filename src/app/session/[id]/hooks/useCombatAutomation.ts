@@ -280,11 +280,13 @@ export function useCombatAutomation({
         stressMental: number[];
         consequences: { slot: string; text: string }[];
         isLethal?: boolean;
+        remainingDamage?: number;
     }) => {
         if (!pendingDamage) return;
         const defenderId = pendingDamage.defender.id;
         const currentState = stateRef.current;
         const liveDefender = currentState.characters[defenderId] || pendingDamage.defender;
+        const isLethalFinal = applied.isLethal || (applied.remainingDamage ?? 0) > 0;
 
         applied.stressPhysical.forEach(idx => {
             globalEventStore.append({
@@ -313,7 +315,7 @@ export function useCombatAutomation({
         });
 
         // If lethal, fill EVERYTHING else to ensure elimination
-        if (applied.isLethal && liveDefender) {
+        if (isLethalFinal && liveDefender) {
             Object.keys(liveDefender.consequences || {}).forEach(slot => {
                 if (!appliedSlots.has(slot)) {
                     const existing = liveDefender.consequences[slot];

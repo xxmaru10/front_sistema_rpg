@@ -45,6 +45,7 @@ export interface DamageResolutionApplied {
     stressMental: number[];
     consequences: { slot: string; text: string }[];
     isLethal?: boolean;
+    remainingDamage?: number;
 }
 
 interface DamageResolutionModalProps {
@@ -128,8 +129,17 @@ export function DamageResolutionModal({
         return damage - absorbed;
     }, [defender, damage, markedPhysical, markedMental, consequenceTexts, orderedSlots]);
 
+    const hasAvailableSlots = useMemo(() => {
+        return orderedSlots.some(slot => {
+            const existing = defender.consequences && defender.consequences[slot];
+            const hasExisting = existing?.text?.trim().length ? true : false;
+            const hasNew = (consequenceTexts[slot] || "").trim().length > 0;
+            return !hasExisting && !hasNew;
+        });
+    }, [defender, orderedSlots, consequenceTexts]);
+
     const overAbsorbed = remainingDamage < 0;
-    const isLethal = remainingDamage > 0;
+    const isLethal = remainingDamage > 0 && !hasAvailableSlots;
     const canConfirm = remainingDamage >= 0;
 
     if (!mounted || !isOpen || !defender) return null;
@@ -168,6 +178,7 @@ export function DamageResolutionModal({
             stressMental: Array.from(markedMental),
             consequences,
             isLethal,
+            remainingDamage,
         });
     };
 

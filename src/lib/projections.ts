@@ -243,14 +243,17 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const char = state.characters[payload.characterId];
             if (!char) return state;
 
+            const nextConsequences = { ...(char.consequences || {}) };
+            const isEmpty = !payload.value || payload.value.trim() === "";
 
-            // Build ConsequenceData object - handle null/empty values
-            const consequenceData = (!payload.value || payload.value.trim() === "")
-                ? undefined
-                : {
+            if (isEmpty) {
+                delete nextConsequences[payload.slot];
+            } else {
+                nextConsequences[payload.slot] = {
                     text: payload.value,
                     debuff: payload.debuff
                 };
+            }
 
             return {
                 ...state,
@@ -258,10 +261,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        consequences: {
-                            ...char.consequences,
-                            [payload.slot]: consequenceData
-                        }
+                        consequences: nextConsequences
                     }
                 }
             };

@@ -769,7 +769,8 @@ export function RollerInputs({
                     align-items: center;
                     justify-content: center;
                     color: var(--accent-color);
-                    pointer-events: none;
+                    pointer-events: auto;
+                    cursor: pointer;
                     z-index: 1;
                 }
 
