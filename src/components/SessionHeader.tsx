@@ -3,26 +3,23 @@
 import { useState, useEffect, useRef } from "react";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { AtmosphericEffectType } from "./AtmosphericEffects";
-import { 
-    Sparkles, 
-    CircleSlash, 
-    CloudRain, 
-    Snowflake, 
-    Wind, 
-    Leaf, 
-    Cloud, 
-    Flame, 
-    FlaskConical, 
-    Droplet, 
-    Palette, 
-    Monitor, 
-    Swords, 
+import {
+    Sparkles,
+    CircleSlash,
+    CloudRain,
+    Snowflake,
+    Wind,
+    Leaf,
+    Cloud,
+    Flame,
+    FlaskConical,
+    Droplet,
+    Palette,
+    Monitor,
+    Swords,
     Library,
-    Skull,
-    User,
     ChevronDown,
     Tv,
-    Dice5
 } from "lucide-react";
 
 const ATMOSPHERIC_OPTIONS: { value: AtmosphericEffectType, label: string, icon: any, color?: string }[] = [
@@ -90,7 +87,6 @@ export function SessionHeader({
     onToggleDiceRoller
 }: SessionHeaderProps) {
     const [showLibrary, setShowLibrary] = useState(false);
-    const [showSummonMenu, setShowSummonMenu] = useState(false);
     const [showBgMenu, setShowBgMenu] = useState(false);
     const [showEffectsMenu, setShowEffectsMenu] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -401,156 +397,6 @@ export function SessionHeader({
                 </div>
             )}
 
-            {isGM && tabName === "ARENA" && (
-                <div
-                    className="gm-actions-bottom"
-                    style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        left: '16px',
-                        display: 'flex',
-                        gap: '8px',
-                        zIndex: 110,
-                        pointerEvents: 'auto'
-                    }}
-                >
-                    <div style={{ position: 'relative' }}>
-                        <button
-                            onClick={() => setShowSummonMenu(!showSummonMenu)}
-                            className="btn btn-primary btn-sm action-btn"
-                            style={{
-                                background: 'linear-gradient(135deg, var(--accent-color) 0%, #F9E79F 50%, var(--accent-color) 100%)',
-                                border: '1px solid var(--accent-color)',
-                                color: '#000',
-                                padding: '6px 16px',
-                                fontFamily: 'var(--font-header)',
-                                fontWeight: 'bold',
-                                letterSpacing: '0.12em',
-                                fontSize: '0.7rem',
-                                boxShadow: '0 0 15px rgba(var(--accent-rgb), 0.4)'
-                            }}
-                        >
-                            CONVOCAR ▼
-                        </button>
-
-                        {showSummonMenu && (
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '100%',
-                                left: 0,
-                                marginBottom: '8px',
-                                background: '#0a0a0a',
-                                border: '1px solid var(--accent-color)',
-                                borderRadius: '4px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                overflow: 'hidden',
-                                zIndex: 30,
-                                boxShadow: '0 4px 12px rgba(var(--accent-rgb),0.6)',
-                                minWidth: '160px'
-                            }}>
-                                <button
-                                    onClick={() => { onSummonThreat?.(); setShowSummonMenu(false); }}
-                                    style={{
-                                        background: 'rgba(255, 50, 50, 0.15)',
-                                        border: 'none',
-                                        borderBottom: '1px solid rgba(var(--accent-rgb), 0.3)',
-                                        color: '#ff6b6b',
-                                        padding: '10px 16px',
-                                        fontFamily: 'var(--font-header)',
-                                        fontWeight: 'bold',
-                                        letterSpacing: '0.1em',
-                                        fontSize: '0.7rem',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                        transition: 'background 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 50, 50, 0.3)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 50, 50, 0.15)'}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Skull size={14} /> INIMIGO</div>
-                                </button>
-                                <button
-                                    onClick={() => { onSummonAlly?.(); setShowSummonMenu(false); }}
-                                    style={{
-                                        background: 'rgba(50, 150, 255, 0.15)',
-                                        border: 'none',
-                                        color: '#50a6ff',
-                                        padding: '10px 16px',
-                                        fontFamily: 'var(--font-header)',
-                                        fontWeight: 'bold',
-                                        letterSpacing: '0.1em',
-                                        fontSize: '0.7rem',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                        transition: 'background 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(50, 150, 255, 0.3)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(50, 150, 255, 0.15)'}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><User size={14} /> ALIADO</div>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    <button
-                        onClick={onToggleChallenge}
-                        className={`btn btn-sm action-btn ${challengeActive ? "btn-primary" : "btn-secondary"}`}
-                        style={{
-                            background: challengeActive ? 'rgba(var(--accent-rgb), 0.8)' : 'rgba(0,0,0,0.6)',
-                            border: '1px solid var(--accent-color)',
-                            color: challengeActive ? '#000' : 'var(--accent-color)',
-                            backdropFilter: 'blur(4px)',
-                            padding: '6px 16px',
-                            fontFamily: 'var(--font-header)',
-                            letterSpacing: '0.1em',
-                            fontSize: '0.7rem'
-                        }}
-                    >
-                        {challengeActive ? "MODO COMBATE" : "MODO DESAFIO"}
-                    </button>
-
-                    {isGM && !challengeActive && (
-                        <button
-                            onClick={onOpenTurnOrder}
-                            className="btn btn-secondary btn-sm action-btn"
-                            style={{
-                                background: 'rgba(0,0,0,0.6)',
-                                border: '1px solid rgba(80, 166, 255, 0.4)',
-                                color: '#50a6ff',
-                                backdropFilter: 'blur(4px)',
-                                padding: '6px 16px',
-                                fontFamily: 'var(--font-header)',
-                                letterSpacing: '0.1em',
-                                fontSize: '0.7rem'
-                            }}
-                        >
-                            ORDEM DE TURNO
-                        </button>
-                    )}
-
-                    {isGM && onToggleDiceRoller && (
-                        <button
-                            onClick={onToggleDiceRoller}
-                            className={`btn btn-secondary btn-sm action-btn ${showDiceRoller ? "active-dice" : ""}`}
-                            style={{
-                                background: showDiceRoller ? 'rgba(80, 166, 255, 0.2)' : 'rgba(0,0,0,0.6)',
-                                border: '1px solid rgba(80, 166, 255, 0.4)',
-                                color: showDiceRoller ? '#fff' : '#50a6ff',
-                                backdropFilter: 'blur(4px)',
-                                padding: '6px 16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                            title="Alternar zona de rolagem do mestre"
-                        >
-                            <Dice5 size={16} />
-                        </button>
-                    )}
-
-                </div>
-            )}
 
 
             {children && (

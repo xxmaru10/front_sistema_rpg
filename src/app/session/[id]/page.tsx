@@ -788,6 +788,7 @@ export default function SessionPage() {
                                     visibility: "PUBLIC",
                                     payload: {}
                                 } as any);
+                                handleChallengeUpdate({ isActive: true });
                             }
                         }}
                     />
