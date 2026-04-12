@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Character } from "@/types/domain";
-import { Shield, Swords, Skull, AlertTriangle } from "lucide-react";
+import { Shield, Swords, Skull, AlertTriangle, RefreshCw } from "lucide-react";
+import { ConsequenceModal } from "./ConsequenceModal";
+import { calculateAbsorption } from "@/lib/gameLogic";
 
 const CONSEQUENCE_CAPACITIES: Record<string, number> = {
     mild: 2,
@@ -42,6 +44,7 @@ export interface DamageResolutionApplied {
     stressPhysical: number[];
     stressMental: number[];
     consequences: { slot: string; text: string }[];
+    isLethal?: boolean;
 }
 
 interface DamageResolutionModalProps {
@@ -66,6 +69,7 @@ export function DamageResolutionModal({
     const [markedPhysical, setMarkedPhysical] = useState<Set<number>>(new Set());
     const [markedMental, setMarkedMental] = useState<Set<number>>(new Set());
     const [consequenceTexts, setConsequenceTexts] = useState<Record<string, string>>({});
+    const [editingConsequenceSlot, setEditingConsequenceSlot] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -125,7 +129,8 @@ export function DamageResolutionModal({
     }, [defender, damage, markedPhysical, markedMental, consequenceTexts, orderedSlots]);
 
     const overAbsorbed = remainingDamage < 0;
-    const canConfirm = remainingDamage === 0;
+    const isLethal = remainingDamage > 0;
+    const canConfirm = remainingDamage >= 0;
 
     if (!mounted || !isOpen || !defender) return null;
 
@@ -162,7 +167,28 @@ export function DamageResolutionModal({
             stressPhysical: Array.from(markedPhysical),
             stressMental: Array.from(markedMental),
             consequences,
+            isLethal,
         });
+    };
+
+    const handleAutoFill = () => {
+        if (!defender) return;
+        const result = calculateAbsorption(defender, damage, track);
+        
+        // Convert array indices to Set
+        if (track === "PHYSICAL") {
+            setMarkedPhysical(new Set(result.stressToMarkIndices));
+            setMarkedMental(new Set());
+        } else {
+            setMarkedMental(new Set(result.stressToMarkIndices));
+            setMarkedPhysical(new Set());
+        }
+        
+        const newCons: Record<string, string> = {};
+        if (result.consequenceSlot) {
+            newCons[result.consequenceSlot] = "DANO AUTOMÁTICO";
+        }
+        setConsequenceTexts(newCons);
     };
 
     const arenaSide = (defender as any).arenaSide as string | undefined;
@@ -254,6 +280,15 @@ export function DamageResolutionModal({
                     </div>
                 )}
 
+                {isLethal && (
+                    <div className="dmg-lethal-warn">
+                        <Skull size={20} />
+                        <div>
+                            <strong>DANO LETAL:</strong> O personagem será DERROTADO por não conseguir absorver {remainingDamage} ponto(s) de dano.
+                        </div>
+                    </div>
+                )}
+
                 {/* Stress Tracks */}
                 <div className="dmg-section">
                     <div className="dmg-section-title">ESTRESSE FÍSICO</div>
@@ -334,13 +369,17 @@ export function DamageResolutionModal({
                                     {isOccupied ? (
                                         <div className="dmg-cons-locked">{existingText}</div>
                                     ) : (
-                                        <input
-                                            type="text"
-                                            className="dmg-cons-input"
-                                            placeholder="Descreva para aplicar…"
-                                            value={current}
-                                            onChange={e => setConsequenceText(slot, e.target.value)}
-                                        />
+                                        <div className="dmg-cons-input-group">
+                                            <button 
+                                                className={`dmg-cons-trigger-btn ${current ? 'has-content' : ''}`}
+                                                onClick={() => setEditingConsequenceSlot(slot)}
+                                            >
+                                                {current || "Definir consequência..."}
+                                            </button>
+                                            {current && (
+                                                <button className="dmg-cons-clear" onClick={() => setConsequenceText(slot, "")}>✕</button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             );
@@ -348,28 +387,42 @@ export function DamageResolutionModal({
                     </div>
                 </div>
 
+                {editingConsequenceSlot && (
+                    <ConsequenceModal
+                        isOpen={true}
+                        initialText={consequenceTexts[editingConsequenceSlot] || ""}
+                        onSave={(text) => {
+                            setConsequenceText(editingConsequenceSlot, text);
+                            setEditingConsequenceSlot(null);
+                        }}
+                        onCancel={() => setEditingConsequenceSlot(null)}
+                    />
+                )}
+
                 {/* Actions */}
                 <div className="dmg-actions">
                     <button
-                        className="dmg-btn confirm"
+                        className={`dmg-btn confirm ${isLethal ? 'lethal' : ''}`}
                         onClick={handleConfirmClick}
                         disabled={!canConfirm || overAbsorbed}
                         title={
-                            canConfirm
-                                ? "Aplicar marcações na ficha"
-                                : overAbsorbed
-                                  ? "Absorção acima do dano — ajuste as seleções"
-                                  : "Reduza o dano restante exatamente a 0 para confirmar"
+                            isLethal
+                                ? "Confirmar DERROTA do personagem"
+                                : canConfirm
+                                  ? "Aplicar marcações na ficha"
+                                  : overAbsorbed
+                                    ? "Absorção acima do dano — ajuste as seleções"
+                                    : "Reduza o dano restante para confirmar"
                         }
                     >
-                        CONFIRMAR
+                        {isLethal ? "CONFIRMAR DERROTA" : "CONFIRMAR"}
                     </button>
                     <button
                         className="dmg-btn auto"
-                        onClick={onAutoCalculate}
-                        title="Aplicar absorção automaticamente"
+                        onClick={handleAutoFill}
+                        title="Distribuir dano automaticamente (você poderá revisar antes de confirmar)"
                     >
-                        CÁLCULO AUTOMÁTICO
+                        <RefreshCw size={14} /> CÁLCULO AUTOMÁTICO
                     </button>
                     {!isNPC && (
                         <button
@@ -484,6 +537,25 @@ export function DamageResolutionModal({
                         text-shadow: 0 0 16px currentColor, 0 0 32px rgba(0,0,0,0.5);
                     }
 
+                    .dmg-lethal-warn {
+                        background: rgba(255, 50, 50, 0.15);
+                        border: 1px solid #ff4444;
+                        color: #ff4444;
+                        padding: 12px 16px;
+                        font-size: 0.85rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        border-radius: 4px;
+                        animation: dmg-pulse 2s infinite;
+                    }
+
+                    @keyframes dmg-pulse {
+                        0% { box-shadow: 0 0 0px rgba(255, 68, 68, 0); }
+                        50% { box-shadow: 0 0 15px rgba(255, 68, 68, 0.3); }
+                        100% { box-shadow: 0 0 0px rgba(255, 68, 68, 0); }
+                    }
+
                     .dmg-section { display: flex; flex-direction: column; gap: 8px; }
                     .dmg-section-title { font-family: var(--font-header); font-size: 0.68rem; letter-spacing: 0.16em; color: var(--accent-color); opacity: 0.75; }
 
@@ -523,6 +595,47 @@ export function DamageResolutionModal({
                     .dmg-cons-name { font-family: var(--font-header); font-size: 0.8rem; color: var(--accent-color); }
                     .dmg-cons-cap { font-size: 0.7rem; color: #ff6b6b; font-weight: bold; }
 
+                    .dmg-cons-input-group {
+                        flex: 1;
+                        display: flex;
+                        gap: 8px;
+                        align-items: center;
+                    }
+                    .dmg-cons-trigger-btn {
+                        flex: 1;
+                        background: rgba(0, 0, 0, 0.5);
+                        border: 1px dashed rgba(197, 160, 89, 0.4);
+                        padding: 8px 10px;
+                        color: rgba(255, 255, 255, 0.5);
+                        font-size: 0.85rem;
+                        text-align: left;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    }
+                    .dmg-cons-trigger-btn:hover {
+                        border-style: solid;
+                        border-color: var(--accent-color);
+                        color: #fff;
+                        background: rgba(var(--accent-rgb), 0.1);
+                    }
+                    .dmg-cons-trigger-btn.has-content {
+                        border-style: solid;
+                        border-color: #ff4444;
+                        color: #fff;
+                        background: rgba(255, 68, 68, 0.05);
+                    }
+                    .dmg-cons-clear {
+                        background: transparent;
+                        border: none;
+                        color: #ff6b6b;
+                        cursor: pointer;
+                        font-size: 1.1rem;
+                        padding: 4px;
+                        opacity: 0.6;
+                        transition: opacity 0.2s;
+                    }
+                    .dmg-cons-clear:hover { opacity: 1; }
+
                     .dmg-cons-input {
                         flex: 1; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(197, 160, 89, 0.3);
                         padding: 8px 10px; color: #fff; font-size: 0.85rem; outline: none;
@@ -537,6 +650,8 @@ export function DamageResolutionModal({
                     }
                     .dmg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
                     .dmg-btn.confirm { border-color: #6ee7b7; color: #6ee7b7; }
+                    .dmg-btn.confirm.lethal { border-color: #ff4444; color: #ff4444; background: rgba(255, 68, 68, 0.1); }
+                    .dmg-btn.confirm.lethal:hover { background: rgba(255, 68, 68, 0.25); box-shadow: 0 0 20px rgba(255, 68, 68, 0.4); }
                     .dmg-btn.auto { border-color: var(--accent-color); color: var(--accent-color); }
                     .dmg-btn.skip { border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); }
                 `}</style>

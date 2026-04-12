@@ -240,7 +240,7 @@ export function CombatTab({
                                     controlsHidden={userRole !== "GM" && !challengeMode && !!(state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive}
                                     soundSettings={state.soundSettings}
                                     currentTurnActorId={currentTurnActorId}
-                                    isCombat={state.combat?.isActive}
+                                    isCombat={!challengeMode}
                                 />
                                 <button
                                     type="button"

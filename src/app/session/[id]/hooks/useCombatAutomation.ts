@@ -279,9 +279,12 @@ export function useCombatAutomation({
         stressPhysical: number[];
         stressMental: number[];
         consequences: { slot: string; text: string }[];
+        isLethal?: boolean;
     }) => {
         if (!pendingDamage) return;
         const defenderId = pendingDamage.defender.id;
+        const currentState = stateRef.current;
+        const liveDefender = currentState.characters[defenderId] || pendingDamage.defender;
 
         applied.stressPhysical.forEach(idx => {
             globalEventStore.append({
@@ -299,6 +302,8 @@ export function useCombatAutomation({
             } as any);
         });
 
+        // Set specified consequences
+        const appliedSlots = new Set(applied.consequences.map(c => c.slot));
         applied.consequences.forEach(c => {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
@@ -306,6 +311,22 @@ export function useCombatAutomation({
                 payload: { characterId: defenderId, slot: c.slot, value: c.text }
             } as any);
         });
+
+        // If lethal, fill EVERYTHING else to ensure elimination
+        if (applied.isLethal && liveDefender) {
+            Object.keys(liveDefender.consequences || {}).forEach(slot => {
+                if (!appliedSlots.has(slot)) {
+                    const existing = liveDefender.consequences[slot];
+                    if (!existing || !existing.text || existing.text.trim().length === 0) {
+                        globalEventStore.append({
+                            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
+                            actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                            payload: { characterId: defenderId, slot, value: "DERROTADO" }
+                        } as any);
+                    }
+                }
+            });
+        }
 
         setPendingDamage(null);
         if (stateRef.current.timerPaused) handleTogglePause();

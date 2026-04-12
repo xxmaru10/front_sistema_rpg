@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Sparkles, Zap, Backpack, Plus, X, Swords, Brain } from "lucide-react";
+import { Sparkles, Zap, Backpack, Plus, Minus, X, Swords, Brain } from "lucide-react";
 import { Character, DEFAULT_SKILLS, Item } from "@/types/domain";
 
 interface RollerInputsProps {
@@ -60,7 +60,7 @@ export function RollerInputs({
     isCombat = false,
     onRequestRollAttention,
 }: RollerInputsProps) {
-    const guideEnabled = isIntegrated && !isReaction && isCombat;
+    const guideEnabled = isIntegrated && isCombat;
     const bonusSelectRef = useRef<HTMLSelectElement>(null);
     const skillSelectRef = useRef<HTMLSelectElement>(null);
     const itemSelectRef = useRef<HTMLSelectElement>(null);
@@ -106,7 +106,12 @@ export function RollerInputs({
     const [interactionStep, setInteractionStep] = useState(1);
 
     useEffect(() => {
-        setInteractionStep(1);
+        if (selectedCharId) {
+            setInteractionStep(2);
+            focusBonusSoon();
+        } else {
+            setInteractionStep(1);
+        }
     }, [selectedCharId]);
 
     // Defender skips the action selection and jumps straight to Bonus
@@ -138,18 +143,26 @@ export function RollerInputs({
         // Intencional: reação só ao trocar personagem (GM), não incluir focusBonusSoon nas deps.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCharId, guideEnabled, isGM, fixedCharacterId]);
+    
+    // ── Bonus Menu State ──
+    const [showBonusMenu, setShowBonusMenu] = useState(false);
+    const [selectedSign, setSelectedSign] = useState<'+' | '-' | null>(null);
+    const bonusMenuRef = useRef<HTMLDivElement>(null);
 
-    // Close sub-menu on outside click
+    // Close menus on outside click
     useEffect(() => {
-        if (!showAttackSubMenu) return;
         const handler = (e: MouseEvent) => {
-            if (attackMenuRef.current && !attackMenuRef.current.contains(e.target as Node)) {
+            if (showAttackSubMenu && attackMenuRef.current && !attackMenuRef.current.contains(e.target as Node)) {
                 setShowAttackSubMenu(false);
+            }
+            if (showBonusMenu && bonusMenuRef.current && !bonusMenuRef.current.contains(e.target as Node)) {
+                setShowBonusMenu(false);
+                setSelectedSign(null);
             }
         };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
-    }, [showAttackSubMenu]);
+    }, [showAttackSubMenu, showBonusMenu]);
 
     const actionLabelMap: Record<RollerInputsProps["actionType"], string> = {
         OVERCOME: "SUPERAR",
@@ -316,31 +329,67 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className={`icon-select-shell ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`} title="Bônus (0–20)">
-                                    <span className="icon-select-face">
-                                        {manualBonus > 0 ? (
-                                            <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>+{manualBonus}</span>
+                                <div 
+                                    className={`icon-select-shell ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`} 
+                                    title="Bônus"
+                                    ref={bonusMenuRef}
+                                >
+                                    <div className="icon-select-face" onClick={() => setShowBonusMenu(!showBonusMenu)}>
+                                        {manualBonus !== 0 ? (
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: manualBonus > 0 ? 'var(--accent-color)' : '#ff6b6b' }}>
+                                                {manualBonus > 0 ? `+${manualBonus}` : manualBonus}
+                                            </span>
                                         ) : (
                                             <Plus size={16} />
                                         )}
-                                    </span>
-                                    <select
-                                        ref={bonusSelectRef}
-                                        value={manualBonus}
-                                        onChange={(e) => {
-                                            const v = parseInt(e.target.value, 10);
-                                            setManualBonus(Number.isFinite(v) ? Math.max(0, Math.min(20, v)) : 0);
-                                            if (interactionStep < 3) setInteractionStep(3);
-                                            focusSkillSoon();
-                                        }}
-                                        onClick={() => { if (interactionStep < 3) setInteractionStep(3); }}
-                                        className="icon-select-native"
-                                        aria-label="Bônus"
-                                    >
-                                        {Array.from({ length: 21 }, (_, i) => (
-                                            <option key={i} value={i}>{i}</option>
-                                        ))}
-                                    </select>
+                                    </div>
+
+                                    {showBonusMenu && (
+                                        <div className="bonus-dropdown-menu">
+                                            {!selectedSign ? (
+                                                <div className="bonus-sign-row">
+                                                    <button className="sign-btn plus" onClick={() => setSelectedSign('+')}>
+                                                        <Plus size={20} />
+                                                        <span>Bônus</span>
+                                                    </button>
+                                                    <button className="sign-btn minus" onClick={() => setSelectedSign('-')}>
+                                                        <Minus size={20} />
+                                                        <span>Ônus</span>
+                                                    </button>
+                                                    <button className="sign-btn zero" onClick={() => {
+                                                        setManualBonus(0);
+                                                        setShowBonusMenu(false);
+                                                        if (interactionStep < 3) setInteractionStep(3);
+                                                        focusSkillSoon();
+                                                    }}>
+                                                        <span>0</span>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="bonus-values-grid">
+                                                    <button className="back-btn" onClick={() => setSelectedSign(null)}>←</button>
+                                                    <div className="values-scroll">
+                                                        {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                                                            <button 
+                                                                key={num} 
+                                                                className={`value-btn ${selectedSign === '-' ? 'is-minus' : ''}`}
+                                                                onClick={() => {
+                                                                    const val = selectedSign === '+' ? num : -num;
+                                                                    setManualBonus(val);
+                                                                    setShowBonusMenu(false);
+                                                                    setSelectedSign(null);
+                                                                    if (interactionStep < 3) setInteractionStep(3);
+                                                                    focusSkillSoon();
+                                                                }}
+                                                            >
+                                                                {selectedSign}{num}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <input
@@ -1289,6 +1338,98 @@ export function RollerInputs({
                     animation: sequence-glow 1.5s infinite alternate !important;
                     border-color: rgba(255, 215, 0, 1) !important;
                     z-index: 10;
+                }
+
+                .bonus-dropdown-menu {
+                    position: absolute;
+                    bottom: 110%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #0a0a0a;
+                    border: 1px solid var(--accent-color);
+                    border-radius: 8px;
+                    padding: 12px;
+                    min-width: 220px;
+                    z-index: 2000;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 15px rgba(var(--accent-rgb), 0.3);
+                    animation: bonus-pop 0.2s ease-out;
+                }
+                @keyframes bonus-pop {
+                    from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.95); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+                }
+                .bonus-sign-row {
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                }
+                .sign-btn {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 12px 8px;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 6px;
+                    color: #fff;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .sign-btn:hover { background: rgba(var(--accent-rgb), 0.15); border-color: var(--accent-color); }
+                .sign-btn.plus { color: var(--accent-color); }
+                .sign-btn.minus { color: #ff6b6b; }
+                .sign-btn span { font-size: 0.65rem; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase; }
+
+                .bonus-values-grid {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                .back-btn {
+                    align-self: flex-start;
+                    background: transparent;
+                    border: none;
+                    color: rgba(255,255,255,0.4);
+                    cursor: pointer;
+                    font-size: 1.2rem;
+                    padding: 0 5px;
+                }
+                .back-btn:hover { color: #fff; }
+                .values-scroll {
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 6px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    padding-right: 4px;
+                }
+                .values-scroll::-webkit-scrollbar { width: 4px; }
+                .values-scroll::-webkit-scrollbar-thumb { background: rgba(var(--accent-rgb), 0.3); border-radius: 2px; }
+                .value-btn {
+                    aspect-ratio: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 4px;
+                    color: #fff;
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .value-btn:hover { 
+                    background: var(--accent-color); 
+                    color: #000; 
+                    border-color: var(--accent-color); 
+                    transform: scale(1.1);
+                }
+                .value-btn.is-minus:hover {
+                    background: #ff4444;
+                    border-color: #ff4444;
                 }
             `}</style>
         </div>

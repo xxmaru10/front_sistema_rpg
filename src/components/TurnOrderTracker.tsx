@@ -370,9 +370,9 @@ export function TurnOrderTracker({
                                 FINALIZAR REAÇÃO
                             </button>
                         ) : isCurrentPlayerActive ? (
-                            <button className="hud-action-btn" onClick={handleNextTurn}>
-                                PASSAR TURNO
-                            </button>
+                             <button className="hud-action-btn next-step-btn" onClick={handleNextTurn} title="Passar Turno">
+                                 <FastForward size={22} />
+                             </button>
                         ) : null}
                     </div>
                 </div>
@@ -390,7 +390,7 @@ export function TurnOrderTracker({
                     position: relative;
                     padding-top: 0;
                     margin-top: -14px;
-                    z-index: 50;
+                    z-index: 2147483640; /* High z-index to stay above everything else */
                 }
 
                 .hud-top {
@@ -430,7 +430,7 @@ export function TurnOrderTracker({
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
-                    margin-bottom: 4px;
+                    margin-bottom: 40px;
                     margin-top: -8px;
                 }
 
@@ -708,6 +708,7 @@ export function TurnOrderTracker({
                     justify-content: center;
                     width: 100%;
                     z-index: 60;
+                    margin-top: 32px; /* Push it down further avoid timer overlap */
                 }
 
                 .hud-timer-container {
@@ -768,15 +769,24 @@ export function TurnOrderTracker({
                     background: rgba(10, 10, 15, 0.9);
                     border: 1px solid var(--accent-color);
                     color: var(--accent-color);
-                    padding: 8px 24px;
+                    padding: 4px 12px;
                     font-family: var(--font-header);
                     font-size: 0.8rem;
                     letter-spacing: 0.15em;
-                    border-radius: 20px;
+                    border-radius: 12px;
                     cursor: pointer;
                     font-weight: bold;
                     transition: all 0.3s;
                     box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .next-step-btn {
+                    padding: 6px 16px;
+                    border-radius: 30px;
+                    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.3) 100%);
                 }
 
                 .hud-action-btn:hover {
