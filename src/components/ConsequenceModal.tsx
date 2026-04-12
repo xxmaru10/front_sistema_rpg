@@ -87,6 +87,14 @@ export function ConsequenceModal({
 
                 <div className="modal-actions">
                     <button
+                        className="modal-btn clear"
+                        onClick={() => onSave("", "", 0)}
+                        title="Limpar consequência e debuff"
+                    >
+                        LIMPAR
+                    </button>
+                    <div style={{ flex: 1 }} />
+                    <button
                         className="modal-btn save"
                         onClick={() => onSave(text, debuffSkill, debuffValue)}
                     >
@@ -201,6 +209,19 @@ export function ConsequenceModal({
                         background: rgba(197, 160, 89, 0.1);
                         border-color: var(--accent-color);
                         color: var(--accent-color);
+                    }
+
+                    .modal-btn.save:hover { background: rgba(197, 160, 89, 0.2); }
+
+                    .modal-btn.clear {
+                        background: rgba(255, 255, 255, 0.05);
+                        border-color: rgba(255, 255, 255, 0.2);
+                        color: rgba(255, 255, 255, 0.6);
+                    }
+                    .modal-btn.clear:hover {
+                        background: rgba(255, 255, 255, 0.1);
+                        color: #fff;
+                        border-color: #fff;
                     }
 
                     .modal-btn.cancel {

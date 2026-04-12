@@ -382,16 +382,16 @@ export function DamageResolutionModal({
                     )}
                 </div>
 
-                <style jsx>{`
+                <style jsx global>{`
                     .dmg-modal-overlay {
                         position: fixed;
                         top: 0; left: 0; right: 0; bottom: 0;
-                        background: rgba(0, 0, 0, 0.92);
+                        background: rgba(0, 0, 0, 0.85);
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        z-index: 999999999;
-                        backdrop-filter: blur(8px);
+                        z-index: 2147483647;
+                        backdrop-filter: blur(4px);
                     }
 
                     .dmg-modal {
@@ -408,9 +408,16 @@ export function DamageResolutionModal({
                         box-shadow: 0 0 80px rgba(197, 160, 89, 0.25),
                                     0 0 40px rgba(255, 50, 50, 0.2),
                                     inset 0 0 40px rgba(0, 0, 0, 0.6);
+                        animation: dmg-modal-in 0.4s cubic-bezier(0.19, 1, 0.22, 1);
                     }
 
-                    /* Header */
+                    @keyframes dmg-modal-in {
+                        from { opacity: 0; transform: scale(0.9) translateY(20px); }
+                        to { opacity: 1; transform: scale(1) translateY(0); }
+                    }
+
+                    /* Rest of the styles remain scoped through unique prefixes if needed, 
+                       but since it's portaled to body, global is fine. */
                     .dmg-header {
                         display: flex;
                         flex-direction: column;
@@ -421,43 +428,24 @@ export function DamageResolutionModal({
                     }
 
                     .dmg-diamond {
-                        width: 82px;
-                        height: 82px;
+                        width: 82px; height: 82px;
                         background: #050505;
                         transform: rotate(45deg);
                         border-radius: 12px;
                         overflow: hidden;
                         border: 3px solid var(--side-color);
-                        box-shadow:
-                            0 0 28px var(--side-color),
-                            0 0 8px var(--side-color),
-                            inset 0 0 12px var(--side-color);
+                        box-shadow: 0 0 28px var(--side-color), 0 0 8px var(--side-color), inset 0 0 12px var(--side-color);
                         position: relative;
                         margin-top: 10px;
                     }
 
                     .dmg-diamond-inner {
-                        position: absolute;
-                        width: 150%;
-                        height: 150%;
-                        top: 50%;
-                        left: 50%;
+                        position: absolute; width: 150%; height: 150%;
+                        top: 50%; left: 50%;
                         transform: translate(-50%, -50%) rotate(-45deg);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
+                        display: flex; align-items: center; justify-content: center;
                     }
-
-                    .dmg-diamond-inner img {
-                        width: 100%;
-                        height: 100%;
-                        object-fit: cover;
-                    }
-
-                    .dmg-placeholder {
-                        color: var(--side-color);
-                        opacity: 0.7;
-                    }
+                    .dmg-diamond-inner img { width: 100%; height: 100%; object-fit: cover; }
 
                     .dmg-name {
                         font-family: var(--font-header);
@@ -465,7 +453,6 @@ export function DamageResolutionModal({
                         color: #fff;
                         letter-spacing: 0.12em;
                         text-align: center;
-                        text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
                     }
 
                     .dmg-track-label {
@@ -476,67 +463,17 @@ export function DamageResolutionModal({
                         letter-spacing: 0.18em;
                     }
 
-                    .dmg-hint-npc,
-                    .dmg-hint-pc {
-                        margin: 0;
-                        font-size: 0.78rem;
-                        line-height: 1.45;
-                        color: rgba(230, 225, 210, 0.72);
-                        text-align: center;
-                        padding: 0 4px;
-                    }
-
-                    .dmg-hint-npc strong,
-                    .dmg-hint-pc strong {
-                        color: var(--accent-color);
-                        font-weight: 600;
-                    }
-
                     .dmg-received-row {
-                        display: flex;
-                        flex-wrap: wrap;
-                        justify-content: center;
-                        gap: 28px;
-                        padding: 8px 0 4px;
+                        display: flex; flex-wrap: wrap; justify-content: center;
+                        gap: 28px; padding: 8px 0 4px;
                     }
 
                     .dmg-received-block {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        gap: 4px;
-                        min-width: 140px;
-                    }
-
-                    .dmg-overwarn {
-                        background: rgba(180, 40, 40, 0.2);
-                        border: 1px solid rgba(255, 100, 100, 0.45);
-                        color: #fecaca;
-                        font-size: 0.8rem;
-                        line-height: 1.4;
-                        padding: 10px 14px;
-                        border-radius: 6px;
-                        text-align: center;
-                    }
-
-                    .dmg-number-sm {
-                        font-size: 2.4rem !important;
-                    }
-
-                    /* Remaining damage */
-                    .dmg-remaining {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        gap: 2px;
+                        display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 140px;
                     }
 
                     .dmg-label {
-                        font-size: 0.68rem;
-                        letter-spacing: 0.18em;
-                        color: var(--accent-color);
-                        opacity: 0.75;
-                        font-family: var(--font-header);
+                        font-size: 0.68rem; letter-spacing: 0.18em; color: var(--accent-color); opacity: 0.75; font-family: var(--font-header);
                     }
 
                     .dmg-number {
@@ -544,43 +481,15 @@ export function DamageResolutionModal({
                         font-size: 3.2rem;
                         font-weight: 900;
                         line-height: 1;
-                        text-shadow:
-                            0 0 16px currentColor,
-                            0 0 32px currentColor,
-                            2px 2px 0 rgba(0, 0, 0, 0.8);
-                        transition: color 0.3s ease;
+                        text-shadow: 0 0 16px currentColor, 0 0 32px rgba(0,0,0,0.5);
                     }
 
-                    /* Sections */
-                    .dmg-section {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 8px;
-                    }
+                    .dmg-section { display: flex; flex-direction: column; gap: 8px; }
+                    .dmg-section-title { font-family: var(--font-header); font-size: 0.68rem; letter-spacing: 0.16em; color: var(--accent-color); opacity: 0.75; }
 
-                    .dmg-section-title {
-                        font-family: var(--font-header);
-                        font-size: 0.68rem;
-                        letter-spacing: 0.16em;
-                        color: var(--accent-color);
-                        opacity: 0.75;
-                    }
-
-                    .dmg-stress-row {
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 8px;
-                    }
-
-                    .dmg-empty {
-                        color: rgba(255, 255, 255, 0.35);
-                        font-size: 0.85rem;
-                        font-style: italic;
-                    }
-
+                    .dmg-stress-row { display: flex; flex-wrap: wrap; gap: 8px; }
                     .dmg-stress-box {
-                        width: 36px;
-                        height: 36px;
+                        width: 36px; height: 36px;
                         background: rgba(0, 0, 0, 0.6);
                         border: 1px solid rgba(197, 160, 89, 0.4);
                         color: #fff;
@@ -588,165 +497,48 @@ export function DamageResolutionModal({
                         font-size: 0.9rem;
                         font-weight: bold;
                         cursor: pointer;
+                        display: flex; align-items: center; justify-content: center;
                         transition: all 0.2s;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        padding: 0;
                     }
 
                     .dmg-stress-box:hover:not(:disabled) {
                         border-color: var(--accent-color);
                         background: rgba(var(--accent-rgb), 0.15);
-                        transform: scale(1.05);
                     }
 
-                    .dmg-stress-box.occupied {
-                        background: rgba(120, 20, 20, 0.6);
-                        border-color: rgba(200, 40, 40, 0.6);
-                        color: rgba(255, 180, 180, 0.6);
-                        cursor: not-allowed;
-                        text-decoration: line-through;
-                    }
-
+                    .dmg-stress-box.occupied { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
                     .dmg-stress-box.new-mark {
-                        background: rgba(200, 40, 40, 0.35);
-                        border-color: #ff4444;
-                        color: #fff;
-                        box-shadow: 0 0 12px rgba(255, 68, 68, 0.6);
+                        background: rgba(200, 40, 40, 0.35); border-color: #ff4444; box-shadow: 0 0 12px rgba(255, 68, 68, 0.6);
                     }
 
-                    /* Consequences */
-                    .dmg-consequences {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 8px;
-                    }
-
+                    .dmg-consequences { display: flex; flex-direction: column; gap: 8px; }
                     .dmg-cons-row {
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                        padding: 8px 12px;
-                        background: rgba(0, 0, 0, 0.4);
-                        border: 1px solid rgba(197, 160, 89, 0.2);
-                        transition: all 0.2s;
+                        display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+                        background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(197, 160, 89, 0.2);
                     }
+                    .dmg-cons-row.new-mark { border-color: #ff4444; background: rgba(200, 40, 40, 0.1); }
+                    .dmg-cons-row.occupied { opacity: 0.4; }
 
-                    .dmg-cons-row.new-mark {
-                        border-color: #ff4444;
-                        background: rgba(200, 40, 40, 0.1);
-                        box-shadow: 0 0 12px rgba(255, 68, 68, 0.3);
-                    }
-
-                    .dmg-cons-row.occupied {
-                        background: rgba(120, 20, 20, 0.2);
-                        border-color: rgba(200, 40, 40, 0.4);
-                        opacity: 0.6;
-                    }
-
-                    .dmg-cons-label {
-                        display: flex;
-                        flex-direction: column;
-                        min-width: 88px;
-                        gap: 2px;
-                    }
-
-                    .dmg-cons-name {
-                        font-family: var(--font-header);
-                        font-size: 0.8rem;
-                        color: var(--accent-color);
-                        letter-spacing: 0.08em;
-                    }
-
-                    .dmg-cons-cap {
-                        font-size: 0.7rem;
-                        color: #ff6b6b;
-                        font-weight: bold;
-                    }
+                    .dmg-cons-label { display: flex; flex-direction: column; min-width: 88px; }
+                    .dmg-cons-name { font-family: var(--font-header); font-size: 0.8rem; color: var(--accent-color); }
+                    .dmg-cons-cap { font-size: 0.7rem; color: #ff6b6b; font-weight: bold; }
 
                     .dmg-cons-input {
-                        flex: 1;
-                        background: rgba(0, 0, 0, 0.5);
-                        border: 1px solid rgba(197, 160, 89, 0.3);
-                        padding: 8px 10px;
-                        color: #fff;
-                        font-family: var(--font-header);
-                        font-size: 0.85rem;
-                        outline: none;
-                        transition: all 0.2s;
+                        flex: 1; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(197, 160, 89, 0.3);
+                        padding: 8px 10px; color: #fff; font-size: 0.85rem; outline: none;
                     }
 
-                    .dmg-cons-input:focus {
-                        border-color: var(--accent-color);
-                        background: rgba(0, 0, 0, 0.75);
-                    }
-
-                    .dmg-cons-locked {
-                        flex: 1;
-                        color: rgba(255, 180, 180, 0.8);
-                        font-size: 0.85rem;
-                        font-style: italic;
-                        text-decoration: line-through;
-                    }
-
-                    /* Actions */
                     .dmg-actions {
-                        display: flex;
-                        gap: 10px;
-                        justify-content: flex-end;
-                        padding-top: 12px;
-                        border-top: 1px solid rgba(197, 160, 89, 0.2);
+                        display: flex; gap: 10px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid rgba(197, 160, 89, 0.2);
                     }
 
                     .dmg-btn {
-                        padding: 10px 18px;
-                        font-family: var(--font-header);
-                        font-size: 0.75rem;
-                        letter-spacing: 0.12em;
-                        cursor: pointer;
-                        border: 1px solid;
-                        background: transparent;
-                        transition: all 0.2s;
+                        padding: 10px 18px; font-family: var(--font-header); font-size: 0.75rem; letter-spacing: 0.12em; cursor: pointer; border: 1px solid; background: transparent; transition: all 0.2s;
                     }
-
-                    .dmg-btn:disabled {
-                        opacity: 0.35;
-                        cursor: not-allowed;
-                    }
-
-                    .dmg-btn.confirm {
-                        background: rgba(110, 231, 183, 0.1);
-                        border-color: #6ee7b7;
-                        color: #6ee7b7;
-                    }
-
-                    .dmg-btn.confirm:hover:not(:disabled) {
-                        background: rgba(110, 231, 183, 0.25);
-                        box-shadow: 0 0 16px rgba(110, 231, 183, 0.4);
-                    }
-
-                    .dmg-btn.auto {
-                        background: rgba(197, 160, 89, 0.1);
-                        border-color: var(--accent-color);
-                        color: var(--accent-color);
-                    }
-
-                    .dmg-btn.auto:hover {
-                        background: rgba(var(--accent-rgb), 0.2);
-                        box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.35);
-                    }
-
-                    .dmg-btn.skip {
-                        background: rgba(100, 100, 120, 0.1);
-                        border-color: rgba(180, 180, 200, 0.5);
-                        color: rgba(200, 200, 220, 0.8);
-                    }
-
-                    .dmg-btn.skip:hover {
-                        background: rgba(180, 180, 200, 0.15);
-                        color: #fff;
-                    }
+                    .dmg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+                    .dmg-btn.confirm { border-color: #6ee7b7; color: #6ee7b7; }
+                    .dmg-btn.auto { border-color: var(--accent-color); color: var(--accent-color); }
+                    .dmg-btn.skip { border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); }
                 `}</style>
             </div>
         </div>,

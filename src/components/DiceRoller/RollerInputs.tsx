@@ -315,7 +315,13 @@ export function RollerInputs({
                             {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
                                 <div className={`icon-select-shell ${interactionStep === 2 ? 'nudge-glow' : ''}`} title="Bônus (0–20)">
-                                    <span className="icon-select-face"><Plus size={16} /></span>
+                                    <span className="icon-select-face">
+                                        {manualBonus > 0 ? (
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>+{manualBonus}</span>
+                                        ) : (
+                                            <Plus size={16} />
+                                        )}
+                                    </span>
                                     <select
                                         ref={bonusSelectRef}
                                         value={manualBonus}
@@ -359,8 +365,16 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className="icon-select-shell" title="Pericia">
-                                    <span className="icon-select-face"><Sparkles size={16} /></span>
+                                <div className={`icon-select-shell ${interactionStep === 3 ? 'nudge-glow' : ''}`} title="Pericia">
+                                    <span className="icon-select-face">
+                                        {selectedSkill ? (
+                                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#fff' }}>
+                                                {selectedSkill.slice(0, 3).toUpperCase()}
+                                            </span>
+                                        ) : (
+                                            <Sparkles size={16} />
+                                        )}
+                                    </span>
                                     <select
                                         ref={skillSelectRef}
                                         value={selectedSkill}
@@ -695,7 +709,8 @@ export function RollerInputs({
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    overflow: hidden;
+                    overflow: visible;
+                    z-index: 1000;
                 }
 
                 .icon-select-face {
