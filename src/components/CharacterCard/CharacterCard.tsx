@@ -210,7 +210,6 @@ export function CharacterCard({
                     onAddConsequence={hook.handleAddConsequence}
                     onOpenAddModal={() => hook.setShowAddConsequenceModal(true)}
                     onCloseAddModal={() => hook.setShowAddConsequenceModal(false)}
-                    onKillCharacter={isGM ? hook.handleKillCharacter : undefined}
                 />
 
                 <div

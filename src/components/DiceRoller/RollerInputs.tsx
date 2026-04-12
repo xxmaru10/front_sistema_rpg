@@ -151,6 +151,23 @@ export function RollerInputs({
     const bonusPortalRef = useRef<HTMLDivElement>(null);
     const [bonusMenuPos, setBonusMenuPos] = useState<{ top: number; left: number } | null>(null);
 
+    // ── Char Picker State ──
+    const [showCharPicker, setShowCharPicker] = useState(false);
+    const [charPickerPos, setCharPickerPos] = useState<{ top: number; left: number } | null>(null);
+    const charPickerAnchorRef = useRef<HTMLButtonElement>(null);
+    const charPickerPortalRef = useRef<HTMLDivElement>(null);
+
+    const openCharPicker = () => {
+        if (charPickerAnchorRef.current) {
+            const rect = charPickerAnchorRef.current.getBoundingClientRect();
+            setCharPickerPos({
+                top: rect.bottom + window.scrollY + 6,
+                left: rect.left + rect.width / 2 + window.scrollX,
+            });
+        }
+        setShowCharPicker(true);
+    };
+
     const openBonusMenu = () => {
         if (bonusMenuRef.current) {
             const rect = bonusMenuRef.current.getBoundingClientRect();
@@ -177,10 +194,17 @@ export function RollerInputs({
                     setSelectedSign(null);
                 }
             }
+            if (showCharPicker) {
+                const inAnchor = charPickerAnchorRef.current?.contains(target) ?? false;
+                const inPortal = charPickerPortalRef.current?.contains(target) ?? false;
+                if (!inAnchor && !inPortal) {
+                    setShowCharPicker(false);
+                }
+            }
         };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
-    }, [showAttackSubMenu, showBonusMenu]);
+    }, [showAttackSubMenu, showBonusMenu, showCharPicker]);
 
     const actionLabelMap: Record<RollerInputsProps["actionType"], string> = {
         OVERCOME: "SUPERAR",
@@ -260,26 +284,100 @@ export function RollerInputs({
         return { ownedSkills, otherSkills };
     })();
 
+    const selectedChar = characters.find(c => c.id === selectedCharId);
+    const charInitial = selectedChar?.name?.trim()?.charAt(0)?.toUpperCase() || "?";
+    const allies = characters.filter(c => !(c.isNPC && c.arenaSide !== "HERO"));
+    const enemies = characters.filter(c => c.isNPC && c.arenaSide !== "HERO");
+
     return (
         <div className={`matrix-inputs flex-stagger ${isIntegrated ? "integrated" : ""}`}>
             {!fixedCharacterId && (
                 <div className="matrix-field">
                     {!isIntegrated && <label>PERSONAGEM</label>}
-                    <select
-                        value={selectedCharId}
-                        onChange={(e) => setSelectedCharId(e.target.value)}
-                        className="mystic-input select-ritual"
-                    >
-                        {characters.map(c => {
-                            const isEnemy = c.isNPC && c.arenaSide !== "HERO";
-                            const color = isEnemy ? "#ff4444" : "#3b82f6";
-                            return (
-                                <option key={c.id} value={c.id} style={{ color }}>
-                                    {c.name.toUpperCase()}
-                                </option>
-                            );
-                        })}
-                    </select>
+                    {isIntegrated ? (
+                        <>
+                            <button
+                                ref={charPickerAnchorRef}
+                                type="button"
+                                className="char-portrait-btn"
+                                onClick={() => showCharPicker ? setShowCharPicker(false) : openCharPicker()}
+                                title={selectedChar?.name || "Selecionar personagem"}
+                            >
+                                {selectedChar?.imageUrl ? (
+                                    <img
+                                        src={selectedChar.imageUrl}
+                                        alt=""
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                    />
+                                ) : (
+                                    <span style={{ fontFamily: 'var(--font-header)', fontSize: '0.9rem', color: 'var(--accent-color)' }}>
+                                        {charInitial}
+                                    </span>
+                                )}
+                            </button>
+                            {showCharPicker && charPickerPos && typeof document !== 'undefined' && createPortal(
+                                <div
+                                    ref={charPickerPortalRef}
+                                    className="char-picker-dropdown"
+                                    style={{ position: 'fixed', top: `${charPickerPos.top}px`, left: `${charPickerPos.left}px`, transform: 'translateX(-50%)', zIndex: 2147483646 }}
+                                >
+                                    {allies.length > 0 && (
+                                        <div className="char-picker-section">
+                                            <div className="char-picker-section-label ally">ALIADOS</div>
+                                            {allies.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    type="button"
+                                                    className={`char-picker-item ally${c.id === selectedCharId ? ' selected' : ''}`}
+                                                    onMouseDown={(e) => { e.stopPropagation(); setSelectedCharId(c.id); setShowCharPicker(false); }}
+                                                >
+                                                    <div className="char-picker-avatar">
+                                                        {c.imageUrl ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span>{c.name.charAt(0).toUpperCase()}</span>}
+                                                    </div>
+                                                    <span className="char-picker-name">{c.name.toUpperCase()}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {enemies.length > 0 && (
+                                        <div className="char-picker-section">
+                                            <div className="char-picker-section-label enemy">ADVERSÁRIOS</div>
+                                            {enemies.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    type="button"
+                                                    className={`char-picker-item enemy${c.id === selectedCharId ? ' selected' : ''}`}
+                                                    onMouseDown={(e) => { e.stopPropagation(); setSelectedCharId(c.id); setShowCharPicker(false); }}
+                                                >
+                                                    <div className="char-picker-avatar">
+                                                        {c.imageUrl ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span>{c.name.charAt(0).toUpperCase()}</span>}
+                                                    </div>
+                                                    <span className="char-picker-name">{c.name.toUpperCase()}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>,
+                                document.body
+                            )}
+                        </>
+                    ) : (
+                        <select
+                            value={selectedCharId}
+                            onChange={(e) => setSelectedCharId(e.target.value)}
+                            className="mystic-input select-ritual"
+                        >
+                            {characters.map(c => {
+                                const isEnemy = c.isNPC && c.arenaSide !== "HERO";
+                                const color = isEnemy ? "#ff4444" : "#3b82f6";
+                                return (
+                                    <option key={c.id} value={c.id} style={{ color }}>
+                                        {c.name.toUpperCase()}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    )}
                 </div>
             )}
 
@@ -339,6 +437,39 @@ export function RollerInputs({
                                     </div>
                                 )}
                             </div>
+                            {/* Inline target tags next to action button (integrated only) */}
+                            {isIntegrated && actionType === "ATTACK" && targetIds.length > 0 && (
+                                <div className="inline-target-tags">
+                                    {targetIds.map(tid => {
+                                        const tc = characters.find(c => c.id === tid);
+                                        return (
+                                            <div key={tid} className="inline-target-tag">
+                                                <div className="inline-target-portrait">
+                                                    {tc?.imageUrl ? (
+                                                        <img src={tc.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                                    ) : (
+                                                        <span>{tc?.name?.charAt(0)?.toUpperCase() || "?"}</span>
+                                                    )}
+                                                </div>
+                                                <span className="inline-target-name">{tc?.name?.toUpperCase() || "???"}</span>
+                                                <button type="button" className="inline-target-remove" onClick={() => handleTargetRemove(tid)}>
+                                                    <X size={10} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {availableTargets.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className="inline-target-add"
+                                            onClick={() => setShowTargetPicker(true)}
+                                            title="Adicionar alvo"
+                                        >
+                                            <Plus size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -564,8 +695,8 @@ export function RollerInputs({
                     </div>
                 </div>
 
-                {/* Attack target tags (shown after target is selected) */}
-                {actionType === "ATTACK" && targetIds.length > 0 && (
+                {/* Attack target tags full-width (non-integrated only) */}
+                {!isIntegrated && actionType === "ATTACK" && targetIds.length > 0 && (
                     <div className="matrix-field full-width animate-reveal">
                         <label>ALVO</label>
                         <div className="target-selection-area">
@@ -582,7 +713,6 @@ export function RollerInputs({
                                         </div>
                                     );
                                 })}
-                                {/* Inline add more targets */}
                                 {availableTargets.length > 0 && (
                                     <button
                                         type="button"
@@ -1460,6 +1590,191 @@ export function RollerInputs({
                 .value-btn.is-minus:hover {
                     background: #ff4444;
                     border-color: #ff4444;
+                }
+
+                /* ── Portrait Character Picker ── */
+                .char-portrait-btn {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    border: 1.5px solid var(--accent-color);
+                    background: #000;
+                    box-shadow: 0 0 12px var(--accent-glow), inset 0 0 8px var(--accent-glow);
+                    cursor: pointer;
+                    overflow: hidden;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    transition: all 0.2s ease;
+                }
+
+                .char-portrait-btn:hover {
+                    transform: scale(1.08);
+                    box-shadow: 0 0 18px var(--accent-glow), inset 0 0 12px var(--accent-glow);
+                    border-color: #fff;
+                }
+
+                .char-picker-dropdown {
+                    background: #0a0a0a;
+                    border: 1px solid rgba(var(--accent-rgb), 0.35);
+                    border-radius: 14px;
+                    padding: 8px;
+                    min-width: 200px;
+                    max-height: 50vh;
+                    overflow-y: auto;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.85), 0 0 16px rgba(var(--accent-rgb), 0.2);
+                    animation: bonus-pop 0.18s ease-out;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+
+                .char-picker-section {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+
+                .char-picker-section-label {
+                    font-family: var(--font-header);
+                    font-size: 0.58rem;
+                    letter-spacing: 0.2em;
+                    padding: 4px 8px 2px;
+                    opacity: 0.6;
+                }
+                .char-picker-section-label.ally { color: #60a5fa; }
+                .char-picker-section-label.enemy { color: #f87171; }
+
+                .char-picker-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 8px;
+                    border-radius: 8px;
+                    border: 1px solid transparent;
+                    background: transparent;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    text-align: left;
+                }
+
+                .char-picker-item.ally:hover,
+                .char-picker-item.ally.selected {
+                    background: rgba(59, 130, 246, 0.12);
+                    border-color: rgba(59, 130, 246, 0.35);
+                }
+
+                .char-picker-item.enemy:hover,
+                .char-picker-item.enemy.selected {
+                    background: rgba(248, 113, 113, 0.12);
+                    border-color: rgba(248, 113, 113, 0.35);
+                }
+
+                .char-picker-avatar {
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255,255,255,0.06);
+                    font-family: var(--font-header);
+                    font-size: 0.75rem;
+                }
+
+                .char-picker-item.ally .char-picker-avatar { border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; }
+                .char-picker-item.enemy .char-picker-avatar { border: 1px solid rgba(248, 113, 113, 0.5); color: #f87171; }
+
+                .char-picker-name {
+                    font-family: var(--font-header);
+                    font-size: 0.68rem;
+                    letter-spacing: 0.08em;
+                }
+                .char-picker-item.ally .char-picker-name { color: rgba(147, 197, 253, 0.9); }
+                .char-picker-item.enemy .char-picker-name { color: rgba(252, 165, 165, 0.9); }
+
+                /* ── Inline Target Tags (next to ATACAR) ── */
+                .action-field-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex-wrap: nowrap;
+                }
+
+                .inline-target-tags {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    flex-wrap: nowrap;
+                }
+
+                .inline-target-tag {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    padding: 3px 8px 3px 4px;
+                    background: rgba(255, 68, 68, 0.1);
+                    border: 1px solid rgba(255, 68, 68, 0.35);
+                    border-radius: 999px;
+                    white-space: nowrap;
+                }
+
+                .inline-target-portrait {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255, 68, 68, 0.15);
+                    border: 1px solid rgba(255, 68, 68, 0.4);
+                    font-family: var(--font-header);
+                    font-size: 0.65rem;
+                    color: #f87171;
+                }
+
+                .inline-target-name {
+                    font-family: var(--font-header);
+                    font-size: 0.62rem;
+                    letter-spacing: 0.06em;
+                    color: rgba(252, 165, 165, 0.9);
+                }
+
+                .inline-target-remove {
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    color: rgba(255, 80, 80, 0.6);
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    transition: color 0.15s;
+                }
+                .inline-target-remove:hover { color: #ff4444; }
+
+                .inline-target-add {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    border: 1px solid rgba(255, 68, 68, 0.35);
+                    background: rgba(255, 68, 68, 0.08);
+                    color: rgba(255, 80, 80, 0.7);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.15s;
+                    flex-shrink: 0;
+                }
+                .inline-target-add:hover {
+                    background: rgba(255, 68, 68, 0.18);
+                    border-color: rgba(255, 68, 68, 0.6);
+                    color: #ff5050;
                 }
             `}</style>
         </div>

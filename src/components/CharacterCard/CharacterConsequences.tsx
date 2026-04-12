@@ -3,7 +3,6 @@
 import { createPortal } from "react-dom";
 import { Character } from "@/types/domain";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
-import { Skull } from "lucide-react";
 
 interface ConsequenceModalState {
     slot: string;
@@ -26,7 +25,6 @@ interface CharacterConsequencesProps {
     onAddConsequence: (type: "mild" | "moderate" | "severe") => void;
     onOpenAddModal: () => void;
     onCloseAddModal: () => void;
-    onKillCharacter?: () => void;
 }
 
 export function CharacterConsequences({
@@ -42,7 +40,6 @@ export function CharacterConsequences({
     onAddConsequence,
     onOpenAddModal,
     onCloseAddModal,
-    onKillCharacter,
 }: CharacterConsequencesProps) {
     const canEdit = canEditConsequences ?? isGM;
     const defaultSlots = ["mild", "moderate", "severe"];
@@ -318,43 +315,6 @@ export function CharacterConsequences({
                     })}
                 </div>
 
-                {isGM && onKillCharacter && (
-                    <button
-                        onClick={onKillCharacter}
-                        title="Matar personagem (preencher todas as consequências)"
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "6px",
-                            width: "100%",
-                            marginTop: "12px",
-                            padding: "8px 12px",
-                            background: "rgba(180, 0, 0, 0.08)",
-                            border: "1px solid rgba(180, 0, 0, 0.28)",
-                            borderRadius: "12px",
-                            color: "rgba(255, 80, 80, 0.75)",
-                            cursor: "pointer",
-                            fontSize: "0.7rem",
-                            letterSpacing: "0.16em",
-                            fontFamily: "var(--font-header)",
-                            transition: "all 0.18s ease",
-                        }}
-                        onMouseEnter={e => {
-                            e.currentTarget.style.background = "rgba(180, 0, 0, 0.18)";
-                            e.currentTarget.style.borderColor = "rgba(255, 60, 60, 0.55)";
-                            e.currentTarget.style.color = "#ff5050";
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.background = "rgba(180, 0, 0, 0.08)";
-                            e.currentTarget.style.borderColor = "rgba(180, 0, 0, 0.28)";
-                            e.currentTarget.style.color = "rgba(255, 80, 80, 0.75)";
-                        }}
-                    >
-                        <Skull size={14} />
-                        ELIMINAR
-                    </button>
-                )}
             </div>
 
             {/* Consequence Edit Modal */}

@@ -406,8 +406,8 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 }
 
                 .combat-log-container.compact-mode {
-                    min-height: 92px;
-                    max-height: 126px;
+                    min-height: 110px;
+                    max-height: 160px;
                     border-radius: 10px;
                     background: rgba(5, 5, 5, 0.84);
                 }
@@ -480,7 +480,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-time {
                     font-family: var(--font-header);
-                    font-size: 0.5rem;
+                    font-size: 0.62rem;
                     color: rgba(255, 255, 255, 0.58);
                     letter-spacing: 0.08em;
                     white-space: nowrap;
@@ -488,7 +488,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-actor {
                     font-family: var(--font-header);
-                    font-size: 0.56rem;
+                    font-size: 0.72rem;
                     color: var(--accent-color);
                     letter-spacing: 0.08em;
                     white-space: nowrap;
@@ -496,7 +496,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-summary {
                     font-family: var(--font-main);
-                    font-size: 0.65rem;
+                    font-size: 0.82rem;
                     color: rgba(255, 255, 255, 0.88);
                     overflow: hidden;
                     text-overflow: ellipsis;
@@ -532,10 +532,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-total {
                     font-family: var(--font-header);
-                    font-size: 0.7rem;
+                    font-size: 1.1rem;
                     color: var(--accent-color);
                     letter-spacing: 0.05em;
                     white-space: nowrap;
+                    font-weight: 800;
                 }
 
                 .compact-total.good {

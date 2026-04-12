@@ -67,8 +67,8 @@ export function DiceChamber({
                 }
 
                 .void-chamber.integrated {
-                    height: 40px;
-                    min-width: 92px;
+                    height: 44px;
+                    min-width: 72px;
                     margin: 0;
                     border-radius: 10px;
                     justify-content: center;
@@ -171,8 +171,8 @@ export function DiceChamber({
                 }
 
                 .quantum-result.integrated .res-value {
-                    font-size: 1.35rem;
-                    font-weight: 700;
+                    font-size: 1.85rem;
+                    font-weight: 800;
                     letter-spacing: 0.03em;
                     line-height: 1;
                 }

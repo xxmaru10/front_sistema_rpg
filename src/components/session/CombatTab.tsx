@@ -222,7 +222,7 @@ export function CombatTab({
         {userRole === "GM" && typeof document !== "undefined" && createPortal(
             <div className="gm-sidebar-vertical">
                     <button
-                        className="gm-sidebar-btn"
+                        className="gm-sidebar-btn gm-sidebar-btn--ally"
                         onClick={onSummonAlly}
                         title="Convocar Aliado"
                         aria-label="Convocar Aliado"

@@ -143,14 +143,6 @@ export function DiceRoller(props: DiceRollerProps) {
                         onRequestRollAttention={requestRollAttention}
                     />
 
-                    <DiceChamber
-                        isRolling={roller.isRolling}
-                        diceRotations={roller.diceRotations}
-                        lastTotal={roller.lastTotal}
-                        getLadderLabel={roller.getLadderLabel}
-                        isIntegrated={isIntegrated}
-                    />
-
                     <button
                         ref={rollTriggerRef}
                         onClick={() => {
@@ -172,6 +164,14 @@ export function DiceRoller(props: DiceRollerProps) {
                         </div>
                         <div className="trigger-progress" style={{ width: roller.isRolling ? '100%' : '0%' }}></div>
                     </button>
+
+                    <DiceChamber
+                        isRolling={roller.isRolling}
+                        diceRotations={roller.diceRotations}
+                        lastTotal={roller.lastTotal}
+                        getLadderLabel={roller.getLadderLabel}
+                        isIntegrated={isIntegrated}
+                    />
                 </>
             )}
 
