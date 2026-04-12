@@ -250,7 +250,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 delete nextConsequences[payload.slot];
             } else {
                 nextConsequences[payload.slot] = {
-                    text: payload.value,
+                    text: payload.value || "",
                     debuff: payload.debuff
                 };
             }
