@@ -219,7 +219,7 @@ export function CombatTab({
             <div
                 className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
             >
-                {shouldRenderTopRollBar && userRole === "GM" && showDiceRoller && (
+                {shouldRenderTopRollBar && showDiceRoller && (
                     <div className={`combat-top-strip is-open`}>
                         <div className="combat-dice-integrated animate-reveal">
 
@@ -237,7 +237,7 @@ export function CombatTab({
                                     targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
                                     challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
                                     disabled={false}
-                                    controlsHidden={!challengeMode && !!(state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive}
+                                    controlsHidden={userRole !== "GM" && !challengeMode && !!(state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive}
                                     soundSettings={state.soundSettings}
                                     currentTurnActorId={currentTurnActorId}
                                 />

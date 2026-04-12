@@ -66,6 +66,11 @@ export function DamageResolutionModal({
     const [markedPhysical, setMarkedPhysical] = useState<Set<number>>(new Set());
     const [markedMental, setMarkedMental] = useState<Set<number>>(new Set());
     const [consequenceTexts, setConsequenceTexts] = useState<Record<string, string>>({});
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Reset state whenever a new damage resolution opens
     useEffect(() => {
@@ -122,7 +127,7 @@ export function DamageResolutionModal({
     const overAbsorbed = remainingDamage < 0;
     const canConfirm = remainingDamage === 0;
 
-    if (!isOpen || !defender || typeof window === "undefined") return null;
+    if (!mounted || !isOpen || !defender) return null;
 
     const togglePhysical = (idx: number) => {
         if (defender.stress.physical[idx]) return;
@@ -381,12 +386,12 @@ export function DamageResolutionModal({
                     .dmg-modal-overlay {
                         position: fixed;
                         top: 0; left: 0; right: 0; bottom: 0;
-                        background: rgba(0, 0, 0, 0.88);
+                        background: rgba(0, 0, 0, 0.92);
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        z-index: 2147483646;
-                        backdrop-filter: blur(3px);
+                        z-index: 999999999;
+                        backdrop-filter: blur(8px);
                     }
 
                     .dmg-modal {

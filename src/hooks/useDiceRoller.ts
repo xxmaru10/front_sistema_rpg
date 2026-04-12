@@ -209,8 +209,11 @@ export function useDiceRoller({
         setTargetIds([]);
 
         const isTargetRolling = activeChar?.id === stateTargetId || charId === stateTargetId;
+        console.log("🎲 [useDiceRoller] finishRoll eval:", { isReaction, isTargetRolling, actionType, lastAttackTotal, stateTargetId, charId, activeCharId: activeChar?.id });
+
         if (isReaction && isTargetRolling && actionType === "DEFEND" && lastAttackTotal !== undefined) {
             const result = lastAttackTotal - (event.payload as any).total;
+            console.log("🎲 [useDiceRoller] Dispatching COMBAT_OUTCOME!", { lastAttackTotal, defenseTotal: (event.payload as any).total, result });
             const absoluteResult = Math.abs(result);
             const outcomeMessage = result > 0
                 ? `ATAQUE VENCEU POR ${absoluteResult}!`

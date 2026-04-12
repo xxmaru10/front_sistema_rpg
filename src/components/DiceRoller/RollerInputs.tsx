@@ -107,6 +107,13 @@ export function RollerInputs({
         setInteractionStep(1);
     }, [selectedCharId]);
 
+    // Defender skips the action selection and jumps straight to Bonus
+    useEffect(() => {
+        if (actionType === "DEFEND" && interactionStep < 2) {
+            setInteractionStep(2);
+        }
+    }, [actionType, interactionStep]);
+
     useEffect(() => {
         if (interactionStep === 4) {
             const hasValidItems = allItems.filter(i => i.name && i.bonus > 0).length > 0;

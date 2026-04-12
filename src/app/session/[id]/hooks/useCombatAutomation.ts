@@ -87,8 +87,13 @@ export function useCombatAutomation({
 
     combatOutcomeHandlerRef.current = (event: ActionEvent) => {
         if (event.type !== "COMBAT_OUTCOME") return;
+        console.log("🔥 [useCombatAutomation] COMBAT_OUTCOME RECEIVED:", event);
         const raw = Number((event.payload as any)?.result);
-        if (!Number.isFinite(raw) || raw <= 0) return;
+        console.log("🔥 [useCombatAutomation] Parsed raw result:", raw);
+        if (!Number.isFinite(raw) || raw <= 0) {
+            console.log("🔥 [useCombatAutomation] Aborting because raw <= 0 or not finite.");
+            return;
+        }
         if (processedOutcomeIds.current.has(event.id)) return;
 
         const defenderId = String((event.payload as any).defenderId || "");
@@ -106,10 +111,12 @@ export function useCombatAutomation({
         }
 
         if (isCharacterEliminated(defender)) {
+            console.log("🔥 [useCombatAutomation] Aborting because defender is already eliminated.");
             processedOutcomeIds.current.add(event.id);
             return;
         }
 
+        console.log("🔥 [useCombatAutomation] SETTING PENDING DAMAGE FOR:", defender.name, "| Damage:", raw);
         processedOutcomeIds.current.add(event.id);
         const track =
             (event.payload as { track?: "PHYSICAL" | "MENTAL" }).track ||
