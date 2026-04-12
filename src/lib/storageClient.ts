@@ -1,11 +1,22 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 const S3_BASE = `https://rpg-platform-free-assets-306337361114.s3.us-east-1.amazonaws.com`;
 
+
 export function getPublicUrl(path: string): string {
   if (!path) return '';
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http')) {
+    // Already absolute URL — check if it's an S3 URL and proxy it
+    if (path.includes('s3.amazonaws.com') || path.includes('s3.us-east-1.amazonaws.com')) {
+      // Extract the key from the S3 URL
+      const match = path.match(/amazonaws\.com\/(.+)$/);
+      if (match) {
+        return `${API_BASE}/api/storage/file/${match[1]}`;
+      }
+    }
+    return path;
+  }
   if (path.startsWith('/audio/')) return path;
-  return `${S3_BASE}/campaign-uploads/${path}`;
+  return `${API_BASE}/api/storage/file/campaign-uploads/${path}`;
 }
 
 export async function listFiles(path: string = ''): Promise<{
