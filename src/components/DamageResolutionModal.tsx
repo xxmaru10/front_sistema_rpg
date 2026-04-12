@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Character } from "@/types/domain";
 import { Shield, Swords, Skull, AlertTriangle } from "lucide-react";
@@ -63,15 +63,9 @@ export function DamageResolutionModal({
     onAutoCalculate,
     onSkip,
 }: DamageResolutionModalProps) {
-    const [mounted, setMounted] = useState(false);
     const [markedPhysical, setMarkedPhysical] = useState<Set<number>>(new Set());
     const [markedMental, setMarkedMental] = useState<Set<number>>(new Set());
     const [consequenceTexts, setConsequenceTexts] = useState<Record<string, string>>({});
-
-    useLayoutEffect(() => {
-        setMounted(true);
-        return () => setMounted(false);
-    }, []);
 
     // Reset state whenever a new damage resolution opens
     useEffect(() => {
@@ -128,7 +122,7 @@ export function DamageResolutionModal({
     const overAbsorbed = remainingDamage < 0;
     const canConfirm = remainingDamage === 0;
 
-    if (!isOpen || !mounted || !defender) return null;
+    if (!isOpen || !defender || typeof window === "undefined") return null;
 
     const togglePhysical = (idx: number) => {
         if (defender.stress.physical[idx]) return;
