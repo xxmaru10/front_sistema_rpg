@@ -47,6 +47,8 @@ export function useSessionDerivations({
     currentTurnActorId,
     deathFocusCharId,
     combatStartTimeRef,
+}: UseSessionDerivationsParams) {
+
     const state = useMemo(() => {
         const sorted = [...events].sort((a, b) => {
             const seqA = a.seq || 0;
