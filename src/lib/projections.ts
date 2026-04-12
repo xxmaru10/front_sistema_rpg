@@ -255,13 +255,17 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 };
             }
 
+            // Se o slot estava marcado como removido, restaurá-lo ao receber texto
+            const removedDefaultSlots = (char.removedDefaultSlots || []).filter(s => s !== payload.slot);
+
             return {
                 ...state,
                 characters: {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        consequences: nextConsequences
+                        consequences: nextConsequences,
+                        removedDefaultSlots,
                     }
                 }
             };
@@ -274,13 +278,21 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const newConsequences = { ...char.consequences };
             delete newConsequences[payload.slot];
 
+            // Se for um slot padrão, registrar como removido para que suma da UI
+            const DEFAULT_CONSEQUENCE_SLOTS = ["mild", "mild2", "moderate", "severe"];
+            const removedDefaultSlots = [...(char.removedDefaultSlots || [])];
+            if (DEFAULT_CONSEQUENCE_SLOTS.includes(payload.slot) && !removedDefaultSlots.includes(payload.slot)) {
+                removedDefaultSlots.push(payload.slot);
+            }
+
             return {
                 ...state,
                 characters: {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        consequences: newConsequences
+                        consequences: newConsequences,
+                        removedDefaultSlots,
                     }
                 }
             };

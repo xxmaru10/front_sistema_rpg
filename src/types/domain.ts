@@ -169,6 +169,7 @@ export type Character = {
   impulseArrows?: number;
   linkedNotes?: EntityNote[];
   religionId?: string;
+  removedDefaultSlots?: string[]; // Slots padrão (mild/moderate/severe) removidos pelo mestre
 };
 
 // Aspect State

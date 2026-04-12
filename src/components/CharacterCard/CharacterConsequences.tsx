@@ -43,15 +43,16 @@ export function CharacterConsequences({
 }: CharacterConsequencesProps) {
     const canEdit = canEditConsequences ?? isGM;
     const defaultSlots = ["mild", "moderate", "severe"];
+    const removedDefaults = character.removedDefaultSlots || [];
     const allKeys = new Set<string>();
-    
-    // Se o personagem não tem NENHUMA consequência definida no estado, mostramos as padrão inicialmente.
-    // Assim que o mestre adiciona ou remove, o estado domina a visualização (permitindo remover caixas).
-    const hasAnyKeys = character.consequences && Object.keys(character.consequences).length > 0;
-    
-    if (!hasAnyKeys) {
-        defaultSlots.forEach((slot) => allKeys.add(slot));
-    } else {
+
+    // Sempre mostrar os slots padrão, exceto os explicitamente removidos pelo mestre
+    defaultSlots.forEach((slot) => {
+        if (!removedDefaults.includes(slot)) allKeys.add(slot);
+    });
+
+    // Adicionar slots preenchidos (incluindo extras como mild_abc123)
+    if (character.consequences) {
         Object.keys(character.consequences).forEach((k) => allKeys.add(k));
     }
 

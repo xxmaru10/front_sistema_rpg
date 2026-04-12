@@ -217,9 +217,9 @@ export function CombatTab({
     }, [isThreatDrawerOpen, threatDrawerCards]);
 
     return (
-        <div className="combat-display animate-reveal">
-            {userRole === "GM" && (
-                <div className="gm-sidebar-vertical">
+        <>
+        {userRole === "GM" && (
+            <div className="gm-sidebar-vertical">
                     <button
                         className="gm-sidebar-btn"
                         onClick={onSummonAlly}
@@ -265,8 +265,7 @@ export function CombatTab({
                 </div>
             )}
 
-
-
+        <div className="combat-display animate-reveal">
             <div
                 className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
             >
@@ -706,5 +705,8 @@ export function CombatTab({
                 </div>
             </div>
         </div>
+        </>
     );
 }
+
+

@@ -360,6 +360,7 @@ export default function SessionPage() {
     useEffect(() => {
         const showBg = activeTab === "combat"
             && !!headerImageUrl
+            && !deathFocusCharId
             && !videoStream
             && !state.battlemap?.isActive;
 
@@ -377,7 +378,7 @@ export default function SessionPage() {
             document.body.style.backgroundAttachment = "";
             document.body.style.backgroundRepeat = "";
         }
-    }, [activeTab, headerImageUrl, videoStream, state.battlemap?.isActive]);
+    }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive]);
 
     // ─── Gerencia Google Fonts + theme-preset-css via efeito ───────────────────
     // Antes era um IIFE no JSX: executava a cada render → re-fazia download do .woff2
