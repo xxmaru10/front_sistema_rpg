@@ -130,6 +130,7 @@ export function DamageResolutionModal({
     }, [defender, damage, markedPhysical, markedMental, consequenceTexts, orderedSlots]);
 
     const hasAvailableSlots = useMemo(() => {
+        if (!defender) return false;
         return orderedSlots.some(slot => {
             const existing = defender.consequences && defender.consequences[slot];
             const hasExisting = existing?.text?.trim().length ? true : false;
