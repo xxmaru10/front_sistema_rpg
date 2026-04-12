@@ -91,9 +91,9 @@
 
 /* ── GM Sidebar Vertical ─────────────────────────────────────────────────── */
 .gm-sidebar-vertical {
-    position: absolute;
+    position: fixed;
     left: 10px;
-    top: 8px;
+    top: 80px;
     z-index: 120;
     display: flex;
     flex-direction: column;

@@ -430,7 +430,7 @@ export function TurnOrderTracker({
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
-                    margin-bottom: 40px;
+                    margin-bottom: 10px;
                     margin-top: -8px;
                 }
 
@@ -656,7 +656,7 @@ export function TurnOrderTracker({
                     justify-content: center;
                     gap: 10px;
                     z-index: 30;
-                    margin-top: 20px;
+                    margin-top: 6px;
                     margin-bottom: 4px;
                 }
 

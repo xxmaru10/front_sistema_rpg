@@ -39,7 +39,7 @@ export function ConsequenceModal({
     if (!isOpen || !mounted) return null;
 
     return createPortal(
-        <div className="consequence-modal-overlay" onClick={onCancel}>
+        <div className="consequence-modal-overlay" onClick={onCancel} style={{ zIndex: 2147483647 }}>
             <div className="consequence-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <span className="modal-symbol">🜊</span>

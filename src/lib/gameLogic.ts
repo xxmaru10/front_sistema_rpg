@@ -59,7 +59,11 @@ export function calculateAbsorption(
 
     // Preferred check order
     const slotsOrder = ["mild", "mild2", "moderate", "severe", "extreme"];
-    const characterSlots = Object.keys(character.consequences);
+    // Inclui slots padrão mesmo que consequences esteja vazio (igual ao DamageResolutionModal)
+    const defaultSlots = ["mild", "moderate", "severe"];
+    const consequenceKeys = Object.keys(character.consequences || {});
+    const mergedKeys = new Set([...defaultSlots, ...consequenceKeys]);
+    const characterSlots = Array.from(mergedKeys);
 
     const availableSlots = characterSlots.filter(slot => {
         const data = character.consequences[slot];

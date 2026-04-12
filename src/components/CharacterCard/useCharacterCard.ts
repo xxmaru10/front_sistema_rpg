@@ -333,8 +333,14 @@ export function useCharacterCard({
 
     const handleAddConsequence = (type: "mild" | "moderate" | "severe") => {
         const uniqueId = `${type}_${uuidv4().slice(0, 8)}`;
-        handleConsequenceChange(uniqueId, " ");
         setShowAddConsequenceModal(false);
+        // Abre o modal de edição diretamente para o novo slot (evita emitir " " que seria trimado e deletado pela projeção)
+        setConsequenceModal({
+            slot: uniqueId,
+            current: "",
+            debuffSkill: "",
+            debuffValue: 0,
+        });
     };
 
     const handleDeleteConsequence = (slot: string, e: React.MouseEvent) => {
