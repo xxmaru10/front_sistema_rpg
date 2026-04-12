@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { listFiles, uploadToPath, deleteFile, moveFile, createFolder, getPublicUrl } from "@/lib/storageClient";
 
 export const BUCKET_NAME = "campaign-uploads";
 
@@ -33,59 +33,31 @@ export function useFileSystem() {
         return name.replace(/[^a-zA-Z0-9.\-_]/g, '_').replace(/_{2,}/g, '_');
     };
 
-    const listAllInPath = async (path: string) => {
-        let results: string[] = [];
-        const { data, error } = await supabase.storage.from(BUCKET_NAME).list(path, { limit: 1000 });
-        if (error || !data) return results;
-
-        for (const item of data) {
-            const fullPath = path ? `${path}/${item.name}` : item.name;
-            if (item.id) { // It's a file
-                results.push(fullPath);
-            } else { // It's a folder
-                const subResults = await listAllInPath(fullPath);
-                results = [...results, ...subResults];
-            }
+    const listAllInPath = async (path: string): Promise<string[]> => {
+        const { files, folders } = await listFiles(path);
+        let results: string[] = files.map((f: any) =>
+          path ? `${path}/${f.name}` : f.name
+        );
+        for (const folder of folders) {
+          const fullPath = path ? `${path}/${folder}` : folder;
+          const subResults = await listAllInPath(fullPath);
+          results = [...results, ...subResults];
         }
         return results;
-    };
+      };
 
-    const fetchContent = useCallback(async () => {
+      const fetchContent = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .storage
-                .from(BUCKET_NAME)
-                .list(currentPath, {
-                    limit: 100,
-                    offset: 0,
-                    sortBy: { column: 'name', order: 'asc' },
-                });
-
-            if (error) {
-                console.error("Error fetching files:", error);
-                return;
-            }
-
-            const detectedFolders: string[] = [];
-            const detectedFiles: FileItem[] = [];
-
-            data?.forEach((item: any) => {
-                if (!item.id) {
-                    detectedFolders.push(item.name);
-                } else {
-                    detectedFiles.push(item);
-                }
-            });
-
-            setFolders(detectedFolders);
-            setFiles(detectedFiles);
+          const { files: rawFiles, folders: rawFolders } = await listFiles(currentPath);
+          setFolders(rawFolders);
+          setFiles(rawFiles);
         } catch (err) {
-            console.error("Unexpected error:", err);
+          console.error('Error fetching files:', err);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    }, [currentPath]);
+      }, [currentPath]);
 
     useEffect(() => {
         fetchContent();
@@ -95,174 +67,148 @@ export function useFileSystem() {
         if (!e.target.files || e.target.files.length === 0) return;
         setUploading(true);
         const file = e.target.files[0];
-        const sanitizedName = sanitize(file.name);
-        const filePath = currentPath ? `${currentPath}/${sanitizedName}` : sanitizedName;
         try {
-            const { error } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file, { cacheControl: '3600', upsert: false });
-            if (error) throw error;
-            fetchContent();
-            if (onComplete) onComplete();
+          await uploadToPath(file, currentPath);
+          fetchContent();
+          if (onComplete) onComplete();
         } catch (error: any) {
-            alert("Erro ao enviar arquivo: " + error.message);
+          alert('Erro ao enviar arquivo: ' + error.message);
         } finally {
-            setUploading(false);
-            e.target.value = "";
+          setUploading(false);
+          e.target.value = '';
         }
-    };
+      };
 
-    const handleCreateFolder = async () => {
+      const handleCreateFolder = async () => {
         if (!newFolderName.trim()) return;
         const sanitizedFolder = sanitize(newFolderName.trim());
         const folderPath = currentPath ? `${currentPath}/${sanitizedFolder}` : sanitizedFolder;
-        const dummyPath = `${folderPath}/.emptyFolderPlaceholder`;
         setUploading(true);
         try {
-            const blob = new Blob([""], { type: "text/plain" });
-            const { error } = await supabase.storage.from(BUCKET_NAME).upload(dummyPath, blob);
-            if (error) throw error;
-            setNewFolderName("");
-            setShowNewFolderInput(false);
-            fetchContent();
+          await createFolder(folderPath);
+          setNewFolderName('');
+          setShowNewFolderInput(false);
+          fetchContent();
         } catch (error: any) {
-            alert("Erro ao criar pasta: " + error.message);
+          alert('Erro ao criar pasta: ' + error.message);
         } finally {
-            setUploading(false);
+          setUploading(false);
         }
-    };
+      };
 
-    const handleFileDelete = async (fileName: string, onComplete?: () => void) => {
+      const handleFileDelete = async (fileName: string, onComplete?: () => void) => {
         if (!confirm(`Tem certeza que deseja deletar "${fileName}"?`)) return;
         const filePath = currentPath ? `${currentPath}/${fileName}` : fileName;
         setLoading(true);
         try {
-            const { error } = await supabase.storage.from(BUCKET_NAME).remove([filePath]);
-            if (error) throw error;
-            fetchContent();
-            if (onComplete) onComplete();
+          await deleteFile(filePath);
+          fetchContent();
+          if (onComplete) onComplete();
         } catch (error: any) {
-            alert("Erro ao deletar: " + error.message);
+          alert('Erro ao deletar: ' + error.message);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
 
-    const handleFolderDelete = async (folderName: string, onComplete?: () => void) => {
+      const handleFolderDelete = async (folderName: string, onComplete?: () => void) => {
         if (!confirm(`Tem certeza que deseja deletar a pasta "${folderName}" e TODO o seu conteúdo?`)) return;
         const folderPath = currentPath ? `${currentPath}/${folderName}` : folderName;
         setLoading(true);
         try {
-            const allFiles = await listAllInPath(folderPath);
-            if (allFiles.length > 0) {
-                const { error } = await supabase.storage.from(BUCKET_NAME).remove(allFiles);
-                if (error) throw error;
-            }
-            await supabase.storage.from(BUCKET_NAME).remove([`${folderPath}/.emptyFolderPlaceholder`]);
-            fetchContent();
-            if (onComplete) onComplete();
+          const allFiles = await listAllInPath(folderPath);
+          for (const filePath of allFiles) {
+            await deleteFile(filePath);
+          }
+          fetchContent();
+          if (onComplete) onComplete();
         } catch (error: any) {
-            alert("Erro ao deletar pasta: " + error.message);
+          alert('Erro ao deletar pasta: ' + error.message);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
 
-    const handlePaste = async (onComplete?: () => void) => {
+      const handlePaste = async (onComplete?: () => void) => {
         if (!movingItem) return;
-
-        if (movingItem.isFolder && (currentPath === movingItem.path || currentPath.startsWith(movingItem.path + "/"))) {
-            alert("Não é possível mover uma pasta para dentro dela mesma ou de uma subpasta sua!");
-            setMovingItem(null);
-            return;
+      
+        if (movingItem.isFolder && (
+          currentPath === movingItem.path ||
+          currentPath.startsWith(movingItem.path + '/')
+        )) {
+          alert('Não é possível mover uma pasta para dentro dela mesma!');
+          setMovingItem(null);
+          return;
         }
-
+      
         setLoading(true);
         try {
-            const destPath = currentPath ? `${currentPath}/${movingItem.name}` : movingItem.name;
-            
-            if (destPath === movingItem.path) {
-                setMovingItem(null);
-                setLoading(false);
-                return;
+          const destPath = currentPath ? `${currentPath}/${movingItem.name}` : movingItem.name;
+          if (destPath === movingItem.path) { setMovingItem(null); return; }
+      
+          if (movingItem.isFolder) {
+            const allFiles = await listAllInPath(movingItem.path);
+            for (const filePath of allFiles) {
+              const relativePath = filePath.slice(movingItem.path.length);
+              await moveFile(filePath, destPath + relativePath);
             }
-
-            if (movingItem.isFolder) {
-                const allFiles = await listAllInPath(movingItem.path);
-                for (const file of allFiles) {
-                    const relativePath = file.slice(movingItem.path.length);
-                    const targetPath = destPath + relativePath;
-                    await supabase.storage.from(BUCKET_NAME).move(file, targetPath);
-                }
-            } else {
-                const { error } = await supabase.storage.from(BUCKET_NAME).move(movingItem.path, destPath);
-                if (error) throw error;
-            }
-            
-            setMovingItem(null);
-            fetchContent();
-            if (onComplete) onComplete();
+          } else {
+            await moveFile(movingItem.path, destPath);
+          }
+      
+          setMovingItem(null);
+          fetchContent();
+          if (onComplete) onComplete();
         } catch (error: any) {
-            alert("Erro ao mover: " + error.message);
+          alert('Erro ao mover: ' + error.message);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
+      
 
-    const handleRename = async (oldName: string, isFolder: boolean, onComplete?: () => void) => {
+      const handleRename = async (oldName: string, isFolder: boolean, onComplete?: () => void) => {
         const newName = prompt(`Novo nome para "${oldName}":`, oldName);
         if (!newName || newName === oldName) return;
-        
         const sanitizedNew = sanitize(newName);
         const oldPath = currentPath ? `${currentPath}/${oldName}` : oldName;
         const newPath = currentPath ? `${currentPath}/${sanitizedNew}` : sanitizedNew;
-        
         setLoading(true);
         try {
-            if (isFolder) {
-                const allFiles = await listAllInPath(oldPath);
-                for (const file of allFiles) {
-                    const relativePath = file.slice(oldPath.length);
-                    const targetPath = newPath + relativePath;
-                    await supabase.storage.from(BUCKET_NAME).move(file, targetPath);
-                }
-            } else {
-                const { error } = await supabase.storage.from(BUCKET_NAME).move(oldPath, newPath);
-                if (error) throw error;
+          if (isFolder) {
+            const allFiles = await listAllInPath(oldPath);
+            for (const filePath of allFiles) {
+              const relativePath = filePath.slice(oldPath.length);
+              await moveFile(filePath, newPath + relativePath);
             }
-            fetchContent();
-            if (onComplete) onComplete();
+          } else {
+            await moveFile(oldPath, newPath);
+          }
+          fetchContent();
+          if (onComplete) onComplete();
         } catch (error: any) {
-            alert("Erro ao renomear: " + error.message);
+          alert('Erro ao renomear: ' + error.message);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
 
-    const getPublicUrl = (fileName: string) => {
+      const getPublicUrlForFile = (fileName: string) => {
         const filePath = currentPath ? `${currentPath}/${fileName}` : fileName;
-        const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-        return data.publicUrl;
-    };
+        return getPublicUrl(filePath);
+      };
 
-    return {
-        currentPath,
-        setCurrentPath,
-        files,
-        folders,
-        loading,
-        uploading,
-        movingItem,
-        setMovingItem,
-        showNewFolderInput,
-        setShowNewFolderInput,
-        newFolderName,
-        setNewFolderName,
-        handleUpload,
-        handleCreateFolder,
-        handleFileDelete,
-        handleFolderDelete,
-        handlePaste,
-        handleRename,
-        getPublicUrl,
-        fetchContent
-    };
+      return {
+        currentPath, setCurrentPath,
+        files, folders,
+        loading, uploading,
+        movingItem, setMovingItem,
+        showNewFolderInput, setShowNewFolderInput,
+        newFolderName, setNewFolderName,
+        handleUpload, handleCreateFolder,
+        handleFileDelete, handleFolderDelete,
+        handlePaste, handleRename,
+        getPublicUrl: getPublicUrlForFile,
+        fetchContent,
+      };
 }

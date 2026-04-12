@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { listFiles, getPublicUrl } from "@/lib/storageClient";
 
 const isYouTubeUrl = (url: string) =>
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
@@ -45,7 +45,6 @@ declare global {
     }
 }
 
-const BUCKET_NAME = "campaign-uploads";
 
 export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -152,57 +151,43 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             const newPlaylists: Record<string, string[]> = {};
 
             const scanFoldersRecursive = async (path: string) => {
-                const { data: items, error } = await supabase
-                    .storage
-                    .from(BUCKET_NAME)
-                    .list(path, { limit: 1000 });
+                const { files, folders } = await listFiles(path);
+                let allTracks: string[] = [];
 
-                if (error || !items) return [];
-
-                let allTracksInThisPath: string[] = [];
-                const subFolders: string[] = [];
-
-                for (const item of items) {
-                    const fullPath = path ? `${path}/${item.name}` : item.name;
-                    if (item.id) {
-                        if (isAudioFile(item.name)) {
-                            allTracksInThisPath.push(fullPath);
-                        }
-                    } else {
-                        subFolders.push(fullPath);
+                for (const file of files) {
+                    if (isAudioFile(file.name)) {
+                        allTracks.push(path ? `${path}/${file.name}` : file.name);
                     }
                 }
-
-                const subFolderResults = await Promise.all(subFolders.map(scanFoldersRecursive));
-                for (const subTracks of subFolderResults) {
-                    allTracksInThisPath = [...allTracksInThisPath, ...subTracks];
+                for (const folder of folders) {
+                    const fullPath = path ? `${path}/${folder}` : folder;
+                    const subTracks = await scanFoldersRecursive(fullPath);
+                    allTracks = [...allTracks, ...subTracks];
                 }
 
-                if (allTracksInThisPath.length > 0) {
-                    newPlaylists[path || "Geral"] = allTracksInThisPath;
+                if (allTracks.length > 0) {
+                    newPlaylists[path || 'Geral'] = allTracks;
                 }
-
-                return allTracksInThisPath;
+                return allTracks;
             };
 
-            await scanFoldersRecursive("");
+            await scanFoldersRecursive('');
 
             const playlistArray: Playlist[] = Object.entries(newPlaylists)
                 .map(([name, tracks]) => ({ name, tracks }))
                 .filter(p => p.tracks.length > 0)
                 .sort((a, b) => {
-                    if (a.name === "Geral") return -1;
-                    if (b.name === "Geral") return 1;
+                    if (a.name === 'Geral') return -1;
+                    if (b.name === 'Geral') return 1;
                     return a.name.localeCompare(b.name);
                 });
 
             setPlaylists(playlistArray);
-
             if (playlistArray.length > 0 && !activePlaylist) {
                 setActivePlaylist(playlistArray[0].name);
             }
         } catch (err) {
-            console.error("Error fetching playlists:", err);
+            console.error('Error fetching playlists:', err);
         } finally {
             setLoading(false);
         }
@@ -210,11 +195,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const isAudioFile = (name: string) => name.match(/\.(mp3|wav|ogg|m4a|aac)$/i);
 
-    const getSupabaseUrl = useCallback((path: string) => {
-        if (!path) return "";
-        if (path.startsWith("/audio/")) return path;
-        const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-        return data.publicUrl;
+    const getUrl = useCallback((path: string) => {
+        return getPublicUrl(path);
     }, []);
 
     useEffect(() => {
@@ -367,7 +349,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         snapshotInitRef.current = false;
         const unsubscribe = globalEventStore.subscribe((event: any) => {
             if (event.type === "SFX_TRIGGERED") {
-                const sfxUrl = getSupabaseUrl(event.payload.url);
+                const sfxUrl = getUrl(event.payload.url);
                 if (sfxUrl) {
                     const sfx = new Audio(sfxUrl);
                     sfx.volume = isMutedRef.current ? 0 : volumeRef.current;
@@ -412,7 +394,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                     setCurrentTrack(url);
                     setIsPlaying(playing);
                     setIsLooping(loop);
-                    
+
                     if (playing && event.payload.startedAt) {
                         const elapsed = (Date.now() - new Date(event.payload.startedAt).getTime()) / 1000;
                         if (isYouTubePlayerAttached() && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
@@ -435,7 +417,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         }
                     } catch (_) { }
 
-                    const fullUrl = getSupabaseUrl(url);
+                    const fullUrl = getUrl(url);
 
                     if (audioRef.current.src !== fullUrl && url) {
                         audioRef.current.src = fullUrl;
@@ -498,111 +480,111 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                 }
             }
         },
-        (bulkEvents) => {
-            // O bulk listener é chamado a cada novo evento do jogo — só restaurar snapshot UMA vez por sessão
-            if (snapshotInitRef.current) return;
-            snapshotInitRef.current = true;
+            (bulkEvents) => {
+                // O bulk listener é chamado a cada novo evento do jogo — só restaurar snapshot UMA vez por sessão
+                if (snapshotInitRef.current) return;
+                snapshotInitRef.current = true;
 
-            // Se já recebemos estado ao-vivo, nunca sobrepor com snapshot.
-            if (sawLiveMusicEventRef.current) return;
-            if (currentTrackRef.current) return;
+                // Se já recebemos estado ao-vivo, nunca sobrepor com snapshot.
+                if (sawLiveMusicEventRef.current) return;
+                if (currentTrackRef.current) return;
 
-            // Evento delta tem prioridade sobre snapshot (inclui startedAt para sync)
-            const lastDeltaMusic = [...bulkEvents]
-                .filter((e: any) => e.type === "MUSIC_PLAYBACK_CHANGED" && !e.payload?.isTemporary)
-                .pop() as any;
+                // Evento delta tem prioridade sobre snapshot (inclui startedAt para sync)
+                const lastDeltaMusic = [...bulkEvents]
+                    .filter((e: any) => e.type === "MUSIC_PLAYBACK_CHANGED" && !e.payload?.isTemporary)
+                    .pop() as any;
 
-            if (lastDeltaMusic) {
-                const eventSeq = Number(lastDeltaMusic.seq || 0);
-                if (eventSeq > 0) {
-                    lastMusicSeqRef.current = eventSeq;
-                }
-                const eventTs = new Date(lastDeltaMusic.createdAt || 0).getTime();
-                if (Number.isFinite(eventTs) && eventTs > 0) {
-                    lastMusicEventTsRef.current = eventTs;
-                }
+                if (lastDeltaMusic) {
+                    const eventSeq = Number(lastDeltaMusic.seq || 0);
+                    if (eventSeq > 0) {
+                        lastMusicSeqRef.current = eventSeq;
+                    }
+                    const eventTs = new Date(lastDeltaMusic.createdAt || 0).getTime();
+                    if (Number.isFinite(eventTs) && eventTs > 0) {
+                        lastMusicEventTsRef.current = eventTs;
+                    }
 
-                const payload = lastDeltaMusic.payload || {};
-                const url = normalizeYouTubeUrl(payload.url || "");
-                const playing = !!payload.playing;
-                const loop = payload.loop ?? true;
+                    const payload = lastDeltaMusic.payload || {};
+                    const url = normalizeYouTubeUrl(payload.url || "");
+                    const playing = !!payload.playing;
+                    const loop = payload.loop ?? true;
 
-                if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
-                    console.warn("[MusicPlayer] Ignoring non-playable YouTube URL from bulk:", url);
+                    if (isYouTubeUrl(url) && !isPlayableYouTubeUrl(url)) {
+                        console.warn("[MusicPlayer] Ignoring non-playable YouTube URL from bulk:", url);
+                        return;
+                    }
+
+                    if (isPlayableYouTubeUrl(url)) {
+                        if (audioRef.current) {
+                            audioRef.current.pause();
+                            audioRef.current.currentTime = 0;
+                            audioRef.current.removeAttribute("src");
+                        }
+                        setCurrentTrack(url);
+                        setIsPlaying(playing);
+                        setIsLooping(loop);
+
+                        if (playing && payload.startedAt) {
+                            const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
+                            if (isYouTubePlayerAttached() && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+                                ytPlayerRef.current.seekTo(elapsed, true);
+                            } else {
+                                pendingSeekRef.current = elapsed;
+                            }
+                        }
+                    } else {
+                        setCurrentTrack(url);
+                        setIsPlaying(playing);
+                        setIsLooping(loop);
+                        if (audioRef.current) {
+                            try {
+                                if (isYouTubePlayerAttached()) {
+                                    ytPlayerRef.current?.pauseVideo?.();
+                                    ytPlayerRef.current?.stopVideo?.();
+                                }
+                            } catch (_) { }
+
+                            const fullUrl = getUrl(url);
+                            if (audioRef.current.src !== fullUrl && url) {
+                                audioRef.current.src = fullUrl;
+                                audioRef.current.load();
+                            }
+
+                            if (playing) {
+                                if (payload.startedAt) {
+                                    const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
+                                    if (Math.abs(audioRef.current.currentTime - elapsed) > 2) {
+                                        audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
+                                    }
+                                }
+                                audioRef.current.play().catch((e) => console.warn("Autoplay blocked on bulk music restore:", e));
+                            } else {
+                                audioRef.current.pause();
+                            }
+                            audioRef.current.loop = loop;
+                        }
+                    }
+
+                    isTemporaryRef.current = !!payload.isTemporary;
+                    restoreUrlRef.current = payload.restoreUrl || "";
+                    restoreLoopRef.current = payload.restoreLoop ?? true;
                     return;
                 }
 
-                if (isPlayableYouTubeUrl(url)) {
-                    if (audioRef.current) {
-                        audioRef.current.pause();
-                        audioRef.current.currentTime = 0;
-                        audioRef.current.removeAttribute("src");
-                    }
-                    setCurrentTrack(url);
-                    setIsPlaying(playing);
-                    setIsLooping(loop);
+                const snap = globalEventStore.getSnapshotState() as any;
+                const snapMusic = snap?.currentMusic;
+                if (!snapMusic?.url) return;
 
-                    if (playing && payload.startedAt) {
-                        const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
-                        if (isYouTubePlayerAttached() && ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
-                            ytPlayerRef.current.seekTo(elapsed, true);
-                        } else {
-                            pendingSeekRef.current = elapsed;
-                        }
-                    }
-                } else {
-                    setCurrentTrack(url);
-                    setIsPlaying(playing);
-                    setIsLooping(loop);
-                    if (audioRef.current) {
-                        try {
-                            if (isYouTubePlayerAttached()) {
-                                ytPlayerRef.current?.pauseVideo?.();
-                                ytPlayerRef.current?.stopVideo?.();
-                            }
-                        } catch (_) { }
-
-                        const fullUrl = getSupabaseUrl(url);
-                        if (audioRef.current.src !== fullUrl && url) {
-                            audioRef.current.src = fullUrl;
-                            audioRef.current.load();
-                        }
-
-                        if (playing) {
-                            if (payload.startedAt) {
-                                const elapsed = (Date.now() - new Date(payload.startedAt).getTime()) / 1000;
-                                if (Math.abs(audioRef.current.currentTime - elapsed) > 2) {
-                                    audioRef.current.currentTime = elapsed % (audioRef.current.duration || 1);
-                                }
-                            }
-                            audioRef.current.play().catch((e) => console.warn("Autoplay blocked on bulk music restore:", e));
-                        } else {
-                            audioRef.current.pause();
-                        }
-                        audioRef.current.loop = loop;
-                    }
-                }
-
-                isTemporaryRef.current = !!payload.isTemporary;
-                restoreUrlRef.current = payload.restoreUrl || "";
-                restoreLoopRef.current = payload.restoreLoop ?? true;
-                return;
+                // Snapshot deve prevalecer no primeiro bootstrap da sessão para evitar
+                // reaproveitar faixa antiga local (fenômeno de autoplay "fantasma").
+                setCurrentTrack(normalizeYouTubeUrl(snapMusic.url));
+                setIsPlaying(snapMusic.playing ?? false);
+                setIsLooping(snapMusic.loop ?? true);
             }
-
-            const snap = globalEventStore.getSnapshotState() as any;
-            const snapMusic = snap?.currentMusic;
-            if (!snapMusic?.url) return;
-
-            // Snapshot deve prevalecer no primeiro bootstrap da sessão para evitar
-            // reaproveitar faixa antiga local (fenômeno de autoplay "fantasma").
-            setCurrentTrack(normalizeYouTubeUrl(snapMusic.url));
-            setIsPlaying(snapMusic.playing ?? false);
-            setIsLooping(snapMusic.loop ?? true);
-        }
         );
 
         return unsubscribe;
-    }, [sessionId, userId, userRole, getSupabaseUrl, isYouTubePlayerAttached]);
+    }, [sessionId, userId, userRole, getUrl, isYouTubePlayerAttached]);
 
     const handleTrackChange = (track: string) => {
         const normalized = normalizeYouTubeUrl(track);
@@ -738,8 +720,8 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
 
     const volumeRow = (
         <div className="control-row volume-horizontal">
-            <button 
-                onClick={() => setIsMuted(!isMuted)} 
+            <button
+                onClick={() => setIsMuted(!isMuted)}
                 className="mute-btn-premium"
                 title={isMuted ? "Unmute" : "Mute"}
             >
@@ -794,7 +776,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                         const depth = parts.length - 1;
                         const displayName = pl.name === "Geral" ? "Geral" : parts[parts.length - 1];
                         const indent = "\u00A0".repeat(depth * 3);
-                        
+
                         return (
                             <option key={pl.name} value={pl.name}>
                                 {indent}{depth > 0 ? "📁 " : ""}{displayName}
@@ -980,7 +962,7 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
                                 const depth = parts.length - 1;
                                 const displayName = pl.name === "Geral" ? "Geral" : parts[parts.length - 1];
                                 const indent = "\u00A0".repeat(depth * 3);
-                                
+
                                 return (
                                     <option key={pl.name} value={pl.name}>
                                         {indent}{depth > 0 ? "📁 " : ""}{displayName}

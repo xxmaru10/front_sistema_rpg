@@ -29,10 +29,10 @@ export const initialState: SessionState = {
 
     soundSettings: {
 
-        victory: "audio/Effects/vitoria.mp3",
-        defeat: "audio/Effects/derrota.mp3",
-        death: "audio/Effects/morte.mp3",
-        battleStart: "audio/Effects/battle_start.mp3"
+        victory: "/audio/Effects/vitoria.mp3",
+        defeat: "/audio/Effects/derrota.mp3",
+        death: "/audio/Effects/morte.mp3",
+        battleStart: "/audio/Effects/battle_start.mp3"
     },
 };
 

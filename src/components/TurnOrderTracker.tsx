@@ -4,9 +4,7 @@ import { ChevronRight, Shield, Swords, Skull, AlertTriangle } from "lucide-react
 import { isCharacterEliminated } from "@/lib/gameLogic";
 import { globalEventStore } from "@/lib/eventStore";
 
-import { supabase } from "@/lib/supabaseClient";
-
-const BUCKET_NAME = "campaign-uploads";
+import { getPublicUrl } from "@/lib/storageClient";
 
 import { TurnTimer } from "./TurnTimer";
 
@@ -39,11 +37,9 @@ const TrackerItem = ({ char, isActive, isTarget, index, itemsRef, effectType, da
     const prevEliminatedRef = useRef(isCharacterEliminated(char));
 
     const getSfxUrl = (path?: string) => {
-        if (!path) return "";
-        if (path.startsWith("http") || path.startsWith("/audio/")) return path;
-        const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-        return data.publicUrl;
-    };
+        if (!path) return '';
+        return getPublicUrl(path);
+      };
 
     // Play audio when effect appears
     useEffect(() => {

@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
-import { BUCKET_NAME } from "./useFileSystem";
+import { listFiles } from "@/lib/storageClient";
 
 export const DEFAULT_SOUND_SETTINGS = {
     victory: "/audio/Effects/vitoria.mp3",
@@ -41,24 +40,23 @@ export function useAudioSettings({ sessionId, soundSettings = {} }: UseAudioSett
         try {
             const audioFiles: string[] = [];
 
-            // 1. Fetch from Supabase Storage
-            const listAllSupabase = async (path: string = "") => {
-                const { data, error } = await supabase.storage.from(BUCKET_NAME).list(path, { limit: 100 });
-                if (error || !data) return;
-
-                for (const item of data) {
-                    const fullChildPath = path ? `${path}/${item.name}` : item.name;
-                    if (!item.id) { // Folder
-                        await listAllSupabase(fullChildPath);
-                    } else if (item.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i)) {
-                        audioFiles.push(fullChildPath);
+            const listAllS3 = async (path: string = '') => {
+                const { files, folders } = await listFiles(path);
+                for (const file of files) {
+                    const fullPath = path ? `${path}/${file.name}` : file.name;
+                    if (file.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i)) {
+                        audioFiles.push(fullPath);
                     }
+                }
+                for (const folder of folders) {
+                    const fullPath = path ? `${path}/${folder}` : folder;
+                    await listAllS3(fullPath);
                 }
             };
 
-            await listAllSupabase("");
+            await listAllS3('');
 
-            // 2. Fetch from local /api/music
+            // Also fetch from local /api/music
             try {
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
                 const res = await fetch(`${apiUrl}/api/music`);
@@ -67,54 +65,40 @@ export function useAudioSettings({ sessionId, soundSettings = {} }: UseAudioSett
                     if (data.playlists) {
                         data.playlists.forEach((pl: any) => {
                             pl.tracks.forEach((trackPath: string) => {
-                                // Add local prefix so players know it's a public asset
                                 const localUrl = `/audio/${trackPath}`;
-                                if (!audioFiles.includes(localUrl)) {
-                                    audioFiles.push(localUrl);
-                                }
+                                if (!audioFiles.includes(localUrl)) audioFiles.push(localUrl);
                             });
                         });
                     }
                 } else {
-                    // Fallback
-                    const defaultAudios = [
-                        '/audio/Effects/vitoria.mp3',
-                        '/audio/Effects/derrota.mp3',
-                        '/audio/Effects/morte.mp3',
-                        '/audio/Effects/battle_start.mp3',
-                        '/audio/Effects/atack.MP3',
-                        '/audio/Effects/defesa.MP3',
-                        '/audio/Effects/dados.MP3',
-                        '/audio/Effects/transicao_retrato.MP3'
-                    ];
-                    defaultAudios.forEach(url => {
-                        if (!audioFiles.includes(url)) audioFiles.push(url);
-                    });
+                    addDefaultAudios(audioFiles);
                 }
-            } catch (e) {
-                console.warn("Failed to fetch local audio:", e);
-                const defaultAudios = [
-                    '/audio/Effects/vitoria.mp3',
-                    '/audio/Effects/derrota.mp3',
-                    '/audio/Effects/morte.mp3',
-                    '/audio/Effects/battle_start.mp3',
-                    '/audio/Effects/atack.MP3',
-                    '/audio/Effects/defesa.MP3',
-                    '/audio/Effects/dados.MP3',
-                    '/audio/Effects/transicao_retrato.MP3'
-                ];
-                defaultAudios.forEach(url => {
-                    if (!audioFiles.includes(url)) audioFiles.push(url);
-                });
+            } catch {
+                addDefaultAudios(audioFiles);
             }
 
             setAllAudioFiles(audioFiles.sort((a, b) => a.localeCompare(b)));
         } catch (e) {
-            console.error("Error fetching all audio:", e);
+            console.error('Error fetching all audio:', e);
         } finally {
             setFetchingAudio(false);
         }
     }, []);
+
+
+    const addDefaultAudios = (audioFiles: string[]) => {
+        const defaults = [
+            '/audio/Effects/vitoria.mp3',
+            '/audio/Effects/derrota.mp3',
+            '/audio/Effects/morte.mp3',
+            '/audio/Effects/battle_start.mp3',
+            '/audio/Effects/atack.MP3',
+            '/audio/Effects/defesa.MP3',
+            '/audio/Effects/dados.MP3',
+            '/audio/Effects/transicao_retrato.MP3',
+        ];
+        defaults.forEach(url => { if (!audioFiles.includes(url)) audioFiles.push(url); });
+    };
 
     useEffect(() => {
         fetchAllAudioFiles();
