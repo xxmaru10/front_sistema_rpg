@@ -289,6 +289,9 @@ export function RollerInputs({
     const allies = characters.filter(c => !(c.isNPC && c.arenaSide !== "HERO"));
     const enemies = characters.filter(c => c.isNPC && c.arenaSide !== "HERO");
 
+    const skillLabel = selectedSkill ? selectedSkill.toUpperCase() : "PERÍCIA";
+    const skillButtonWidth = `${Math.min(Math.max(skillLabel.length + 2, 9), 17)}ch`;
+
     return (
         <div className={`matrix-inputs flex-stagger ${isIntegrated ? "integrated" : ""}`}>
             {!fixedCharacterId && (
@@ -580,15 +583,13 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className={`icon-select-shell ${(guideEnabled && interactionStep === 3) ? 'nudge-glow' : ''}`} title="Pericia">
-                                    <span className="icon-select-face">
-                                        {selectedSkill ? (
-                                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#fff' }}>
-                                                {selectedSkill.slice(0, 3).toUpperCase()}
-                                            </span>
-                                        ) : (
-                                            <Sparkles size={16} />
-                                        )}
+                                <div
+                                    className={`icon-select-shell skill-select-shell ${(guideEnabled && interactionStep === 3) ? 'nudge-glow' : ''}`}
+                                    title="Pericia"
+                                    style={{ width: skillButtonWidth, minWidth: '72px' }}
+                                >
+                                    <span className="icon-select-face" style={{ padding: '0 8px', fontSize: '0.66rem', fontFamily: 'var(--font-header)', letterSpacing: '0.08em', fontWeight: selectedSkill ? 800 : 400, color: selectedSkill ? '#fff' : 'var(--accent-color)', whiteSpace: 'nowrap' }}>
+                                        {skillLabel}
                                     </span>
                                     <select
                                         ref={skillSelectRef}
@@ -648,7 +649,7 @@ export function RollerInputs({
                             {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
                                 <div className={`icon-select-shell ${(guideEnabled && interactionStep === 4) ? 'nudge-glow' : ''}`} title="Inventario">
-                                    <span className="icon-select-face"><Backpack size={16} /></span>
+                                    <span className="icon-select-face" style={{ fontSize: '0.66rem', fontFamily: 'var(--font-header)', letterSpacing: '0.08em', color: 'var(--accent-color)' }}>ITEM</span>
                                     <select
                                         ref={itemSelectRef}
                                         value={selectedItemId}
@@ -1590,6 +1591,14 @@ export function RollerInputs({
                 .value-btn.is-minus:hover {
                     background: #ff4444;
                     border-color: #ff4444;
+                }
+
+                /* ── Skill select shell override (expands with selected value) ── */
+                .skill-select-shell {
+                    width: auto !important;
+                    min-width: 72px !important;
+                    max-width: 18ch;
+                    padding: 0 2px;
                 }
 
                 /* ── Portrait Character Picker ── */

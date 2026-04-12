@@ -280,11 +280,6 @@ export function TurnOrderTracker({
     return (
         <div className="turn-tracker-container animate-reveal-tracker">
             
-            {/* Top HUD: Round & Timer */}
-            <div className="hud-top">
-                <div className="round-badge">RODADA {currentRound}</div>
-            </div>
-
             {/* Semicircle Carousel */}
             <div className="semicircle-arena">
                 <div className="connection-arc"></div>
@@ -315,20 +310,6 @@ export function TurnOrderTracker({
                     );
                 })}
 
-                {activeCharacterId && (
-                    <div className="center-timer-wrapper">
-                        <TurnTimer
-                            startTime={lastTurnChangeTimestamp ?? ''}
-                            durationMinutes={isReaction ? 2 : 3}
-                            isPaused={timerPaused}
-                            pausedAt={timerPausedAt || undefined}
-                            isGM={userRole === "GM"}
-                            onExpire={() => { console.log("Timer expired."); }}
-                            onTogglePause={handleTogglePause || (() => {})}
-                            onForcePass={handleForcePass || (() => {})}
-                        />
-                    </div>
-                )}
             </div>
 
             {/* GM Controls: Below Center Diamond */}
