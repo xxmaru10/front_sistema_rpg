@@ -305,7 +305,7 @@ export function useCharacterCard({
 
     // ── Consequence Handlers ──────────────────────────────────────────────────
     const handleConsequenceChange = (slot: string, value: string | null, debuff?: ConsequenceDebuff) => {
-        if (!isGM) return;
+        if (!canEdit) return;
         if (value === null) {
             const currentData = character.consequences[slot];
             setConsequenceModal({
@@ -339,8 +339,8 @@ export function useCharacterCard({
 
     const handleDeleteConsequence = (slot: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!isGM) return;
-        if (isGM) {
+        if (!canEdit) return;
+        if (canEdit) {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_DELETED", actorUserId: normalizedUserId,
                 createdAt: new Date().toISOString(), visibility: "PUBLIC",

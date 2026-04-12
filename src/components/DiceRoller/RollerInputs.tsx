@@ -148,16 +148,34 @@ export function RollerInputs({
     const [showBonusMenu, setShowBonusMenu] = useState(false);
     const [selectedSign, setSelectedSign] = useState<'+' | '-' | null>(null);
     const bonusMenuRef = useRef<HTMLDivElement>(null);
+    const bonusPortalRef = useRef<HTMLDivElement>(null);
+    const [bonusMenuPos, setBonusMenuPos] = useState<{ top: number; left: number } | null>(null);
 
-    // Close menus on outside click
+    const openBonusMenu = () => {
+        if (bonusMenuRef.current) {
+            const rect = bonusMenuRef.current.getBoundingClientRect();
+            setBonusMenuPos({
+                top: rect.top + window.scrollY,
+                left: rect.left + rect.width / 2 + window.scrollX,
+            });
+        }
+        setShowBonusMenu(true);
+    };
+
+    // Close menus on outside click — portal-aware
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (showAttackSubMenu && attackMenuRef.current && !attackMenuRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (showAttackSubMenu && attackMenuRef.current && !attackMenuRef.current.contains(target)) {
                 setShowAttackSubMenu(false);
             }
-            if (showBonusMenu && bonusMenuRef.current && !bonusMenuRef.current.contains(e.target as Node)) {
-                setShowBonusMenu(false);
-                setSelectedSign(null);
+            if (showBonusMenu) {
+                const inAnchor = bonusMenuRef.current?.contains(target) ?? false;
+                const inPortal = bonusPortalRef.current?.contains(target) ?? false;
+                if (!inAnchor && !inPortal) {
+                    setShowBonusMenu(false);
+                    setSelectedSign(null);
+                }
             }
         };
         document.addEventListener("mousedown", handler);
@@ -329,34 +347,47 @@ export function RollerInputs({
                         <div className="field-row">
                             {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div 
-                                    className={`icon-select-shell ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`} 
-                                    title="Bônus"
-                                    ref={bonusMenuRef}
-                                >
-                                    <div className="icon-select-face" onClick={() => setShowBonusMenu(!showBonusMenu)}>
-                                        {manualBonus !== 0 ? (
-                                            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: manualBonus > 0 ? 'var(--accent-color)' : '#ff6b6b' }}>
-                                                {manualBonus > 0 ? `+${manualBonus}` : manualBonus}
-                                            </span>
-                                        ) : (
-                                            <Plus size={16} />
-                                        )}
+                                <>
+                                    <div
+                                        className={`icon-select-shell ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`}
+                                        title="Bônus"
+                                        ref={bonusMenuRef}
+                                    >
+                                        <div className="icon-select-face" onClick={() => showBonusMenu ? (setShowBonusMenu(false), setSelectedSign(null)) : openBonusMenu()}>
+                                            {manualBonus !== 0 ? (
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: manualBonus > 0 ? 'var(--accent-color)' : '#ff6b6b' }}>
+                                                    {manualBonus > 0 ? `+${manualBonus}` : manualBonus}
+                                                </span>
+                                            ) : (
+                                                <Plus size={16} />
+                                            )}
+                                        </div>
                                     </div>
 
-                                    {showBonusMenu && (
-                                        <div className="bonus-dropdown-menu">
+                                    {showBonusMenu && bonusMenuPos && typeof document !== 'undefined' && createPortal(
+                                        <div
+                                            ref={bonusPortalRef}
+                                            className="bonus-dropdown-menu"
+                                            style={{
+                                                position: 'fixed',
+                                                top: `${bonusMenuPos.top}px`,
+                                                left: `${bonusMenuPos.left}px`,
+                                                transform: 'translate(-50%, -110%)',
+                                                zIndex: 2147483646,
+                                            }}
+                                        >
                                             {!selectedSign ? (
                                                 <div className="bonus-sign-row">
-                                                    <button className="sign-btn plus" onClick={() => setSelectedSign('+')}>
+                                                    <button className="sign-btn plus" onMouseDown={(e) => { e.stopPropagation(); setSelectedSign('+'); }}>
                                                         <Plus size={20} />
                                                         <span>Bônus</span>
                                                     </button>
-                                                    <button className="sign-btn minus" onClick={() => setSelectedSign('-')}>
+                                                    <button className="sign-btn minus" onMouseDown={(e) => { e.stopPropagation(); setSelectedSign('-'); }}>
                                                         <Minus size={20} />
                                                         <span>Ônus</span>
                                                     </button>
-                                                    <button className="sign-btn zero" onClick={() => {
+                                                    <button className="sign-btn zero" onMouseDown={(e) => {
+                                                        e.stopPropagation();
                                                         setManualBonus(0);
                                                         setShowBonusMenu(false);
                                                         if (interactionStep < 3) setInteractionStep(3);
@@ -367,13 +398,14 @@ export function RollerInputs({
                                                 </div>
                                             ) : (
                                                 <div className="bonus-values-grid">
-                                                    <button className="back-btn" onClick={() => setSelectedSign(null)}>←</button>
+                                                    <button className="back-btn" onMouseDown={(e) => { e.stopPropagation(); setSelectedSign(null); }}>←</button>
                                                     <div className="values-scroll">
                                                         {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
-                                                            <button 
-                                                                key={num} 
+                                                            <button
+                                                                key={num}
                                                                 className={`value-btn ${selectedSign === '-' ? 'is-minus' : ''}`}
-                                                                onClick={() => {
+                                                                onMouseDown={(e) => {
+                                                                    e.stopPropagation();
                                                                     const val = selectedSign === '+' ? num : -num;
                                                                     setManualBonus(val);
                                                                     setShowBonusMenu(false);
@@ -388,9 +420,10 @@ export function RollerInputs({
                                                     </div>
                                                 </div>
                                             )}
-                                        </div>
+                                        </div>,
+                                        document.body
                                     )}
-                                </div>
+                                </>
                             ) : (
                                 <input
                                     type="number"
@@ -1342,10 +1375,6 @@ export function RollerInputs({
                 }
 
                 .bonus-dropdown-menu {
-                    position: absolute;
-                    bottom: 110%;
-                    left: 50%;
-                    transform: translateX(-50%);
                     background: #0a0a0a;
                     border: 1px solid var(--accent-color);
                     border-radius: 8px;

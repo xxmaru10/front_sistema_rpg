@@ -90,8 +90,11 @@ export function DamageResolutionModal({
 
     const orderedSlots = useMemo(() => {
         if (!defender) return [] as string[];
-        const keys = Object.keys(defender.consequences || {});
-        return keys.sort((a, b) => {
+        // Garante que os slots padrão sempre aparecem, mesmo se consequences estiver vazio
+        const defaultKeys = new Set(["mild", "moderate", "severe"]);
+        const existingKeys = Object.keys(defender.consequences || {});
+        existingKeys.forEach(k => defaultKeys.add(k));
+        return Array.from(defaultKeys).sort((a, b) => {
             const ia = SLOT_ORDER.indexOf(a);
             const ib = SLOT_ORDER.indexOf(b);
             if (ia !== -1 && ib !== -1) return ia - ib;
@@ -289,15 +292,6 @@ export function DamageResolutionModal({
                     <div className="dmg-overwarn">
                         A absorção ultrapassa o dano recebido. Desmarque caixas ou apague texto de consequência até o
                         restante bater em zero.
-                    </div>
-                )}
-
-                {isLethal && (
-                    <div className="dmg-lethal-warn">
-                        <Skull size={20} />
-                        <div>
-                            <strong>DANO LETAL:</strong> O personagem será DERROTADO por não conseguir absorver {remainingDamage} ponto(s) de dano.
-                        </div>
                     </div>
                 )}
 

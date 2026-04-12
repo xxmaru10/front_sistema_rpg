@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
-import { ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
+import { ChevronLeft, ChevronRight, ScrollText, UserPlus, Skull, Zap, ListOrdered, Dices } from "lucide-react";
 import { CombatCard } from "@/components/CombatCard";
 import { DiceRoller } from "@/components/DiceRoller";
 import { CombatLog } from "@/components/CombatLog";
@@ -35,6 +35,11 @@ interface CombatTabProps {
     handleChallengeUpdate: (patch: Partial<{ isActive: boolean; text: string; difficulty: number; aspects?: string[] }>) => void;
     characterList: Character[];
     onRefresh?: () => void;
+    // GM Sidebar callbacks
+    onSummonAlly?: () => void;
+    onSummonThreat?: () => void;
+    onToggleChallenge?: () => void;
+    onOpenTurnOrder?: () => void;
 }
 
 export function CombatTab({
@@ -62,7 +67,11 @@ export function CombatTab({
     handlePreviousTurn,
     handleChallengeUpdate,
     characterList,
-    onRefresh
+    onRefresh,
+    onSummonAlly,
+    onSummonThreat,
+    onToggleChallenge,
+    onOpenTurnOrder,
 }: CombatTabProps) {
     const [isHeroDrawerOpen, setIsHeroDrawerOpen] = useState(false);
     const [isThreatDrawerOpen, setIsThreatDrawerOpen] = useState(false);
@@ -209,10 +218,52 @@ export function CombatTab({
 
     return (
         <div className="combat-display animate-reveal">
-            <div className="display-header">
-                <div className="gm-actions-row">
+            {userRole === "GM" && (
+                <div className="gm-sidebar-vertical">
+                    <button
+                        className="gm-sidebar-btn"
+                        onClick={onSummonAlly}
+                        title="Convocar Aliado"
+                        aria-label="Convocar Aliado"
+                    >
+                        <UserPlus size={18} />
+                    </button>
+                    <button
+                        className="gm-sidebar-btn gm-sidebar-btn--threat"
+                        onClick={onSummonThreat}
+                        title="Convocar Inimigo"
+                        aria-label="Convocar Inimigo"
+                    >
+                        <Skull size={18} />
+                    </button>
+                    <div className="gm-sidebar-divider" />
+                    <button
+                        className={`gm-sidebar-btn${challengeMode ? " gm-sidebar-btn--active" : ""}`}
+                        onClick={onToggleChallenge}
+                        title={challengeMode ? "Desativar Modo Desafio" : "Ativar Modo Desafio"}
+                        aria-label="Modo Desafio"
+                    >
+                        <Zap size={18} />
+                    </button>
+                    <button
+                        className="gm-sidebar-btn"
+                        onClick={onOpenTurnOrder}
+                        title="Ordem de Turno"
+                        aria-label="Ordem de Turno"
+                    >
+                        <ListOrdered size={18} />
+                    </button>
+                    <div className="gm-sidebar-divider" />
+                    <button
+                        className={`gm-sidebar-btn${showDiceRoller ? " gm-sidebar-btn--active" : ""}`}
+                        onClick={() => setShowDiceRoller(!showDiceRoller)}
+                        title={showDiceRoller ? "Ocultar Dados" : "Mostrar Dados"}
+                        aria-label="Dados"
+                    >
+                        <Dices size={18} />
+                    </button>
                 </div>
-            </div>
+            )}
 
 
 

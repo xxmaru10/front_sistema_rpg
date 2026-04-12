@@ -312,6 +312,40 @@ export default function SessionPage() {
         setSpectatorMode, screenShareManagerRef,
     });
 
+    // ─── SHARED GM CALLBACKS ──────────────────────────────────────────────────
+    const handleToggleChallengeMode = () => {
+        const newState = !challengeMode;
+        lastToggleTimeRef.current = Date.now();
+        if (!newState) {
+            combatStartTimeRef.current = Date.now();
+        } else {
+            combatStartTimeRef.current = null;
+        }
+        handleChallengeUpdate({ isActive: newState });
+        if (!newState && userRole === "GM") {
+            if (!state.turnOrder || state.turnOrder.length === 0) {
+                const players = characterList.filter(c => !c.isNPC);
+                if (players.length > 0) {
+                    globalEventStore.append({
+                        id: uuidv4(), sessionId: sessionId as string, seq: 0,
+                        type: "TURN_ORDER_UPDATED", actorUserId,
+                        createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                        payload: { characterIds: players.map(p => p.id) }
+                    } as any);
+                }
+            }
+            setShowTurnOrderModal(true);
+            setTimeout(() => {
+                globalEventStore.append({
+                    id: uuidv4(), sessionId: sessionId as string, seq: 0,
+                    type: "TURN_STEPPED", actorUserId,
+                    createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                    payload: { index: 0 }
+                } as any);
+            }, 500);
+        }
+    };
+
     useEffect(() => {
         if (!state.battlemap?.isActive && isTheaterMode) {
             battlemapToolStore.setTheaterMode(false);
@@ -697,38 +731,7 @@ export default function SessionPage() {
                 }
                 onSummonAlly={() => { setSummonMode("HERO"); setShowSummonModal(true); }}
                 onSummonThreat={() => { setSummonMode("THREAT"); setShowSummonModal(true); }}
-                onToggleChallenge={() => {
-                    const newState = !challengeMode;
-                    lastToggleTimeRef.current = Date.now();
-                    if (!newState) {
-                        combatStartTimeRef.current = Date.now();
-                    } else {
-                        combatStartTimeRef.current = null;
-                    }
-                    handleChallengeUpdate({ isActive: newState });
-                    if (!newState && userRole === "GM") {
-                        if (!state.turnOrder || state.turnOrder.length === 0) {
-                            const players = characterList.filter(c => !c.isNPC);
-                            if (players.length > 0) {
-                                globalEventStore.append({
-                                    id: uuidv4(), sessionId: sessionId as string, seq: 0,
-                                    type: "TURN_ORDER_UPDATED", actorUserId,
-                                    createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                                    payload: { characterIds: players.map(p => p.id) }
-                                } as any);
-                            }
-                        }
-                        setShowTurnOrderModal(true);
-                        setTimeout(() => {
-                            globalEventStore.append({
-                                id: uuidv4(), sessionId: sessionId as string, seq: 0,
-                                type: "TURN_STEPPED", actorUserId,
-                                createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                                payload: { index: 0 }
-                            } as any);
-                        }, 500);
-                    }
-                }}
+                onToggleChallenge={handleToggleChallengeMode}
                 onOpenTurnOrder={() => setShowTurnOrderModal(true)}
                 challengeActive={challengeMode}
                 inCombat={!challengeMode}
@@ -885,6 +888,10 @@ export default function SessionPage() {
                                         handleChallengeUpdate={handleChallengeUpdate}
                                         characterList={characterList}
                                         onRefresh={refresh}
+                                        onSummonAlly={() => { setSummonMode("HERO"); setShowSummonModal(true); }}
+                                        onSummonThreat={() => { setSummonMode("THREAT"); setShowSummonModal(true); }}
+                                        onToggleChallenge={handleToggleChallengeMode}
+                                        onOpenTurnOrder={() => setShowTurnOrderModal(true)}
                                     />
                                 )}
 

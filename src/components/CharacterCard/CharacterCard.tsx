@@ -188,6 +188,7 @@ export function CharacterCard({
                     isGM={isGM}
                     isCompact={isCompact}
                     canEditStressOrFP={canEditStressOrFP}
+                    canEditConsequences={canEdit}
                     isEditingName={hook.isEditingName}
                     tempName={hook.tempName}
                     onTempNameChange={hook.setTempName}
