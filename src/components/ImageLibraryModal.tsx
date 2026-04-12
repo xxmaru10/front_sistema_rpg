@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { supabase } from "@/lib/supabaseClient";
+import { listFiles, getPublicUrl, uploadToPath } from "@/lib/storageClient";
 import { Folder, Image as ImageIcon, ArrowLeft, Loader2, X, Upload, Info } from "lucide-react";
 import { ImageCropper } from "@/components/ImageCropper/ImageCropper";
 
@@ -33,7 +33,7 @@ export function ImageLibraryModal({ isOpen, onClose, onSelect, cropConfig }: Ima
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [pendingCropUrl, setPendingCropUrl] = useState<string | null>(null);
-
+    
     const BUCKET_NAME = "campaign-uploads";
 
     useEffect(() => {
@@ -49,73 +49,48 @@ export function ImageLibraryModal({ isOpen, onClose, onSelect, cropConfig }: Ima
     const fetchContent = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .storage
-                .from(BUCKET_NAME)
-                .list(currentPath, {
-                    limit: 100,
-                    offset: 0,
-                    sortBy: { column: 'name', order: 'asc' },
-                });
-
-            if (error) throw error;
-
-            const mappedItems: FileItem[] = (data || []).map((item: any) => ({
-                name: item.name,
-                id: item.id,
-                metadata: item.metadata
-            }));
-
-            // Filter out non-image files (keep folders and images)
-            const filteredItems = mappedItems.filter(item =>
-                !item.id || // It's a folder
-                item.metadata?.mimetype?.startsWith('image/') || // It's an image mime
-                item.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) // It has image extension
-            );
-
-            setItems(filteredItems);
-
+          const { files: rawFiles, folders } = await listFiles(currentPath);
+      
+          const mappedItems: FileItem[] = [
+            ...folders.map((f: string) => ({ name: f, id: null })),
+            ...rawFiles
+              .filter((f: any) =>
+                f.metadata?.mimetype?.startsWith('image/') ||
+                f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+              )
+              .map((f: any) => ({ name: f.name, id: f.id, metadata: f.metadata })),
+          ];
+      
+          setItems(mappedItems);
         } catch (err) {
-            console.error("Error fetching library:", err);
+          console.error('Error fetching library:', err);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
 
-    const getPublicUrl = (fileName: string) => {
+      const getItemUrl = (fileName: string) => {
         const filePath = currentPath ? `${currentPath}/${fileName}` : fileName;
-        const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-        return data.publicUrl;
-    };
-
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        return getPublicUrl(filePath);
+      };
+      const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         if (file.size > 10 * 1024 * 1024) {
-            alert("A imagem deve ter no máximo 10MB.");
-            return;
+          alert('A imagem deve ter no máximo 10MB.');
+          return;
         }
-
         setLoading(true);
         try {
-            const fileName = `${Date.now()}-${file.name}`;
-            const filePath = currentPath ? `${currentPath}/${fileName}` : fileName;
-
-            const { error } = await supabase.storage
-                .from(BUCKET_NAME)
-                .upload(filePath, file);
-
-            if (error) throw error;
-
-            await fetchContent();
+          await uploadToPath(file, currentPath);
+          await fetchContent();
         } catch (err) {
-            console.error("Upload error:", err);
-            alert("Erro ao enviar imagem.");
+          console.error('Upload error:', err);
+          alert('Erro ao enviar imagem.');
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
 
     if (!isOpen || !mounted) return null;
 
@@ -202,7 +177,7 @@ export function ImageLibraryModal({ isOpen, onClose, onSelect, cropConfig }: Ima
 
                             {items.map(item => {
                                 const isFolder = !item.id;
-                                const url = !isFolder ? getPublicUrl(item.name) : null;
+                                const url = !isFolder ? getItemUrl(item.name) : null;
 
                                 return (
                                     <div

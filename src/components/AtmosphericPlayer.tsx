@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, RefreshCw } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { listFiles, getPublicUrl } from "@/lib/storageClient";
 
 interface AtmosphericPlayerProps {
     sessionId?: string;
@@ -13,8 +13,7 @@ interface AtmosphericPlayerProps {
     unifiedMode?: boolean;
 }
 
-const BUCKET_NAME = "campaign-uploads";
-const ATMOSPHERIC_FOLDER = "Atmosferico";
+
 
 export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: AtmosphericPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -43,50 +42,34 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
     const fetchTracks = async () => {
         setLoading(true);
         try {
-            // Recursive function to get all audio files in a folder
-            const getAllFilesRecursive = async (path: string): Promise<string[]> => {
-                const { data: folderFiles, error } = await supabase
-                    .storage
-                    .from(BUCKET_NAME)
-                    .list(path, {
-                        limit: 1000,
-                        offset: 0,
-                        sortBy: { column: 'name', order: 'asc' },
-                    });
-
-                if (error || !folderFiles) return [];
-
-                let tracks: string[] = [];
-                for (const file of folderFiles) {
-                    const fullPath = `${path}/${file.name}`;
-                    if (file.id) {
-                        // It's a file
-                        if (file.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i)) {
-                            tracks.push(fullPath);
-                        }
-                    } else {
-                        // It's a folder, recurse
-                        const subTracks = await getAllFilesRecursive(fullPath);
-                        tracks = [...tracks, ...subTracks];
-                    }
-                }
-                return tracks;
-            };
-
-            const audioFiles = await getAllFilesRecursive(ATMOSPHERIC_FOLDER);
-            setTracks(audioFiles);
+          const getAllFilesRecursive = async (path: string): Promise<string[]> => {
+            const { files, folders } = await listFiles(path);
+            let tracks: string[] = [];
+            for (const file of files) {
+              if (file.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i)) {
+                tracks.push(path ? `${path}/${file.name}` : file.name);
+              }
+            }
+            for (const folder of folders) {
+              const fullPath = path ? `${path}/${folder}` : folder;
+              const subTracks = await getAllFilesRecursive(fullPath);
+              tracks = [...tracks, ...subTracks];
+            }
+            return tracks;
+          };
+      
+          const audioFiles = await getAllFilesRecursive('Atmosferico');
+          setTracks(audioFiles);
         } catch (err) {
-            console.error("Error fetching atmospheric tracks:", err);
+          console.error('Error fetching atmospheric tracks:', err);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
 
-    const getSupabaseUrl = useCallback((path: string) => {
-        if (!path) return "";
-        const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-        return data.publicUrl;
-    }, []);
+      const getUrl = useCallback((path: string) => {
+        return getPublicUrl(path);
+      }, []);
 
     const scheduleAutoplayUnlock = useCallback(() => {
         if (autoplayUnlockPendingRef.current) return;
@@ -159,7 +142,7 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
         const loop = !!payload.loop;
         const startedAt = payload.startedAt as string | undefined;
 
-        const targetFullUrl = url ? getSupabaseUrl(url) : "";
+        const targetFullUrl = url ? getUrl(url) : "";
         const isNewTrack = !!url && audio.src !== targetFullUrl;
 
         if (isNewTrack) {
@@ -214,7 +197,7 @@ export function AtmosphericPlayer({ sessionId, userId, userRole, unifiedMode }: 
             }
         };
         playAudio();
-    }, [getSupabaseUrl, scheduleAutoplayUnlock, syncCurrentTimeFromStartedAt]);
+    }, [getUrl, scheduleAutoplayUnlock, syncCurrentTimeFromStartedAt]);
 
     useEffect(() => {
         fetchTracks();
