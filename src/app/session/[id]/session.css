@@ -1718,7 +1718,8 @@ body {
 }
 
 .combat-top-strip .combat-log-wrapper {
-    width: min(100%, 1320px);
+    width: fit-content;
+    max-width: min(calc(100% - 12px), 1320px);
     margin: 0 auto;
 }
 
@@ -1958,11 +1959,12 @@ body {
 }
 
 .combat-log-wrapper {
-    width: 100%;
-    min-height: 112px;
-    max-height: 188px;
+    width: fit-content;
+    max-width: min(calc(100% - 12px), 1320px);
+    min-height: 144px;
+    max-height: 196px;
     overflow: hidden;
-    margin-top: 2px;
+    margin: 2px auto 0;
     z-index: 1;
 }
 

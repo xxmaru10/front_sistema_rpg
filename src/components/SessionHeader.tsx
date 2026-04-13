@@ -411,7 +411,7 @@ export function SessionHeader({
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
-                    paddingTop: '20px'
+                    paddingTop: '60px'
                 }}>
                     <div style={{ pointerEvents: 'auto' }}>
                         {children}

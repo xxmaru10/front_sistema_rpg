@@ -440,22 +440,6 @@ export function CombatTab({
 
                 {/* Coluna 1: Herói Ativo (Esquerda) */}
                 <div className="combat-party combat-side-column">
-                    {/* Round indicator - top left of hero side */}
-                    <div style={{
-                        alignSelf: 'flex-start',
-                        marginBottom: '6px',
-                        paddingLeft: '4px',
-                        lineHeight: 1,
-                        fontFamily: 'var(--font-victorian)',
-                        fontSize: 'clamp(2.8rem, 5vw, 4.5rem)',
-                        fontWeight: 900,
-                        color: 'rgba(var(--accent-rgb), 0.22)',
-                        textShadow: '0 0 30px rgba(var(--accent-rgb), 0.1)',
-                        userSelect: 'none',
-                        letterSpacing: '-0.04em',
-                    }}>
-                        {state.currentRound || 1}
-                    </div>
                     {heroCombatants.length === 0 ? (
                         <div className="empty-combat-text p-4 text-center border border-dashed border-[var(--accent-color)30] rounded opacity-50 text-xs">
                             Nenhum aliado na sessão.
@@ -596,21 +580,7 @@ export function CombatTab({
                 {/* Coluna 3: Ameaças (Direita) OU Desafio */}
                 </div>
                 <div className="combat-threats-column combat-side-column">
-                    {/* Timer - top right of threat side */}
-                    {currentTurnActorId && (
-                        <div style={{ alignSelf: 'flex-end', marginBottom: '6px', paddingRight: '4px' }}>
-                            <TurnTimer
-                                startTime={state.lastTurnChangeTimestamp ?? ''}
-                                durationMinutes={state.isReaction ? 2 : 3}
-                                isPaused={state.timerPaused}
-                                pausedAt={state.timerPausedAt || undefined}
-                                isGM={userRole === "GM"}
-                                onExpire={() => {}}
-                                onTogglePause={handleTogglePause}
-                                onForcePass={handleForcePass}
-                            />
-                        </div>
-                    )}
+
                     <div className="combat-threats">
                         <div className="combat-side-lane threat-side-lane">
                             {threatCombatants.length === 0 && threatHazards.length === 0 ? (

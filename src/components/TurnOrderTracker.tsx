@@ -280,6 +280,24 @@ export function TurnOrderTracker({
     return (
         <div className="turn-tracker-container animate-reveal-tracker">
             
+            <div className="hud-top">
+                <div className="round-badge">
+                    RODADA {currentRound}
+                </div>
+                <div className="hud-timer-container">
+                    <TurnTimer
+                        startTime={lastTurnChangeTimestamp ?? ''}
+                        durationMinutes={isReaction ? 2 : 3}
+                        isPaused={timerPaused}
+                        pausedAt={timerPausedAt || undefined}
+                        isGM={userRole === "GM"}
+                        onExpire={() => {}}
+                        onTogglePause={handleTogglePause}
+                        onForcePass={handleForcePass}
+                    />
+                </div>
+            </div>
+
             {/* Semicircle Carousel */}
             <div className="semicircle-arena">
                 <div className="connection-arc"></div>
