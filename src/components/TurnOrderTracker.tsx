@@ -292,8 +292,8 @@ export function TurnOrderTracker({
                         pausedAt={timerPausedAt || undefined}
                         isGM={userRole === "GM"}
                         onExpire={() => {}}
-                        onTogglePause={handleTogglePause}
-                        onForcePass={handleForcePass}
+                        onTogglePause={handleTogglePause || (() => {})}
+                        onForcePass={handleForcePass || (() => {})}
                     />
                 </div>
             </div>
