@@ -490,7 +490,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-actor {
                     font-family: var(--font-header);
-                    font-size: 0.95rem;
+                    font-size: 0.76rem;
                     color: var(--accent-color);
                     letter-spacing: 0.08em;
                     white-space: nowrap;
@@ -500,7 +500,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-summary {
                     font-family: var(--font-main);
-                    font-size: 1.05rem;
+                    font-size: 0.84rem;
                     color: rgba(255, 255, 255, 0.92);
                     overflow: hidden;
                     text-overflow: ellipsis;
@@ -536,7 +536,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-total {
                     font-family: var(--font-header);
-                    font-size: 1.6rem;
+                    font-size: 1.28rem;
                     color: var(--accent-color);
                     letter-spacing: 0.02em;
                     white-space: nowrap;

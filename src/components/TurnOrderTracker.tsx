@@ -281,9 +281,6 @@ export function TurnOrderTracker({
         <div className="turn-tracker-container animate-reveal-tracker">
             
             <div className="hud-top">
-                <div className="round-badge">
-                    RODADA {currentRound}
-                </div>
                 <div className="hud-timer-container">
                     <TurnTimer
                         startTime={lastTurnChangeTimestamp ?? ''}
@@ -295,6 +292,9 @@ export function TurnOrderTracker({
                         onTogglePause={handleTogglePause || (() => {})}
                         onForcePass={handleForcePass || (() => {})}
                     />
+                </div>
+                <div className="round-badge">
+                    RODADA {currentRound}
                 </div>
             </div>
 
@@ -394,10 +394,11 @@ export function TurnOrderTracker({
 
                 .hud-top {
                     display: flex;
-                    flex-direction: column;
+                    flex-direction: row;
                     align-items: center;
-                    gap: 2px;
-                    margin-bottom: 0px;
+                    justify-content: space-between;
+                    width: 420px;
+                    margin-bottom: -18px;
                     z-index: 60;
                 }
 
