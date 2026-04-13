@@ -406,10 +406,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 }
 
                 .combat-log-container.compact-mode {
-                    min-height: 92px;
-                    max-height: 126px;
-                    border-radius: 10px;
-                    background: rgba(5, 5, 5, 0.84);
+                    min-height: 144px;
+                    max-height: 196px;
+                    border-radius: 12px;
+                    background: rgba(5, 5, 5, 0.88);
+                    backdrop-filter: blur(12px);
                 }
 
                 .combat-log-container.compact-mode .log-header {
@@ -425,8 +426,8 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     display: flex;
                     flex-direction: column;
                     align-items: stretch;
-                    gap: 4px;
-                    padding: 6px 8px;
+                    gap: 6px;
+                    padding: 8px 10px;
                     overflow-x: hidden;
                     overflow-y: auto;
                 }
@@ -439,9 +440,10 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 .combat-log-container.compact-mode .combat-entry {
                     min-width: 0;
                     max-width: none;
-                    padding: 4px 6px;
+                    padding: 10px 14px;
                     border-right: none;
-                    border-bottom: 1px solid rgba(197, 160, 89, 0.08);
+                    border-bottom: 2px solid rgba(197, 160, 89, 0.1);
+                    min-height: 64px;
                 }
 
                 .combat-log-container.compact-mode .combat-entry:last-child {
@@ -480,7 +482,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-time {
                     font-family: var(--font-header);
-                    font-size: 0.5rem;
+                    font-size: 0.62rem;
                     color: rgba(255, 255, 255, 0.58);
                     letter-spacing: 0.08em;
                     white-space: nowrap;
@@ -488,16 +490,18 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-actor {
                     font-family: var(--font-header);
-                    font-size: 0.56rem;
+                    font-size: 0.76rem;
                     color: var(--accent-color);
                     letter-spacing: 0.08em;
                     white-space: nowrap;
+                    font-weight: 800;
+                    text-shadow: 0 0 8px rgba(0,0,0,0.5);
                 }
 
                 .compact-summary {
                     font-family: var(--font-main);
-                    font-size: 0.65rem;
-                    color: rgba(255, 255, 255, 0.88);
+                    font-size: 0.84rem;
+                    color: rgba(255, 255, 255, 0.92);
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
@@ -532,10 +536,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .compact-total {
                     font-family: var(--font-header);
-                    font-size: 0.7rem;
+                    font-size: 1.28rem;
                     color: var(--accent-color);
-                    letter-spacing: 0.05em;
+                    letter-spacing: 0.02em;
                     white-space: nowrap;
+                    font-weight: 900;
                 }
 
                 .compact-total.good {

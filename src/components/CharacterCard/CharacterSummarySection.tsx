@@ -17,6 +17,7 @@ interface CharacterSummarySectionProps {
     isGM: boolean;
     isCompact: boolean;
     canEditStressOrFP: boolean;
+    canEditConsequences?: boolean;
     isEditingName: boolean;
     tempName: string;
     onTempNameChange: (value: string) => void;
@@ -45,6 +46,7 @@ export function CharacterSummarySection({
     isGM,
     isCompact,
     canEditStressOrFP,
+    canEditConsequences,
     isEditingName,
     tempName,
     onTempNameChange,
@@ -454,6 +456,7 @@ export function CharacterSummarySection({
                     <CharacterConsequences
                         character={character}
                         isGM={isGM}
+                        canEditConsequences={canEditConsequences}
                         consequenceModal={consequenceModal}
                         showAddConsequenceModal={showAddConsequenceModal}
                         onConsequenceClick={onConsequenceClick}

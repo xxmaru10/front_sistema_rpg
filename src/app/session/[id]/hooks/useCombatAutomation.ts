@@ -1,7 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { globalEventStore } from "@/lib/eventStore";
+import { computeState } from "@/lib/projections";
 import { isCharacterEliminated, calculateAbsorption } from "@/lib/gameLogic";
+import type { ActionEvent, Character } from "@/types/domain";
+
+function getCharactersFromProjectedStore(): Record<string, Character> {
+    const events = globalEventStore.getEvents();
+    const sorted = [...events].sort((a: ActionEvent, b: ActionEvent) => {
+        const seqA = a.seq || 0;
+        const seqB = b.seq || 0;
+        if (seqA > 0 && seqB > 0 && seqA !== seqB) return seqA - seqB;
+        if (seqA > 0 && seqB === 0) return -1;
+        if (seqA === 0 && seqB > 0) return 1;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+    const snapshot = globalEventStore.getSnapshotState();
+    const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
+    const projectionEvents =
+        snapshot && snapshotUpToSeq >= 0
+            ? sorted.filter((e) => (e.seq || 0) === 0 || (e.seq || 0) > snapshotUpToSeq)
+            : sorted;
+    return computeState(projectionEvents, snapshot ?? undefined).characters as Record<string, Character>;
+}
 
 interface CombatAutomationParams {
     sessionId: string;
@@ -11,6 +32,9 @@ interface CombatAutomationParams {
     currentTurnActorId: string | null;
     isCurrentPlayerActive: boolean;
     challengeMode: boolean;
+    events: ActionEvent[];
+    /** Quando false, a timeline inicial já foi carregada (evita modal em desfechos antigos). */
+    isSessionEventsLoading: boolean;
 }
 
 export function useCombatAutomation({
@@ -21,22 +45,85 @@ export function useCombatAutomation({
     currentTurnActorId,
     isCurrentPlayerActive,
     challengeMode,
+    events,
+    isSessionEventsLoading,
 }: CombatAutomationParams) {
     const [consequenceQueue, setConsequenceQueue] = useState<
         { characterId: string; slot: string; damage: number; track: "PHYSICAL" | "MENTAL" }[]
     >([]);
     const [deathTurnPassed, setDeathTurnPassed] = useState<Set<string>>(new Set());
+    const [pendingDamage, setPendingDamage] = useState<
+        { defender: Character; damage: number; track: "PHYSICAL" | "MENTAL" } | null
+    >(null);
 
     const processedOutcomeIds = useRef<Set<string>>(new Set());
     const scheduledDeletionIds = useRef<Set<string>>(new Set());
     const processedTurnOrderIds = useRef<Set<string>>(new Set());
     const prevActorIdRef = useRef<string | null>(null);
     const stateRef = useRef(state);
+    const combatOutcomeHandlerRef = useRef<(event: ActionEvent) => void>(() => {});
+    const seededHistoricalCombatOutcomesRef = useRef(false);
 
     // Keep stateRef in sync for use inside subscriptions
     useEffect(() => {
         stateRef.current = state;
     }, [state]);
+
+    useEffect(() => {
+        processedOutcomeIds.current.clear();
+        seededHistoricalCombatOutcomesRef.current = false;
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (userRole !== "GM" || isSessionEventsLoading || seededHistoricalCombatOutcomesRef.current) return;
+        if (events.length === 0) return;
+        for (const e of events) {
+            if (e.type === "COMBAT_OUTCOME" && (e.seq || 0) > 0) {
+                processedOutcomeIds.current.add(e.id);
+            }
+        }
+        seededHistoricalCombatOutcomesRef.current = true;
+    }, [isSessionEventsLoading, events, userRole]);
+
+    combatOutcomeHandlerRef.current = (event: ActionEvent) => {
+        if (event.type !== "COMBAT_OUTCOME") return;
+        console.log("🔥 [useCombatAutomation] COMBAT_OUTCOME RECEIVED:", event);
+        const raw = Number((event.payload as any)?.result);
+        console.log("🔥 [useCombatAutomation] Parsed raw result:", raw);
+        if (!Number.isFinite(raw) || raw <= 0) {
+            console.log("🔥 [useCombatAutomation] Aborting because raw <= 0 or not finite.");
+            return;
+        }
+        if (processedOutcomeIds.current.has(event.id)) return;
+
+        const defenderId = String((event.payload as any).defenderId || "");
+        if (!defenderId) return;
+
+        const currentState = stateRef.current;
+        const projectedChars = getCharactersFromProjectedStore();
+        const defender =
+            projectedChars[defenderId] ||
+            (currentState.characters[defenderId] as Character | undefined);
+
+        if (!defender) {
+            console.warn("[useCombatAutomation] Damage resolution failed: Defender not found in state", defenderId);
+            return;
+        }
+
+        if (isCharacterEliminated(defender)) {
+            console.log("🔥 [useCombatAutomation] Aborting because defender is already eliminated.");
+            processedOutcomeIds.current.add(event.id);
+            return;
+        }
+
+        console.log("🔥 [useCombatAutomation] SETTING PENDING DAMAGE FOR:", defender.name, "| Damage:", raw);
+        processedOutcomeIds.current.add(event.id);
+        const track =
+            (event.payload as { track?: "PHYSICAL" | "MENTAL" }).track ||
+            currentState.damageType ||
+            "PHYSICAL";
+        setPendingDamage({ defender: { ...defender }, damage: raw, track });
+    };
 
     // ─── TURN ACTIONS ────────────────────────────────────────────────────────
 
@@ -68,7 +155,8 @@ export function useCombatAutomation({
     };
 
     const handleTogglePause = () => {
-        if (!state.timerPaused) {
+        const isPaused = stateRef.current.timerPaused;
+        if (!isPaused) {
             globalEventStore.append({
                 id: uuidv4(), sessionId, seq: 0, type: "TIMER_PAUSED",
                 actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
@@ -151,69 +239,145 @@ export function useCombatAutomation({
         }
     }, [state.isReaction, state.targetId, state.characters, userRole, actorUserId, sessionId]);
 
-    // ─── AUTOMATIC DAMAGE & CONSEQUENCE PROCESSING ──────────────────────────
+    // ─── DAMAGE RESOLUTION: OPEN MODAL ON COMBAT_OUTCOME (GM ONLY) ──────────
+    //
+    // The modal (DamageResolutionModal) lets the GM decide how the damage is
+    // absorbed manually, or fall back to the legacy automatic flow via the
+    // "Cálculo automático" button. Players do not see the modal.
 
     useEffect(() => {
+        if (userRole !== "GM") return;
         const unsubscribe = globalEventStore.subscribe((event) => {
-            if (event.type !== "COMBAT_OUTCOME" || event.payload.result <= 0) return;
-            if (processedOutcomeIds.current.has(event.id)) return;
-            processedOutcomeIds.current.add(event.id);
+            combatOutcomeHandlerRef.current(event);
+        });
+        return unsubscribe;
+    }, [sessionId, actorUserId, userRole]);
 
-            const { defenderId, result } = event.payload;
-            const currentState = stateRef.current;
-            const defender = currentState.characters[defenderId];
-            if (!defender || isCharacterEliminated(defender)) return;
+    // Reforço: quando `events` do React atualiza (ex.: merge WebSocket), reprocessa
+    // o último COMBAT_OUTCOME válido — o subscribe sozinho pode perder corrida com o estado.
+    useEffect(() => {
+        if (userRole !== "GM" || !events?.length) return;
+        for (let i = events.length - 1; i >= 0; i--) {
+            const e = events[i];
+            if (e.type !== "COMBAT_OUTCOME") continue;
+            const raw = Number((e.payload as any)?.result);
+            if (!Number.isFinite(raw) || raw <= 0) continue;
+            if (processedOutcomeIds.current.has(e.id)) continue;
+            combatOutcomeHandlerRef.current(e);
+            break;
+        }
+    }, [events, userRole]);
 
-            const track = currentState.damageType || "PHYSICAL";
-            const absorption = calculateAbsorption(defender, result, track);
+    // Pause the timer while the GM is resolving damage
+    useEffect(() => {
+        if (pendingDamage && userRole === "GM" && !state.timerPaused) {
+            handleTogglePause();
+        }
+    }, [pendingDamage, userRole, state.timerPaused]);
 
-            absorption.stressToMarkIndices.forEach((idx: number) => {
-                globalEventStore.append({
-                    id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
-                    actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                    payload: { characterId: defenderId, track, boxIndex: idx }
-                } as any);
-            });
+    const handleDamageConfirm = (applied: {
+        stressPhysical: number[];
+        stressMental: number[];
+        consequences: { slot: string; text: string }[];
+        isLethal?: boolean;
+        remainingDamage?: number;
+    }) => {
+        if (!pendingDamage) return;
+        const defenderId = pendingDamage.defender.id;
+        const currentState = stateRef.current;
+        const liveDefender = currentState.characters[defenderId] || pendingDamage.defender;
+        const isLethalFinal = applied.isLethal || (applied.remainingDamage ?? 0) > 0;
 
-            if (absorption.consequenceSlot) {
-                console.log("[DEBUG] Queuing consequence:", absorption.consequenceSlot, "for character:", defender.name);
-                setConsequenceQueue(prev => {
-                    const alreadyQueued = prev.some(
-                        q => q.characterId === defenderId && q.slot === absorption.consequenceSlot
-                    );
-                    if (alreadyQueued) {
-                        console.log("[DEBUG] Consequence already queued, skipping duplicate.");
-                        return prev;
-                    }
-                    const newQueue = [...prev, {
-                        characterId: defenderId,
-                        slot: absorption.consequenceSlot!,
-                        damage: result - absorption.stressToMarkIndices.length,
-                        track
-                    }];
-                    console.log("[DEBUG] New Consequence Queue:", newQueue);
-                    return newQueue;
-                });
-            } else if (absorption.remainingDamage > 0) {
-                console.log("[DEBUG] No consequence slot found. Remaining damage:", absorption.remainingDamage);
-                globalEventStore.append({
-                    id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_UPDATED",
-                    actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                    payload: { characterId: defenderId, changes: { isEliminated: true } }
-                } as any).catch(() => {
-                    const lastSlot = Object.keys(defender.consequences).pop();
-                    if (lastSlot) {
+        applied.stressPhysical.forEach(idx => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, track: "PHYSICAL", boxIndex: idx }
+            } as any);
+        });
+
+        applied.stressMental.forEach(idx => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, track: "MENTAL", boxIndex: idx }
+            } as any);
+        });
+
+        // Set specified consequences
+        const appliedSlots = new Set(applied.consequences.map(c => c.slot));
+        applied.consequences.forEach(c => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, slot: c.slot, value: c.text }
+            } as any);
+        });
+
+        // If lethal, fill EVERYTHING else to ensure elimination
+        if (isLethalFinal && liveDefender) {
+            Object.keys(liveDefender.consequences || {}).forEach(slot => {
+                if (!appliedSlots.has(slot)) {
+                    const existing = liveDefender.consequences[slot];
+                    if (!existing || !existing.text || existing.text.trim().length === 0) {
                         globalEventStore.append({
                             id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
                             actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                            payload: { characterId: defenderId, slot: lastSlot, value: "DERROTADO" }
+                            payload: { characterId: defenderId, slot, value: "DERROTADO" }
                         } as any);
                     }
-                });
-            }
+                }
+            });
+        }
+
+        setPendingDamage(null);
+        if (stateRef.current.timerPaused) handleTogglePause();
+    };
+
+    const handleDamageAutoCalculate = () => {
+        if (!pendingDamage) return;
+        const { defender, damage, track } = pendingDamage;
+        const currentState = stateRef.current;
+        const liveDefender = currentState.characters[defender.id] || defender;
+        if (!liveDefender) { setPendingDamage(null); return; }
+
+        const absorption = calculateAbsorption(liveDefender, damage, track);
+        const defenderId = defender.id;
+
+        absorption.stressToMarkIndices.forEach((idx: number) => {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "STRESS_MARKED",
+                actorUserId, createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: defenderId, track, boxIndex: idx }
+            } as any);
         });
-        return unsubscribe;
-    }, [sessionId, actorUserId]); // Stable deps only — stateRef used for current state inside
+
+        if (absorption.consequenceSlot) {
+            setConsequenceQueue(prev => {
+                const alreadyQueued = prev.some(
+                    q => q.characterId === defenderId && q.slot === absorption.consequenceSlot
+                );
+                if (alreadyQueued) return prev;
+                return [...prev, {
+                    characterId: defenderId,
+                    slot: absorption.consequenceSlot!,
+                    damage: damage - absorption.stressToMarkIndices.length,
+                    track
+                }];
+            });
+        }
+
+        setPendingDamage(null);
+        // Timer stays paused — ConsequenceModal (text prompt) will resume it on close.
+        if (!absorption.consequenceSlot && stateRef.current.timerPaused) {
+            handleTogglePause();
+        }
+    };
+
+    const handleDamageSkip = () => {
+        setPendingDamage(null);
+        if (stateRef.current.timerPaused) handleTogglePause();
+    };
 
     // ─── AUTOMATIC TURN ORDER INTEGRATION (Garbage Collector) ───────────────
 
@@ -404,5 +568,9 @@ export function useCombatAutomation({
         handleForcePass,
         handleConsequenceSave,
         handleConsequenceCancel,
+        pendingDamage,
+        handleDamageConfirm,
+        handleDamageAutoCalculate,
+        handleDamageSkip,
     };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+
 import { v4 as uuidv4 } from "uuid";
 import { createRollEvent } from "@/lib/dice";
 import { globalEventStore } from "@/lib/eventStore";
@@ -24,6 +25,7 @@ interface UseDiceRollerProps {
     soundSettings?: {
         dice?: string;
     };
+    currentTurnActorId?: string | null;
 }
 
 type ActionType = "ATTACK" | "DEFEND" | "OVERCOME" | "CREATE_ADVANTAGE";
@@ -41,7 +43,8 @@ export function useDiceRoller({
     isReaction, 
     lastAttackTotal, 
     stateDamageType,
-    soundSettings
+    soundSettings,
+    currentTurnActorId
 }: UseDiceRollerProps) {
     const [manualBonus, setManualBonus] = useState(0);
     const [selectedCharId, setSelectedCharId] = useState(fixedCharacterId || characters[0]?.id || "");
@@ -54,6 +57,7 @@ export function useDiceRoller({
     const [lastReactionState, setLastReactionState] = useState(false);
 
     const pendingCharIdRef = useRef<string>("");
+    const finishRollRef = useRef<(charId: string, finalDice: number[]) => void>(() => {});
     const [isRolling, setIsRolling] = useState(false);
     const [diceResults, setDiceResults] = useState<number[]>([0, 0, 0, 0]);
     const [diceRotations, setDiceRotations] = useState<{ x: number, y: number }[]>([
@@ -67,10 +71,14 @@ export function useDiceRoller({
             if (selectedCharId !== fixedCharacterId) {
                 setSelectedCharId(fixedCharacterId);
             }
+        } else if (isGM && currentTurnActorId) {
+            if (selectedCharId !== currentTurnActorId && characters.some(c => c.id === currentTurnActorId)) {
+                setSelectedCharId(currentTurnActorId);
+            }
         } else if (!selectedCharId && characters.length > 0) {
             setSelectedCharId(characters[0].id);
         }
-    }, [fixedCharacterId, characters, selectedCharId]);
+    }, [fixedCharacterId, characters, selectedCharId, isGM, currentTurnActorId]);
 
     // Force reaction target selection, action type and damage type when reaction starts
     useEffect(() => {
@@ -162,9 +170,20 @@ export function useDiceRoller({
 
         globalEventStore.append(event);
         setSelectedSkill("");
+        setManualBonus(0);
         setIsRolling(false);
 
-        if (targetIds.length > 0 && (actionType === "ATTACK" || actionType === "CREATE_ADVANTAGE")) {
+        const attackTotal = (event.payload as any).total as number;
+        const attackForcesDefense =
+            actionType === "ATTACK" &&
+            targetIds.length > 0 &&
+            Number.isFinite(attackTotal) &&
+            attackTotal > 0;
+
+        if (
+            targetIds.length > 0 &&
+            (actionType === "CREATE_ADVANTAGE" || attackForcesDefense)
+        ) {
             const firstTargetId = targetIds[0];
             const targetChar = characters.find(c => c.id === firstTargetId);
 
@@ -190,8 +209,11 @@ export function useDiceRoller({
         setTargetIds([]);
 
         const isTargetRolling = activeChar?.id === stateTargetId || charId === stateTargetId;
+        console.log("🎲 [useDiceRoller] finishRoll eval:", { isReaction, isTargetRolling, actionType, lastAttackTotal, stateTargetId, charId, activeCharId: activeChar?.id });
+
         if (isReaction && isTargetRolling && actionType === "DEFEND" && lastAttackTotal !== undefined) {
             const result = lastAttackTotal - (event.payload as any).total;
+            console.log("🎲 [useDiceRoller] Dispatching COMBAT_OUTCOME!", { lastAttackTotal, defenseTotal: (event.payload as any).total, result });
             const absoluteResult = Math.abs(result);
             const outcomeMessage = result > 0
                 ? `ATAQUE VENCEU POR ${absoluteResult}!`
@@ -213,7 +235,8 @@ export function useDiceRoller({
                     attackTotal: lastAttackTotal,
                     defenseTotal: (event.payload as any).total,
                     result,
-                    message: outcomeMessage
+                    message: outcomeMessage,
+                    track: damageType,
                 }
             } as any);
         }
@@ -235,6 +258,9 @@ export function useDiceRoller({
         isReaction, 
         lastAttackTotal
     ]);
+
+    // Keep the ref always pointing to the latest finishRoll
+    finishRollRef.current = finishRoll;
 
     const handleSkillSelect = (skillName: string) => {
         setSelectedSkill(skillName);
@@ -275,14 +301,30 @@ export function useDiceRoller({
         setIsRolling(true);
         setLastTotal(null);
         
+        const effectiveSkills = activeChar?.skills || DEFAULT_SKILLS;
+        const skillRank = selectedSkill ? (effectiveSkills[selectedSkill] || 0) : 0;
+        const selectedItemData = selectedItemId ? allItems.find(i => i.id === selectedItemId) : undefined;
+        const itemBonus = selectedItemData?.bonus || 0;
+
         diceSimulationStore.show({
+            calculationBreakdown: {
+                baseSkillValue: skillRank,
+                itemBonusValue: itemBonus,
+                customModifierValue: manualBonus,
+                itemName: selectedItemData?.name,
+            },
+            resultOverlay: targetDiff !== undefined && targetDiff !== null
+                ? { mode: "challenge", targetDifficulty: targetDiff }
+                : { mode: "combat" },
             onPreResult: () => {
                 const diceSound = soundSettings?.dice || "/audio/Effects/dados.MP3";
                 const audio = new Audio(diceSound);
                 audio.play().catch(e => console.warn("Failed to play dice sound:", e));
             },
             onSettled: (results) => {
-                finishRoll(charId, results);
+                // Use ref to avoid stale closure — finishRoll may have been
+                // recreated with updated lastAttackTotal after handleRoll was called.
+                finishRollRef.current(charId, results);
             }
         });
 

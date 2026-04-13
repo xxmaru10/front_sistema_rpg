@@ -39,7 +39,7 @@ export function ConsequenceModal({
     if (!isOpen || !mounted) return null;
 
     return createPortal(
-        <div className="consequence-modal-overlay" onClick={onCancel}>
+        <div className="consequence-modal-overlay" onClick={onCancel} style={{ zIndex: 2147483647 }}>
             <div className="consequence-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <span className="modal-symbol">🜊</span>
@@ -87,6 +87,14 @@ export function ConsequenceModal({
 
                 <div className="modal-actions">
                     <button
+                        className="modal-btn clear"
+                        onClick={() => onSave("", "", 0)}
+                        title="Limpar consequência e debuff"
+                    >
+                        LIMPAR
+                    </button>
+                    <div style={{ flex: 1 }} />
+                    <button
                         className="modal-btn save"
                         onClick={() => onSave(text, debuffSkill, debuffValue)}
                     >
@@ -105,7 +113,7 @@ export function ConsequenceModal({
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        z-index: 9999;
+                        z-index: 2147483647;
                     }
 
                     .consequence-modal {
@@ -201,6 +209,19 @@ export function ConsequenceModal({
                         background: rgba(197, 160, 89, 0.1);
                         border-color: var(--accent-color);
                         color: var(--accent-color);
+                    }
+
+                    .modal-btn.save:hover { background: rgba(197, 160, 89, 0.2); }
+
+                    .modal-btn.clear {
+                        background: rgba(255, 255, 255, 0.05);
+                        border-color: rgba(255, 255, 255, 0.2);
+                        color: rgba(255, 255, 255, 0.6);
+                    }
+                    .modal-btn.clear:hover {
+                        background: rgba(255, 255, 255, 0.1);
+                        color: #fff;
+                        border-color: #fff;
                     }
 
                     .modal-btn.cancel {

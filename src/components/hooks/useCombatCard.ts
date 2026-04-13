@@ -113,6 +113,37 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
         } as any);
     }, [isGM, character.id, character.impulseArrows, sessionId, normalizedUserId]);
 
+    const handleClearAllConsequences = useCallback(() => {
+        if (!isGM) return;
+        Object.keys(character.consequences || {}).forEach(slot => {
+            handleConsequenceChange(slot, "", undefined);
+        });
+    }, [isGM, character.consequences, handleConsequenceChange]);
+
+    const handleKillCharacter = useCallback(() => {
+        if (!isGM) return;
+        const removedDefaults = character.removedDefaultSlots || [];
+        const defaultSlots = ["mild", "moderate", "severe"].filter(s => !removedDefaults.includes(s));
+        const allSlots = new Set<string>(defaultSlots);
+        (character.extraConsequenceSlots || []).forEach(s => allSlots.add(s));
+        Object.keys(character.consequences || {}).forEach(k => allSlots.add(k));
+        allSlots.forEach(slot => {
+            const existing = (character.consequences as any)?.[slot];
+            if (!existing?.text?.trim()) {
+                globalEventStore.append({
+                    id: uuidv4(),
+                    sessionId,
+                    seq: 0,
+                    type: "CHARACTER_CONSEQUENCE_UPDATED",
+                    actorUserId: normalizedUserId,
+                    createdAt: new Date().toISOString(),
+                    visibility: "PUBLIC",
+                    payload: { characterId: character.id, slot, value: "ELIMINADO" }
+                } as any);
+            }
+        });
+    }, [isGM, character, sessionId, normalizedUserId]);
+
     return {
         isCollapsed,
         setIsCollapsed,
@@ -125,5 +156,7 @@ export function useCombatCard({ character, sessionId, actorUserId, isGM }: UseCo
         handleSaveConsequence,
         handleUpdateHazard,
         handleImpulseArrowsChange,
+        handleClearAllConsequences,
+        handleKillCharacter,
     };
 }

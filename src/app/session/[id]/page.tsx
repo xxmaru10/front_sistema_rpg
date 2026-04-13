@@ -26,6 +26,7 @@ import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
+import { DamageResolutionModal } from "@/components/DamageResolutionModal";
 import { AtmosphericEffects } from "@/components/AtmosphericEffects";
 import { getThemePreset, generateThemeCSS } from "@/lib/themePresets";
 import { Battlemap } from "@/components/Battlemap";
@@ -262,6 +263,12 @@ export default function SessionPage() {
         combatStartTimeRef,
     });
 
+    useEffect(() => {
+        if (userRole === "PLAYER" && isCurrentPlayerActive && !showDiceRoller) {
+            setShowDiceRoller(true);
+        }
+    }, [isCurrentPlayerActive, userRole, showDiceRoller, setShowDiceRoller]);
+
     // ─── SCREEN SHARE / AUDIO LIFECYCLE ──────────────────────────────────────
     // Must come before useSessionActions so screenShareManagerRef is available.
 
@@ -281,12 +288,15 @@ export default function SessionPage() {
 
     const {
         activeConsequence,
+        pendingDamage, handleDamageConfirm, handleDamageAutoCalculate, handleDamageSkip,
         handleNextTurn, handlePreviousTurn, handleTogglePause,
         handleForcePass, handleConsequenceSave, handleConsequenceCancel,
     } = useCombatAutomation({
         sessionId: sessionId as string,
         actorUserId, userRole, state, currentTurnActorId,
         isCurrentPlayerActive, challengeMode,
+        events,
+        isSessionEventsLoading: isLoading,
     });
 
     // ─── SESSION ACTIONS ──────────────────────────────────────────────────────
@@ -302,6 +312,40 @@ export default function SessionPage() {
         setSpectatorMode, screenShareManagerRef,
     });
 
+    // ─── SHARED GM CALLBACKS ──────────────────────────────────────────────────
+    const handleToggleChallengeMode = () => {
+        const newState = !challengeMode;
+        lastToggleTimeRef.current = Date.now();
+        if (!newState) {
+            combatStartTimeRef.current = Date.now();
+        } else {
+            combatStartTimeRef.current = null;
+        }
+        handleChallengeUpdate({ isActive: newState });
+        if (!newState && userRole === "GM") {
+            if (!state.turnOrder || state.turnOrder.length === 0) {
+                const players = characterList.filter(c => !c.isNPC);
+                if (players.length > 0) {
+                    globalEventStore.append({
+                        id: uuidv4(), sessionId: sessionId as string, seq: 0,
+                        type: "TURN_ORDER_UPDATED", actorUserId,
+                        createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                        payload: { characterIds: players.map(p => p.id) }
+                    } as any);
+                }
+            }
+            setShowTurnOrderModal(true);
+            setTimeout(() => {
+                globalEventStore.append({
+                    id: uuidv4(), sessionId: sessionId as string, seq: 0,
+                    type: "TURN_STEPPED", actorUserId,
+                    createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                    payload: { index: 0 }
+                } as any);
+            }, 500);
+        }
+    };
+
     useEffect(() => {
         if (!state.battlemap?.isActive && isTheaterMode) {
             battlemapToolStore.setTheaterMode(false);
@@ -316,6 +360,7 @@ export default function SessionPage() {
     useEffect(() => {
         const showBg = activeTab === "combat"
             && !!headerImageUrl
+            && !deathFocusCharId
             && !videoStream
             && !state.battlemap?.isActive;
 
@@ -333,7 +378,7 @@ export default function SessionPage() {
             document.body.style.backgroundAttachment = "";
             document.body.style.backgroundRepeat = "";
         }
-    }, [activeTab, headerImageUrl, videoStream, state.battlemap?.isActive]);
+    }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive]);
 
     // ─── Gerencia Google Fonts + theme-preset-css via efeito ───────────────────
     // Antes era um IIFE no JSX: executava a cada render → re-fazia download do .woff2
@@ -422,6 +467,21 @@ export default function SessionPage() {
             if (firstNpc) setCombatActiveNpcId(firstNpc.id);
         }
     }, [characterList, combatActivePcId, combatActiveNpcId, combatLastSelectedId]);
+
+    // Auto-sync droplist to whoever is active in turn
+    useEffect(() => {
+        if (currentTurnActorId) {
+            const char = characterList.find(c => c.id === currentTurnActorId);
+            if (char) {
+                if (char.isNPC) {
+                    setCombatActiveNpcId(char.id);
+                } else {
+                    setCombatActivePcId(char.id);
+                }
+                setCombatLastSelectedId(char.id);
+            }
+        }
+    }, [currentTurnActorId, characterList]);
 
     // ─── LOADING SCREEN ───────────────────────────────────────────────────────
 
@@ -672,38 +732,7 @@ export default function SessionPage() {
                 }
                 onSummonAlly={() => { setSummonMode("HERO"); setShowSummonModal(true); }}
                 onSummonThreat={() => { setSummonMode("THREAT"); setShowSummonModal(true); }}
-                onToggleChallenge={() => {
-                    const newState = !challengeMode;
-                    lastToggleTimeRef.current = Date.now();
-                    if (!newState) {
-                        combatStartTimeRef.current = Date.now();
-                    } else {
-                        combatStartTimeRef.current = null;
-                    }
-                    handleChallengeUpdate({ isActive: newState });
-                    if (!newState && userRole === "GM") {
-                        if (!state.turnOrder || state.turnOrder.length === 0) {
-                            const players = characterList.filter(c => !c.isNPC);
-                            if (players.length > 0) {
-                                globalEventStore.append({
-                                    id: uuidv4(), sessionId: sessionId as string, seq: 0,
-                                    type: "TURN_ORDER_UPDATED", actorUserId,
-                                    createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                                    payload: { characterIds: players.map(p => p.id) }
-                                } as any);
-                            }
-                        }
-                        setShowTurnOrderModal(true);
-                        setTimeout(() => {
-                            globalEventStore.append({
-                                id: uuidv4(), sessionId: sessionId as string, seq: 0,
-                                type: "TURN_STEPPED", actorUserId,
-                                createdAt: new Date().toISOString(), visibility: "PUBLIC",
-                                payload: { index: 0 }
-                            } as any);
-                        }, 500);
-                    }
-                }}
+                onToggleChallenge={handleToggleChallengeMode}
                 onOpenTurnOrder={() => setShowTurnOrderModal(true)}
                 challengeActive={challengeMode}
                 inCombat={!challengeMode}
@@ -714,6 +743,8 @@ export default function SessionPage() {
                 onStartScreenShare={handleStartScreenShare}
                 onStopScreenShare={handleStopScreenShare}
                 connectionStatus={connectionStatus}
+                showDiceRoller={showDiceRoller}
+                onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
             >
                 {activeTab === "combat" && !challengeMode && (
                     <TurnOrderTracker
@@ -723,6 +754,44 @@ export default function SessionPage() {
                         targetId={state.targetId}
                         soundSettings={state.soundSettings}
                         lastTurnChangeTimestamp={state.lastTurnChangeTimestamp}
+                        userRole={userRole}
+                        currentRound={state.currentRound || 1}
+                        handleNextTurn={() => handleNextTurn(false)}
+                        handlePreviousTurn={handlePreviousTurn}
+                        handleForcePass={handleForcePass}
+                        handleTogglePause={handleTogglePause}
+                        isReaction={state.isReaction || false}
+                        timerPaused={state.timerPaused || false}
+                        timerPausedAt={state.timerPausedAt || null}
+                        isCurrentPlayerActive={isCurrentPlayerActive || false}
+                        actorUserId={actorUserId}
+                        sessionId={sessionId as string}
+                        handleNextRound={() => handleNextTurn(true)}
+                        handleEndCombat={() => {
+                            if (confirm("Encerrar combate?")) {
+                                globalEventStore.append({
+                                    id: uuidv4(),
+                                    sessionId: sessionId as string,
+                                    seq: 0,
+                                    type: "TURN_ORDER_UPDATED",
+                                    actorUserId,
+                                    createdAt: new Date().toISOString(),
+                                    visibility: "PUBLIC",
+                                    payload: { characterIds: [] }
+                                } as any);
+                                globalEventStore.append({
+                                    id: uuidv4(),
+                                    sessionId: sessionId as string,
+                                    seq: 0,
+                                    type: "COMBAT_REACTION_ENDED",
+                                    actorUserId,
+                                    createdAt: new Date().toISOString(),
+                                    visibility: "PUBLIC",
+                                    payload: {}
+                                } as any);
+                                handleChallengeUpdate({ isActive: true });
+                            }
+                        }}
                     />
                 )}
                 {showVictory && <div className="victory-announcement">VITÓRIA</div>}
@@ -821,6 +890,10 @@ export default function SessionPage() {
                                         handleChallengeUpdate={handleChallengeUpdate}
                                         characterList={characterList}
                                         onRefresh={refresh}
+                                        onSummonAlly={() => { setSummonMode("HERO"); setShowSummonModal(true); }}
+                                        onSummonThreat={() => { setSummonMode("THREAT"); setShowSummonModal(true); }}
+                                        onToggleChallenge={handleToggleChallengeMode}
+                                        onOpenTurnOrder={() => setShowTurnOrderModal(true)}
                                     />
                                 )}
 
@@ -883,6 +956,18 @@ export default function SessionPage() {
                 />
             )}
 
+            {userRole === "GM" && pendingDamage && (
+                <DamageResolutionModal
+                    isOpen={!!pendingDamage}
+                    defender={pendingDamage.defender}
+                    damage={pendingDamage?.damage || 0}
+                    track={pendingDamage?.track || "PHYSICAL"}
+                    onConfirm={handleDamageConfirm}
+                    onAutoCalculate={handleDamageAutoCalculate}
+                    onSkip={handleDamageSkip}
+                />
+            )}
+
             {userRole === "GM" && activeConsequence && (
                 <ConsequenceModal
                     isOpen={true}
@@ -930,6 +1015,8 @@ export default function SessionPage() {
                 <FateDice3D
                     isVisible={true}
                     accentColor={diceParams?.accentColor}
+                    calculationBreakdown={diceParams?.calculationBreakdown}
+                    resultOverlay={diceParams?.resultOverlay}
                     onSettled={(results) => {
                         diceParams?.onSettled(results);
                         diceSimulationStore.hide();

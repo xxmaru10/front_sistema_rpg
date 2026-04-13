@@ -1,12 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Character } from "@/types/domain";
-import { ChevronRight, Shield, Swords, Skull, AlertTriangle } from "lucide-react";
+import { ChevronRight, ChevronLeft, Shield, Swords, Skull, AlertTriangle, FastForward, Trash2 } from "lucide-react";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 import { globalEventStore } from "@/lib/eventStore";
-
-import { getPublicUrl } from "@/lib/storageClient";
-
+import { supabase } from "@/lib/supabaseClient";
 import { TurnTimer } from "./TurnTimer";
+import { v4 as uuidv4 } from "uuid";
+
+const BUCKET_NAME = "campaign-uploads";
 
 interface TurnOrderTrackerProps {
     characters: Character[];
@@ -22,14 +23,37 @@ interface TurnOrderTrackerProps {
         battleStart?: string;
     };
     lastTurnChangeTimestamp?: string;
+    
+    // Novas props para a HUD
+    userRole?: "GM" | "PLAYER";
+    currentRound?: number;
+    handleNextTurn?: () => void;
+    handlePreviousTurn?: () => void;
+    handleForcePass?: () => void;
+    handleTogglePause?: () => void;
+    isReaction?: boolean;
+    timerPaused?: boolean;
+    timerPausedAt?: string | null;
+    isCurrentPlayerActive?: boolean;
+    actorUserId?: string;
+    sessionId?: string;
+    handleNextRound?: () => void;
+    handleEndCombat?: () => void;
 }
 
-const TrackerItem = ({ char, isActive, isTarget, index, itemsRef, effectType, damage, soundSettings }: {
+const TrackerItem = ({ 
+    char, 
+    isActive, 
+    isTarget, 
+    distance,
+    effectType, 
+    damage, 
+    soundSettings 
+}: {
     char: Character,
     isActive: boolean,
     isTarget: boolean,
-    index: number,
-    itemsRef: React.MutableRefObject<Map<string, HTMLDivElement | null>>,
+    distance: number | 'hidden',
     effectType?: 'slash' | 'shield',
     damage?: number,
     soundSettings?: TurnOrderTrackerProps['soundSettings']
@@ -37,34 +61,30 @@ const TrackerItem = ({ char, isActive, isTarget, index, itemsRef, effectType, da
     const prevEliminatedRef = useRef(isCharacterEliminated(char));
 
     const getSfxUrl = (path?: string) => {
-        if (!path) return '';
-        return getPublicUrl(path);
-      };
+        if (!path) return "";
+        if (path.startsWith("http") || path.startsWith("/audio/")) return path;
+        const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
+        return data.publicUrl;
+    };
 
-    // Play audio when effect appears
     useEffect(() => {
         if (effectType === 'slash') {
             const url = getSfxUrl(soundSettings?.hit) || "/audio/Effects/atack.MP3";
-            console.log("Playing hit sound:", url);
             const audio = new Audio(url);
             audio.volume = 0.5;
             audio.play().catch(e => console.warn("Hit sound failed:", e));
         } else if (effectType === 'shield') {
             const url = getSfxUrl(soundSettings?.defense) || "/audio/Effects/defesa.MP3";
-            console.log("Playing defense sound:", url);
             const audio = new Audio(url);
             audio.volume = 0.5;
             audio.play().catch(e => console.warn("Defense sound failed:", e));
         }
     }, [effectType, soundSettings]);
 
-    // Death Sound logic
     useEffect(() => {
         const isCurrentlyEliminated = isCharacterEliminated(char);
         if (isCurrentlyEliminated && !prevEliminatedRef.current) {
-            // Just died!
             const url = getSfxUrl(soundSettings?.death) || "/audio/Effects/morte.mp3";
-            console.log("Playing death sound for", char.name, ":", url);
             const audio = new Audio(url);
             audio.volume = 0.6;
             audio.play().catch(e => console.warn("Death sound failed:", e));
@@ -76,20 +96,17 @@ const TrackerItem = ({ char, isActive, isTarget, index, itemsRef, effectType, da
     const arenaSide = char.arenaSide as string | undefined;
     const isThreat = (arenaSide === 'THREAT') || (char.isNPC && arenaSide !== 'HERO');
 
-    // Determine color
     const sideColor = isHazard
         ? '#a855f7'
         : isThreat
             ? '#ff4444'
-            : (char.isNPC ? '#50a6ff' : '#c5a059');
+            : '#3b82f6'; // Azul para jogadores e aliados
 
-    // Calculate Damage/Stress Level
     const physicalTotal = char.stress.physical.length;
     const physicalMarked = char.stress.physical.filter(Boolean).length;
     const mentalTotal = char.stress.mental.length;
     const mentalMarked = char.stress.mental.filter(Boolean).length;
 
-    // Consequences
     const consequenceKeys = Object.keys(char.consequences);
     const standardSlots = ["mild", "moderate", "severe"];
     const extraSlots = consequenceKeys.filter(k => !standardSlots.includes(k));
@@ -97,7 +114,7 @@ const TrackerItem = ({ char, isActive, isTarget, index, itemsRef, effectType, da
 
     let filledConsequences = 0;
     consequenceKeys.forEach(key => {
-        if (char.consequences[key]?.text && char.consequences[key]?.text.trim().length > 0) {
+        if (char.consequences[key]?.text && typeof char.consequences[key]?.text === 'string' && char.consequences[key]?.text.trim().length > 0) {
             filledConsequences++;
         }
     });
@@ -108,45 +125,40 @@ const TrackerItem = ({ char, isActive, isTarget, index, itemsRef, effectType, da
 
     return (
         <div
-            ref={(el) => {
-                if (el) itemsRef.current.set(char.id, el);
-                else itemsRef.current.delete(char.id);
-            }}
-            className={`tracker-item ${isActive ? 'active' : ''} ${isTarget ? 'target' : ''}`}
+            className={`tracker-item ${isActive ? 'center-active' : ''} ${isTarget ? 'is-target' : ''}`}
+            data-distance={distance}
             style={{ '--side-color': sideColor } as any}
         >
-            <div className="portrait-tall">
-                <div className="portrait-content">
+            <div className="diamond-portrait">
+                <div className="portrait-inner">
                     {char.imageUrl ? (
                         <img src={char.imageUrl} alt={char.name} />
                     ) : (
                         <div className="portrait-placeholder">
                             {isHazard ? (
-                                <AlertTriangle size={24} />
+                                <AlertTriangle size={32} />
                             ) : isThreat ? (
-                                <Skull size={24} />
+                                <Skull size={32} />
                             ) : char.isNPC ? (
-                                <Shield size={24} />
+                                <Shield size={32} />
                             ) : (
-                                <Swords size={24} />
+                                <Swords size={32} />
                             )}
                         </div>
                     )}
 
-                    {/* Liquid Overlay */}
                     <div
                         className="portrait-blood-overlay"
                         style={{ height: `${damagePercentage}%` }}
-                    ></div>
+                    />
 
-                    {/* Combat Effects Overlays */}
                     {effectType === 'slash' && (
-                        <div className="effect-overlay slash-effect">
+                        <div className="effect-overlay">
                             <img src="/atack.gif" alt="Slash" className="effect-gif" />
                         </div>
                     )}
                     {effectType === 'shield' && (
-                        <div className="effect-overlay shield-effect">
+                        <div className="effect-overlay">
                             <img src="/defense.gif" alt="Shield" className="effect-gif" />
                         </div>
                     )}
@@ -157,15 +169,11 @@ const TrackerItem = ({ char, isActive, isTarget, index, itemsRef, effectType, da
                         </div>
                     )}
                 </div>
-
-                {/* Damage Number Overlay - Moved outside portrait-content to allow "falling out" */}
-                {effectType === 'slash' && damage !== undefined && damage > 0 && (
-                    <div className="damage-number">-{damage}</div>
-                )}
-
-                <div className="turn-number">{index + 1}</div>
             </div>
-            <div className="char-mini-name">{char.name.split(' ')[0].toUpperCase()}</div>
+
+            {effectType === 'slash' && damage !== undefined && damage > 0 && (
+                <div className="damage-number">-{damage}</div>
+            )}
         </div>
     );
 };
@@ -176,42 +184,44 @@ export function TurnOrderTracker({
     activeCharacterId,
     targetId,
     soundSettings,
-    lastTurnChangeTimestamp
+    lastTurnChangeTimestamp,
+    userRole = "PLAYER",
+    currentRound = 1,
+    handleNextTurn,
+    handlePreviousTurn,
+    handleForcePass,
+    handleTogglePause,
+    isReaction = false,
+    timerPaused = false,
+    timerPausedAt = null,
+    isCurrentPlayerActive = false,
+    actorUserId,
+    sessionId = "",
+    handleNextRound,
+    handleEndCombat
 }: TurnOrderTrackerProps) {
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const itemsRef = useRef<Map<string, HTMLDivElement | null>>(new Map());
-
     const [focusId, setFocusId] = useState<string | null>(null);
     const [effectTrigger, setEffectTrigger] = useState<{ id: string, type: 'slash' | 'shield', damage: number } | null>(null);
     const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Combat Event Listener at Parent Level to coordinate focus
     useEffect(() => {
         const unsubscribe = globalEventStore.subscribe((event) => {
             if (event.type === "COMBAT_OUTCOME") {
                 const payload = event.payload;
-                const targetId = payload.defenderId;
+                const actTargetId = payload.defenderId;
                 const result = payload.result;
                 const isHit = result > 0;
 
-                // Clear any existing focus timeout
-                if (focusTimeoutRef.current) {
-                    clearTimeout(focusTimeoutRef.current);
-                }
+                if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
 
-                // Set Focus to Target
-                setFocusId(targetId);
-
-                // Trigger Effect on specific item
+                setFocusId(actTargetId);
                 setEffectTrigger({
-                    id: targetId,
+                    id: actTargetId,
                     type: isHit ? 'slash' : 'shield',
                     damage: result > 0 ? result : 0
                 });
 
-                // Clear focus after animation (Extended time for damage display)
                 const duration = isHit ? 3330 : 2500;
-
                 focusTimeoutRef.current = setTimeout(() => {
                     setFocusId(null);
                     setEffectTrigger(null);
@@ -225,169 +235,356 @@ export function TurnOrderTracker({
         };
     }, []);
 
-    // Auto-scroll to center active character OR focused character
-    useEffect(() => {
-        const targetToScroll = focusId || activeCharacterId;
+    // Calcula de forma circular as distâncias a partir do centro
+    const centerCharacterId = focusId || activeCharacterId;
+    let centerIndex = currentTurnIndex;
+    
+    if (focusId) {
+        const fIdx = characters.findIndex(c => c.id === focusId);
+        if (fIdx !== -1) centerIndex = fIdx;
+    } else if (activeCharacterId && characters[currentTurnIndex]?.id !== activeCharacterId) {
+        const aIdx = characters.findIndex(c => c.id === activeCharacterId);
+        if (aIdx !== -1) centerIndex = aIdx;
+    }
 
-        if (targetToScroll && itemsRef.current.has(targetToScroll)) {
-            const node = itemsRef.current.get(targetToScroll);
-            if (node) {
-                node.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest',
-                    inline: 'center'
-                });
+    const calculatedDistances = useMemo(() => {
+        const dists: Record<string, number | 'hidden'> = {};
+        const len = characters.length;
+        
+        characters.forEach((char, index) => {
+            if (len === 0) return;
+            
+            let dist = (index - centerIndex) % len;
+            if (dist > Math.floor(len / 2)) dist -= len;
+            if (dist < -Math.floor(len / 2)) dist += len;
+            
+            // Limit to showing 5 items (0, -1, 1, -2, 2)
+            if (Math.abs(dist) <= 2) {
+                dists[char.id] = dist;
+            } else {
+                dists[char.id] = 'hidden';
             }
-        }
-    }, [activeCharacterId, focusId]);
+        });
+        return dists;
+    }, [characters, centerIndex]);
 
     if (!characters || characters.length === 0) return null;
 
+    // Checks current player state for Player View Buttons
+    const amITarget = useMemo(() => {
+        if (!isReaction || !targetId) return false;
+        const targetChar = characters.find(c => c.id === targetId);
+        return targetChar?.ownerUserId?.trim().toLowerCase() === actorUserId?.trim().toLowerCase();
+    }, [isReaction, targetId, characters, actorUserId]);
+
     return (
         <div className="turn-tracker-container animate-reveal-tracker">
-            <div className="tracker-scroll custom-scrollbar" ref={scrollContainerRef}>
-                <div className="tracker-items-center">
-                    {characters.map((char, index) => (
+            
+            <div className="hud-top">
+                <div className="hud-timer-container">
+                    <TurnTimer
+                        startTime={lastTurnChangeTimestamp ?? ''}
+                        durationMinutes={isReaction ? 2 : 3}
+                        isPaused={timerPaused}
+                        pausedAt={timerPausedAt || undefined}
+                        isGM={userRole === "GM"}
+                        onExpire={() => {}}
+                        onTogglePause={handleTogglePause || (() => {})}
+                        onForcePass={handleForcePass || (() => {})}
+                    />
+                </div>
+                <div className="round-badge">
+                    RODADA {currentRound}
+                </div>
+            </div>
+
+            {/* Semicircle Carousel */}
+            <div className="semicircle-arena">
+                <div className="connection-arc"></div>
+                {userRole === "GM" && (
+                    <>
+                        <button className="hud-floating-nav prev" onClick={handlePreviousTurn} title="Voltar Turno">
+                            <ChevronLeft size={32} />
+                        </button>
+                        <button className="hud-floating-nav next" onClick={handleNextTurn} title="Avançar Turno">
+                            <ChevronRight size={32} />
+                        </button>
+                    </>
+                )}
+                
+                {characters.map((char) => {
+                    const dist = calculatedDistances[char.id] ?? 'hidden';
+                    return (
                         <TrackerItem
                             key={char.id}
                             char={char}
-                            isActive={char.id === activeCharacterId}
+                            isActive={dist === 0 && !isReaction}
                             isTarget={char.id === targetId || char.id === focusId}
-                            index={index}
-                            itemsRef={itemsRef}
+                            distance={dist}
                             effectType={effectTrigger?.id === char.id ? effectTrigger.type : undefined}
                             damage={effectTrigger?.id === char.id ? effectTrigger.damage : undefined}
                             soundSettings={soundSettings}
                         />
-                    ))}
-                </div>
+                    );
+                })}
+
             </div>
 
-            {/* Timer only for active character - REMOVED: Managed centrally in page.tsx */}
-            {/* {activeCharacterId && characters.find(c => c.id === activeCharacterId) && (
-                <div className="turn-timer-wrapper">
-                    <TurnTimer
-                         // ... props
-                    />
+            {/* GM Controls: Below Center Diamond */}
+            {userRole === "GM" && (
+                <div className="gm-center-controls">
+                    {handleNextRound && (
+                        <button className="gm-round-btn" onClick={handleNextRound} title="Passar Rodada">
+                            <FastForward size={16} />
+                        </button>
+                    )}
+                    {handleEndCombat && (
+                        <button className="gm-trash-btn" onClick={handleEndCombat} title="Encerrar combate">
+                            <Trash2 size={15} />
+                        </button>
+                    )}
                 </div>
-            )} */}
+            )}
+
+            {/* Bottom HUD: Player Controls */}
+            {userRole === "PLAYER" && (
+                <div className="hud-bottom">
+                    <div className="player-turn-controls">
+                        {amITarget ? (
+                            <button
+                                className="hud-action-btn highlight-reaction"
+                                onClick={() => {
+                                    globalEventStore.append({
+                                        id: uuidv4(),
+                                        sessionId: sessionId,
+                                        seq: 0,
+                                        type: "COMBAT_REACTION_ENDED",
+                                        actorUserId: actorUserId || "",
+                                        createdAt: new Date().toISOString(),
+                                        visibility: "PUBLIC",
+                                        payload: {}
+                                    } as any);
+                                }}
+                            >
+                                FINALIZAR REAÇÃO
+                            </button>
+                        ) : isCurrentPlayerActive ? (
+                             <button className="hud-action-btn next-step-btn" onClick={handleNextTurn} title="Passar Turno">
+                                 <FastForward size={22} />
+                             </button>
+                        ) : null}
+                    </div>
+                </div>
+            )}
 
             <style jsx>{`
-                .turn-timer-wrapper {
-                    position: absolute;
-                    top: -40px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 300px;
-                    z-index: 100;
-                }
                 .turn-tracker-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: transparent;
-                    border: none;
-                    padding: 0;
-                    width: 100%;
-                    box-shadow: none;
-                    backdrop-filter: none;
-                    min-height: auto;
-                    gap: 24px;
-                    overflow: hidden;
-                }
-
-                .tracker-scroll {
-                    display: flex;
-                    align-items: center;
-                    overflow-x: auto;
-                    padding: 20px 0;
-                    flex-grow: 1;
-                    scroll-behavior: smooth;
-                    justify-content: flex-start;
-                    width: 100%;
-                    mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
-                    -webkit-mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
-                }
-
-                .tracker-items-center {
-                    display: flex;
-                    align-items: flex-end;
-                    gap: 16px;
-                    margin: 0;
-                    padding: 0 calc(50% - 60px);
-                    min-width: min-content;
-                }
-                
-                /* Global styles for TrackerItem because scoped jsx in loop is tricky or just cleaner here */
-                :global(.tracker-item) {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 8px;
-                    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-                    opacity: 0.5; 
-                    transform: scale(0.9);
+                    justify-content: flex-start;
+                    width: 100%;
+                    max-width: 800px;
+                    margin: 0 auto;
                     position: relative;
-                    flex-shrink: 0;
-                    cursor: pointer;
-                    filter: grayscale(0.6);
+                    padding-top: 0;
+                    margin-top: -14px;
+                    z-index: 2147483640; /* High z-index to stay above everything else */
                 }
 
-                :global(.tracker-item:hover) {
-                    opacity: 0.8;
-                    transform: scale(0.95);
-                    filter: grayscale(0.2);
+                .hud-top {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 420px;
+                    margin-bottom: -18px;
+                    z-index: 60;
                 }
 
-                :global(.tracker-item.active) {
-                    opacity: 1;
-                    transform: scale(1.15) translateY(-5px);
-                    z-index: 10;
-                    filter: grayscale(0);
-                    margin: 0 10px;
+                .round-badge {
+                    color: var(--accent-color);
+                    font-family: var(--font-header);
+                    letter-spacing: 0.12em;
+                    font-size: 0.72rem;
+                    font-weight: bold;
+                    text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
+                    line-height: 1;
                 }
-                
-                :global(.portrait-tall) {
-                    width: 110px;
-                    height: 180px;
-                    border-radius: 6px;
-                    border: 1px solid var(--side-color);
-                    padding: 2px;
-                    background: rgba(10, 10, 12, 0.8);
+
+                .center-timer-wrapper {
+                    position: absolute;
+                    bottom: -15px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 50;
+                    display: flex;
+                    justify-content: center;
+                }
+
+                /* Semicircle Area - Downward Curve */
+                .semicircle-arena {
                     position: relative;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-                    transition: all 0.3s;
-                }
-                
-               :global(.active .portrait-tall) {
-                    box-shadow: 0 0 40px var(--side-color), inset 0 0 20px var(--side-color);
-                    border-width: 2px;
-                    border-color: #fff;
-                }
-
-                :global(.tracker-item.target .portrait-tall) {
-                    box-shadow: 0 0 40px #a855f7, inset 0 0 20px #a855f7;
-                    border-color: #a855f7;
-                    border-width: 2px;
+                    width: 700px;
+                    height: 110px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: flex-start;
+                    margin-bottom: 10px;
+                    margin-top: -8px;
                 }
 
-                :global(.tracker-item.target) {
-                    opacity: 1;
-                    filter: grayscale(0);
-                    transform: scale(1.05);
+                .connection-arc {
+                    position: absolute;
+                    width: 340px;
+                    height: 200px;
+                    border: 2px solid transparent;
+                    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 50%;
+                    top: -168px; /* arco passa pelas pontas laterais dos losangos */
+                    left: 50%;
+                    transform: translateX(-50%);
+                    pointer-events: none;
                     z-index: 5;
                 }
 
-                :global(.portrait-content) {
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 2px;
-                    overflow: hidden;
+                :global(.tracker-item) {
+                    position: absolute;
+                    top: 0;
+                    left: 50%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    transform-origin: center center;
+                    filter: grayscale(0.6);
+                    cursor: pointer;
+                }
+
+                :global(.tracker-item:hover) {
+                    filter: grayscale(0.2);
+                }
+
+                :global(.tracker-item.center-active) {
+                    filter: grayscale(0);
+                }
+
+                /* Posicionamento do Semicirculo invertido (Centro no fundo) */
+                :global(.tracker-item[data-distance="0"]) {
+                    transform: translate(-50%, 10px) scale(1);
+                    opacity: 1;
+                    z-index: 20;
+                }
+
+                :global(.tracker-item[data-distance="-1"]) {
+                    transform: translate(calc(-50% - 80px), -18px) scale(0.75);
+                    opacity: 0.8;
+                    z-index: 15;
+                    filter: brightness(0.7) grayscale(0.4);
+                }
+
+                :global(.tracker-item[data-distance="1"]) {
+                    transform: translate(calc(-50% + 80px), -18px) scale(0.75);
+                    opacity: 0.8;
+                    z-index: 15;
+                    filter: brightness(0.7) grayscale(0.4);
+                }
+
+                :global(.tracker-item[data-distance="-2"]) {
+                    transform: translate(calc(-50% - 140px), -48px) scale(0.55);
+                    opacity: 0.5;
+                    z-index: 10;
+                    filter: brightness(0.4) grayscale(0.8);
+                }
+
+                :global(.tracker-item[data-distance="2"]) {
+                    transform: translate(calc(-50% + 140px), -48px) scale(0.55);
+                    opacity: 0.5;
+                    z-index: 10;
+                    filter: brightness(0.4) grayscale(0.8);
+                }
+
+                :global(.tracker-item[data-distance="hidden"]) {
+                    transform: translate(-50%, -60px) scale(0.2);
+                    opacity: 0;
+                    pointer-events: none;
+                    z-index: 1;
+                }
+
+                /* Inclinação dos losangos para seguir o arco */
+                :global(.tracker-item[data-distance="-2"] .diamond-portrait) {
+                    transform: rotate(67deg);
+                }
+                :global(.tracker-item[data-distance="-2"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-67deg);
+                }
+                :global(.tracker-item[data-distance="-1"] .diamond-portrait) {
+                    transform: rotate(57deg);
+                }
+                :global(.tracker-item[data-distance="-1"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-57deg);
+                }
+                :global(.tracker-item[data-distance="1"] .diamond-portrait) {
+                    transform: rotate(33deg);
+                }
+                :global(.tracker-item[data-distance="1"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-33deg);
+                }
+                :global(.tracker-item[data-distance="2"] .diamond-portrait) {
+                    transform: rotate(23deg);
+                }
+                :global(.tracker-item[data-distance="2"] .portrait-inner) {
+                    transform: translate(-50%, -50%) rotate(-23deg);
+                }
+
+                /* Losango */
+                :global(.diamond-portrait) {
+                    width: 54px;
+                    height: 54px;
                     background: #050505;
+                    transform: rotate(45deg);
+                    border-radius: 10px;
+                    overflow: hidden;
+                    border: 2px solid var(--side-color);
+                    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.7);
+                    position: relative;
+                    transition: all 0.4s ease;
+                }
+
+                :global(.center-active .diamond-portrait) {
+                    width: 68px;
+                    height: 68px;
+                    border-width: 3px;
+                    border-color: var(--side-color);
+                    box-shadow: 0 0 28px var(--side-color), 0 0 8px var(--side-color), inset 0 0 12px var(--side-color);
+                }
+
+                :global(.is-target .diamond-portrait) {
+                    border-color: #a855f7;
+                    box-shadow: 0 0 40px #a855f7, inset 0 0 20px #a855f7;
+                }
+
+                :global(.portrait-inner) {
+                    position: absolute;
+                    width: 150%;
+                    height: 150%;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%) rotate(-45deg);
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    position: relative;
+                }
+
+                :global(.portrait-inner img) {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                :global(.portrait-placeholder) {
+                    color: var(--side-color);
+                    opacity: 0.6;
                 }
 
                 :global(.portrait-blood-overlay) {
@@ -401,7 +598,7 @@ export function TurnOrderTracker({
                     mix-blend-mode: multiply;
                     z-index: 2;
                 }
-                
+
                 :global(.effect-overlay) {
                     position: absolute;
                     inset: 0;
@@ -412,19 +609,12 @@ export function TurnOrderTracker({
                     justify-content: center;
                     animation: fadeInOut 2s forwards;
                 }
-                
+
                 :global(.effect-gif) {
                     width: 80%;
                     height: 80%;
                     object-fit: contain;
                     filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
-                }
-                
-                @keyframes fadeInOut {
-                    0% { opacity: 0; transform: scale(0.5); }
-                    20% { opacity: 1; transform: scale(1.2); }
-                    80% { opacity: 1; transform: scale(1); }
-                    100% { opacity: 0; transform: scale(0.8); }
                 }
 
                 :global(.damage-number) {
@@ -434,17 +624,187 @@ export function TurnOrderTracker({
                     align-items: center;
                     justify-content: center;
                     color: #ff2222;
-                    font-size: 4rem;
+                    font-size: 3rem;
                     font-weight: 900;
-                    text-shadow: 
-                        0 0 15px rgba(255, 0, 0, 0.8), 
-                        3px 3px 0px #000, 
-                        -2px -2px 0px #000;
+                    text-shadow: 0 0 15px rgba(255, 0, 0, 0.8), 2px 2px 0px #000;
                     z-index: 50;
                     opacity: 0;
                     pointer-events: none;
                     animation: damageJump 2.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
                     animation-delay: 1.1s;
+                }
+
+                :global(.portrait-death-overlay) {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #ff0000;
+                    z-index: 3;
+                    pointer-events: none;
+                }
+
+                :global(.death-skull) {
+                    filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
+                    animation: skullPulse 1.5s infinite;
+                }
+
+                .gm-center-controls {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    z-index: 30;
+                    margin-top: 6px;
+                    margin-bottom: 4px;
+                }
+
+                .gm-round-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(10, 10, 15, 0.85);
+                    border: 1px solid rgba(197, 160, 89, 0.5);
+                    color: rgba(197, 160, 89, 0.7);
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .gm-round-btn:hover {
+                    border-color: var(--accent-color);
+                    color: var(--accent-color);
+                    background: rgba(var(--accent-rgb), 0.15);
+                    transform: scale(1.1);
+                }
+
+                .gm-trash-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(10, 10, 15, 0.85);
+                    border: 1px solid rgba(255, 68, 68, 0.5);
+                    color: rgba(255, 68, 68, 0.7);
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .gm-trash-btn:hover {
+                    border-color: #ff4444;
+                    color: #ff4444;
+                    background: rgba(255, 68, 68, 0.15);
+                    transform: scale(1.1);
+                }
+
+                /* HUD Bottom: Controles */
+                .hud-bottom {
+                    display: flex;
+                    justify-content: center;
+                    width: 100%;
+                    z-index: 60;
+                    margin-top: 32px; /* Push it down further avoid timer overlap */
+                }
+
+                .hud-timer-container {
+                    min-width: 60px;
+                    display: flex;
+                    justify-content: center;
+                    color: var(--accent-color);
+                    font-size: 0.8rem;
+                    font-weight: bold;
+                    letter-spacing: 0.08em;
+                    text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.9), 0 0 24px rgba(var(--accent-rgb), 0.5);
+                    filter: brightness(1.3);
+                }
+
+                .top-timer {
+                    margin-top: 0;
+                    margin-bottom: 0;
+                }
+
+                .hud-floating-nav {
+                    background: transparent;
+                    border: none;
+                    color: rgba(197, 160, 89, 0.6);
+                    position: absolute;
+                    top: 42px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    padding: 0;
+                    z-index: 25;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .hud-floating-nav.prev {
+                    left: calc(50% - 78px);
+                }
+
+                .hud-floating-nav.next {
+                    left: calc(50% + 50px);
+                }
+
+                .hud-floating-nav:hover {
+                    color: #C5A059;
+                    transform: scale(1.15);
+                    filter: drop-shadow(0 0 8px rgba(197, 160, 89, 0.6));
+                }
+
+                .player-turn-controls {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                }
+
+                .hud-action-btn {
+                    background: rgba(10, 10, 15, 0.9);
+                    border: 1px solid var(--accent-color);
+                    color: var(--accent-color);
+                    padding: 4px 12px;
+                    font-family: var(--font-header);
+                    font-size: 0.8rem;
+                    letter-spacing: 0.15em;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    transition: all 0.3s;
+                    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .next-step-btn {
+                    padding: 6px 16px;
+                    border-radius: 30px;
+                    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.3) 100%);
+                }
+
+                .hud-action-btn:hover {
+                    background: rgba(var(--accent-rgb), 0.2);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 20px rgba(var(--accent-rgb), 0.4);
+                }
+
+                .highlight-reaction {
+                    border-color: #a855f7;
+                    color: #fff;
+                    background: rgba(168, 85, 247, 0.5);
+                    animation: pulse-reaction 1.5s infinite alternate;
+                }
+
+                @keyframes pulse-reaction {
+                    from { box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); }
+                    to { box-shadow: 0 0 25px rgba(168, 85, 247, 0.8); }
                 }
 
                 @keyframes damageJump {
@@ -455,110 +815,16 @@ export function TurnOrderTracker({
                     100% { opacity: 0; transform: scale(0.8) translateY(250px) translateX(100px) rotate(90deg); }
                 }
 
-                :global(.portrait-death-overlay) {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #ff0000;
-                    font-size: 3rem;
-                    font-weight: bold;
-                    text-shadow: 0 0 10px #000;
-                    pointer-events: none;
-                    animation: fadeIn 0.5s;
-                    z-index: 3;
-                }
-
-                :global(.death-skull) {
-                    color: #ff0000;
-                    filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8)) drop-shadow(0 0 20px rgba(255, 0, 0, 0.5));
-                    animation: skullPulse 1.5s ease-in-out infinite;
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: scale(0.5); }
+                    20% { opacity: 1; transform: scale(1.2); }
+                    80% { opacity: 1; transform: scale(1); }
+                    100% { opacity: 0; transform: scale(0.8); }
                 }
 
                 @keyframes skullPulse {
                     0%, 100% { transform: scale(1); opacity: 0.9; }
                     50% { transform: scale(1.1); opacity: 1; }
-                }
-
-                :global(.portrait-content img) {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                    object-position: top center;
-                    position: relative;
-                    z-index: 1;
-                }
-
-                :global(.portrait-placeholder) {
-                    color: var(--side-color);
-                    opacity: 0.6;
-                }
-
-                :global(.turn-number) {
-                    position: absolute;
-                    top: -6px;
-                    left: -6px;
-                    background: var(--side-color);
-                    color: #fff;
-                    font-size: 0.6rem;
-                    font-weight: bold;
-                    width: 16px;
-                    height: 16px;
-                    border-radius: 3px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-                    border: 1px solid rgba(255,255,255,0.2);
-                    z-index: 3;
-                    transition: all 0.3s;
-                }
-                
-                :global(.active .turn-number) {
-                    background: #fff;
-                    color: #000;
-                    transform: scale(1.2);
-                }
-
-                :global(.char-mini-name) {
-                    font-family: var(--font-header);
-                    font-size: 0.5rem;
-                    letter-spacing: 0.05em;
-                    color: #888;
-                    white-space: nowrap;
-                    text-shadow: 0 1px 2px rgba(0,0,0,1);
-                    max-width: 50px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-
-                :global(.active .char-mini-name) {
-                    color: #fff;
-                    font-weight: bold;
-                    transform: scale(1.1);
-                    text-shadow: 0 0 10px var(--side-color);
-                }
-                
-                .animate-reveal-tracker {
-                    opacity: 0;
-                    transform: translateY(-5px);
-                    animation: revealTracker 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-                }
-
-                @keyframes revealTracker {
-                    to { opacity: 1; transform: translateY(0); }
-                }
-
-                .custom-scrollbar::-webkit-scrollbar {
-                    height: 3px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: rgba(0,0,0,0.1);
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(197, 160, 89, 0.1);
-                    border-radius: 1px;
                 }
             `}</style>
         </div>

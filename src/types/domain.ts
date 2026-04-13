@@ -169,6 +169,8 @@ export type Character = {
   impulseArrows?: number;
   linkedNotes?: EntityNote[];
   religionId?: string;
+  removedDefaultSlots?: string[]; // Slots padrão (mild/moderate/severe) removidos pelo mestre
+  extraConsequenceSlots?: string[]; // Slots extras criados pelo mestre (ex: mild_abc123)
 };
 
 // Aspect State
@@ -456,6 +458,7 @@ export type ActionEvent =
   | EventEnvelope<"SCENE_ACTIVATED", { id: string }>
   | EventEnvelope<"CHARACTER_CONSEQUENCE_UPDATED", { characterId: string; slot: string; value: string | null; debuff?: ConsequenceDebuff }>
   | EventEnvelope<"CHARACTER_CONSEQUENCE_DELETED", { characterId: string; slot: string }>
+  | EventEnvelope<"CHARACTER_CONSEQUENCE_SLOT_ADDED", { characterId: string; slot: string }>
   | EventEnvelope<"CHARACTER_INVENTORY_UPDATED", { characterId: string; item: Item }>
   | EventEnvelope<"CHARACTER_STUNT_UPDATED", { characterId: string; stunt: Stunt }>
   | EventEnvelope<"CHARACTER_STUNT_DELETED", { characterId: string; stuntId: string }>
@@ -482,7 +485,7 @@ export type ActionEvent =
   | EventEnvelope<"TURN_STEPPED", { index: number }>
   | EventEnvelope<"COMBAT_TARGET_SET", { targetId: string | null; targetIds?: string[]; damageType?: "PHYSICAL" | "MENTAL"; isReaction?: boolean }>
   | EventEnvelope<"COMBAT_REACTION_ENDED", { characterId?: string }>
-  | EventEnvelope<"COMBAT_OUTCOME", { attackerId: string; defenderId: string; attackTotal: number; defenseTotal: number; result: number; message: string }>
+  | EventEnvelope<"COMBAT_OUTCOME", { attackerId: string; defenderId: string; attackTotal: number; defenseTotal: number; result: number; message: string; track?: "PHYSICAL" | "MENTAL" }>
   | EventEnvelope<"TIMER_PAUSED", { pausedAt: string }>
   | EventEnvelope<"TIMER_RESUMED", { resumedAt: string }>
   | EventEnvelope<"TURN_FORCED_PASS", { characterId: string; isReaction: boolean }>

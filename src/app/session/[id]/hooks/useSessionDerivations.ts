@@ -49,8 +49,6 @@ export function useSessionDerivations({
     combatStartTimeRef,
 }: UseSessionDerivationsParams) {
 
-    // ─── GAME STATE (PROJECTION) ──────────────────────────────────────────────
-
     const state = useMemo(() => {
         const sorted = [...events].sort((a, b) => {
             const seqA = a.seq || 0;
@@ -163,16 +161,31 @@ export function useSessionDerivations({
     const isCurrentPlayerActive = useMemo(() => {
         if (!currentTurnActorId) return false;
         const currentActor = actorUserId?.toLowerCase().trim();
-        if (fixedCharacterId && currentTurnActorId === fixedCharacterId) return true;
-        if (state.isReaction && state.targetId) {
+        
+        let result = false;
+        if (fixedCharacterId && currentTurnActorId === fixedCharacterId) {
+            result = true;
+        } else if (state.isReaction && state.targetId) {
             const targetChar = state.characters[state.targetId];
-            if (!targetChar) return false;
-            const targetOwner = targetChar.ownerUserId?.toLowerCase().trim();
-            return targetOwner === currentActor || (userRole === "GM" && !!targetChar.isNPC);
+            if (targetChar) {
+                const targetOwner = targetChar.ownerUserId?.toLowerCase().trim();
+                result = (targetOwner === currentActor || (userRole === "GM" && !!targetChar.isNPC));
+            }
+        } else {
+            const turnActor = state.characters[currentTurnActorId];
+            if (turnActor) {
+                if (userRole === "GM" && turnActor.isNPC) {
+                    result = true;
+                } else {
+                    const owner = turnActor.ownerUserId?.toLowerCase().trim();
+                    result = (owner === currentActor);
+                }
+            }
         }
-        const owner = state.characters[currentTurnActorId]?.ownerUserId?.toLowerCase().trim();
-        if (!owner) return false;
-        return owner === currentActor;
+
+        console.log("🛡️ [isCurrentPlayerActive] ID:", actorUserId, "Active:", result, "Turn:", currentTurnActorId, "ActingFor:", fixedCharacterId);
+        console.log("🛡️ [isCurrentPlayerActive] User:", actorUserId, "Active:", result, "TurnIdxActor:", currentTurnActorId, "Reaction:", state.isReaction);
+        return result;
     }, [currentTurnActorId, state.characters, actorUserId, fixedCharacterId, state.isReaction, state.targetId, userRole]);
 
     // ─── COMBAT LIST MEMOS ────────────────────────────────────────────────────
@@ -244,7 +257,7 @@ export function useSessionDerivations({
             ) return e.payload;
         }
         return null;
-    }, [events, state.isReaction, state.targetId]);
+    }, [state.isReaction, state.targetId, events]);
 
     const filteredEvents = useMemo(() => {
         if (logFilter === "ALL") return events;

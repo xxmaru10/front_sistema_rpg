@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState, useCallback } from "react";
 import { useDiceRoller } from "@/hooks/useDiceRoller";
 import { RollerInputs } from "./DiceRoller/RollerInputs";
 import { DiceChamber } from "./DiceRoller/DiceChamber";
@@ -16,6 +16,7 @@ interface DiceRollerProps {
     targetDiff?: number;
     challengeDescription?: string;
     disabled?: boolean;
+    controlsHidden?: boolean;
     isGM?: boolean;
     stateTargetId?: string;
     isReaction?: boolean;
@@ -30,6 +31,8 @@ interface DiceRollerProps {
         dice?: string;
         portrait?: string;
     };
+    currentTurnActorId?: string | null;
+    isCombat?: boolean;
 }
 
 export function DiceRoller(props: DiceRollerProps) {
@@ -47,7 +50,10 @@ export function DiceRoller(props: DiceRollerProps) {
         isReaction = false,
         lastAttackTotal,
         stateDamageType,
-        soundSettings
+        soundSettings,
+        currentTurnActorId,
+        isCombat = false,
+        controlsHidden = false
     } = props;
 
     const roller = useDiceRoller({
@@ -63,7 +69,8 @@ export function DiceRoller(props: DiceRollerProps) {
         isReaction,
         lastAttackTotal,
         stateDamageType,
-        soundSettings
+        soundSettings,
+        currentTurnActorId
     });
 
     const challengeColors = useMemo(() => {
@@ -76,10 +83,17 @@ export function DiceRoller(props: DiceRollerProps) {
         return { primary: '#4ade80', glow: 'rgba(74, 222, 128, 0.3)', bg: 'rgba(10, 35, 20, 1)' };
     }, [targetDiff]);
 
+    const rollTriggerRef = useRef<HTMLButtonElement>(null);
+    const [rollNudge, setRollNudge] = useState(false);
+    const requestRollAttention = useCallback(() => {
+        if (!isIntegrated) return;
+        setRollNudge(true);
+    }, [isIntegrated]);
+
     if (characters.length === 0) return null;
 
     return (
-        <div className={`probability-grid tarot-style animate-reveal ${isIntegrated ? 'integrated' : ''} ${disabled ? 'disabled-mode' : ''} ${isReaction && !disabled ? 'reaction-active' : ''} ${roller.actionType === 'ATTACK' ? `damage-type-${roller.damageType.toLowerCase()}` : ""}`}>
+        <div className={`probability-grid tarot-style animate-reveal ${isIntegrated ? 'integrated' : ''} ${disabled ? 'disabled-mode' : ''} ${controlsHidden ? 'controls-hidden-mode' : ''} ${isReaction && !disabled ? 'reaction-active' : ''} ${roller.actionType === 'ATTACK' ? `damage-type-${roller.damageType.toLowerCase()}` : ""}`}>
             {!isIntegrated && (
                 <div className="roller-brand">
                     <div className="brand-dot"></div>
@@ -90,58 +104,76 @@ export function DiceRoller(props: DiceRollerProps) {
                 </div>
             )}
 
-            <RollerInputs
-                isIntegrated={isIntegrated}
-                fixedCharacterId={fixedCharacterId}
-                characters={characters}
-                selectedCharId={roller.selectedCharId}
-                setSelectedCharId={roller.setSelectedCharId}
-                selectedSkill={roller.selectedSkill}
-                handleSkillSelect={roller.handleSkillSelect}
-                actionType={roller.actionType}
-                setActionType={roller.setActionType}
-                damageType={roller.damageType}
-                toggleDamageType={roller.toggleDamageType}
-                setExplicitDamageType={roller.setExplicitDamageType}
-                selectedItemId={roller.selectedItemId}
-                setSelectedItemId={roller.setSelectedItemId}
-                allItems={roller.allItems}
-                manualBonus={roller.manualBonus}
-                setManualBonus={roller.setManualBonus}
-                targetIds={roller.targetIds}
-                handleTargetAdd={roller.handleTargetAdd}
-                handleTargetRemove={roller.handleTargetRemove}
-                isGM={isGM}
-                activeChar={roller.activeChar}
-            />
-
-            <DiceChamber
-                isRolling={roller.isRolling}
-                diceRotations={roller.diceRotations}
-                lastTotal={roller.lastTotal}
-                getLadderLabel={roller.getLadderLabel}
-                isIntegrated={isIntegrated}
-            />
-
-            <button
-                onClick={roller.handleRoll}
-                className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''}`}
-                disabled={roller.isRolling || disabled}
-                title={disabled ? "Aguarde seu turno" : "Rolar dados"}
-            >
-                <div className={`trigger-content ${isIntegrated ? 'integrated' : ''}`}>
-                    {disabled ? (
-                        "AGUARDE SEU TURNO"
-                    ) : roller.isRolling ? (
-                        isIntegrated ? "..." : "CONVOCANDO O DESTINO..."
-                    ) : isIntegrated ? (
-                        <Dices size={21} />
-                    ) : (
-                        "ROLAR"
-                    )}
+            {disabled ? (
+                <div className="disabled-overlay-message" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '0 20px', color: '#ff4444', fontWeight: 'bold', letterSpacing: '0.1em', textAlign: 'center', fontSize: isIntegrated ? '0.9rem' : '1.2rem' }}>
+                    AGUARDE A SUA VEZ
                 </div>
-                <div className="trigger-progress" style={{ width: roller.isRolling ? '100%' : '0%' }}></div>
-            </button>
+            ) : controlsHidden ? (
+                /* When it's not the player's turn: keep the strip rendered
+                   but collapse all inner controls so only the log button
+                   (rendered outside this component) remains visible. */
+                null
+            ) : (
+                <>
+                    <RollerInputs
+                        isIntegrated={isIntegrated}
+                        fixedCharacterId={fixedCharacterId}
+                        characters={characters}
+                        selectedCharId={roller.selectedCharId}
+                        setSelectedCharId={roller.setSelectedCharId}
+                        selectedSkill={roller.selectedSkill}
+                        handleSkillSelect={roller.handleSkillSelect}
+                        actionType={roller.actionType}
+                        setActionType={roller.setActionType}
+                        damageType={roller.damageType}
+                        toggleDamageType={roller.toggleDamageType}
+                        setExplicitDamageType={roller.setExplicitDamageType}
+                        selectedItemId={roller.selectedItemId}
+                        setSelectedItemId={roller.setSelectedItemId}
+                        allItems={roller.allItems}
+                        manualBonus={roller.manualBonus}
+                        setManualBonus={roller.setManualBonus}
+                        targetIds={roller.targetIds}
+                        handleTargetAdd={roller.handleTargetAdd}
+                        handleTargetRemove={roller.handleTargetRemove}
+                        isGM={isGM}
+                        activeChar={roller.activeChar}
+                        isReaction={isReaction}
+                        isCombat={isCombat}
+                        onRequestRollAttention={requestRollAttention}
+                    />
+
+                    <button
+                        ref={rollTriggerRef}
+                        onClick={() => {
+                            setRollNudge(false);
+                            roller.handleRoll();
+                        }}
+                        className={`matrix-trigger ${isIntegrated ? 'integrated' : ''} ${roller.isRolling ? 'rolling' : ''} ${rollNudge && isCombat ? 'roll-nudge' : ''}`}
+                        disabled={roller.isRolling}
+                        title="Rolar dados"
+                    >
+                        <div className={`trigger-content ${isIntegrated ? 'integrated' : ''}`}>
+                            {roller.isRolling ? (
+                                isIntegrated ? "..." : "CONVOCANDO O DESTINO..."
+                            ) : isIntegrated ? (
+                                <Dices size={21} />
+                            ) : (
+                                "ROLAR"
+                            )}
+                        </div>
+                        <div className="trigger-progress" style={{ width: roller.isRolling ? '100%' : '0%' }}></div>
+                    </button>
+
+                    <DiceChamber
+                        isRolling={roller.isRolling}
+                        diceRotations={roller.diceRotations}
+                        lastTotal={roller.lastTotal}
+                        getLadderLabel={roller.getLadderLabel}
+                        isIntegrated={isIntegrated}
+                    />
+                </>
+            )}
 
             <style jsx>{`
                 .probability-grid {
@@ -290,6 +322,10 @@ export function DiceRoller(props: DiceRollerProps) {
 
                 .rolling .trigger-content { color: #000; }
 
+                .probability-grid.integrated.controls-hidden-mode {
+                    /* Keep the container visible but collapse inner content */
+                }
+
                 .probability-grid.integrated.disabled-mode {
                     opacity: 0.5;
                     pointer-events: none;
@@ -311,6 +347,20 @@ export function DiceRoller(props: DiceRollerProps) {
                     letter-spacing: 0.2em;
                     margin-left: auto;
                     text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+                }
+
+                .matrix-trigger.roll-nudge {
+                    animation: rollNudgePulse 0.55s ease-in-out infinite;
+                    border-color: rgba(255, 215, 0, 1);
+                    box-shadow: 0 0 22px rgba(250, 204, 21, 0.55), 0 0 44px rgba(250, 120, 40, 0.35);
+                }
+
+                @keyframes rollNudgePulse {
+                    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                    20% { transform: translate(-2px, 1px) rotate(-4deg); }
+                    40% { transform: translate(2px, -1px) rotate(4deg); }
+                    60% { transform: translate(-1px, -1px) rotate(-3deg); }
+                    80% { transform: translate(1px, 1px) rotate(3deg); }
                 }
             `}</style>
         </div>

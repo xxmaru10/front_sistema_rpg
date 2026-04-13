@@ -6,9 +6,10 @@ interface CombatConsequencesProps {
     character: Character;
     isGM: boolean;
     openConsequenceModal: (slot: string, currentValue: string, debuffSkill?: string, debuffValue?: number) => void;
+    onClearAll?: () => void;
 }
 
-export function CombatConsequences({ character, isGM, openConsequenceModal }: CombatConsequencesProps) {
+export function CombatConsequences({ character, isGM, openConsequenceModal, onClearAll }: CombatConsequencesProps) {
     const defaultSlots = ["mild", "moderate", "severe"];
     const slotOrder = ["mild", "moderate", "severe"];
     const allSlots = new Set<string>(defaultSlots);
@@ -33,8 +34,21 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
         return cons && cons.text && cons.text.trim().length > 0;
     });
 
+    const hasFilled = filledSlots.length > 0;
+
     return (
         <div className="combat-consequences">
+            {isGM && hasFilled && onClearAll && (
+                <button 
+                    className="clear-all-btn"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClearAll();
+                    }}
+                >
+                    LIMPAR TUDO
+                </button>
+            )}
             <div className="consequences-list">
                 {orderedSlots.map((slot) => {
                     const cons = character.consequences?.[slot];
@@ -50,7 +64,8 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
                         <div
                             key={slot}
                             className={`combat-consequence-box ${isFilled ? 'filled' : 'empty'}`}
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 if (!isGM) return;
                                 openConsequenceModal(slot, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value);
                             }}
@@ -70,6 +85,25 @@ export function CombatConsequences({ character, isGM, openConsequenceModal }: Co
             </div>
 
             <style jsx>{`
+                .clear-all-btn {
+                    background: rgba(255, 68, 68, 0.1);
+                    border: 1px solid rgba(255, 68, 68, 0.3);
+                    color: #ff6b6b;
+                    font-size: 0.55rem;
+                    letter-spacing: 0.15em;
+                    padding: 4px 0;
+                    width: 100%;
+                    cursor: pointer;
+                    border-radius: 4px;
+                    margin-bottom: 6px;
+                    transition: all 0.2s;
+                    font-weight: bold;
+                }
+                .clear-all-btn:hover {
+                    background: rgba(255, 68, 68, 0.2);
+                    border-color: #ff4444;
+                    color: #fff;
+                }
                 .combat-consequences {
                     display: flex;
                     flex-direction: column;

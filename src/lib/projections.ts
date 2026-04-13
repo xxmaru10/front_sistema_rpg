@@ -29,10 +29,10 @@ export const initialState: SessionState = {
 
     soundSettings: {
 
-        victory: "/audio/Effects/vitoria.mp3",
-        defeat: "/audio/Effects/derrota.mp3",
-        death: "/audio/Effects/morte.mp3",
-        battleStart: "/audio/Effects/battle_start.mp3"
+        victory: "audio/Effects/vitoria.mp3",
+        defeat: "audio/Effects/derrota.mp3",
+        death: "audio/Effects/morte.mp3",
+        battleStart: "audio/Effects/battle_start.mp3"
     },
 };
 
@@ -243,14 +243,20 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const char = state.characters[payload.characterId];
             if (!char) return state;
 
+            const nextConsequences = { ...(char.consequences || {}) };
+            const isEmpty = !payload.value || payload.value.trim() === "";
 
-            // Build ConsequenceData object - handle null/empty values
-            const consequenceData = (!payload.value || payload.value.trim() === "")
-                ? undefined
-                : {
-                    text: payload.value,
+            if (isEmpty) {
+                delete nextConsequences[payload.slot];
+            } else {
+                nextConsequences[payload.slot] = {
+                    text: payload.value || "",
                     debuff: payload.debuff
                 };
+            }
+
+            // Se o slot estava marcado como removido, restaurá-lo ao receber texto
+            const removedDefaultSlots = (char.removedDefaultSlots || []).filter(s => s !== payload.slot);
 
             return {
                 ...state,
@@ -258,11 +264,25 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        consequences: {
-                            ...char.consequences,
-                            [payload.slot]: consequenceData
-                        }
+                        consequences: nextConsequences,
+                        removedDefaultSlots,
                     }
+                }
+            };
+        }
+
+        case "CHARACTER_CONSEQUENCE_SLOT_ADDED": {
+            const char = state.characters[payload.characterId];
+            if (!char) return state;
+            const extraConsequenceSlots = [...(char.extraConsequenceSlots || [])];
+            if (!extraConsequenceSlots.includes(payload.slot)) {
+                extraConsequenceSlots.push(payload.slot);
+            }
+            return {
+                ...state,
+                characters: {
+                    ...state.characters,
+                    [payload.characterId]: { ...char, extraConsequenceSlots }
                 }
             };
         }
@@ -274,13 +294,25 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const newConsequences = { ...char.consequences };
             delete newConsequences[payload.slot];
 
+            // Remover de extra slots se aplicável
+            const extraConsequenceSlots = (char.extraConsequenceSlots || []).filter(s => s !== payload.slot);
+
+            // Se for um slot padrão, registrar como removido para que suma da UI
+            const DEFAULT_CONSEQUENCE_SLOTS = ["mild", "mild2", "moderate", "severe"];
+            const removedDefaultSlots = [...(char.removedDefaultSlots || [])];
+            if (DEFAULT_CONSEQUENCE_SLOTS.includes(payload.slot) && !removedDefaultSlots.includes(payload.slot)) {
+                removedDefaultSlots.push(payload.slot);
+            }
+
             return {
                 ...state,
                 characters: {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        consequences: newConsequences
+                        consequences: newConsequences,
+                        removedDefaultSlots,
+                        extraConsequenceSlots,
                     }
                 }
             };

@@ -2,6 +2,7 @@
 
 import { useFateDiceSimulation } from "../hooks/useFateDiceSimulation";
 import { FateResultOverlay } from "./DiceRoller/FateResultOverlay";
+import type { DiceResultOverlayMode } from "@/lib/diceSimulationStore";
 
 interface FateDice3DProps {
     isVisible: boolean;
@@ -10,6 +11,16 @@ interface FateDice3DProps {
     onPreResult?: (results: number[]) => void;
     userRole?: "GM" | "PLAYER";
     activeTab?: string;
+    calculationBreakdown?: {
+        baseSkillValue?: number;
+        itemBonusValue?: number;
+        customModifierValue?: number;
+        itemName?: string;
+    };
+    resultOverlay?: {
+        mode: DiceResultOverlayMode;
+        targetDifficulty?: number;
+    };
 }
 
 /**
@@ -23,6 +34,8 @@ export default function FateDice3D({
     onPreResult,
     userRole,
     activeTab,
+    calculationBreakdown,
+    resultOverlay,
 }: FateDice3DProps) {
     const {
         mountRef,
@@ -107,6 +120,8 @@ export default function FateDice3D({
                     accentColor={resolvedAccent}
                     dangerColor={resolvedDanger}
                     onAutoRoll={autoRoll}
+                    calculationBreakdown={calculationBreakdown}
+                    resultOverlay={resultOverlay}
                 />
             </div>
 

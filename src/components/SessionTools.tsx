@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Download, Upload, Trash2, Check, Copy, Edit2, Save, X, Settings, Music, Loader2 } from "lucide-react";
 import { globalEventStore } from "@/lib/eventStore";
+import { supabase } from "@/lib/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
 
 interface SessionToolsProps {

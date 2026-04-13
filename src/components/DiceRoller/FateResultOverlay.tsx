@@ -5,6 +5,7 @@
 
 import React from "react";
 import { Play } from "lucide-react";
+import type { DiceResultOverlayMode } from "@/lib/diceSimulationStore";
 
 interface FateResultOverlayProps {
     phase: "idle" | "held" | "thrown" | "snapping" | "done";
@@ -12,6 +13,21 @@ interface FateResultOverlayProps {
     accentColor: string;
     dangerColor: string;
     onAutoRoll: () => void;
+    calculationBreakdown?: {
+        baseSkillValue?: number;
+        itemBonusValue?: number;
+        customModifierValue?: number;
+        itemName?: string;
+    };
+    resultOverlay?: {
+        mode: DiceResultOverlayMode;
+        targetDifficulty?: number;
+    };
+}
+
+function fmtSigned(n: number): string {
+    if (n > 0) return `+${n}`;
+    return `${n}`;
 }
 
 /** Escada de resultados Fate */
@@ -32,6 +48,8 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     accentColor,
     dangerColor,
     onAutoRoll,
+    calculationBreakdown,
+    resultOverlay,
 }) => {
     const label =
         phase === "idle"     ? "CLIQUE E SEGURE PARA PEGAR OS DADOS" :
@@ -41,6 +59,30 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
         "";
 
     const diceSum = results ? results.reduce((a, b) => a + b, 0) : 0;
+    
+    // Calculate full breakdown sums
+    const totalBonus = 
+        (calculationBreakdown?.baseSkillValue || 0) + 
+        (calculationBreakdown?.itemBonusValue || 0) + 
+        (calculationBreakdown?.customModifierValue || 0);
+
+    const grandTotal = diceSum + totalBonus;
+    
+    // Show breakdown only if there's any modifier
+    const hasModifiers = totalBonus !== 0 || !!calculationBreakdown;
+
+    const successGreen = "#4ade80";
+    const failRed = "#ff3333";
+    const neutralTone = accentColor;
+
+    let totalColor = neutralTone;
+    if (resultOverlay?.mode === "combat") {
+        if (grandTotal > 0) totalColor = successGreen;
+        else if (grandTotal < 0) totalColor = failRed;
+    } else if (resultOverlay?.mode === "challenge") {
+        const diff = resultOverlay.targetDifficulty ?? 0;
+        totalColor = grandTotal >= diff ? successGreen : failRed;
+    }
 
     return (
         <>
@@ -136,8 +178,147 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                 </div>
             )}
 
-            {/* Painel de resultado — face vencedora + total + escada */}
-            {phase === "done" && results && (
+            {/* Painel de resultado após 3D: compacto (Arena / desafio) */}
+            {phase === "done" && results && resultOverlay && (
+                <div style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "52.5%",
+                    transform: "translate(-50%, -50%)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "14px",
+                    pointerEvents: "none",
+                    animation: "resultReveal 0.6s cubic-bezier(0.19, 1, 0.22, 1)",
+                    background: "rgba(5, 5, 8, 0.98)",
+                    padding: "28px 48px 36px",
+                    borderRadius: "28px",
+                    minWidth: "300px",
+                    border: `1px solid ${totalColor}66`,
+                    boxShadow: `0 0 80px rgba(0,0,0,0.9), 0 0 40px ${totalColor}33`,
+                    backdropFilter: "blur(16px)",
+                }}>
+                    {/* Breakdown section — cálculos no topo */}
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "6px",
+                        width: "100%",
+                    }}>
+                        {/* Linha dos dados individuais */}
+                        {results && results.length > 0 && (
+                            <div style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                gap: "4px 6px",
+                                fontFamily: "var(--font-header, 'Cinzel', serif)",
+                                fontSize: "0.88rem",
+                                color: "rgba(230, 225, 210, 0.75)",
+                                letterSpacing: "0.06em",
+                                paddingBottom: "4px",
+                                borderBottom: "1px solid rgba(255,255,255,0.08)",
+                            }}>
+                                {results.map((v, i) => (
+                                    <span key={i} style={{
+                                        fontVariantNumeric: "tabular-nums",
+                                        color: v === 1 ? accentColor : v === -1 ? "#ff6666" : "rgba(230,225,210,0.4)",
+                                    }}>
+                                        {i > 0 ? <span style={{ color: "rgba(255,255,255,0.2)", margin: "0 2px" }}>·</span> : null}
+                                        {v === 1 ? "+1" : v === -1 ? "−1" : "0"}
+                                    </span>
+                                ))}
+                                <span style={{ color: "rgba(255,255,255,0.25)", margin: "0 4px" }}>→</span>
+                                <span style={{ color: "rgba(230,225,210,0.9)", fontWeight: 600 }}>
+                                    dado {fmtSigned(diceSum)}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Modificadores — só mostra os não-zero */}
+                        {calculationBreakdown && (() => {
+                            const skillVal = calculationBreakdown.baseSkillValue ?? 0;
+                            const itemVal = calculationBreakdown.itemBonusValue ?? 0;
+                            const bonusVal = calculationBreakdown.customModifierValue ?? 0;
+                            const lines: { label: string; value: number }[] = [];
+                            if (skillVal !== 0) lines.push({ label: "Perícia", value: skillVal });
+                            if (itemVal !== 0 || calculationBreakdown.itemName) {
+                                lines.push({
+                                    label: calculationBreakdown.itemName || "Item",
+                                    value: itemVal,
+                                });
+                            }
+                            if (bonusVal !== 0) lines.push({ label: "Bônus", value: bonusVal });
+                            if (lines.length === 0) return null;
+                            return (
+                                <div style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                    paddingTop: "4px",
+                                }}>
+                                    {lines.map(({ label, value }) => (
+                                        <div key={label} style={{
+                                            fontFamily: "var(--font-header, 'Cinzel', serif)",
+                                            fontSize: "0.9rem",
+                                            color: "rgba(230, 225, 210, 0.85)",
+                                            letterSpacing: "0.06em",
+                                        }}>
+                                            {label}{" "}
+                                            <span style={{
+                                                color: value > 0 ? accentColor : value < 0 ? "#ff6666" : "rgba(230,225,210,0.5)",
+                                                fontWeight: 700,
+                                            }}>
+                                                {fmtSigned(value)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
+                    </div>
+
+                    {/* Separador */}
+                    <div style={{
+                        width: "60%",
+                        height: "1px",
+                        background: `linear-gradient(to right, transparent, ${totalColor}66, transparent)`,
+                    }} />
+
+                    {/* Total grande */}
+                    <span style={{
+                        color: totalColor,
+                        fontFamily: "var(--font-header, 'Cinzel', serif)",
+                        fontSize: "clamp(3.2rem, 12vw, 5rem)",
+                        fontWeight: 700,
+                        letterSpacing: "0.06em",
+                        lineHeight: 1,
+                        textShadow: `0 0 28px ${totalColor}88, 0 0 60px rgba(0,0,0,0.85)`,
+                    }}>
+                        {grandTotal > 0 ? `+${grandTotal}` : `${grandTotal}`}
+                    </span>
+
+                    {/* Rótulo da escada */}
+                    <div style={{
+                        fontFamily: "var(--font-header, 'Cinzel', serif)",
+                        fontSize: "0.72rem",
+                        letterSpacing: "0.28em",
+                        textTransform: "uppercase",
+                        color: totalColor,
+                        opacity: 0.65,
+                    }}>
+                        {ladderLabel(grandTotal).toUpperCase()}
+                    </div>
+                </div>
+            )}
+
+            {/* Painel de resultado legado (sem resultOverlay) */}
+            {phase === "done" && results && !resultOverlay && (
                 <div style={{
                     position: "absolute",
                     top: "50%",
@@ -192,6 +373,50 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         })}
                     </div>
 
+                    {(hasModifiers || calculationBreakdown) && (
+                        <div style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "6px",
+                            color: accentColor,
+                            fontFamily: "var(--font-header, 'Cinzel', serif)",
+                            fontSize: "0.95rem",
+                            letterSpacing: "0.08em",
+                            opacity: 0.9,
+                            marginTop: "-4px",
+                            marginBottom: "4px",
+                            textAlign: "center",
+                        }}>
+                            <div>
+                                {results.map((v, i) => (
+                                    <span key={i} style={{ fontVariantNumeric: "tabular-nums" }}>
+                                        {i > 0 ? <span style={{ opacity: 0.35 }}> · </span> : null}
+                                        {v === 1 ? "+1" : v === -1 ? "−1" : "0"}
+                                    </span>
+                                ))}
+                                <span style={{ opacity: 0.45 }}> → </span>
+                                <span>dado {fmtSigned(diceSum)}</span>
+                            </div>
+                            {calculationBreakdown && (
+                                <>
+                                    <div>Perícia {fmtSigned(calculationBreakdown.baseSkillValue ?? 0)}</div>
+                                    {(calculationBreakdown.itemName ||
+                                        (calculationBreakdown.itemBonusValue ?? 0) !== 0) && (
+                                        <div>
+                                            {calculationBreakdown.itemName
+                                                ? `${calculationBreakdown.itemName} ${fmtSigned(
+                                                      calculationBreakdown.itemBonusValue ?? 0
+                                                  )}`
+                                                : `Item ${fmtSigned(calculationBreakdown.itemBonusValue ?? 0)}`}
+                                        </div>
+                                    )}
+                                    <div>Bônus manual {fmtSigned(calculationBreakdown.customModifierValue ?? 0)}</div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     <div style={{
                         color: accentColor,
                         fontFamily: "var(--font-header, 'Cinzel', serif)",
@@ -199,8 +424,14 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         fontWeight: "bold",
                         letterSpacing: "0.15em",
                         textShadow: `0 0 20px ${accentColor}, 0 0 40px ${accentColor}66`,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px"
                     }}>
-                        {diceSum > 0 ? `+${diceSum}` : diceSum < 0 ? `${diceSum}` : "0"}
+                        {(hasModifiers || calculationBreakdown) && (
+                            <span style={{ fontSize: "1.4rem", opacity: 0.8 }}>Total =</span>
+                        )}
+                        <span>{grandTotal > 0 ? `+${grandTotal}` : grandTotal < 0 ? `${grandTotal}` : "0"}</span>
                     </div>
 
                     <div style={{
@@ -212,7 +443,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         textShadow: `0 0 12px ${accentColor}`,
                         opacity: 0.72,
                     }}>
-                        {ladderLabel(diceSum).toUpperCase()}
+                        {ladderLabel(grandTotal).toUpperCase()}
                     </div>
                 </div>
             )}

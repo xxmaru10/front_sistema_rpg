@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
-import { ChevronLeft, ChevronRight, FastForward, Trash2, Dice5, ScrollText } from "lucide-react";
-import { CombatCard } from "@/components/CombatCard";
+import { ChevronLeft, ChevronRight, ScrollText, UserPlus, Skull, Zap, ListOrdered, Dices } from "lucide-react";
 import { TurnTimer } from "@/components/TurnTimer";
+import { CombatCard } from "@/components/CombatCard";
 import { DiceRoller } from "@/components/DiceRoller";
 import { CombatLog } from "@/components/CombatLog";
-import { isCharacterEliminated } from "@/lib/gameLogic";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 
@@ -37,6 +37,11 @@ interface CombatTabProps {
     handleChallengeUpdate: (patch: Partial<{ isActive: boolean; text: string; difficulty: number; aspects?: string[] }>) => void;
     characterList: Character[];
     onRefresh?: () => void;
+    // GM Sidebar callbacks
+    onSummonAlly?: () => void;
+    onSummonThreat?: () => void;
+    onToggleChallenge?: () => void;
+    onOpenTurnOrder?: () => void;
 }
 
 export function CombatTab({
@@ -64,7 +69,11 @@ export function CombatTab({
     handlePreviousTurn,
     handleChallengeUpdate,
     characterList,
-    onRefresh
+    onRefresh,
+    onSummonAlly,
+    onSummonThreat,
+    onToggleChallenge,
+    onOpenTurnOrder,
 }: CombatTabProps) {
     const [isHeroDrawerOpen, setIsHeroDrawerOpen] = useState(false);
     const [isThreatDrawerOpen, setIsThreatDrawerOpen] = useState(false);
@@ -145,7 +154,7 @@ export function CombatTab({
 
     const hasExpandedHeroes = isHeroDrawerOpen;
     const hasExpandedThreats = isThreatDrawerOpen || threatHazards.length > 0;
-    const shouldRenderTopRollBar = showDiceRoller || userRole === "GM";
+    const shouldRenderTopRollBar = true;
 
     useEffect(() => {
         if (heroCombatants.length === 0) setIsHeroDrawerOpen(false);
@@ -210,33 +219,92 @@ export function CombatTab({
     }, [isThreatDrawerOpen, threatDrawerCards]);
 
     return (
+        <>
+        {userRole === "GM" && typeof document !== "undefined" && createPortal(
+            <div className="gm-sidebar-vertical">
+                    <button
+                        className="gm-sidebar-btn gm-sidebar-btn--ally"
+                        onClick={onSummonAlly}
+                        title="Convocar Aliado"
+                        aria-label="Convocar Aliado"
+                    >
+                        <UserPlus size={18} />
+                    </button>
+                    <button
+                        className="gm-sidebar-btn gm-sidebar-btn--threat"
+                        onClick={onSummonThreat}
+                        title="Convocar Inimigo"
+                        aria-label="Convocar Inimigo"
+                    >
+                        <Skull size={18} />
+                    </button>
+                    <div className="gm-sidebar-divider" />
+                    <button
+                        className={`gm-sidebar-btn${challengeMode ? " gm-sidebar-btn--active" : ""}`}
+                        onClick={onToggleChallenge}
+                        title={challengeMode ? "Desativar Modo Desafio" : "Ativar Modo Desafio"}
+                        aria-label="Modo Desafio"
+                    >
+                        <Zap size={18} />
+                    </button>
+                    <button
+                        className="gm-sidebar-btn"
+                        onClick={onOpenTurnOrder}
+                        title="Ordem de Turno"
+                        aria-label="Ordem de Turno"
+                    >
+                        <ListOrdered size={18} />
+                    </button>
+                    <div className="gm-sidebar-divider" />
+                    <button
+                        className={`gm-sidebar-btn${showDiceRoller ? " gm-sidebar-btn--active" : ""}`}
+                        onClick={() => setShowDiceRoller(!showDiceRoller)}
+                        title={showDiceRoller ? "Ocultar Dados" : "Mostrar Dados"}
+                        aria-label="Dados"
+                    >
+                        <Dices size={18} />
+                    </button>
+                </div>,
+            document.body
+        )}
+
         <div className="combat-display animate-reveal">
-            <div className="display-header">
-                <div className="gm-actions-row">
-                </div>
-            </div>
-
-
-
             <div
                 className={`combat-arena-layout${hasExpandedHeroes ? " has-expanded-left" : ""}${hasExpandedThreats ? " has-expanded-right" : ""}${isHeroDrawerOpen ? " hero-drawer-open" : ""}${isThreatDrawerOpen ? " threat-drawer-open" : ""}`}
             >
-                {shouldRenderTopRollBar && (
-                    <div className={`combat-top-strip ${showDiceRoller ? "is-open" : ""}`}>
-                        {!showDiceRoller && userRole === "GM" && (
-                            <button
-                                onClick={() => setShowDiceRoller(true)}
-                                className="combat-top-roll-open-btn"
-                                title="Abrir zona de rolagem"
-                                aria-label="Abrir zona de rolagem"
-                            >
-                                <Dice5 size={18} />
-                            </button>
-                        )}
+                {shouldRenderTopRollBar && showDiceRoller && (
+                    <div className={`combat-top-strip is-open`}>
+                        <div className="combat-dice-integrated animate-reveal">
 
-                        {showDiceRoller && (
-                            <div className="combat-dice-integrated animate-reveal">
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0', position: 'absolute', top: '6px', right: '6px', zIndex: 5 }}>
+                                <DiceRoller
+                                    sessionId={sessionId as string}
+                                    actorUserId={actorUserId}
+                                    characters={combatantList}
+                                    fixedCharacterId={fixedCharacterId}
+                                    isIntegrated={true}
+                                    isGM={userRole === "GM"}
+                                    stateTargetId={state.targetId}
+                                    isReaction={state.isReaction}
+                                    lastAttackTotal={lastReactionAttack?.total}
+                                    stateDamageType={state.damageType}
+                                    targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
+                                    challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
+                                    disabled={false}
+                                    controlsHidden={false}
+                                    soundSettings={state.soundSettings}
+                                    currentTurnActorId={currentTurnActorId}
+                                    isCombat={!challengeMode}
+                                />
+                                <button
+                                    type="button"
+                                    className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
+                                    onClick={() => setShowCombatLogs(prev => !prev)}
+                                    title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                    aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
+                                >
+                                    <ScrollText size={18} />
+                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', borderLeft: '1px solid rgba(255,255,255,0.1)', marginLeft: '4px' }}>
                                     <button
                                         onClick={() => setShowDiceRoller(false)}
                                         style={{
@@ -269,31 +337,6 @@ export function CombatTab({
                                         ✕
                                     </button>
                                 </div>
-                                <DiceRoller
-                                    sessionId={sessionId as string}
-                                    actorUserId={actorUserId}
-                                    characters={combatantList}
-                                    fixedCharacterId={fixedCharacterId}
-                                    isIntegrated={true}
-                                    isGM={userRole === "GM"}
-                                    stateTargetId={state.targetId}
-                                    isReaction={state.isReaction}
-                                    lastAttackTotal={lastReactionAttack?.total}
-                                    stateDamageType={state.damageType}
-                                    targetDiff={challengeMode ? (state.challenge?.difficulty || 0) : undefined}
-                                    challengeDescription={challengeMode ? (state.challenge?.text || "") : undefined}
-                                    disabled={!challengeMode && (state.turnOrder && state.turnOrder.length > 0) && !isCurrentPlayerActive && userRole !== "GM"}
-                                    soundSettings={state.soundSettings}
-                                />
-                                <button
-                                    type="button"
-                                    className={`combat-log-toggle-btn ${showCombatLogs ? "active" : ""}`}
-                                    onClick={() => setShowCombatLogs(prev => !prev)}
-                                    title={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
-                                    aria-label={showCombatLogs ? "Ocultar logs" : "Mostrar logs"}
-                                >
-                                    <ScrollText size={18} />
-                                </button>
                                 {showChallengePanel && (
                                     <div
                                         className={`combat-inline-challenge ${hasChallengeAspects || (userRole === "GM" && isChallengeAspectsOpen) ? "has-aspects" : ""}`}
@@ -377,10 +420,9 @@ export function CombatTab({
                                         )}
                                     </div>
                                 )}
-                            </div>
-                        )}
+                        </div>
 
-                        {showDiceRoller && showCombatLogs && (
+                        {showCombatLogs && (
                             <div className="combat-log-wrapper">
                                 <CombatLog
                                     events={events}
@@ -518,215 +560,27 @@ export function CombatTab({
                         ))}
                     </div>
 
-                    {/* Turn Timer Area */}
-                    {currentTurnActorId && (
-                        <div className="timer-wrapper animate-reveal">
-                            <TurnTimer
-                                startTime={lastActionTimestamp ?? ''}
-                                durationMinutes={state.isReaction ? 2 : 3}
-                                isPaused={!!state.timerPaused}
-                                pausedAt={state.timerPausedAt}
-                                isGM={userRole === "GM"}
-                                onExpire={() => {
-                                    // Disabled auto-pass per user request. Timer just rolls.
-                                    // if (isCurrentPlayerActive || userRole === "GM") {
-                                    //    handleForcePass();
-                                    // }
-                                    console.log("Timer expired, but auto-pass is disabled.");
-                                }}
-                                onTogglePause={handleTogglePause}
-                                onForcePass={handleForcePass}
-                            />
-                        </div>
-                    )}
+                    {/* Turn Timer Area foi movido para o TurnOrderTracker no page.tsx */}
 
                     {/* Combat Control Bar - Moved Here */}
 
 
-                    {(!state.turnOrder || state.turnOrder.length === 0) ? null : (
+                    {(!state.turnOrder || state.turnOrder.length === 0) ? null : userRole === "PLAYER" ? (
                         <div className="combat-control-bar animate-reveal">
-                            <div className="round-counter">
-                                <span className="label">RODADA</span>
-                                <span className="value">{state.currentRound || 1}</span>
-                            </div>
-
-                            <div className="combat-actions">
-                                {userRole === "GM" ? (
-                                    <div className="gm-turn-controls">
-                                        <button className="nav-btn prev" onClick={handlePreviousTurn} title="Voltar Turno">
-                                            <ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} />
-                                        </button>
-                                        <span className="turn-indicator">
-                                            {(state.currentTurnIndex || 0) + 1} / {state.turnOrder.length}
-                                        </span>
-                                        <button className="nav-btn next" onClick={() => handleNextTurn(false)} title="Avançar Turno">
-                                            <ChevronRight size={20} />
-                                        </button>
-                                        <div className="divider-vt"></div>
-                                        <button className="end-round-btn fancy-round-btn" onClick={() => handleNextTurn(true)}>
-                                            <FastForward size={16} />
-                                            PASSAR RODADA
-                                        </button>
-                                        <div className="divider-vt"></div>
-                                        <button
-                                            className="trash-end-combat-btn"
-                                            onClick={() => {
-                                                if (confirm("Encerrar combate e iniciar modo desafio? Todas as ameaças serão removidas.")) {
-                                                    // 1. Activate Challenge Mode
-                                                    handleChallengeUpdate({ isActive: true });
-
-                                                    // 2. Clear Turn Order
-                                                    globalEventStore.append({
-                                                        id: uuidv4(),
-                                                        sessionId,
-                                                        seq: 0,
-                                                        type: "TURN_ORDER_UPDATED",
-                                                        actorUserId,
-                                                        createdAt: new Date().toISOString(),
-                                                        visibility: "PUBLIC",
-                                                        payload: { characterIds: [] }
-                                                    } as any);
-
-                                                    // 3. Remove all Threats from Arena
-                                                    const threats = characterList.filter(c => c.isNPC && c.arenaSide !== "HERO" && c.activeInArena === true);
-                                                    threats.forEach(t => handleRemoveCharacter(t.id));
-
-                                                    // 4. Clear any stuck reaction
-                                                    globalEventStore.append({
-                                                        id: uuidv4(),
-                                                        sessionId,
-                                                        seq: 0,
-                                                        type: "COMBAT_REACTION_ENDED",
-                                                        actorUserId,
-                                                        createdAt: new Date().toISOString(),
-                                                        visibility: "PUBLIC",
-                                                        payload: {}
-                                                    } as any);
-                                                }
-                                            }}
-                                            title="Encerrar combate e iniciar modo desafio"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    /* Player View */
-                                    <div className="player-turn-status">
-                                        {state.isReaction && state.targetId ? (() => {
-                                            const targetChar = state.characters[state.targetId];
-                                            const amITarget = targetChar?.ownerUserId?.trim().toLowerCase() === actorUserId?.trim().toLowerCase();
-
-                                            if (amITarget) {
-                                                return (
-                                                    <button
-                                                        className="end-turn-btn pulse reaction-btn"
-                                                        style={{ background: '#a855f7', color: '#fff', borderColor: '#a855f7' }}
-                                                        onClick={() => {
-                                                            globalEventStore.append({
-                                                                id: uuidv4(),
-                                                                sessionId,
-                                                                seq: 0,
-                                                                type: "COMBAT_REACTION_ENDED",
-                                                                actorUserId,
-                                                                createdAt: new Date().toISOString(),
-                                                                visibility: "PUBLIC",
-                                                                payload: {}
-                                                            } as any);
-                                                        }}
-                                                    >
-                                                        FINALIZAR REAÇÃO
-                                                    </button>
-                                                );
-                                            }
-                                            return (
-                                                <div className="turn-status-message">
-                                                    <span className="waiting-text" style={{ color: '#a855f7', opacity: 1, letterSpacing: '0.1em', fontWeight: 'bold' }}>
-                                                        AGUARDANDO REAÇÃO...
-                                                    </span>
-                                                </div>
-                                            );
-                                        })() : isCurrentPlayerActive ? (
-                                            <div className="player-active-actions" style={{ display: 'flex', gap: '8px' }}>
-                                                <button className="end-turn-btn pulse" onClick={() => handleNextTurn(false)}>
-                                                    FINALIZAR TURNO
-                                                </button>
-                                                {state.targetId && (
-                                                    <button
-                                                        className="end-turn-btn"
-                                                        style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}
-                                                        onClick={() => {
-                                                            globalEventStore.append({
-                                                                id: uuidv4(),
-                                                                sessionId,
-                                                                seq: 0,
-                                                                type: "COMBAT_TARGET_SET",
-                                                                actorUserId,
-                                                                createdAt: new Date().toISOString(),
-                                                                visibility: "PUBLIC",
-                                                                payload: { targetId: null }
-                                                            } as any);
-                                                        }}
-                                                    >
-                                                        LIMPAR ALVO
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="turn-status-message">
-                                                {/* Check if player is next (skipping dead characters) */}
-                                                {(() => {
-                                                    let nextActiveChar = null;
-                                                    const turnOrder = state.turnOrder || [];
-                                                    const currentIndex = state.currentTurnIndex || 0;
-
-                                                    // Look ahead for the next LIVING character
-                                                    for (let i = 1; i < turnOrder.length; i++) {
-                                                        const checkIndex = (currentIndex + i) % turnOrder.length;
-                                                        const charId = turnOrder[checkIndex];
-                                                        const char = state.characters[charId];
-
-                                                        // Check if character exists and is NOT eliminated
-                                                        if (char && !isCharacterEliminated(char)) {
-                                                            nextActiveChar = char;
-                                                            break;
-                                                        }
-                                                    }
-
-
-
-                                                    // Robust comparison: handle potential case differences or undefined
-                                                    const ownerId = nextActiveChar?.ownerUserId;
-                                                    const currentActorId = actorUserId;
-
-                                                    const amINext = ownerId && currentActorId && ownerId.trim().toLowerCase() === currentActorId.trim().toLowerCase();
-
-                                                    if (amINext) {
-                                                        return (
-                                                            <span className="next-up-msg animate-pulse" style={{ display: 'block', fontSize: '1rem', color: '#50a6ff', marginTop: '4px', fontWeight: 'bold', letterSpacing: '0.1em' }}>
-                                                                VOCÊ É O PRÓXIMO...
-                                                            </span>
-                                                        );
-                                                    }
-
-                                                    return (
-                                                        <span className="waiting-text" style={{ color: 'var(--accent-color)', opacity: 0.8, letterSpacing: '0.1em' }}>
-                                                            AGUARDANDO...
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                            <div className="combat-actions" style={{ justifyContent: 'center', width: '100%' }}>
+                                <div className="player-turn-status" style={{ justifyContent: 'center' }}>
+                                    {/* LIMPAR ALVO removido daqui */}
+                                </div>
                             </div>
                         </div>
-                    )}
+                    ) : null}
 
 
                 {/* Coluna 3: Ameaças (Direita) */}
                 {/* Coluna 3: Ameaças (Direita) OU Desafio */}
                 </div>
                 <div className="combat-threats-column combat-side-column">
+
                     <div className="combat-threats">
                         <div className="combat-side-lane threat-side-lane">
                             {threatCombatants.length === 0 && threatHazards.length === 0 ? (
@@ -855,5 +709,8 @@ export function CombatTab({
                 </div>
             </div>
         </div>
+        </>
     );
 }
+
+

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Sparkles, Zap, Backpack, Plus, X, Swords, Brain } from "lucide-react";
+import { Sparkles, Zap, Backpack, Plus, Minus, X, Swords, Brain } from "lucide-react";
 import { Character, DEFAULT_SKILLS, Item } from "@/types/domain";
 
 interface RollerInputsProps {
@@ -28,6 +28,9 @@ interface RollerInputsProps {
     handleTargetRemove: (id: string) => void;
     isGM: boolean;
     activeChar: Character | undefined;
+    isReaction?: boolean;
+    isCombat?: boolean;
+    onRequestRollAttention?: () => void;
 }
 
 export function RollerInputs({
@@ -52,25 +55,156 @@ export function RollerInputs({
     handleTargetAdd,
     handleTargetRemove,
     isGM,
-    activeChar
+    activeChar,
+    isReaction = false,
+    isCombat = false,
+    onRequestRollAttention,
 }: RollerInputsProps) {
+    const guideEnabled = isIntegrated && isCombat;
+    const bonusSelectRef = useRef<HTMLSelectElement>(null);
+    const skillSelectRef = useRef<HTMLSelectElement>(null);
+    const itemSelectRef = useRef<HTMLSelectElement>(null);
+    const gmCharGuideInit = useRef(false);
+
+    const focusBonusSoon = () => {
+        if (!guideEnabled) return;
+        requestAnimationFrame(() => {
+            bonusSelectRef.current?.focus();
+        });
+    };
+
+    const focusSkillSoon = () => {
+        if (!guideEnabled) return;
+        requestAnimationFrame(() => {
+            skillSelectRef.current?.focus();
+        });
+    };
+
+    const afterSkillChosen = (skill: string) => {
+        handleSkillSelect(skill);
+        if (!guideEnabled) return;
+        if (!skill) return;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const items = allItems.filter(i => i.name && i.bonus > 0);
+                if (items.length > 0) {
+                    itemSelectRef.current?.focus();
+                } else {
+                    onRequestRollAttention?.();
+                }
+            });
+        });
+    };
+
     // ── Attack sub-menu state ──
     const [showAttackSubMenu, setShowAttackSubMenu] = useState(false);
     const [showTargetPicker, setShowTargetPicker] = useState(false);
     const [pendingDamageType, setPendingDamageType] = useState<"PHYSICAL" | "MENTAL" | null>(null);
     const attackMenuRef = useRef<HTMLDivElement>(null);
 
-    // Close sub-menu on outside click
+    // ── Sequential Glow State ──
+    const [interactionStep, setInteractionStep] = useState(1);
+
     useEffect(() => {
-        if (!showAttackSubMenu) return;
+        if (selectedCharId) {
+            setInteractionStep(2);
+            focusBonusSoon();
+        } else {
+            setInteractionStep(1);
+        }
+    }, [selectedCharId]);
+
+    // Defender skips the action selection and jumps straight to Bonus
+    useEffect(() => {
+        if (actionType === "DEFEND" && interactionStep < 2) {
+            setInteractionStep(2);
+        }
+    }, [actionType, interactionStep]);
+
+    useEffect(() => {
+        if (interactionStep === 4) {
+            const hasValidItems = allItems.filter(i => i.name && i.bonus > 0).length > 0;
+            if (!hasValidItems) {
+                setInteractionStep(5);
+            }
+        }
+        if (interactionStep === 5) {
+            onRequestRollAttention?.();
+        }
+    }, [interactionStep, allItems, onRequestRollAttention]);
+
+    useEffect(() => {
+        if (!guideEnabled || !isGM || fixedCharacterId) return;
+        if (!gmCharGuideInit.current) {
+            gmCharGuideInit.current = true;
+            return;
+        }
+        focusBonusSoon();
+        // Intencional: reação só ao trocar personagem (GM), não incluir focusBonusSoon nas deps.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCharId, guideEnabled, isGM, fixedCharacterId]);
+    
+    // ── Bonus Menu State ──
+    const [showBonusMenu, setShowBonusMenu] = useState(false);
+    const [selectedSign, setSelectedSign] = useState<'+' | '-' | null>(null);
+    const bonusMenuRef = useRef<HTMLDivElement>(null);
+    const bonusPortalRef = useRef<HTMLDivElement>(null);
+    const [bonusMenuPos, setBonusMenuPos] = useState<{ top: number; left: number } | null>(null);
+
+    // ── Char Picker State ──
+    const [showCharPicker, setShowCharPicker] = useState(false);
+    const [charPickerPos, setCharPickerPos] = useState<{ top: number; left: number } | null>(null);
+    const charPickerAnchorRef = useRef<HTMLButtonElement>(null);
+    const charPickerPortalRef = useRef<HTMLDivElement>(null);
+
+    const openCharPicker = () => {
+        if (charPickerAnchorRef.current) {
+            const rect = charPickerAnchorRef.current.getBoundingClientRect();
+            setCharPickerPos({
+                top: rect.bottom + window.scrollY + 6,
+                left: rect.left + rect.width / 2 + window.scrollX,
+            });
+        }
+        setShowCharPicker(true);
+    };
+
+    const openBonusMenu = () => {
+        if (bonusMenuRef.current) {
+            const rect = bonusMenuRef.current.getBoundingClientRect();
+            setBonusMenuPos({
+                top: rect.top + window.scrollY,
+                left: rect.left + rect.width / 2 + window.scrollX,
+            });
+        }
+        setShowBonusMenu(true);
+    };
+
+    // Close menus on outside click — portal-aware
+    useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (attackMenuRef.current && !attackMenuRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (showAttackSubMenu && attackMenuRef.current && !attackMenuRef.current.contains(target)) {
                 setShowAttackSubMenu(false);
+            }
+            if (showBonusMenu) {
+                const inAnchor = bonusMenuRef.current?.contains(target) ?? false;
+                const inPortal = bonusPortalRef.current?.contains(target) ?? false;
+                if (!inAnchor && !inPortal) {
+                    setShowBonusMenu(false);
+                    setSelectedSign(null);
+                }
+            }
+            if (showCharPicker) {
+                const inAnchor = charPickerAnchorRef.current?.contains(target) ?? false;
+                const inPortal = charPickerPortalRef.current?.contains(target) ?? false;
+                if (!inAnchor && !inPortal) {
+                    setShowCharPicker(false);
+                }
             }
         };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
-    }, [showAttackSubMenu]);
+    }, [showAttackSubMenu, showBonusMenu, showCharPicker]);
 
     const actionLabelMap: Record<RollerInputsProps["actionType"], string> = {
         OVERCOME: "SUPERAR",
@@ -84,9 +218,10 @@ export function RollerInputs({
         ? `ATACAR (${damageLabel})`
         : actionLabelMap[actionType] || "SUPERAR";
 
-    const computeIntegratedWidth = (baseLabel: string, currentLabel: string, maxCh = 14) => {
+    const computeIntegratedWidth = (baseLabel: string, currentLabel: string, maxCh = 22) => {
         const base = baseLabel.length + 1;
         const current = currentLabel.length + 1;
+        // Use a more proportional expansion
         return `${Math.min(Math.max(base, current), maxCh)}ch`;
     };
 
@@ -114,6 +249,8 @@ export function RollerInputs({
         }
         setShowAttackSubMenu(false);
         setActionType(value as RollerInputsProps["actionType"]);
+        if (interactionStep < 2) setInteractionStep(2);
+        focusBonusSoon();
     };
 
     const handleDamageTypeSelected = (type: "PHYSICAL" | "MENTAL") => {
@@ -124,6 +261,8 @@ export function RollerInputs({
         // Open target picker if there are available targets
         if (availableTargets.length > 0) {
             setShowTargetPicker(true);
+        } else {
+            focusBonusSoon();
         }
     };
 
@@ -131,6 +270,7 @@ export function RollerInputs({
         handleTargetAdd(targetId);
         setShowTargetPicker(false);
         setPendingDamageType(null);
+        focusBonusSoon();
     };
 
     const handleTargetPickerClose = () => {
@@ -144,75 +284,108 @@ export function RollerInputs({
         return { ownedSkills, otherSkills };
     })();
 
+    const selectedChar = characters.find(c => c.id === selectedCharId);
+    const charInitial = selectedChar?.name?.trim()?.charAt(0)?.toUpperCase() || "?";
+    const allies = characters.filter(c => !(c.isNPC && c.arenaSide !== "HERO"));
+    const enemies = characters.filter(c => c.isNPC && c.arenaSide !== "HERO");
+
+    const skillLabel = selectedSkill ? selectedSkill.toUpperCase() : "PERÍCIA";
+    const skillButtonWidth = `${Math.min(Math.max(skillLabel.length + 2, 9), 17)}ch`;
+
     return (
         <div className={`matrix-inputs flex-stagger ${isIntegrated ? "integrated" : ""}`}>
             {!fixedCharacterId && (
                 <div className="matrix-field">
                     {!isIntegrated && <label>PERSONAGEM</label>}
-                    <select
-                        value={selectedCharId}
-                        onChange={(e) => setSelectedCharId(e.target.value)}
-                        className="mystic-input select-ritual"
-                    >
-                        {characters.map(c => (
-                            <option key={c.id} value={c.id}>{c.name.toUpperCase()}</option>
-                        ))}
-                    </select>
+                    {isIntegrated ? (
+                        <>
+                            <button
+                                ref={charPickerAnchorRef}
+                                type="button"
+                                className="char-portrait-btn"
+                                onClick={() => showCharPicker ? setShowCharPicker(false) : openCharPicker()}
+                                title={selectedChar?.name || "Selecionar personagem"}
+                            >
+                                {selectedChar?.imageUrl ? (
+                                    <img
+                                        src={selectedChar.imageUrl}
+                                        alt=""
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                    />
+                                ) : (
+                                    <span style={{ fontFamily: 'var(--font-header)', fontSize: '0.9rem', color: 'var(--accent-color)' }}>
+                                        {charInitial}
+                                    </span>
+                                )}
+                            </button>
+                            {showCharPicker && charPickerPos && typeof document !== 'undefined' && createPortal(
+                                <div
+                                    ref={charPickerPortalRef}
+                                    className="char-picker-dropdown"
+                                    style={{ position: 'fixed', top: `${charPickerPos.top}px`, left: `${charPickerPos.left}px`, transform: 'translateX(-50%)', zIndex: 2147483646 }}
+                                >
+                                    {allies.length > 0 && (
+                                        <div className="char-picker-section">
+                                            <div className="char-picker-section-label ally">ALIADOS</div>
+                                            {allies.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    type="button"
+                                                    className={`char-picker-item ally${c.id === selectedCharId ? ' selected' : ''}`}
+                                                    onMouseDown={(e) => { e.stopPropagation(); setSelectedCharId(c.id); setShowCharPicker(false); }}
+                                                >
+                                                    <div className="char-picker-avatar">
+                                                        {c.imageUrl ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span>{c.name.charAt(0).toUpperCase()}</span>}
+                                                    </div>
+                                                    <span className="char-picker-name">{c.name.toUpperCase()}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {enemies.length > 0 && (
+                                        <div className="char-picker-section">
+                                            <div className="char-picker-section-label enemy">ADVERSÁRIOS</div>
+                                            {enemies.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    type="button"
+                                                    className={`char-picker-item enemy${c.id === selectedCharId ? ' selected' : ''}`}
+                                                    onMouseDown={(e) => { e.stopPropagation(); setSelectedCharId(c.id); setShowCharPicker(false); }}
+                                                >
+                                                    <div className="char-picker-avatar">
+                                                        {c.imageUrl ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span>{c.name.charAt(0).toUpperCase()}</span>}
+                                                    </div>
+                                                    <span className="char-picker-name">{c.name.toUpperCase()}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>,
+                                document.body
+                            )}
+                        </>
+                    ) : (
+                        <select
+                            value={selectedCharId}
+                            onChange={(e) => setSelectedCharId(e.target.value)}
+                            className="mystic-input select-ritual"
+                        >
+                            {characters.map(c => {
+                                const isEnemy = c.isNPC && c.arenaSide !== "HERO";
+                                const color = isEnemy ? "#ff4444" : "#3b82f6";
+                                return (
+                                    <option key={c.id} value={c.id} style={{ color }}>
+                                        {c.name.toUpperCase()}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    )}
                 </div>
             )}
 
             <div className={`control-panel-grid ${isIntegrated ? "integrated-mode" : ""}`}>
                 <div className="panel-col primary">
-                    <div className="matrix-field">
-                        {!isIntegrated && <label>PERICIA</label>}
-                        <div className="field-row">
-                            {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
-                            {isIntegrated ? (
-                                <div className="icon-select-shell" title="Pericia">
-                                    <span className="icon-select-face"><Sparkles size={16} /></span>
-                                    <select
-                                        value={selectedSkill}
-                                        onChange={(e) => handleSkillSelect(e.target.value)}
-                                        className="icon-select-native"
-                                        aria-label="Pericia"
-                                    >
-                                        <option value="">PERICIA</option>
-                                        {skillOptions.ownedSkills.sort().map(skill => {
-                                            const rank = activeChar?.skills?.[skill] || 0;
-                                            return <option key={skill} value={skill}>{skill.toUpperCase()} (+{rank})</option>;
-                                        })}
-                                        {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
-                                        {skillOptions.otherSkills.sort().map(skill => {
-                                            const rank = activeChar?.skills?.[skill] || 0;
-                                            return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
-                                        })}
-                                    </select>
-                                </div>
-                            ) : (
-                                <select
-                                    value={selectedSkill}
-                                    onChange={(e) => handleSkillSelect(e.target.value)}
-                                    className="mystic-input select-ritual"
-                                >
-                                    <option value="">ROLAGEM PURA</option>
-                                    {skillOptions.ownedSkills.sort().map(skill => {
-                                        const rank = activeChar?.skills?.[skill] || 0;
-                                        return (
-                                            <option key={skill} value={skill} style={{ color: "var(--accent-color)", fontWeight: "bold" }}>
-                                                {skill.toUpperCase()} (+{rank})
-                                            </option>
-                                        );
-                                    })}
-                                    {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
-                                    {skillOptions.otherSkills.sort().map(skill => {
-                                        const rank = activeChar?.skills?.[skill] || 0;
-                                        return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
-                                    })}
-                                </select>
-                            )}
-                        </div>
-                    </div>
-
                     <div className="matrix-field" ref={attackMenuRef}>
                         {!isIntegrated && <label>ACAO</label>}
                         <div className="field-row action-field-row">
@@ -220,9 +393,12 @@ export function RollerInputs({
                             <div className="action-dropdown-wrapper">
                                 <button
                                     type="button"
-                                    className={`mystic-input select-ritual action-btn ${actionType === "ATTACK" ? "attack-active" : ""}`}
-                                    style={isIntegrated ? { width: actionWidth, maxWidth: "18ch" } : undefined}
-                                    onClick={() => setShowAttackSubMenu(!showAttackSubMenu)}
+                                    className={`mystic-input select-ritual action-btn ${actionType === "ATTACK" ? "attack-active" : ""} ${interactionStep === 1 ? 'nudge-glow' : ''}`}
+                                    style={isIntegrated ? { width: actionWidth, minWidth: "120px" } : undefined}
+                                    onClick={() => {
+                                        setShowAttackSubMenu(!showAttackSubMenu);
+                                        if (interactionStep < 2) setInteractionStep(2);
+                                    }}
                                 >
                                     {selectedActionLabel}
                                 </button>
@@ -264,21 +440,224 @@ export function RollerInputs({
                                     </div>
                                 )}
                             </div>
+                            {/* Inline target tags next to action button (integrated only) */}
+                            {isIntegrated && actionType === "ATTACK" && targetIds.length > 0 && (
+                                <div className="inline-target-tags">
+                                    {targetIds.map(tid => {
+                                        const tc = characters.find(c => c.id === tid);
+                                        return (
+                                            <div key={tid} className="inline-target-tag">
+                                                <div className="inline-target-portrait">
+                                                    {tc?.imageUrl ? (
+                                                        <img src={tc.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                                    ) : (
+                                                        <span>{tc?.name?.charAt(0)?.toUpperCase() || "?"}</span>
+                                                    )}
+                                                </div>
+                                                <span className="inline-target-name">{tc?.name?.toUpperCase() || "???"}</span>
+                                                <button type="button" className="inline-target-remove" onClick={() => handleTargetRemove(tid)}>
+                                                    <X size={10} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {availableTargets.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className="inline-target-add"
+                                            onClick={() => setShowTargetPicker(true)}
+                                            title="Adicionar alvo"
+                                        >
+                                            <Plus size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="matrix-field bonus-field-container">
+                        {!isIntegrated && <label>BONUS</label>}
+                        <div className="field-row">
+                            {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
+                            {isIntegrated ? (
+                                <>
+                                    <div
+                                        className={`icon-select-shell ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`}
+                                        title="Bônus"
+                                        ref={bonusMenuRef}
+                                    >
+                                        <div className="icon-select-face" onClick={() => showBonusMenu ? (setShowBonusMenu(false), setSelectedSign(null)) : openBonusMenu()}>
+                                            {manualBonus !== 0 ? (
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: manualBonus > 0 ? 'var(--accent-color)' : '#ff6b6b' }}>
+                                                    {manualBonus > 0 ? `+${manualBonus}` : manualBonus}
+                                                </span>
+                                            ) : (
+                                                <Plus size={16} />
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {showBonusMenu && bonusMenuPos && typeof document !== 'undefined' && createPortal(
+                                        <div
+                                            ref={bonusPortalRef}
+                                            className="bonus-dropdown-menu"
+                                            style={{
+                                                position: 'fixed',
+                                                top: `${bonusMenuPos.top}px`,
+                                                left: `${bonusMenuPos.left}px`,
+                                                transform: 'translate(-50%, -110%)',
+                                                zIndex: 2147483646,
+                                            }}
+                                        >
+                                            {!selectedSign ? (
+                                                <div className="bonus-sign-row">
+                                                    <button className="sign-btn plus" onMouseDown={(e) => { e.stopPropagation(); setSelectedSign('+'); }}>
+                                                        <Plus size={20} />
+                                                        <span>Bônus</span>
+                                                    </button>
+                                                    <button className="sign-btn minus" onMouseDown={(e) => { e.stopPropagation(); setSelectedSign('-'); }}>
+                                                        <Minus size={20} />
+                                                        <span>Ônus</span>
+                                                    </button>
+                                                    <button className="sign-btn zero" onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        setManualBonus(0);
+                                                        setShowBonusMenu(false);
+                                                        if (interactionStep < 3) setInteractionStep(3);
+                                                        focusSkillSoon();
+                                                    }}>
+                                                        <span>0</span>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="bonus-values-grid">
+                                                    <button className="back-btn" onMouseDown={(e) => { e.stopPropagation(); setSelectedSign(null); }}>←</button>
+                                                    <div className="values-scroll">
+                                                        {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                                                            <button
+                                                                key={num}
+                                                                className={`value-btn ${selectedSign === '-' ? 'is-minus' : ''}`}
+                                                                onMouseDown={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const val = selectedSign === '+' ? num : -num;
+                                                                    setManualBonus(val);
+                                                                    setShowBonusMenu(false);
+                                                                    setSelectedSign(null);
+                                                                    if (interactionStep < 3) setInteractionStep(3);
+                                                                    focusSkillSoon();
+                                                                }}
+                                                            >
+                                                                {selectedSign}{num}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>,
+                                        document.body
+                                    )}
+                                </>
+                            ) : (
+                                <input
+                                    type="number"
+                                    placeholder="BONUS"
+                                    value={manualBonus === 0 ? "" : manualBonus}
+                                    onChange={(e) => {
+                                        const rawValue = e.target.value;
+                                        setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
+                                        if (interactionStep < 3) setInteractionStep(3);
+                                    }}
+                                    onClick={() => { if (interactionStep < 3) setInteractionStep(3); }}
+                                    className={`mystic-input input-ritual bonus-input narrowed ${(guideEnabled && interactionStep === 2) ? 'nudge-glow' : ''}`}
+                                    style={{ width: bonusWidth, minWidth: "60px" }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
 
                 <div className="panel-col secondary">
+                    <div className="matrix-field">
+                        {!isIntegrated && <label>PERICIA</label>}
+                        <div className="field-row">
+                            {!isIntegrated && <Sparkles size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
+                            {isIntegrated ? (
+                                <div
+                                    className={`icon-select-shell skill-select-shell ${(guideEnabled && interactionStep === 3) ? 'nudge-glow' : ''}`}
+                                    title="Pericia"
+                                    style={{ width: skillButtonWidth, minWidth: '72px' }}
+                                >
+                                    <span className="icon-select-face" style={{ padding: '0 8px', fontSize: '0.66rem', fontFamily: 'var(--font-header)', letterSpacing: '0.08em', fontWeight: selectedSkill ? 800 : 400, color: selectedSkill ? '#fff' : 'var(--accent-color)', whiteSpace: 'nowrap' }}>
+                                        {skillLabel}
+                                    </span>
+                                    <select
+                                        ref={skillSelectRef}
+                                        value={selectedSkill}
+                                        onChange={(e) => {
+                                            afterSkillChosen(e.target.value);
+                                            if (interactionStep < 4) setInteractionStep(4);
+                                        }}
+                                        onClick={() => { if (interactionStep < 4) setInteractionStep(4); }}
+                                        className="icon-select-native"
+                                        aria-label="Pericia"
+                                    >
+                                        <option value="">PERICIA</option>
+                                        {skillOptions.ownedSkills.sort().map(skill => {
+                                            const rank = activeChar?.skills?.[skill] || 0;
+                                            return <option key={skill} value={skill}>{skill.toUpperCase()} (+{rank})</option>;
+                                        })}
+                                        {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
+                                        {skillOptions.otherSkills.sort().map(skill => {
+                                            const rank = activeChar?.skills?.[skill] || 0;
+                                            return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
+                                        })}
+                                    </select>
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedSkill}
+                                    onChange={(e) => {
+                                        handleSkillSelect(e.target.value);
+                                        if (interactionStep < 4) setInteractionStep(4);
+                                    }}
+                                    onClick={() => { if (interactionStep < 4) setInteractionStep(4); }}
+                                    className={`mystic-input select-ritual ${(guideEnabled && interactionStep === 3) ? 'nudge-glow' : ''}`}
+                                >
+                                    <option value="">ROLAGEM PURA</option>
+                                    {skillOptions.ownedSkills.sort().map(skill => {
+                                        const rank = activeChar?.skills?.[skill] || 0;
+                                        return (
+                                            <option key={skill} value={skill} style={{ color: "var(--accent-color)", fontWeight: "bold" }}>
+                                                {skill.toUpperCase()} (+{rank})
+                                            </option>
+                                        );
+                                    })}
+                                    {skillOptions.ownedSkills.length > 0 && <option disabled>----------</option>}
+                                    {skillOptions.otherSkills.sort().map(skill => {
+                                        const rank = activeChar?.skills?.[skill] || 0;
+                                        return <option key={skill} value={skill}>{skill.toUpperCase()} ({rank})</option>;
+                                    })}
+                                </select>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="matrix-field item-field-container">
                         {!isIntegrated && <label>INVENTARIO</label>}
                         <div className="field-row">
                             {!isIntegrated && <Backpack size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
                             {isIntegrated ? (
-                                <div className="icon-select-shell" title="Inventario">
-                                    <span className="icon-select-face"><Backpack size={16} /></span>
+                                <div className={`icon-select-shell ${(guideEnabled && interactionStep === 4) ? 'nudge-glow' : ''}`} title="Inventario">
+                                    <span className="icon-select-face" style={{ fontSize: '0.66rem', fontFamily: 'var(--font-header)', letterSpacing: '0.08em', color: 'var(--accent-color)' }}>ITEM</span>
                                     <select
+                                        ref={itemSelectRef}
                                         value={selectedItemId}
-                                        onChange={(e) => setSelectedItemId(e.target.value)}
+                                        onChange={(e) => {
+                                            setSelectedItemId(e.target.value);
+                                            if (interactionStep < 5) setInteractionStep(5);
+                                        }}
+                                        onClick={() => { if (interactionStep < 5) setInteractionStep(5); }}
                                         className="icon-select-native"
                                         aria-label="Inventario"
                                     >
@@ -293,8 +672,12 @@ export function RollerInputs({
                             ) : (
                                 <select
                                     value={selectedItemId}
-                                    onChange={(e) => setSelectedItemId(e.target.value)}
-                                    className="mystic-input select-ritual"
+                                    onChange={(e) => {
+                                        setSelectedItemId(e.target.value);
+                                        if (interactionStep < 5) setInteractionStep(5);
+                                    }}
+                                    onClick={() => { if (interactionStep < 5) setInteractionStep(5); }}
+                                    className={`mystic-input select-ritual ${(guideEnabled && interactionStep === 4) ? 'nudge-glow' : ''}`}
                                     style={{
                                         textAlign: "center",
                                         textIndent: "0",
@@ -311,28 +694,10 @@ export function RollerInputs({
                             )}
                         </div>
                     </div>
-
-                    <div className="matrix-field bonus-field-container">
-                        {!isIntegrated && <label>BONUS</label>}
-                        <div className="field-row">
-                            {!isIntegrated && <Plus size={18} className="field-icon" style={{ stroke: "var(--accent-color)" }} />}
-                            <input
-                                type="number"
-                                placeholder="BONUS"
-                                value={manualBonus === 0 ? "" : manualBonus}
-                                onChange={(e) => {
-                                    const rawValue = e.target.value;
-                                    setManualBonus(rawValue === "" ? 0 : (parseInt(rawValue, 10) || 0));
-                                }}
-                                className="mystic-input input-ritual bonus-input"
-                                style={isIntegrated ? { width: bonusWidth, maxWidth: "4ch" } : undefined}
-                            />
-                        </div>
-                    </div>
                 </div>
 
-                {/* Attack target tags (shown after target is selected) */}
-                {actionType === "ATTACK" && targetIds.length > 0 && (
+                {/* Attack target tags full-width (non-integrated only) */}
+                {!isIntegrated && actionType === "ATTACK" && targetIds.length > 0 && (
                     <div className="matrix-field full-width animate-reveal">
                         <label>ALVO</label>
                         <div className="target-selection-area">
@@ -349,7 +714,6 @@ export function RollerInputs({
                                         </div>
                                     );
                                 })}
-                                {/* Inline add more targets */}
                                 {availableTargets.length > 0 && (
                                     <button
                                         type="button"
@@ -514,15 +878,16 @@ export function RollerInputs({
                     gap: 8px;
                     flex: 1 1 120px;
                     min-width: 0;
-                    width: auto;
+                    width: 100%;
                     align-items: center;
                 }
 
                 .control-panel-grid.integrated-mode .panel-col {
                     flex-direction: row;
                     gap: 4px;
-                    flex: 0 1 auto;
+                    flex: 1 1 auto;
                     width: auto;
+                    justify-content: flex-start;
                 }
 
                 .field-row {
@@ -559,7 +924,8 @@ export function RollerInputs({
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    overflow: hidden;
+                    overflow: visible;
+                    z-index: 1000;
                 }
 
                 .icon-select-face {
@@ -567,7 +933,8 @@ export function RollerInputs({
                     align-items: center;
                     justify-content: center;
                     color: var(--accent-color);
-                    pointer-events: none;
+                    pointer-events: auto;
+                    cursor: pointer;
                     z-index: 1;
                 }
 
@@ -592,6 +959,13 @@ export function RollerInputs({
                     border-radius: 30px !important;
                     box-shadow: 0 0 20px var(--accent-glow), inset 0 0 15px var(--accent-glow) !important;
                     color: var(--accent-color) !important;
+                    font-size: 0.8rem;
+                    height: 36px;
+                    padding: 0 14px;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    flex: 1 1 auto;
+                    min-width: 0;
+                }
                     text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow) !important;
                     transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1) !important;
                     text-align: center;
@@ -620,7 +994,7 @@ export function RollerInputs({
 
                 .matrix-inputs.integrated .select-ritual,
                 .matrix-inputs.integrated .input-ritual {
-                    max-width: 16ch !important;
+                    max-width: 24ch !important;
                 }
 
                 .control-panel-grid.integrated-mode .select-ritual {
@@ -646,11 +1020,15 @@ export function RollerInputs({
                 }
 
                 .control-panel-grid.integrated-mode .bonus-input {
-                    width: auto !important;
-                    min-width: 2ch;
                     font-size: 1.08rem !important;
                     font-weight: 800 !important;
                     line-height: 1;
+                    padding: 2px 4px !important;
+                    min-width: unset !important;
+                }
+                
+                .bonus-input.narrowed {
+                    width: 38px !important;
                 }
 
                 .attack-type-select {
@@ -1095,6 +1473,317 @@ export function RollerInputs({
                         max-width: calc(100vw - 32px);
                         margin: 0 16px;
                     }
+                }
+                .target-tag-portrait {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background-size: cover;
+                    background-position: center;
+                    border: 1px solid var(--accent-color);
+                }
+
+                @keyframes sequence-glow {
+                    0% {
+                        box-shadow: 0 0 5px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255, 215, 0, 0.2);
+                        border-color: rgba(255, 215, 0, 0.6);
+                    }
+                    50% {
+                        box-shadow: 0 0 15px rgba(255, 215, 0, 1), inset 0 0 10px rgba(255, 215, 0, 0.8) !important;
+                        border-color: rgba(255, 215, 0, 1) !important;
+                        transform: scale(1.05);
+                    }
+                    100% {
+                        box-shadow: 0 0 5px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255, 215, 0, 0.2);
+                        border-color: rgba(255, 215, 0, 0.6);
+                    }
+                }
+
+                .nudge-glow {
+                    animation: sequence-glow 1.5s infinite alternate !important;
+                    border-color: rgba(255, 215, 0, 1) !important;
+                    z-index: 10;
+                }
+
+                .bonus-dropdown-menu {
+                    background: #0a0a0a;
+                    border: 1px solid var(--accent-color);
+                    border-radius: 8px;
+                    padding: 12px;
+                    min-width: 220px;
+                    z-index: 2000;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 15px rgba(var(--accent-rgb), 0.3);
+                    animation: bonus-pop 0.2s ease-out;
+                }
+                @keyframes bonus-pop {
+                    from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.95); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+                }
+                .bonus-sign-row {
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                }
+                .sign-btn {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 12px 8px;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 6px;
+                    color: #fff;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .sign-btn:hover { background: rgba(var(--accent-rgb), 0.15); border-color: var(--accent-color); }
+                .sign-btn.plus { color: var(--accent-color); }
+                .sign-btn.minus { color: #ff6b6b; }
+                .sign-btn span { font-size: 0.65rem; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase; }
+
+                .bonus-values-grid {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                .back-btn {
+                    align-self: flex-start;
+                    background: transparent;
+                    border: none;
+                    color: rgba(255,255,255,0.4);
+                    cursor: pointer;
+                    font-size: 1.2rem;
+                    padding: 0 5px;
+                }
+                .back-btn:hover { color: #fff; }
+                .values-scroll {
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 6px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    padding-right: 4px;
+                }
+                .values-scroll::-webkit-scrollbar { width: 4px; }
+                .values-scroll::-webkit-scrollbar-thumb { background: rgba(var(--accent-rgb), 0.3); border-radius: 2px; }
+                .value-btn {
+                    aspect-ratio: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 4px;
+                    color: #fff;
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .value-btn:hover { 
+                    background: var(--accent-color); 
+                    color: #000; 
+                    border-color: var(--accent-color); 
+                    transform: scale(1.1);
+                }
+                .value-btn.is-minus:hover {
+                    background: #ff4444;
+                    border-color: #ff4444;
+                }
+
+                /* ── Skill select shell override (expands with selected value) ── */
+                .skill-select-shell {
+                    width: auto !important;
+                    min-width: 72px !important;
+                    max-width: 18ch;
+                    padding: 0 2px;
+                }
+
+                /* ── Portrait Character Picker ── */
+                .char-portrait-btn {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    border: 1.5px solid var(--accent-color);
+                    background: #000;
+                    box-shadow: 0 0 12px var(--accent-glow), inset 0 0 8px var(--accent-glow);
+                    cursor: pointer;
+                    overflow: hidden;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    transition: all 0.2s ease;
+                }
+
+                .char-portrait-btn:hover {
+                    transform: scale(1.08);
+                    box-shadow: 0 0 18px var(--accent-glow), inset 0 0 12px var(--accent-glow);
+                    border-color: #fff;
+                }
+
+                .char-picker-dropdown {
+                    background: #0a0a0a;
+                    border: 1px solid rgba(var(--accent-rgb), 0.35);
+                    border-radius: 14px;
+                    padding: 8px;
+                    min-width: 200px;
+                    max-height: 50vh;
+                    overflow-y: auto;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.85), 0 0 16px rgba(var(--accent-rgb), 0.2);
+                    animation: bonus-pop 0.18s ease-out;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+
+                .char-picker-section {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+
+                .char-picker-section-label {
+                    font-family: var(--font-header);
+                    font-size: 0.58rem;
+                    letter-spacing: 0.2em;
+                    padding: 4px 8px 2px;
+                    opacity: 0.6;
+                }
+                .char-picker-section-label.ally { color: #60a5fa; }
+                .char-picker-section-label.enemy { color: #f87171; }
+
+                .char-picker-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 8px;
+                    border-radius: 8px;
+                    border: 1px solid transparent;
+                    background: transparent;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    text-align: left;
+                }
+
+                .char-picker-item.ally:hover,
+                .char-picker-item.ally.selected {
+                    background: rgba(59, 130, 246, 0.12);
+                    border-color: rgba(59, 130, 246, 0.35);
+                }
+
+                .char-picker-item.enemy:hover,
+                .char-picker-item.enemy.selected {
+                    background: rgba(248, 113, 113, 0.12);
+                    border-color: rgba(248, 113, 113, 0.35);
+                }
+
+                .char-picker-avatar {
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255,255,255,0.06);
+                    font-family: var(--font-header);
+                    font-size: 0.75rem;
+                }
+
+                .char-picker-item.ally .char-picker-avatar { border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; }
+                .char-picker-item.enemy .char-picker-avatar { border: 1px solid rgba(248, 113, 113, 0.5); color: #f87171; }
+
+                .char-picker-name {
+                    font-family: var(--font-header);
+                    font-size: 0.68rem;
+                    letter-spacing: 0.08em;
+                }
+                .char-picker-item.ally .char-picker-name { color: rgba(147, 197, 253, 0.9); }
+                .char-picker-item.enemy .char-picker-name { color: rgba(252, 165, 165, 0.9); }
+
+                /* ── Inline Target Tags (next to ATACAR) ── */
+                .action-field-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex-wrap: nowrap;
+                }
+
+                .inline-target-tags {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    flex-wrap: nowrap;
+                }
+
+                .inline-target-tag {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    padding: 3px 8px 3px 4px;
+                    background: rgba(255, 68, 68, 0.1);
+                    border: 1px solid rgba(255, 68, 68, 0.35);
+                    border-radius: 999px;
+                    white-space: nowrap;
+                }
+
+                .inline-target-portrait {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255, 68, 68, 0.15);
+                    border: 1px solid rgba(255, 68, 68, 0.4);
+                    font-family: var(--font-header);
+                    font-size: 0.65rem;
+                    color: #f87171;
+                }
+
+                .inline-target-name {
+                    font-family: var(--font-header);
+                    font-size: 0.62rem;
+                    letter-spacing: 0.06em;
+                    color: rgba(252, 165, 165, 0.9);
+                }
+
+                .inline-target-remove {
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    color: rgba(255, 80, 80, 0.6);
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    transition: color 0.15s;
+                }
+                .inline-target-remove:hover { color: #ff4444; }
+
+                .inline-target-add {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    border: 1px solid rgba(255, 68, 68, 0.35);
+                    background: rgba(255, 68, 68, 0.08);
+                    color: rgba(255, 80, 80, 0.7);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.15s;
+                    flex-shrink: 0;
+                }
+                .inline-target-add:hover {
+                    background: rgba(255, 68, 68, 0.18);
+                    border-color: rgba(255, 68, 68, 0.6);
+                    color: #ff5050;
                 }
             `}</style>
         </div>

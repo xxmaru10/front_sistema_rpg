@@ -14,6 +14,8 @@ interface ConsequenceModalState {
 interface CharacterConsequencesProps {
     character: Character;
     isGM: boolean;
+    /** Se true, permite edição mesmo para não-GM (ex: dono do personagem). Padrão: isGM */
+    canEditConsequences?: boolean;
     consequenceModal: ConsequenceModalState | null;
     showAddConsequenceModal: boolean;
     onConsequenceClick: (slot: string) => void;
@@ -28,6 +30,7 @@ interface CharacterConsequencesProps {
 export function CharacterConsequences({
     character,
     isGM,
+    canEditConsequences,
     consequenceModal,
     showAddConsequenceModal,
     onConsequenceClick,
@@ -38,9 +41,20 @@ export function CharacterConsequences({
     onOpenAddModal,
     onCloseAddModal,
 }: CharacterConsequencesProps) {
+    const canEdit = canEditConsequences ?? isGM;
     const defaultSlots = ["mild", "moderate", "severe"];
+    const removedDefaults = character.removedDefaultSlots || [];
     const allKeys = new Set<string>();
-    defaultSlots.forEach((slot) => allKeys.add(slot));
+
+    // Sempre mostrar os slots padrão, exceto os explicitamente removidos pelo mestre
+    defaultSlots.forEach((slot) => {
+        if (!removedDefaults.includes(slot)) allKeys.add(slot);
+    });
+
+    // Slots extras criados pelo mestre (ainda vazios ou preenchidos)
+    (character.extraConsequenceSlots || []).forEach((k) => allKeys.add(k));
+
+    // Slots preenchidos (garante que qualquer slot com texto apareça)
     if (character.consequences) {
         Object.keys(character.consequences).forEach((k) => allKeys.add(k));
     }
@@ -95,7 +109,7 @@ export function CharacterConsequences({
                     <div className="header-group" style={{ gap: "8px" }}>
                         <span className="symbol">🜊</span>
                         <span style={{ fontSize: "0.7rem", letterSpacing: "0.22em" }}>CONSEQUÊNCIAS</span>
-                        {isGM && (
+                        {canEdit && (
                             <button
                                 onClick={onOpenAddModal}
                                 className="add-mild2-btn"
@@ -120,7 +134,7 @@ export function CharacterConsequences({
                                 className={`consequence-slot ${isFilled ? "filled" : "empty"} small-slot`}
                                 style={{
                                     display: "grid",
-                                    gridTemplateColumns: isGM ? "auto minmax(0, 1fr) auto" : "auto minmax(0, 1fr)",
+                                    gridTemplateColumns: "auto 1fr",
                                     alignItems: "center",
                                     gap: "10px",
                                     marginBottom: 0,
@@ -162,7 +176,7 @@ export function CharacterConsequences({
                                     </span>
                                 </div>
 
-                                {isGM ? (
+                                {canEdit ? (
                                     <div className="consequence-input-wrapper">
                                         <button
                                             className="consequence-input-area"
@@ -300,6 +314,7 @@ export function CharacterConsequences({
                         );
                     })}
                 </div>
+
             </div>
 
             {/* Consequence Edit Modal */}

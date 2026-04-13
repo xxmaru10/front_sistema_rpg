@@ -3,34 +3,24 @@ import { Character } from "@/types/domain";
 export function isCharacterEliminated(character: Character): boolean {
     if (!character) return false;
 
-    // DEATH RULE: A character is ONLY eliminated when ALL consequence slots are filled.
-    // Physical and Mental stress do NOT count for death - only consequences.
+    // DEATH RULE: A character is ONLY eliminated when ALL available consequence slots are filled.
+    // "Available" = default slots (mild/moderate/severe) minus explicitly removed ones,
+    //               plus any extra slots created by the GM.
+    const removedDefaults = character.removedDefaultSlots || [];
+    const defaultSlots = ["mild", "moderate", "severe"].filter(s => !removedDefaults.includes(s));
 
-    // Get all consequence keys (mild, moderate, severe + any extras)
-    const allConsequenceKeys = Object.keys(character.consequences);
+    const allSlots = new Set<string>(defaultSlots);
+    (character.extraConsequenceSlots || []).forEach(s => allSlots.add(s));
+    // Include any filled slots not already in the above (edge-case safety)
+    Object.keys(character.consequences || {}).forEach(k => allSlots.add(k));
 
-    // If the character has no consequence slots defined, they cannot be eliminated by consequences.
-    // INSTEAD, they are eliminated if their Physical OR Mental stress track is fully filled.
-    if (allConsequenceKeys.length === 0) {
-        const physicalTotal = character.stress.physical.length;
-        const physicalMarked = character.stress.physical.filter(Boolean).length;
-        const physicalFull = physicalTotal > 0 && physicalMarked === physicalTotal;
+    if (allSlots.size === 0) return false;
 
-        const mentalTotal = character.stress.mental.length;
-        const mentalMarked = character.stress.mental.filter(Boolean).length;
-        const mentalFull = mentalTotal > 0 && mentalMarked === mentalTotal;
-
-        if (physicalFull || mentalFull) return true;
-        return false;
-    }
-
-    // Check if ALL consequence slots have text (are filled)
-    const allConsequencesFilled = allConsequenceKeys.every(key => {
-        const cons = character.consequences[key];
+    // Eliminated only when EVERY slot has non-empty text
+    return Array.from(allSlots).every(slot => {
+        const cons = (character.consequences as any)[slot];
         return cons && cons.text && cons.text.trim().length > 0;
     });
-
-    return allConsequencesFilled;
 }
 
 export type DamageAbsorptionResult = {
@@ -77,7 +67,11 @@ export function calculateAbsorption(
 
     // Preferred check order
     const slotsOrder = ["mild", "mild2", "moderate", "severe", "extreme"];
-    const characterSlots = Object.keys(character.consequences);
+    // Inclui slots padrão mesmo que consequences esteja vazio (igual ao DamageResolutionModal)
+    const defaultSlots = ["mild", "moderate", "severe"];
+    const consequenceKeys = Object.keys(character.consequences || {});
+    const mergedKeys = new Set([...defaultSlots, ...consequenceKeys]);
+    const characterSlots = Array.from(mergedKeys);
 
     const availableSlots = characterSlots.filter(slot => {
         const data = character.consequences[slot];

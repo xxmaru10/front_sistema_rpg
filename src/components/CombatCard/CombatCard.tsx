@@ -11,7 +11,7 @@ import { CombatExtras } from "@/components/CombatExtras";
 
 // Sub-components
 import { useState } from 'react';
-import { ChevronLeft, ChevronDown, Star, Sparkles, Briefcase, Target, Dices, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronDown, Star, Sparkles, Briefcase, Target, Dices, Trash2, Skull } from "lucide-react";
 import { CombatAspects } from "./CombatAspects";
 import { CombatCardStyles } from "./CombatCard.styles";
 
@@ -90,6 +90,8 @@ export function CombatCard({
         handleSaveConsequence,
         handleUpdateHazard,
         handleImpulseArrowsChange,
+        handleClearAllConsequences,
+        handleKillCharacter,
     } = useCombatCard({ character, sessionId, actorUserId, isGM });
 
     const isHazard = character.isHazard;
@@ -416,14 +418,6 @@ export function CombatCard({
                             backgroundColor: '#000',
                             overflow: 'hidden',
                             zIndex: 2,
-                            ...(character.imageUrl
-                                ? {
-                                    backgroundImage: `url(${character.imageUrl})`,
-                                    backgroundSize: 'cover',
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundPosition: `${arenaFocusX}% ${arenaFocusY}%`,
-                                }
-                                : {})
                         }}
                     >
                         {character.imageUrl ? (
@@ -652,7 +646,45 @@ export function CombatCard({
                                 character={character}
                                 isGM={isGM}
                                 openConsequenceModal={openConsequenceModal}
+                                onClearAll={handleClearAllConsequences}
                             />
+                            {isGM && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleKillCharacter(); }}
+                                    title="Matar personagem (preencher todas as consequências)"
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "6px",
+                                        width: "100%",
+                                        marginTop: "8px",
+                                        padding: "6px 10px",
+                                        background: "rgba(180, 0, 0, 0.08)",
+                                        border: "1px solid rgba(180, 0, 0, 0.28)",
+                                        borderRadius: "8px",
+                                        color: "rgba(255, 80, 80, 0.75)",
+                                        cursor: "pointer",
+                                        fontSize: "0.66rem",
+                                        letterSpacing: "0.16em",
+                                        fontFamily: "var(--font-header)",
+                                        transition: "all 0.18s ease",
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.background = "rgba(180, 0, 0, 0.18)";
+                                        e.currentTarget.style.borderColor = "rgba(255, 60, 60, 0.55)";
+                                        e.currentTarget.style.color = "#ff5050";
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.background = "rgba(180, 0, 0, 0.08)";
+                                        e.currentTarget.style.borderColor = "rgba(180, 0, 0, 0.28)";
+                                        e.currentTarget.style.color = "rgba(255, 80, 80, 0.75)";
+                                    }}
+                                >
+                                    <Skull size={12} />
+                                    ELIMINAR
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

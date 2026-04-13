@@ -5,10 +5,25 @@
 
 type DiceSimulationCallback = (results: number[]) => void;
 
+export type DiceResultOverlayMode = "combat" | "challenge";
+
 interface DiceSimulationParams {
     accentColor?: string;
     onSettled: DiceSimulationCallback;
     onPreResult?: DiceSimulationCallback;
+    calculationBreakdown?: {
+        baseSkillValue?: number;
+        itemBonusValue?: number;
+        customModifierValue?: number;
+        /** Nome do item equipado/selecionado (só exibição no overlay). */
+        itemName?: string;
+    };
+    /** Como colorir o total final após os dados 3D (Arena vs desafio). */
+    resultOverlay?: {
+        mode: DiceResultOverlayMode;
+        /** Dificuldade do desafio (modo challenge); sucesso se total >= este valor. */
+        targetDifficulty?: number;
+    };
 }
 
 class DiceSimulationStore {
