@@ -341,6 +341,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 if (savedOutput) {
                     mgr.setOutputDevice(savedOutput).catch(console.warn);
                 }
+            } else if (savedInput) {
+                // Mic falhou com device salvo — provavelmente stale; limpa para próxima tentativa usar default
+                localStorage.removeItem('voice_input_device');
+                setAudioInputDeviceId('');
             }
         } finally {
             setIsJoining(false);

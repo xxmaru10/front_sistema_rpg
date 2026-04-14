@@ -436,10 +436,22 @@ export class VoiceChatManager {
             return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
         } catch (preferredError) {
             console.warn("[VoiceChat] Preferred mic constraints failed, trying fallback:", preferredError);
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: this.getFallbackAudioConstraints(resolvedDeviceId),
-            });
-            return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: this.getFallbackAudioConstraints(resolvedDeviceId),
+                });
+                return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+            } catch (fallbackError) {
+                // Device ID stale ou inválido — tenta sem deviceId (usa default do sistema)
+                if (resolvedDeviceId) {
+                    console.warn("[VoiceChat] Device ID inválido/stale, tentando sem deviceId:", fallbackError);
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: this.getFallbackAudioConstraints(undefined),
+                    });
+                    return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+                }
+                throw fallbackError;
+            }
         }
     }
 
