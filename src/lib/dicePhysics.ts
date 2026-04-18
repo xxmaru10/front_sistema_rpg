@@ -5,8 +5,11 @@
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
+import { DieType } from "../types/domain";
+
 export interface PhysicsDie {
     mesh: any;
+    type: DieType;
     pos: { x: number; y: number; z: number };
     vel: { x: number; y: number; z: number };
     angVel: { x: number; y: number; z: number };
@@ -178,23 +181,109 @@ export function cursorToWorld(
 /**
  * Lê qual face do dado está voltada para cima.
  */
-export function readFaceUpWithIndex(mesh: any, THREE: any): { value: number; matIndex: number } {
+export function readFaceUpWithIndex(mesh: any, type: DieType, THREE: any): { value: number; matIndex: number } {
     const worldUp = new THREE.Vector3(0, 1, 0);
     const mat     = new THREE.Matrix4().makeRotationFromEuler(mesh.rotation);
 
-    // Layout do BoxGeometry (materialIndex):
-    // 0=+X, 1=-X (0), 2=+Y, 3=-Y (+1), 4=+Z, 5=-Z (-1)
-    const faces = [
-        { n: new THREE.Vector3( 1, 0, 0), v:  0, idx: 0 },
-        { n: new THREE.Vector3(-1, 0, 0), v:  0, idx: 1 },
-        { n: new THREE.Vector3( 0, 1, 0), v:  1, idx: 2 },
-        { n: new THREE.Vector3( 0,-1, 0), v:  1, idx: 3 },
-        { n: new THREE.Vector3( 0, 0, 1), v: -1, idx: 4 },
-        { n: new THREE.Vector3( 0, 0,-1), v: -1, idx: 5 },
-    ] as const;
+    let faces: Array<{ n: any, v: number, idx: number }>;
+
+    if (type === "dF") {
+        faces = [
+            { n: new THREE.Vector3( 1, 0, 0), v:  0, idx: 0 },
+            { n: new THREE.Vector3(-1, 0, 0), v:  0, idx: 1 },
+            { n: new THREE.Vector3( 0, 1, 0), v:  1, idx: 2 },
+            { n: new THREE.Vector3( 0,-1, 0), v:  1, idx: 3 },
+            { n: new THREE.Vector3( 0, 0, 1), v: -1, idx: 4 },
+            { n: new THREE.Vector3( 0, 0,-1), v: -1, idx: 5 },
+        ];
+    } else if (type === "d6") {
+        faces = [
+            { n: new THREE.Vector3( 1, 0, 0), v: 4, idx: 0 },
+            { n: new THREE.Vector3(-1, 0, 0), v: 3, idx: 1 },
+            { n: new THREE.Vector3( 0, 1, 0), v: 2, idx: 2 },
+            { n: new THREE.Vector3( 0,-1, 0), v: 5, idx: 3 },
+            { n: new THREE.Vector3( 0, 0, 1), v: 6, idx: 4 },
+            { n: new THREE.Vector3( 0, 0,-1), v: 1, idx: 5 },
+        ];
+    } else if (type === "d4") {
+        // Tetraedro: normal de cada face
+        const s = 1/Math.sqrt(3);
+        faces = [
+            { n: new THREE.Vector3( s,  s,  s), v: 1, idx: 0 },
+            { n: new THREE.Vector3( s, -s, -s), v: 2, idx: 1 },
+            { n: new THREE.Vector3(-s,  s, -s), v: 3, idx: 2 },
+            { n: new THREE.Vector3(-s, -s,  s), v: 4, idx: 3 },
+        ];
+    } else if (type === "d8") {
+        const s = 1/Math.sqrt(3);
+        faces = [
+            { n: new THREE.Vector3( s,  s,  s), v: 1, idx: 0 },
+            { n: new THREE.Vector3( s,  s, -s), v: 2, idx: 1 },
+            { n: new THREE.Vector3( s, -s,  s), v: 3, idx: 2 },
+            { n: new THREE.Vector3( s, -s, -s), v: 4, idx: 3 },
+            { n: new THREE.Vector3(-s,  s,  s), v: 5, idx: 4 },
+            { n: new THREE.Vector3(-s,  s, -s), v: 6, idx: 5 },
+            { n: new THREE.Vector3(-s, -s,  s), v: 7, idx: 6 },
+            { n: new THREE.Vector3(-s, -s, -s), v: 8, idx: 7 },
+        ];
+    } else if (type === "d12") {
+        // Aproximação das normais do dodecaedro (Faces são pentágonos)
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const invPhi = 1 / phi;
+        const normals = [
+            [0, invPhi, phi], [0, invPhi, -phi], [0, -invPhi, phi], [0, -invPhi, -phi],
+            [invPhi, phi, 0], [invPhi, -phi, 0], [-invPhi, phi, 0], [-invPhi, -phi, 0],
+            [phi, 0, invPhi], [phi, 0, -invPhi], [-phi, 0, invPhi], [-phi, 0, -invPhi],
+        ];
+        faces = normals.map((n, i) => ({ n: new THREE.Vector3(...n).normalize(), v: i + 1, idx: i }));
+    } else if (type === "d20") {
+        // Icosaedro: 20 faces triangulares
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const vertices = [
+            [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
+            [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
+            [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
+        ];
+        // Faces do icosaedro (índices de vértices)
+        const faceIndices = [
+            [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+            [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+            [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+            [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+        ];
+        faces = faceIndices.map((fi, i) => {
+            const v0 = new THREE.Vector3(...vertices[fi[0]]);
+            const v1 = new THREE.Vector3(...vertices[fi[1]]);
+            const v2 = new THREE.Vector3(...vertices[fi[2]]);
+            const normal = new THREE.Vector3().crossVectors(
+                v1.clone().sub(v0),
+                v2.clone().sub(v0)
+            ).normalize();
+            return { n: normal, v: i + 1, idx: i };
+        });
+    } else if (type === "d10" || type === "d100") {
+        // d10 is complex to normalize manually, but let's use a simplified approach
+        // 10 faces (pentagonal trapezohedron)
+        // For d10, we'll assume a standard mapping or just use 10 directions
+        const angles = Array.from({length: 10}, (_, i) => (i * Math.PI * 2) / 10);
+        faces = angles.map((ang, i) => {
+            const y = i % 2 === 0 ? 0.5 : -0.5;
+            const horizontal = 0.866;
+            return {
+                n: new THREE.Vector3(Math.cos(ang) * horizontal, y, Math.sin(ang) * horizontal).normalize(),
+                v: i + 1,
+                idx: i
+            };
+        });
+    } else {
+        // Fallback or dF
+        faces = [
+            { n: new THREE.Vector3( 0, 1, 0), v: 1, idx: 2 }
+        ];
+    }
 
     let best = -Infinity;
-    let result = { value: 0, matIndex: 2 };
+    let result = { value: 0, matIndex: 0 };
     for (const { n, v, idx } of faces) {
         const dot = n.clone().applyMatrix4(mat).dot(worldUp);
         if (dot > best) { best = dot; result = { value: v, matIndex: idx }; }

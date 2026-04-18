@@ -1014,11 +1014,16 @@ export default function SessionPage() {
             {diceVisible && (
                 <FateDice3D
                     isVisible={true}
+                    initialPool={diceParams?.currentPool ?? diceParams?.initialPool}
+                    onPoolChange={(pool) => {
+                        diceSimulationStore.updateCurrentPool(pool);
+                        diceParams?.onPoolChange?.(pool);
+                    }}
                     accentColor={diceParams?.accentColor}
                     calculationBreakdown={diceParams?.calculationBreakdown}
                     resultOverlay={diceParams?.resultOverlay}
-                    onSettled={(results) => {
-                        diceParams?.onSettled(results);
+                    onSettled={(results, breakdown) => {
+                        diceParams?.onSettled(results, breakdown);
                         diceSimulationStore.hide();
                     }}
                     onPreResult={(results) => {

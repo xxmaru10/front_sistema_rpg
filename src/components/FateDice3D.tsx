@@ -3,11 +3,14 @@
 import { useFateDiceSimulation } from "../hooks/useFateDiceSimulation";
 import { FateResultOverlay } from "./DiceRoller/FateResultOverlay";
 import type { DiceResultOverlayMode } from "@/lib/diceSimulationStore";
+import { DiceBreakdownEntry, DicePoolEntry } from "@/types/domain";
 
 interface FateDice3DProps {
     isVisible: boolean;
+    initialPool?: DicePoolEntry[];
+    onPoolChange?: (pool: DicePoolEntry[]) => void;
     accentColor?: string;
-    onSettled: (results: number[]) => void;
+    onSettled: (results: number[], breakdown: DiceBreakdownEntry[]) => void;
     onPreResult?: (results: number[]) => void;
     userRole?: "GM" | "PLAYER";
     activeTab?: string;
@@ -29,6 +32,8 @@ interface FateDice3DProps {
  */
 export default function FateDice3D({
     isVisible,
+    initialPool,
+    onPoolChange,
     accentColor = "#C5A059",
     onSettled,
     onPreResult,
@@ -41,15 +46,24 @@ export default function FateDice3D({
         mountRef,
         uiPhase,
         uiResults,
+        uiBreakdown,
         autoRoll,
         resolvedAccent,
         resolvedDanger,
+        dicePool,
+        updatePool,
     } = useFateDiceSimulation({
         isVisible,
+        initialPool,
         accentColor,
         onSettled,
         onPreResult,
     });
+
+    const handlePoolChange = (newPool: DicePoolEntry[]) => {
+        updatePool(newPool);
+        onPoolChange?.(newPool);
+    };
 
     if (!isVisible) return null;
 
@@ -117,9 +131,12 @@ export default function FateDice3D({
                 <FateResultOverlay
                     phase={uiPhase}
                     results={uiResults}
+                    breakdown={uiBreakdown}
                     accentColor={resolvedAccent}
                     dangerColor={resolvedDanger}
                     onAutoRoll={autoRoll}
+                    dicePool={dicePool}
+                    onPoolChange={handlePoolChange}
                     calculationBreakdown={calculationBreakdown}
                     resultOverlay={resultOverlay}
                 />

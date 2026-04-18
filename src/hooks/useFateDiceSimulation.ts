@@ -24,12 +24,28 @@ import {
     createFaceTexture, 
     getVibrantDanger 
 } from "../lib/diceVisuals";
+import { DiceBreakdownEntry, DicePoolEntry, DieType } from "@/types/domain";
+
+const DICE_ORDER: DieType[] = ["dF", "d4", "d6", "d8", "d10", "d12", "d20", "d100"];
+const IDLE_Y = FLOOR_Y + 2.2;
+
+interface RuntimeDie extends PhysicsDie {
+    sourceType: DieType;
+    d100GroupIndex?: number;
+    d100Part?: "tens" | "units";
+}
+
+function sortBreakdown(entries: DiceBreakdownEntry[]): DiceBreakdownEntry[] {
+    return entries
+        .filter((entry) => entry.values.length > 0)
+        .sort((a, b) => DICE_ORDER.indexOf(a.type) - DICE_ORDER.indexOf(b.type));
+}
 
 interface SceneState {
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
-    dice: PhysicsDie[];
+    dice: RuntimeDie[];
     dieLights: THREE.PointLight[];
     animFrameId: number;
     phase: "idle" | "held" | "thrown" | "snapping" | "done";
@@ -42,19 +58,22 @@ interface SceneState {
 
 interface UseFateDiceSimulationProps {
     isVisible: boolean;
+    initialPool?: DicePoolEntry[];
     accentColor: string;
-    onSettled: (results: number[]) => void;
+    onSettled: (results: number[], breakdown: DiceBreakdownEntry[]) => void;
     onPreResult?: (results: number[]) => void;
 }
 
 export function useFateDiceSimulation({
     isVisible,
+    initialPool,
     accentColor,
     onSettled,
     onPreResult,
 }: UseFateDiceSimulationProps) {
     const mountRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<SceneState | null>(null);
+    const [dicePool, setDicePool] = useState<DicePoolEntry[]>(initialPool || [{ type: "dF", count: 4 }]);
     const onSettledRef = useRef(onSettled);
     const onPreResultRef = useRef(onPreResult);
     
@@ -70,6 +89,7 @@ export function useFateDiceSimulation({
 
     const [uiPhase, setUiPhase] = useState<"idle" | "held" | "thrown" | "snapping" | "done">("idle");
     const [uiResults, setUiResults] = useState<number[] | null>(null);
+    const [uiBreakdown, setUiBreakdown] = useState<DiceBreakdownEntry[] | null>(null);
     const [resolvedAccent, setResolvedAccent] = useState(accentColor);
     const [resolvedDanger, setResolvedDanger] = useState("#ff2255");
 
@@ -81,6 +101,7 @@ export function useFateDiceSimulation({
 
         setUiPhase("idle");
         setUiResults(null);
+        setUiBreakdown(null);
         isHeldRef.current = false;
 
         // Pré-busca números aleatórios
@@ -133,13 +154,45 @@ export function useFateDiceSimulation({
                 bailOutAndRollInstantly();
                 return;
             }
-
             function bailOutAndRollInstantly() {
-                const fbResults = Array.from({length: 4}, () => [1, 0, -1][Math.floor(Math.random() * 3)]);
+                const results: number[] = [];
+                const breakdown: DiceBreakdownEntry[] = [];
+                dicePool.forEach(p => {
+                    const values: number[] = [];
+                    for (let i = 0; i < p.count; i++) {
+                        let v = 0;
+                        if (p.type === "dF") {
+                            v = Math.floor(Math.random() * 3) - 1;
+                        } else if (p.type === "d100") {
+                            const tens = Math.floor(Math.random() * 10);
+                            const units = Math.floor(Math.random() * 10);
+                            v = tens === 0 && units === 0 ? 100 : tens * 10 + units;
+                        } else {
+                            const sides = parseInt(p.type.substring(1), 10) || 6;
+                            v = Math.floor(Math.random() * sides) + 1;
+                        }
+                        results.push(v);
+                        values.push(v);
+                    }
+                    breakdown.push({ type: p.type, values });
+                });
+
+                if (results.length === 0) { // Fallback 4dF
+                    const values: number[] = [];
+                    for (let i = 0; i < 4; i++) {
+                        const v = Math.floor(Math.random() * 3) - 1;
+                        results.push(v);
+                        values.push(v);
+                    }
+                    breakdown.push({ type: "dF", values });
+                }
+
+                const sortedBreakdown = sortBreakdown(breakdown);
                 setUiPhase("done");
-                setUiResults(fbResults);
-                onPreResultRef.current?.(fbResults);
-                onSettledRef.current(fbResults);
+                setUiResults(results);
+                setUiBreakdown(sortedBreakdown);
+                onPreResultRef.current?.(results);
+                onSettledRef.current(results, sortedBreakdown);
             }
 
             renderer.setSize(W, H);
@@ -180,11 +233,16 @@ export function useFateDiceSimulation({
             scene.add(tableMesh);
 
             // ── Texturas e Materiais ──────────────────────────────────────────
-            const texBlank = createFaceTexture(THREE, "",  themeAccent, themeBg, themeName);
-            const texPlus  = createFaceTexture(THREE, "+", themeAccent, themeBg, themeName);
-            const texMinus = createFaceTexture(THREE, "−", themeAccent, themeBg, themeName);
+            const textureCache = new Map<string, any>();
+            function getCachedTexture(symbol: string) {
+                const key = `${symbol}|${themeAccent}|${themeBg}|${themeName}`;
+                if (textureCache.has(key)) return textureCache.get(key);
+                const tex = createFaceTexture(THREE, symbol, themeAccent, themeBg, themeName);
+                textureCache.set(key, tex);
+                return tex;
+            }
 
-            function makeMats() {
+            function makeMats(type: DieType) {
                 let rough = 0.25, metal = 0.15;
                 if (themeName === 'cyberpunk' || themeName === 'espacial') { rough = 0.12; metal = 0.80; }
                 else if (themeName === 'medieval') { rough = 0.85; metal = 0.04; }
@@ -202,25 +260,91 @@ export function useFateDiceSimulation({
                         metalness: metal,
                     });
                 }
-                return [m(texBlank), m(texBlank), m(texPlus), m(texPlus), m(texMinus), m(texMinus)];
+
+                if (type === "dF") {
+                    return [
+                        getCachedTexture(""), getCachedTexture(""),
+                        getCachedTexture("+"), getCachedTexture("+"),
+                        getCachedTexture("−"), getCachedTexture("−")
+                    ].map(m);
+                }
+                if (type === "d6") {
+                    return [
+                        getCachedTexture("pip:4"), getCachedTexture("pip:3"),
+                        getCachedTexture("pip:2"), getCachedTexture("pip:5"),
+                        getCachedTexture("pip:6"), getCachedTexture("pip:1")
+                    ].map(m);
+                }
+                if (type === "d4") {
+                    return [
+                         getCachedTexture("1"), getCachedTexture("2"),
+                         getCachedTexture("3"), getCachedTexture("4")
+                    ].map(m);
+                }
+                if (type === "d8") {
+                    return Array.from({length: 8}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                if (type === "d10" || type === "d100") {
+                    return Array.from({length: 10}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                if (type === "d12") {
+                    return Array.from({length: 12}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                if (type === "d20") {
+                    return Array.from({length: 20}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                return [getCachedTexture("?")].map(m);
+            }
+
+            function createDieGeometry(type: DieType) {
+                if (type === "dF" || type === "d6") return new THREE.BoxGeometry(1, 1, 1);
+                if (type === "d4") return new THREE.TetrahedronGeometry(1.0);
+                if (type === "d8") return new THREE.OctahedronGeometry(1.0);
+                if (type === "d12") return new THREE.DodecahedronGeometry(1.0);
+                if (type === "d20") return new THREE.IcosahedronGeometry(1.0);
+                if (type === "d10" || type === "d100") {
+                    // d10 is a pentagonal trapezohedron. We'll use a simplified Cyrano geometry or Cylinder with 10 segments
+                    const geo = new THREE.CylinderGeometry(0, 1.1, 1.2, 10);
+                    return geo;
+                }
+                return new THREE.BoxGeometry(1, 1, 1);
             }
 
             // ── Dados ─────────────────────────────────────────────────────────
-            const N_DICE = 4;
-            const SPACING = 1.5;
-            const IDLE_Y = 1.0;
-            const startX = -((N_DICE - 1) * SPACING) / 2;
+            const dice: RuntimeDie[] = [];
+            const flatPool: Array<{
+                renderType: Exclude<DieType, "d100">;
+                sourceType: DieType;
+                d100GroupIndex?: number;
+                d100Part?: "tens" | "units";
+            }> = [];
+            dicePool.forEach(p => {
+                if (p.type === "d100") {
+                    for (let i = 0; i < p.count; i++) {
+                        flatPool.push({ renderType: "d10", sourceType: "d100", d100GroupIndex: i, d100Part: "tens" });
+                        flatPool.push({ renderType: "d10", sourceType: "d100", d100GroupIndex: i, d100Part: "units" });
+                    }
+                } else {
+                    for (let i = 0; i < p.count; i++) flatPool.push({ renderType: p.type, sourceType: p.type });
+                }
+            });
 
-            const dice: PhysicsDie[] = [];
-            // Removemos as dieLights (PointLights) individuais por dado para aliviar severamente a GPU no mobile.
-            // A iluminação fica a cargo da Ambient + 2 Directionals.
-
-            for (let i = 0; i < N_DICE; i++) {
-                const geo = new THREE.BoxGeometry(1, 1, 1);
-                const mats = makeMats();
+            const N_TOTAL = flatPool.length;
+            const SPACING = 1.6;
+            const ROWS = N_TOTAL > 0 ? Math.ceil(Math.sqrt(N_TOTAL)) : 1;
+            const COLS = N_TOTAL > 0 ? Math.ceil(N_TOTAL / ROWS) : 1;
+            
+            flatPool.forEach((entry, i) => {
+                const geo = createDieGeometry(entry.renderType);
+                const mats = makeMats(entry.renderType);
                 const mesh = new THREE.Mesh(geo, mats);
-                const px = startX + i * SPACING;
-                mesh.position.set(px, IDLE_Y, 0);
+                
+                const r = Math.floor(i / COLS);
+                const c = i % COLS;
+                const px = (c - (COLS-1)/2) * SPACING;
+                const pz = (r - (ROWS-1)/2) * SPACING;
+
+                mesh.position.set(px, IDLE_Y, pz);
                 mesh.rotation.set(
                     Math.random() * Math.PI * 2,
                     Math.random() * Math.PI * 2,
@@ -230,7 +354,11 @@ export function useFateDiceSimulation({
                 
                 dice.push({
                     mesh,
-                    pos: { x: px, y: IDLE_Y, z: 0 },
+                    type: entry.renderType,
+                    sourceType: entry.sourceType,
+                    d100GroupIndex: entry.d100GroupIndex,
+                    d100Part: entry.d100Part,
+                    pos: { x: px, y: IDLE_Y, z: pz },
                     vel: { x: 0, y: 0, z: 0 },
                     angVel: {
                         x: (Math.random() - 0.5) * 0.07,
@@ -239,7 +367,7 @@ export function useFateDiceSimulation({
                     },
                     onFloor: false,
                 });
-            }
+            });
 
             camera.updateMatrixWorld();
 
@@ -265,9 +393,14 @@ export function useFateDiceSimulation({
                     die.mesh.position.y = die.pos.y;
                 });
 
-                const results: number[] = state.dice.map(die => {
-                    const { value, matIndex } = readFaceUpWithIndex(die.mesh, THREE);
-                    (die.mesh.material as THREE.MeshStandardMaterial[]).forEach((mat, mi) => {
+                const results: number[] = [];
+                const breakdownMap: Partial<Record<DieType, number[]>> = {};
+                const d100Parts = new Map<number, { tens?: number; units?: number }>();
+
+                state.dice.forEach(die => {
+                    const { value, matIndex } = readFaceUpWithIndex(die.mesh, die.type, THREE);
+                    const materials = Array.isArray(die.mesh.material) ? die.mesh.material : [die.mesh.material];
+                    materials.forEach((mat: THREE.MeshStandardMaterial, mi: number) => {
                         if (mi === matIndex) {
                             mat.emissive.setHex(accentNum);
                             mat.emissiveIntensity = 2.4;
@@ -276,14 +409,52 @@ export function useFateDiceSimulation({
                             mat.emissiveIntensity = 0.08;
                         }
                     });
-                    return value;
+                    if (die.sourceType === "d100") {
+                        const key = die.d100GroupIndex ?? 0;
+                        const pair = d100Parts.get(key) ?? {};
+                        if (die.d100Part === "tens") pair.tens = value % 10;
+                        else pair.units = value % 10;
+                        d100Parts.set(key, pair);
+                        return;
+                    }
+
+                    results.push(value);
+                    if (!breakdownMap[die.sourceType]) breakdownMap[die.sourceType] = [];
+                    breakdownMap[die.sourceType]!.push(value);
                 });
+
+                if (d100Parts.size > 0) {
+                    const d100Values: number[] = [];
+                    const orderedPairs = Array.from(d100Parts.entries()).sort((a, b) => a[0] - b[0]);
+                    orderedPairs.forEach(([, pair]) => {
+                        const tens = pair.tens ?? Math.floor(Math.random() * 10);
+                        const units = pair.units ?? Math.floor(Math.random() * 10);
+                        const total = tens === 0 && units === 0 ? 100 : tens * 10 + units;
+                        d100Values.push(total);
+                        results.push(total);
+                    });
+                    breakdownMap.d100 = d100Values;
+                }
+
+                if (results.length === 0) {
+                    const fallback = Array.from({ length: 4 }, () => Math.floor(Math.random() * 3) - 1);
+                    breakdownMap.dF = fallback;
+                    results.push(...fallback);
+                }
+
+                const breakdown = sortBreakdown(
+                    Object.entries(breakdownMap).map(([type, values]) => ({
+                        type: type as DieType,
+                        values: values ?? [],
+                    })),
+                );
 
                 state.phase = "done";
                 setUiPhase("done");
                 setUiResults(results);
+                setUiBreakdown(breakdown);
                 onPreResultRef.current?.(results);
-                setTimeout(() => onSettledRef.current(results), 2000);
+                setTimeout(() => onSettledRef.current(results, breakdown), 2000);
             }
 
             function animate() {
@@ -310,7 +481,7 @@ export function useFateDiceSimulation({
                                              state.containerW, state.containerH, camera, HELD_Y);
 
                     state.dice.forEach((die, i) => {
-                        const tx = wp ? wp.x + (i - 1.5) * 2.3 : die.pos.x;
+                        const tx = wp ? wp.x + (i - (state.dice.length-1)/2) * 1.5 : die.pos.x;
                         const tz = wp ? wp.z : die.pos.z;
                         die.vel.x += (tx     - die.pos.x) * SPRING;
                         die.vel.y += (HELD_Y - die.pos.y) * SPRING;
@@ -474,7 +645,11 @@ export function useFateDiceSimulation({
             alive = false;
             cleanup?.();
         };
-    }, [isVisible, accentColor]);
+    }, [isVisible, accentColor, dicePool]); // Re-run when dicePool changes
+
+    const updatePool = (newPool: DicePoolEntry[]) => {
+        setDicePool(newPool);
+    };
 
     const autoRoll = () => {
         const state = sceneRef.current;
@@ -507,8 +682,11 @@ export function useFateDiceSimulation({
         mountRef,
         uiPhase,
         uiResults,
+        uiBreakdown,
         autoRoll,
         resolvedAccent,
         resolvedDanger,
+        dicePool,
+        updatePool,
     };
 }

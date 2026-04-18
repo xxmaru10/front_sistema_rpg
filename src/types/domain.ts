@@ -378,10 +378,23 @@ export type GlobalItem = {
 
 
 // Event Payloads
+export type DieType = "dF" | "d4" | "d6" | "d8" | "d10" | "d12" | "d20" | "d100";
+
+export type DicePoolEntry = {
+  type: DieType;
+  count: number;
+};
+
+export type DiceBreakdownEntry = {
+  type: DieType;
+  values: number[];
+};
+
 export type RollPayload = {
   characterId: string;
-  dice: number[]; // length 4, values -1, 0, 1
+  dice: number[]; // Flat array of all values for legacy compatibility
   diceSum: number;
+  diceBreakdown?: DiceBreakdownEntry[]; // Detailed breakdown by die type
   skill?: { name: string; rank: number };
   modifier: number; // Total modifier (Skill + Manual + Item)
   manualBonus?: number; // The manual bonus input

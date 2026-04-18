@@ -3,14 +3,20 @@
  * Permite que qualquer componente dispare a animação no nível da página.
  */
 
-type DiceSimulationCallback = (results: number[]) => void;
-
 export type DiceResultOverlayMode = "combat" | "challenge";
+
+import { DiceBreakdownEntry, DicePoolEntry } from "@/types/domain";
+
+type DiceSettledCallback = (results: number[], breakdown: DiceBreakdownEntry[]) => void;
+type DicePreviewCallback = (results: number[]) => void;
 
 interface DiceSimulationParams {
     accentColor?: string;
-    onSettled: DiceSimulationCallback;
-    onPreResult?: DiceSimulationCallback;
+    initialPool?: DicePoolEntry[];
+    currentPool?: DicePoolEntry[]; // Final pool after user edits
+    onPoolChange?: (pool: DicePoolEntry[]) => void;
+    onSettled: DiceSettledCallback;
+    onPreResult?: DicePreviewCallback;
     calculationBreakdown?: {
         baseSkillValue?: number;
         itemBonusValue?: number;
@@ -58,6 +64,12 @@ class DiceSimulationStore {
 
     getParams() {
         return this.activeParams;
+    }
+
+    updateCurrentPool(pool: DicePoolEntry[]) {
+        if (this.activeParams) {
+            this.activeParams.currentPool = pool;
+        }
     }
 }
 

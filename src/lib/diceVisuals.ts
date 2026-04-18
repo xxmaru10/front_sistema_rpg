@@ -211,8 +211,29 @@ export function fillSymbolShape(ctx: CanvasRenderingContext2D, S: number, symbol
         drawRRect(ctx, cx - 102, cy - 17, 204, 34, 14); ctx.fill();
     } else if (symbol === '−') {
         drawRRect(ctx, cx - 105, cy - 16, 210, 32, 14); ctx.fill();
-    } else {
+    } else if (symbol === '●') {
         ctx.beginPath(); ctx.arc(cx, cy, 52, 0, Math.PI * 2); ctx.fill();
+    } else if (/^\d+$/.test(symbol)) {
+        // Se for um número, usa fonte grande
+        ctx.font = `800 ${S * 0.44}px var(--font-header, 'Cinzel', serif), serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(symbol, cx, cy + S * 0.05);
+    } else if (symbol.startsWith("pip:")) {
+        const count = parseInt(symbol.split(":")[1]);
+        const d = S * 0.22;
+        const r = S * 0.045;
+        const pips: Record<number, [number, number][]> = {
+            1: [[cx, cy]],
+            2: [[cx-d, cy-d], [cx+d, cy+d]],
+            3: [[cx-d, cy-d], [cx, cy], [cx+d, cy+d]],
+            4: [[cx-d, cy-d], [cx+d, cy-d], [cx-d, cy+d], [cx+d, cy+d]],
+            5: [[cx-d, cy-d], [cx+d, cy-d], [cx, cy], [cx-d, cy+d], [cx+d, cy+d]],
+            6: [[cx-d, cy-d], [cx+d, cy-d], [cx-d, cy], [cx+d, cy], [cx-d, cy+d], [cx+d, cy+d]],
+        };
+        (pips[count] || []).forEach(([px, py]) => {
+            ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
+        });
     }
 }
 
@@ -230,8 +251,11 @@ export function drawNeonLampSymbol(ctx: CanvasRenderingContext2D, S: number, sym
                 ctx.beginPath(); ctx.moveTo(cx-100, cy); ctx.lineTo(cx+100, cy); ctx.stroke();
             } else if (symbol === '−') {
                 ctx.beginPath(); ctx.moveTo(cx-100, cy); ctx.lineTo(cx+100, cy); ctx.stroke();
-            } else {
+            } else if (symbol === '●') {
                 ctx.beginPath(); ctx.arc(cx, cy, 52, 0, Math.PI*2); ctx.stroke();
+            } else {
+                 fillSymbolShape(ctx, S, symbol);
+                 ctx.stroke();
             }
             ctx.restore();
         }
@@ -299,14 +323,14 @@ export function createFaceTexture(THREE: any, symbol: string, accentHex: string,
     const S = 512;
     const canvas = document.createElement('canvas');
     canvas.width = S; canvas.height = S;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { alpha: false })!;
 
     drawThemeFaceBackground(ctx, S, bgHex, themeName);
     drawThemeFaceBorder(ctx, S, accentHex, themeName);
 
-    if (symbol === '+')      { drawNeonLampSymbol(ctx, S, '+', accentHex, themeName); }
-    else if (symbol === '−') { drawNeonLampSymbol(ctx, S, '−', accentHex, themeName); }
-    else                     { drawNeonLampSymbol(ctx, S, '●', accentHex, themeName); }
+    drawNeonLampSymbol(ctx, S, symbol, accentHex, themeName);
 
-    return new THREE.CanvasTexture(canvas);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+    return tex;
 }

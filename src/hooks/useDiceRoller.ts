@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createRollEvent } from "@/lib/dice";
 import { globalEventStore } from "@/lib/eventStore";
 import { diceSimulationStore } from "@/lib/diceSimulationStore";
-import { Character, DEFAULT_SKILLS, Item } from "@/types/domain";
+import { Character, DEFAULT_SKILLS, DiceBreakdownEntry } from "@/types/domain";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 
 interface UseDiceRollerProps {
@@ -57,13 +57,14 @@ export function useDiceRoller({
     const [lastReactionState, setLastReactionState] = useState(false);
 
     const pendingCharIdRef = useRef<string>("");
-    const finishRollRef = useRef<(charId: string, finalDice: number[]) => void>(() => {});
+    const finishRollRef = useRef<(charId: string, finalDice: number[], breakdown?: DiceBreakdownEntry[]) => void>(() => {});
     const [isRolling, setIsRolling] = useState(false);
     const [diceResults, setDiceResults] = useState<number[]>([0, 0, 0, 0]);
     const [diceRotations, setDiceRotations] = useState<{ x: number, y: number }[]>([
         { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }
     ]);
     const [lastTotal, setLastTotal] = useState<number | null>(null);
+    const normalizedActorUserId = useMemo(() => actorUserId.trim().toLowerCase(), [actorUserId]);
 
     // Sync if characters load later or if fixed character is provided
     useEffect(() => {
@@ -135,7 +136,7 @@ export function useDiceRoller({
         return ladder[val] || "N/A";
     };
 
-    const finishRoll = useCallback(async (charId: string, finalDice: number[]) => {
+    const finishRoll = useCallback(async (charId: string, finalDice: number[], breakdown?: DiceBreakdownEntry[]) => {
         const fullNote = selectedSkill ? `[${selectedSkill}]`.toUpperCase() : "";
 
         const selectedItemData = selectedItemId ? allItems.find(i => i.id === selectedItemId) : undefined;
@@ -148,7 +149,7 @@ export function useDiceRoller({
 
         const event = createRollEvent(
             sessionId,
-            actorUserId,
+            normalizedActorUserId,
             charId,
             finalModifier,
             finalDice,
@@ -161,7 +162,8 @@ export function useDiceRoller({
             manualBonus,
             challengeDescription,
             targetIds.length > 0 ? targetIds : undefined,
-            damageType
+            damageType,
+            breakdown
         );
 
         setDiceResults(finalDice);
@@ -193,7 +195,7 @@ export function useDiceRoller({
                     sessionId,
                     seq: 0,
                     type: "COMBAT_TARGET_SET",
-                    actorUserId,
+                    actorUserId: normalizedActorUserId,
                     createdAt: new Date().toISOString(),
                     visibility: "PUBLIC",
                     payload: {
@@ -226,7 +228,7 @@ export function useDiceRoller({
                 sessionId,
                 seq: 0,
                 type: "COMBAT_OUTCOME",
-                actorUserId,
+                actorUserId: normalizedActorUserId,
                 createdAt: new Date().toISOString(),
                 visibility: "PUBLIC",
                 payload: {
@@ -247,7 +249,7 @@ export function useDiceRoller({
         activeChar, 
         manualBonus, 
         sessionId, 
-        actorUserId, 
+        normalizedActorUserId, 
         actionType, 
         targetIds, 
         targetDiff, 
@@ -321,10 +323,10 @@ export function useDiceRoller({
                 const audio = new Audio(diceSound);
                 audio.play().catch(e => console.warn("Failed to play dice sound:", e));
             },
-            onSettled: (results) => {
+            onSettled: (results, breakdown) => {
                 // Use ref to avoid stale closure — finishRoll may have been
                 // recreated with updated lastAttackTotal after handleRoll was called.
-                finishRollRef.current(charId, results);
+                finishRollRef.current(charId, results, breakdown);
             }
         });
 

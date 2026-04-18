@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-18 (story-43 local theme override + gm lock)
+last_updated: 2026-04-18 (story-44 multi-dice pipeline hardening)
 status: ativo
 ---
 
@@ -99,6 +99,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Modal de distribuicao de dano (GM) | `COMBAT_OUTCOME` passou a carregar `track` (fisico/mental) no payload; o hook `useCombatAutomation` resolve o defensor via a mesma projeÃ§Ã£o que o `eventStore` (evita dessincronia com `state` React) e guarda snapshot do personagem em `pendingDamage`; o modal usa `z-index` acima do menu lateral fixo e `useLayoutEffect` para montagem imediata do portal. | 2026-04-11 |
 | Re-crop de Retrato por Botao Lapis (Story 42) | `CharacterPortrait` ganhou acao GM-only para reabrir o fluxo `ImageCropper -> ArenaFocusCropper` com `imageUrl` existente, reutilizando o mesmo pipeline de upload e eventos (`CHARACTER_IMAGE_UPDATED` + `CHARACTER_UPDATED`) sem bypass de Event Sourcing. `ImageCropper` reforcou carga externa com `crossOrigin = "anonymous"` e falha explicita para CORS/bucket invalido. | 2026-04-18 |
 | Tema Individual por Jogador com Bloqueio do Mestre (Story 43) | O seletor de tema ficou disponivel para PLAYER em modo local (sem evento PUBLIC), com persistencia por sessao+usuario em `localStorage` (`cronos_local_theme_{sessionId}_{userId}`) e override CSS dedicado (`#theme-player-override`). O mestre controla `SESSION_THEME_LOCK_UPDATED`; quando bloqueado, jogadores veem botao desabilitado com lock/tooltip e o override local e removido temporariamente sem apagar preferencia. | 2026-04-18 |
+| Seletor Multi-Dado com Breakdown Deterministico (Story 44) | O fluxo de rolagem 3D foi alinhado com Event Sourcing: `diceBreakdown` agora percorre fim-a-fim (`useFateDiceSimulation` -> `diceSimulationStore` -> `page.tsx` -> `useDiceRoller` -> `createRollEvent`), mantendo `dice` legado sincronizado por flatten do breakdown. `d100` passa a consolidar par de d10 em valor unico (1..100), o fallback com pool vazio gera `4dF` consistentemente e a overlay final exibe resultados por tipo para evitar perda de semantica em pools heterogeneos. | 2026-04-18 |
 
 | ConsolidaÃ§Ã£o Feature-based (Session Notes) | MigraÃ§Ã£o completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentaÃ§Ã£o do useSessionNotes), componentes de abas e estilos em um Ãºnico domÃ­nio isolado. SubstituiÃ§Ã£o de `confirm()` nativo por `useDeleteConfirm` (UX de exclusÃ£o segura nÃ£o-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -178,6 +179,12 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Tema local por jogador sem quebrar Event Sourcing**: alteracoes de tema feitas por PLAYER nao disparam eventos PUBLIC; sao aplicadas apenas no cliente via `#theme-player-override` para manter consistencia global do log.
 - **Bloqueio do mestre como evento global**: `SESSION_THEME_LOCK_UPDATED` permanece PUBLIC e controla apenas permissao de override no cliente, sem destruir preferencia local do jogador.
 - **Persistencia por identidade normalizada**: chave de tema local passou a usar `sessionId + userId.trim().toLowerCase()` para evitar vazamento de preferencia entre usuarios no mesmo navegador e alinhar com `knowledge/conventions.md`.
+
+## Registro de Decisoes (Story 44)
+- **Quebra de contrato corrigida no pipeline de dados**: o callback `onSettled` passou a transportar `results + diceBreakdown` em todo o caminho de simulacao, evitando descarte silencioso de breakdown antes do `ROLL_RESOLVED`.
+- **Compatibilidade legado preservada por flatten centralizado**: `createRollEvent` agora recalcula `dice` a partir de `diceBreakdown` quando presente, garantindo coerencia entre leitores antigos (array linear) e novos (breakdown por tipo).
+- **Modelagem de `d100` como entidade de dominio**: a simulacao continua renderizando dois d10 fisicos, mas persiste `d100` consolidado (1..100) no payload, mantendo semantica de regra sem alterar o backend.
+- **Fallback deterministico para caixa vazia**: quando o pool esta vazio no momento do settle/fallback WebGL, o sistema gera `4dF` automaticamente para manter o fluxo rapido sem regressao.
 
 ## PadrÃµes Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) tÃªm sua prÃ³pria subpasta com hooks e estilos.

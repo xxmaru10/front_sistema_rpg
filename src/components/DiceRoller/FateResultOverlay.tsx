@@ -4,12 +4,17 @@
  */
 
 import React from "react";
-import { Play } from "lucide-react";
+import { Play, Pencil, Trash2, X, AlertCircle } from "lucide-react";
+import { DiceBreakdownEntry, DicePoolEntry, DieType } from "@/types/domain";
+import { useState, useMemo } from "react";
 import type { DiceResultOverlayMode } from "@/lib/diceSimulationStore";
 
 interface FateResultOverlayProps {
     phase: "idle" | "held" | "thrown" | "snapping" | "done";
     results: number[] | null;
+    breakdown?: DiceBreakdownEntry[] | null;
+    dicePool: DicePoolEntry[];
+    onPoolChange: (pool: DicePoolEntry[]) => void;
     accentColor: string;
     dangerColor: string;
     onAutoRoll: () => void;
@@ -42,15 +47,60 @@ function ladderLabel(sum: number): string {
     return L[sum] || "N/A";
 }
 
+function renderDieValue(type: DieType, value: number): string {
+    if (type === "dF") return value > 0 ? "+1" : value < 0 ? "-1" : "0";
+    return String(value);
+}
+
 export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     phase,
     results,
+    breakdown,
+    dicePool,
+    onPoolChange,
     accentColor,
     dangerColor,
     onAutoRoll,
     calculationBreakdown,
     resultOverlay,
 }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [limitToast, setLimitToast] = useState(false);
+
+    const totalDiceCount = useMemo(() => dicePool.reduce((acc, curr) => acc + curr.count, 0), [dicePool]);
+
+    const notationText = useMemo(() => {
+        if (totalDiceCount === 0) return "Caixa vazia — selecione um tipo de dado";
+        return dicePool
+            .filter(p => p.count > 0)
+            .sort((a, b) => {
+                const order: DieType[] = ["dF", "d4", "d6", "d8", "d10", "d12", "d20", "d100"];
+                return order.indexOf(a.type) - order.indexOf(b.type);
+            })
+            .map(p => `${p.count}${p.type}`)
+            .join(" + ");
+    }, [dicePool, totalDiceCount]);
+
+    const handleAddDie = (type: DieType) => {
+        if (totalDiceCount >= 40) {
+            setLimitToast(true);
+            setTimeout(() => setLimitToast(false), 1500);
+            return;
+        }
+        const newPool = [...dicePool];
+        const idx = newPool.findIndex(p => p.type === type);
+        if (idx >= 0) {
+            newPool[idx] = { ...newPool[idx], count: newPool[idx].count + 1 };
+        } else {
+            newPool.push({ type, count: 1 });
+        }
+        onPoolChange(newPool);
+    };
+
+    const handleClear = () => {
+        onPoolChange([]);
+    };
+
     const label =
         phase === "idle"     ? "CLIQUE E SEGURE PARA PEGAR OS DADOS" :
         phase === "held"     ? "MOVA PARA BALANÇAR  ·  SOLTE PARA LANÇAR" :
@@ -103,6 +153,172 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                     zIndex: 10,
                     pointerEvents: "none", // Container principal não bloqueia cliques
                 }}>
+                    {/* Toolbar de edição e notação */}
+                    <div style={{
+                        position: "absolute",
+                        top: "16px",
+                        right: "16px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        pointerEvents: "auto",
+                    }}>
+                        {/* Botão de Lápis */}
+                        <button
+                            onClick={() => setIsEditing(!isEditing)}
+                            style={{
+                                background: isEditing ? `${accentColor}22` : "rgba(0,0,0,0.45)",
+                                border: `1px solid ${isEditing ? accentColor : accentColor + "33"}`,
+                                borderRadius: "8px",
+                                color: accentColor,
+                                width: "36px",
+                                height: "36px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                                transition: "all 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
+                                boxShadow: `0 2px 8px rgba(0,0,0,0.4)`,
+                                padding: "8px"
+                            }}
+                            title="Editar pool de dados"
+                        >
+                            <Pencil size={18} />
+                        </button>
+                    </div>
+
+                    {/* Notação Viva */}
+                    <div style={{
+                        position: "absolute",
+                        top: "-42px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        fontFamily: "var(--font-header, 'Cinzel', serif)",
+                        fontSize: "0.82rem",
+                        color: totalDiceCount === 0 ? "rgba(230, 225, 210, 0.4)" : accentColor,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.15em",
+                        whiteSpace: "nowrap",
+                        padding: "4px 16px",
+                        background: "rgba(10, 10, 15, 0.85)",
+                        borderRadius: "20px",
+                        border: `1px solid ${totalDiceCount === 40 ? '#f97316' : accentColor}33`,
+                        boxShadow: totalDiceCount === 40 ? `0 0 15px rgba(249, 115, 22, 0.2)` : `0 0 10px ${accentColor}11`,
+                        backdropFilter: "blur(4px)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        transition: "all 0.3s ease",
+                    }}>
+                        {notationText}
+                        {totalDiceCount > 0 && (
+                            <button
+                                onClick={handleClear}
+                                style={{
+                                    background: "transparent",
+                                    border: "none",
+                                    color: "#ff4444",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    padding: "4px",
+                                    marginLeft: "4px",
+                                    borderRadius: "4px",
+                                    transition: "background 0.2s",
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 68, 68, 0.15)"}
+                                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                                title="Limpar caixa"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Painel Seletor de Dados (Glass Mode) */}
+                    {isEditing && (
+                        <div style={{
+                            position: "absolute",
+                            top: "60px",
+                            right: "16px",
+                            width: "200px",
+                            background: "rgba(15, 15, 25, 0.92)",
+                            backdropFilter: "blur(12px)",
+                            border: `1px solid ${accentColor}44`,
+                            borderRadius: "16px",
+                            boxShadow: `0 10px 30px rgba(0,0,0,0.8), 0 0 20px ${accentColor}11`,
+                            padding: "16px",
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "8px",
+                            pointerEvents: "auto",
+                            zIndex: 20,
+                            animation: "panelFadeIn 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
+                        }}>
+                             <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                <span style={{ color: "rgba(230,225,210,0.5)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pool de Dados</span>
+                                <button onClick={() => setIsEditing(false)} style={{ background: "transparent", border: "none", color: "rgba(230,225,210,0.4)", cursor: "pointer" }}><X size={14} /></button>
+                             </div>
+                             {(["dF", "d4", "d6", "d8", "d10", "d12", "d20", "d100"] as DieType[]).map(type => (
+                                <button
+                                    key={type}
+                                    onClick={() => handleAddDie(type)}
+                                    style={{
+                                        background: "rgba(255,255,255,0.03)",
+                                        border: "1px solid rgba(255,255,255,0.08)",
+                                        borderRadius: "8px",
+                                        padding: "8px 4px",
+                                        color: "rgba(230,225,210,0.9)",
+                                        fontFamily: "var(--font-header, 'Cinzel', serif)",
+                                        fontSize: "0.75rem",
+                                        cursor: "pointer",
+                                        transition: "all 0.2s",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        gap: "2px"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                                        e.currentTarget.style.borderColor = `${accentColor}66`;
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                                    }}
+                                >
+                                    <span style={{ fontSize: "1rem", color: accentColor }}>{type === 'dF' ? '♢' : '△'}</span>
+                                    {type}
+                                </button>
+                             ))}
+                        </div>
+                    )}
+
+                    {/* Toast de Limite */}
+                    {limitToast && (
+                        <div style={{
+                            position: "absolute",
+                            top: "-80px",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            background: "rgba(249, 115, 22, 0.95)",
+                            color: "#fff",
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            fontSize: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            boxShadow: "0 4px 15px rgba(0,0,0,0.4)",
+                            animation: "toastFadeIn 0.3s ease",
+                            zIndex: 100,
+                        }}>
+                             <AlertCircle size={14} />
+                             LIMITE ATINGIDO: 40 DADOS
+                        </div>
+                    )}
+
+
                     {/* Botão de rolagem automática interno */}
                     <button
                         onClick={onAutoRoll}
@@ -223,16 +439,33 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                                 paddingBottom: "4px",
                                 borderBottom: "1px solid rgba(255,255,255,0.08)",
                             }}>
-                                {results.map((v, i) => (
-                                    <span key={i} style={{
-                                        fontVariantNumeric: "tabular-nums",
-                                        color: v === 1 ? accentColor : v === -1 ? "#ff6666" : "rgba(230,225,210,0.4)",
-                                    }}>
-                                        {i > 0 ? <span style={{ color: "rgba(255,255,255,0.2)", margin: "0 2px" }}>·</span> : null}
-                                        {v === 1 ? "+1" : v === -1 ? "−1" : "0"}
-                                    </span>
-                                ))}
-                                <span style={{ color: "rgba(255,255,255,0.25)", margin: "0 4px" }}>→</span>
+                                {breakdown && breakdown.length > 0 ? (
+                                    breakdown.map((entry, entryIndex) => (
+                                        <span
+                                            key={`${entry.type}-${entryIndex}`}
+                                            style={{ display: "flex", alignItems: "center", gap: "4px" }}
+                                        >
+                                            {entryIndex > 0 ? <span style={{ color: "rgba(255,255,255,0.2)", margin: "0 2px" }}>+</span> : null}
+                                            <span style={{ color: "rgba(230,225,210,0.55)", fontSize: "0.72rem" }}>
+                                                {entry.values.length}{entry.type}
+                                            </span>
+                                            <span style={{ color: "rgba(230,225,210,0.88)" }}>
+                                                [{entry.values.map((v) => renderDieValue(entry.type, v)).join(" ")}]
+                                            </span>
+                                        </span>
+                                    ))
+                                ) : (
+                                    results.map((v, i) => (
+                                        <span key={i} style={{
+                                            fontVariantNumeric: "tabular-nums",
+                                            color: v === 1 ? accentColor : v === -1 ? "#ff6666" : "rgba(230,225,210,0.4)",
+                                        }}>
+                                            {i > 0 ? <span style={{ color: "rgba(255,255,255,0.2)", margin: "0 2px" }}>.</span> : null}
+                                            {v === 1 ? "+1" : v === -1 ? "-1" : "0"}
+                                        </span>
+                                    ))
+                                )}
+                                <span style={{ color: "rgba(255,255,255,0.25)", margin: "0 4px" }}>-&gt;</span>
                                 <span style={{ color: "rgba(230,225,210,0.9)", fontWeight: 600 }}>
                                     dado {fmtSigned(diceSum)}
                                 </span>
@@ -449,6 +682,14 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
             )}
 
             <style>{`
+                @keyframes panelFadeIn {
+                    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+                    to   { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                @keyframes toastFadeIn {
+                    from { opacity: 0; transform: translate(-50%, 10px); }
+                    to   { opacity: 1; transform: translate(-50%, 0); }
+                }
                 @keyframes resultReveal {
                     from { opacity: 0; transform: translate(-50%, -40%) scale(0.9); }
                     to   { opacity: 1; transform: translate(-50%, -50%) scale(1);   }
