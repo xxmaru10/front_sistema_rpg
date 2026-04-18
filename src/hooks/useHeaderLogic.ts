@@ -38,6 +38,7 @@ export interface HeaderLogicState {
     customColorG: number;
     customColorB: number;
     isTheaterMode: boolean;
+    themeLocked: boolean;
 }
 
 export interface HeaderLogicActions {
@@ -62,6 +63,7 @@ export function useHeaderLogic(
     const [customColorG, setCustomColorG] = useState(180);
     const [customColorB, setCustomColorB] = useState(60);
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
+    const [themeLocked, setThemeLocked] = useState(false);
 
     // ── URL param persistence ──────────────────────────────────────────────
     useEffect(() => {
@@ -156,6 +158,9 @@ export function useHeaderLogic(
                     setCustomColorB(parsed.b);
                 }
             }
+            if (snapshot.themeLocked !== undefined) {
+                setThemeLocked(snapshot.themeLocked);
+            }
         }
 
         const unsubscribeStore = globalEventStore.subscribe(
@@ -198,6 +203,8 @@ export function useHeaderLogic(
                         setCustomColorG(g);
                         setCustomColorB(b);
                     }
+                } else if (event.type === "SESSION_THEME_LOCK_UPDATED") {
+                    setThemeLocked(event.payload.locked);
                 }
             },
             (bulkEvents) => {
@@ -219,6 +226,9 @@ export function useHeaderLogic(
                 }
                 if (projected.battlemap?.isActive !== undefined) {
                     setBattlemapActive(projected.battlemap.isActive);
+                }
+                if (projected.themeLocked !== undefined) {
+                    setThemeLocked(projected.themeLocked);
                 }
             }
         );
@@ -278,6 +288,7 @@ export function useHeaderLogic(
         customColorG,
         customColorB,
         isTheaterMode,
+        themeLocked,
         changeSessionNumber,
     };
 }

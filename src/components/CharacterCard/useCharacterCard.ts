@@ -256,6 +256,13 @@ export function useCharacterCard({
         setIsImageProcessing(false);
     };
 
+    const handleReCrop = () => {
+        if (!isGM || !character.imageUrl || isImageProcessing) return;
+        setTempCropSrc(character.imageUrl);
+        setIsCropping(true);
+        setIsImageProcessing(true);
+    };
+
     // ── Bio Handlers ──────────────────────────────────────────────────────────
     const startEditingBio = () => {
         setTempBio(character.biography || "");
@@ -437,6 +444,6 @@ export function useCharacterCard({
         // Cropper
         isCropping, tempCropSrc, handleCropConfirm, handleCropCancel,
         isArenaFocusCropping, arenaFocusSrc, handleArenaFocusConfirm, handleArenaFocusCancel,
-        isImageProcessing,
+        isImageProcessing, handleReCrop
     };
 }

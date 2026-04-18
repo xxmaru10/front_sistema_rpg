@@ -280,6 +280,7 @@ export type SessionState = {
     battlemap?: BattlemapState;
     name?: string;
     stickyNotes?: StickyNote[];
+    themeLocked?: boolean;
 };
 
 export type Stroke = {
@@ -499,6 +500,7 @@ export type ActionEvent =
 
   | EventEnvelope<"SESSION_THEME_UPDATED", { color: string }>
   | EventEnvelope<"SESSION_THEME_PRESET_UPDATED", { preset: string }>
+  | EventEnvelope<"SESSION_THEME_LOCK_UPDATED", { locked: boolean }>
   | EventEnvelope<"SESSION_SOUNDS_UPDATED", {
     victory?: string;
     defeat?: string;

@@ -88,6 +88,7 @@ export function CharacterCard({
                         onCancelEditName={() => hook.setIsEditingName(false)}
                         onImageUpload={hook.handleImageUpload}
                         isImageProcessing={hook.isImageProcessing}
+                        onReCrop={hook.handleReCrop}
                     />
 
                     <CharacterLore
