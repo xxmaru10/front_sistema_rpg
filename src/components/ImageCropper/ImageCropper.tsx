@@ -64,18 +64,36 @@ export function ImageCropper({
         [frameW, frameH]
     );
 
-    // External URLs must use CORS to keep canvas export available (toDataURL).
+    // External URLs should try CORS first to preserve canvas export (toDataURL).
+    // If that fails, fallback to normal image load so authenticated/same-origin
+    // URLs can still work.
     useEffect(() => {
         let cancelled = false;
         setImgLoaded(false);
         setLoadError(null);
         imgRef.current = null;
 
-        const img = new Image();
         const isExternal = !src.startsWith("data:") && !src.startsWith("blob:");
-        if (isExternal) {
-            img.crossOrigin = "anonymous";
-        }
+
+        const loadAsRegularImage = () => {
+            const fallback = new Image();
+            fallback.onload = () => {
+                clearTimeout(timeoutId);
+                if (cancelled) return;
+                imgRef.current = fallback;
+                setImgLoaded(true);
+                setLoadError(null);
+                initTransform(fallback);
+            };
+            fallback.onerror = () => {
+                clearTimeout(timeoutId);
+                failLoad("Nao foi possivel carregar essa imagem para recorte.");
+            };
+            fallback.src = src;
+        };
+
+        const img = new Image();
+        if (isExternal) img.crossOrigin = "anonymous";
 
         const failLoad = (message: string) => {
             if (cancelled) return;
@@ -98,8 +116,13 @@ export function ImageCropper({
         };
 
         img.onerror = () => {
-            clearTimeout(timeoutId);
-            failLoad("Nao foi possivel carregar essa imagem para recorte (CORS/bucket).");
+            if (!isExternal) {
+                clearTimeout(timeoutId);
+                failLoad("Nao foi possivel carregar essa imagem para recorte.");
+                return;
+            }
+            // Retry without crossOrigin for URLs that depend on auth/session context.
+            loadAsRegularImage();
         };
 
         img.src = src;
@@ -233,7 +256,7 @@ export function ImageCropper({
             onConfirm(outputCanvas.toDataURL("image/jpeg", 0.7));
         } catch (err) {
             console.error("[ImageCropper] Falha ao exportar imagem recortada:", err);
-            setLoadError("Nao foi possivel processar essa imagem para recorte.");
+            setLoadError("Imagem carregada, mas bloqueada para recorte pelo navegador (CORS).");
         }
     };
 
