@@ -1,4 +1,4 @@
-import { ActionEvent, RollPayload } from "@/types/domain";
+import { ActionEvent, DiceBreakdownEntry, RollPayload } from "@/types/domain";
 // Import UUID generator for unique event IDs
 import { v4 as uuidv4 } from "uuid";
 
@@ -34,7 +34,7 @@ export function createRollEvent(
     actorUserId: string,
     characterId: string,
     modifier: number = 0,
-    dice: number[], // Agora recebe os dados já rolados
+    dice: number[],
     actionType?: RollPayload["actionType"],
     targetCharacterId?: string,
     note?: string,
@@ -44,9 +44,18 @@ export function createRollEvent(
     manualBonus?: number,
     challengeDescription?: string,
     targetCharacterIds?: string[],
-    damageType?: "PHYSICAL" | "MENTAL"
+    damageType?: "PHYSICAL" | "MENTAL",
+    diceBreakdown?: DiceBreakdownEntry[]
 ): ActionEvent {
-    const diceSum = dice.reduce((a, b) => a + b, 0);
+    let normalizedDice = dice;
+    let diceSum = dice.reduce((a, b) => a + b, 0);
+
+    // Breakdown is source of truth for heterogeneous pools.
+    if (diceBreakdown) {
+        normalizedDice = diceBreakdown.flatMap((entry) => entry.values);
+        diceSum = diceBreakdown.reduce((acc, entry) => acc + entry.values.reduce((a, b) => a + b, 0), 0);
+    }
+
     const total = diceSum + modifier;
 
     return {
@@ -60,8 +69,9 @@ export function createRollEvent(
         createdAt: new Date().toISOString(),
         payload: {
             characterId,
-            dice,
+            dice: normalizedDice,
             diceSum,
+            diceBreakdown,
             modifier,
             manualBonus,
             skill,

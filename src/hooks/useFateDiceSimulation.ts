@@ -1,6 +1,6 @@
-/**
- * Hook customizado para gerenciar a simulação 3D dos dados Fate.
- * Encapsula Three.js, física e interações.
+﻿/**
+ * Hook customizado para gerenciar a simulaÃ§Ã£o 3D dos dados Fate.
+ * Encapsula Three.js, fÃ­sica e interaÃ§Ãµes.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +13,7 @@ import {
     isSettled, 
     resolveCollisions, 
     cursorToWorld, 
+    createFacedDieGeometry,
     readFaceUpWithIndex,
     fetchRandomOrg,
     FLOOR_Y,
@@ -24,12 +25,136 @@ import {
     createFaceTexture, 
     getVibrantDanger 
 } from "../lib/diceVisuals";
+import { DiceBreakdownEntry, DicePoolEntry, DieType } from "@/types/domain";
+
+const DICE_ORDER: DieType[] = ["dF", "d4", "d6", "d8", "d10", "d12", "d20", "d100"];
+const IDLE_Y = FLOOR_Y + 1.45;
+const DIE_VISUAL_SCALE = 0.7;
+const POOL_CENTER_Z = -0.35;
+const OPEN_INTERACTION_GUARD_MS = 240;
+const MIN_HOLD_TO_THROW_MS = 120;
+const MANUAL_DICE_MAX = 40;
+const MANUAL_SETTLE_DELAY_MS = 500;
+
+interface RuntimeDie extends PhysicsDie {
+    sourceType: DieType;
+    d100GroupIndex?: number;
+    d100Part?: "tens" | "units";
+}
+
+function sortBreakdown(entries: DiceBreakdownEntry[]): DiceBreakdownEntry[] {
+    return entries
+        .filter((entry) => entry.values.length > 0)
+        .sort((a, b) => DICE_ORDER.indexOf(a.type) - DICE_ORDER.indexOf(b.type));
+}
+
+function buildInstantResultsFromPool(pool: DicePoolEntry[]): { results: number[]; breakdown: DiceBreakdownEntry[] } {
+    const results: number[] = [];
+    const breakdown: DiceBreakdownEntry[] = [];
+
+    pool.forEach((p) => {
+        const values: number[] = [];
+        for (let i = 0; i < p.count; i++) {
+            let v = 0;
+            if (p.type === "dF") {
+                v = Math.floor(Math.random() * 3) - 1;
+            } else if (p.type === "d100") {
+                const tens = Math.floor(Math.random() * 10);
+                const units = Math.floor(Math.random() * 10);
+                v = tens === 0 && units === 0 ? 100 : tens * 10 + units;
+            } else {
+                const sides = parseInt(p.type.substring(1), 10) || 6;
+                v = Math.floor(Math.random() * sides) + 1;
+            }
+            results.push(v);
+            values.push(v);
+        }
+        breakdown.push({ type: p.type, values });
+    });
+
+    if (results.length === 0) {
+        const values: number[] = [];
+        for (let i = 0; i < 4; i++) {
+            const v = Math.floor(Math.random() * 3) - 1;
+            results.push(v);
+            values.push(v);
+        }
+        breakdown.push({ type: "dF", values });
+    }
+
+    return { results, breakdown: sortBreakdown(breakdown) };
+}
+
+function parseManualDiceExpression(
+    rawExpression: string,
+    nextRandomUnit: () => number,
+): { results: number[]; error?: string } {
+    const expression = rawExpression.replace(/\s+/g, "").toLowerCase();
+    if (!expression) {
+        return { results: [], error: "Digite uma expressão de dados (ex: 2d6+d20)." };
+    }
+
+    const terms = expression.split("+").map((term) => term.trim()).filter(Boolean);
+    if (terms.length === 0) {
+        return { results: [], error: "Expressão inválida. Use o formato 2d6+d20." };
+    }
+
+    let totalDice = 0;
+    const results: number[] = [];
+
+    for (const term of terms) {
+        const diceMatch = term.match(/^(\d*)d(f|\d+)$/i);
+        if (diceMatch) {
+            const count = diceMatch[1] ? parseInt(diceMatch[1], 10) : 1;
+            if (!Number.isFinite(count) || count < 1) {
+                return { results: [], error: `Quantidade inválida em "${term}".` };
+            }
+
+            totalDice += count;
+            if (totalDice > MANUAL_DICE_MAX) {
+                return { results: [], error: `Limite atingido: máximo de ${MANUAL_DICE_MAX} dados.` };
+            }
+
+            const faceToken = diceMatch[2].toLowerCase();
+            if (faceToken === "f") {
+                for (let i = 0; i < count; i++) {
+                    results.push(Math.floor(nextRandomUnit() * 3) - 1);
+                }
+                continue;
+            }
+
+            const faces = parseInt(faceToken, 10);
+            if (!Number.isFinite(faces) || faces < 2 || faces > 1000) {
+                return { results: [], error: `Faces inválidas em "${term}" (use d2 até d1000).` };
+            }
+
+            for (let i = 0; i < count; i++) {
+                results.push(Math.floor(nextRandomUnit() * faces) + 1);
+            }
+            continue;
+        }
+
+        const modifierMatch = term.match(/^-?\d+$/);
+        if (modifierMatch) {
+            results.push(parseInt(term, 10));
+            continue;
+        }
+
+        return { results: [], error: `Termo inválido: "${term}". Use algo como d20, 2d6 ou +4.` };
+    }
+
+    if (results.length === 0) {
+        return { results: [], error: "Nenhum dado válido foi encontrado." };
+    }
+
+    return { results };
+}
 
 interface SceneState {
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
-    dice: PhysicsDie[];
+    dice: RuntimeDie[];
     dieLights: THREE.PointLight[];
     animFrameId: number;
     phase: "idle" | "held" | "thrown" | "snapping" | "done";
@@ -42,23 +167,26 @@ interface SceneState {
 
 interface UseFateDiceSimulationProps {
     isVisible: boolean;
+    initialPool?: DicePoolEntry[];
     accentColor: string;
-    onSettled: (results: number[]) => void;
+    onSettled: (results: number[], breakdown?: DiceBreakdownEntry[]) => void;
     onPreResult?: (results: number[]) => void;
 }
 
 export function useFateDiceSimulation({
     isVisible,
+    initialPool,
     accentColor,
     onSettled,
     onPreResult,
 }: UseFateDiceSimulationProps) {
     const mountRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<SceneState | null>(null);
+    const [dicePool, setDicePool] = useState<DicePoolEntry[]>(initialPool || [{ type: "dF", count: 4 }]);
     const onSettledRef = useRef(onSettled);
     const onPreResultRef = useRef(onPreResult);
     
-    // Atualiza refs para evitar stale closures no loop de animação
+    // Atualiza refs para evitar stale closures no loop de animaÃ§Ã£o
     onSettledRef.current = onSettled;
     onPreResultRef.current = onPreResult;
 
@@ -67,11 +195,25 @@ export function useFateDiceSimulation({
     const mouseVelRef = useRef({ x: 0, y: 0 });
     const isHeldRef = useRef(false);
     const randBufRef = useRef<number[]>([]);
+    const interactionReadyAtRef = useRef(0);
+    const holdStartedAtRef = useRef(0);
+    const webglReadyRef = useRef(false);
+    const settleTimeoutRef = useRef<number | null>(null);
 
     const [uiPhase, setUiPhase] = useState<"idle" | "held" | "thrown" | "snapping" | "done">("idle");
     const [uiResults, setUiResults] = useState<number[] | null>(null);
+    const [uiBreakdown, setUiBreakdown] = useState<DiceBreakdownEntry[] | null>(null);
     const [resolvedAccent, setResolvedAccent] = useState(accentColor);
     const [resolvedDanger, setResolvedDanger] = useState("#ff2255");
+
+    const settleInstantRoll = () => {
+        const { results, breakdown } = buildInstantResultsFromPool(dicePool);
+        setUiPhase("done");
+        setUiResults(results);
+        setUiBreakdown(breakdown);
+        onPreResultRef.current?.(results);
+        onSettledRef.current(results, breakdown);
+    };
 
     useEffect(() => {
         if (!isVisible || !mountRef.current) return;
@@ -81,9 +223,17 @@ export function useFateDiceSimulation({
 
         setUiPhase("idle");
         setUiResults(null);
+        setUiBreakdown(null);
         isHeldRef.current = false;
+        holdStartedAtRef.current = 0;
+        interactionReadyAtRef.current = performance.now() + OPEN_INTERACTION_GUARD_MS;
+        webglReadyRef.current = false;
+        if (settleTimeoutRef.current !== null) {
+            window.clearTimeout(settleTimeoutRef.current);
+            settleTimeoutRef.current = null;
+        }
 
-        // Pré-busca números aleatórios
+        // PrÃ©-busca nÃºmeros aleatÃ³rios
         fetchRandomOrg(80).then(nums => { if (alive) randBufRef.current = nums; });
 
         import("three").then((THREE) => {
@@ -94,7 +244,7 @@ export function useFateDiceSimulation({
                 return Math.random();
             }
 
-            // ── Ler variáveis CSS ─────────────────────────────────────────────
+            // â”€â”€ Ler variÃ¡veis CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const root = document.documentElement;
             const cssProp = (name: string, fallback: string) =>
                 getComputedStyle(root).getPropertyValue(name).trim() || fallback;
@@ -112,34 +262,39 @@ export function useFateDiceSimulation({
             const W = container.clientWidth;
             const H = container.clientHeight;
 
-            // ── Renderer ──────────────────────────────────────────────────────
+            // â”€â”€ Renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                        function bailOutAndRollInstantly() {
+                const { results, breakdown } = buildInstantResultsFromPool(dicePool);
+                setUiPhase("done");
+                setUiResults(results);
+                setUiBreakdown(breakdown);
+                onPreResultRef.current?.(results);
+                onSettledRef.current(results, breakdown);
+            }
+
             let renderer: THREE.WebGLRenderer;
             try {
-                renderer = new THREE.WebGLRenderer({ 
-                    antialias: false, // Otimizado para low-end (removido MSAA) 
+                renderer = new THREE.WebGLRenderer({
+                    antialias: false, // Otimizado para low-end (removido MSAA)
                     alpha: true,
-                    powerPreference: "low-power" // Sugere que use menos GPU se possível
+                    powerPreference: "low-power", // Sugere que use menos GPU se possÃ­vel
                 });
-                
+
                 // Tratar perda de contexto WebGL
                 renderer.domElement.addEventListener("webglcontextlost", (event: Event) => {
                     event.preventDefault();
-                    console.warn("WebGL Context Lost! Fallback para rolagem instantânea.");
-                    bailOutAndRollInstantly();
+                    webglReadyRef.current = false;
+                    const activePhase = sceneRef.current?.phase ?? "idle";
+                    console.warn("WebGL Context Lost! phase=", activePhase);
+                    if (activePhase !== "idle") {
+                        bailOutAndRollInstantly();
+                    }
                 }, false);
 
+                webglReadyRef.current = true;
             } catch (e) {
-                console.warn("Falha crítica ao iniciar WebGL. Usando fallback 2D.", e);
-                bailOutAndRollInstantly();
+                console.warn("Falha crÃ­tica ao iniciar WebGL. Mantendo overlay em fallback atÃ© click em Play.", e);
                 return;
-            }
-
-            function bailOutAndRollInstantly() {
-                const fbResults = Array.from({length: 4}, () => [1, 0, -1][Math.floor(Math.random() * 3)]);
-                setUiPhase("done");
-                setUiResults(fbResults);
-                onPreResultRef.current?.(fbResults);
-                onSettledRef.current(fbResults);
             }
 
             renderer.setSize(W, H);
@@ -147,14 +302,14 @@ export function useFateDiceSimulation({
             renderer.shadowMap.enabled = false; // Sombras desativadas para performance no mobile
             container.appendChild(renderer.domElement);
 
-            // ── Cena e câmera ─────────────────────────────────────────────────
+            // â”€â”€ Cena e cÃ¢mera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
             const cameraXOffset = -0.65; // Deslocamento para alinhar com o 'left: 52.5%'
             camera.position.set(cameraXOffset, 9, 13);
             camera.lookAt(cameraXOffset, 0, 0);
 
-            // ── Iluminação ────────────────────────────────────────────────────
+            // â”€â”€ IluminaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const dirLight = new THREE.DirectionalLight(0xffdda0, 1.0);
             dirLight.position.set(4, 14, 7);
@@ -165,26 +320,31 @@ export function useFateDiceSimulation({
             fillLight.position.set(-6, 4, -4);
             scene.add(fillLight);
 
-            // ── Mesa ──────────────────────────────────────────────────────────
+            // â”€â”€ Mesa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const bgNum = parseInt(themeBg.replace('#', ''), 16) || 0x080808;
             const tableGeo = new THREE.PlaneGeometry(80, 60);
             const tableMat = new THREE.MeshStandardMaterial({
                 color: bgNum,
                 roughness: 0.95,
                 transparent: true,
-                opacity: 0, // Piso invisível para os dados flutuarem sobre a arena
+                opacity: 0, // Piso invisÃ­vel para os dados flutuarem sobre a arena
             });
             const tableMesh = new THREE.Mesh(tableGeo, tableMat);
             tableMesh.rotation.x = -Math.PI / 2;
             tableMesh.position.y = FLOOR_Y;
             scene.add(tableMesh);
 
-            // ── Texturas e Materiais ──────────────────────────────────────────
-            const texBlank = createFaceTexture(THREE, "",  themeAccent, themeBg, themeName);
-            const texPlus  = createFaceTexture(THREE, "+", themeAccent, themeBg, themeName);
-            const texMinus = createFaceTexture(THREE, "−", themeAccent, themeBg, themeName);
+            // â”€â”€ Texturas e Materiais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const textureCache = new Map<string, any>();
+            function getCachedTexture(symbol: string) {
+                const key = `${symbol}|${themeAccent}|${themeBg}|${themeName}`;
+                if (textureCache.has(key)) return textureCache.get(key);
+                const tex = createFaceTexture(THREE, symbol, themeAccent, themeBg, themeName);
+                textureCache.set(key, tex);
+                return tex;
+            }
 
-            function makeMats() {
+            function makeMats(type: DieType) {
                 let rough = 0.25, metal = 0.15;
                 if (themeName === 'cyberpunk' || themeName === 'espacial') { rough = 0.12; metal = 0.80; }
                 else if (themeName === 'medieval') { rough = 0.85; metal = 0.04; }
@@ -197,30 +357,99 @@ export function useFateDiceSimulation({
                         map: tex,
                         emissiveMap: tex,
                         emissive: new THREE.Color(1, 1, 1),
-                        emissiveIntensity: 1.8,
+                        emissiveIntensity: 1.1,
                         roughness: rough,
                         metalness: metal,
                     });
                 }
-                return [m(texBlank), m(texBlank), m(texPlus), m(texPlus), m(texMinus), m(texMinus)];
+
+                if (type === "dF") {
+                    return [
+                        getCachedTexture(""), getCachedTexture(""),
+                        getCachedTexture("+"), getCachedTexture("+"),
+                        getCachedTexture("âˆ’"), getCachedTexture("âˆ’")
+                    ].map(m);
+                }
+                if (type === "d6") {
+                    return [
+                        getCachedTexture("pip:4"), getCachedTexture("pip:3"),
+                        getCachedTexture("pip:2"), getCachedTexture("pip:5"),
+                        getCachedTexture("pip:6"), getCachedTexture("pip:1")
+                    ].map(m);
+                }
+                if (type === "d4") {
+                    return [
+                         getCachedTexture("1"), getCachedTexture("2"),
+                         getCachedTexture("3"), getCachedTexture("4")
+                    ].map(m);
+                }
+                if (type === "d8") {
+                    return Array.from({length: 8}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                if (type === "d10" || type === "d100") {
+                    return Array.from({length: 10}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                if (type === "d12") {
+                    return Array.from({length: 12}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                if (type === "d20") {
+                    return Array.from({length: 20}, (_, i) => getCachedTexture((i+1).toString())).map(m);
+                }
+                return [getCachedTexture("?")].map(m);
             }
 
-            // ── Dados ─────────────────────────────────────────────────────────
-            const N_DICE = 4;
-            const SPACING = 1.5;
-            const IDLE_Y = 1.0;
-            const startX = -((N_DICE - 1) * SPACING) / 2;
+            // â”€â”€ Dados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const dice: RuntimeDie[] = [];
+            const flatPool: Array<{
+                renderType: Exclude<DieType, "d100">;
+                sourceType: DieType;
+                d100GroupIndex?: number;
+                d100Part?: "tens" | "units";
+            }> = [];
+            dicePool.forEach(p => {
+                if (p.type === "d100") {
+                    for (let i = 0; i < p.count; i++) {
+                        flatPool.push({ renderType: "d10", sourceType: "d100", d100GroupIndex: i, d100Part: "tens" });
+                        flatPool.push({ renderType: "d10", sourceType: "d100", d100GroupIndex: i, d100Part: "units" });
+                    }
+                } else {
+                    for (let i = 0; i < p.count; i++) flatPool.push({ renderType: p.type, sourceType: p.type });
+                }
+            });
 
-            const dice: PhysicsDie[] = [];
-            // Removemos as dieLights (PointLights) individuais por dado para aliviar severamente a GPU no mobile.
-            // A iluminação fica a cargo da Ambient + 2 Directionals.
-
-            for (let i = 0; i < N_DICE; i++) {
-                const geo = new THREE.BoxGeometry(1, 1, 1);
-                const mats = makeMats();
+            const N_TOTAL = flatPool.length;
+            const SPACING = 1.2;
+            const ROWS = N_TOTAL > 0 ? Math.ceil(Math.sqrt(N_TOTAL)) : 1;
+            const COLS = N_TOTAL > 0 ? Math.ceil(N_TOTAL / ROWS) : 1;
+            
+            flatPool.forEach((entry, i) => {
+                const faced = createFacedDieGeometry(entry.renderType, THREE);
+                const geo = faced.geometry;
+                const mats = makeMats(entry.renderType);
                 const mesh = new THREE.Mesh(geo, mats);
-                const px = startX + i * SPACING;
-                mesh.position.set(px, IDLE_Y, 0);
+                if (faced.faceNormals.length > 0) {
+                    mesh.userData.faceNormals = faced.faceNormals;
+                    mesh.userData.faceValues = faced.faceValues;
+                }
+                if (entry.renderType !== "dF" && entry.renderType !== "d6") {
+                    const edgeGeo = new THREE.EdgesGeometry(geo, 28);
+                    const edgeMat = new THREE.LineBasicMaterial({
+                        color: accentNum,
+                        transparent: true,
+                        opacity: 0.68,
+                    });
+                    const edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
+                    edgeLines.renderOrder = 2;
+                    mesh.add(edgeLines);
+                }
+                
+                const r = Math.floor(i / COLS);
+                const c = i % COLS;
+                const px = (c - (COLS-1)/2) * SPACING;
+                const pz = (r - (ROWS-1)/2) * SPACING + POOL_CENTER_Z;
+
+                mesh.position.set(px, IDLE_Y, pz);
+                mesh.scale.setScalar(DIE_VISUAL_SCALE);
                 mesh.rotation.set(
                     Math.random() * Math.PI * 2,
                     Math.random() * Math.PI * 2,
@@ -230,7 +459,11 @@ export function useFateDiceSimulation({
                 
                 dice.push({
                     mesh,
-                    pos: { x: px, y: IDLE_Y, z: 0 },
+                    type: entry.renderType,
+                    sourceType: entry.sourceType,
+                    d100GroupIndex: entry.d100GroupIndex,
+                    d100Part: entry.d100Part,
+                    pos: { x: px, y: IDLE_Y, z: pz },
                     vel: { x: 0, y: 0, z: 0 },
                     angVel: {
                         x: (Math.random() - 0.5) * 0.07,
@@ -239,7 +472,7 @@ export function useFateDiceSimulation({
                     },
                     onFloor: false,
                 });
-            }
+            });
 
             camera.updateMatrixWorld();
 
@@ -265,25 +498,75 @@ export function useFateDiceSimulation({
                     die.mesh.position.y = die.pos.y;
                 });
 
-                const results: number[] = state.dice.map(die => {
-                    const { value, matIndex } = readFaceUpWithIndex(die.mesh, THREE);
-                    (die.mesh.material as THREE.MeshStandardMaterial[]).forEach((mat, mi) => {
+                const results: number[] = [];
+                const breakdownMap: Partial<Record<DieType, number[]>> = {};
+                const d100Parts = new Map<number, { tens?: number; units?: number }>();
+
+                state.dice.forEach(die => {
+                    const { value, matIndex } = readFaceUpWithIndex(die.mesh, die.type, THREE);
+                    const materials = Array.isArray(die.mesh.material) ? die.mesh.material : [die.mesh.material];
+                    materials.forEach((mat: THREE.MeshStandardMaterial, mi: number) => {
                         if (mi === matIndex) {
                             mat.emissive.setHex(accentNum);
-                            mat.emissiveIntensity = 2.4;
+                            mat.emissiveIntensity = 1.35;
                         } else {
                             mat.color.setHex(0x2a2a2a);
-                            mat.emissiveIntensity = 0.08;
+                            mat.emissiveIntensity = 0.04;
                         }
                     });
-                    return value;
+                    if (die.sourceType === "d100") {
+                        const key = die.d100GroupIndex ?? 0;
+                        const pair = d100Parts.get(key) ?? {};
+                        if (die.d100Part === "tens") pair.tens = value % 10;
+                        else pair.units = value % 10;
+                        d100Parts.set(key, pair);
+                        return;
+                    }
+
+                    results.push(value);
+                    if (!breakdownMap[die.sourceType]) breakdownMap[die.sourceType] = [];
+                    breakdownMap[die.sourceType]!.push(value);
                 });
+
+                if (d100Parts.size > 0) {
+                    const d100Values: number[] = [];
+                    const orderedPairs = Array.from(d100Parts.entries()).sort((a, b) => a[0] - b[0]);
+                    orderedPairs.forEach(([, pair]) => {
+                        const tens = pair.tens ?? Math.floor(Math.random() * 10);
+                        const units = pair.units ?? Math.floor(Math.random() * 10);
+                        const total = tens === 0 && units === 0 ? 100 : tens * 10 + units;
+                        d100Values.push(total);
+                        results.push(total);
+                    });
+                    breakdownMap.d100 = d100Values;
+                }
+
+                if (results.length === 0) {
+                    const fallback = Array.from({ length: 4 }, () => Math.floor(Math.random() * 3) - 1);
+                    breakdownMap.dF = fallback;
+                    results.push(...fallback);
+                }
+
+                const breakdown = sortBreakdown(
+                    Object.entries(breakdownMap).map(([type, values]) => ({
+                        type: type as DieType,
+                        values: values ?? [],
+                    })),
+                );
 
                 state.phase = "done";
                 setUiPhase("done");
                 setUiResults(results);
+                setUiBreakdown(breakdown);
                 onPreResultRef.current?.(results);
-                setTimeout(() => onSettledRef.current(results), 2000);
+                if (settleTimeoutRef.current !== null) {
+                    window.clearTimeout(settleTimeoutRef.current);
+                }
+                settleTimeoutRef.current = window.setTimeout(() => {
+                    if (!alive) return;
+                    onSettledRef.current(results, breakdown);
+                    settleTimeoutRef.current = null;
+                }, 2000);
             }
 
             function animate() {
@@ -299,18 +582,18 @@ export function useFateDiceSimulation({
                         die.mesh.rotation.x += die.angVel.x;
                         die.mesh.rotation.y += die.angVel.y;
                         die.mesh.rotation.z += die.angVel.z;
-                        die.pos.y = IDLE_Y + Math.sin(t + i * 1.3) * 0.2;
+                        die.pos.y = IDLE_Y + Math.sin(t + i * 1.3) * 0.1;
                         die.mesh.position.y = die.pos.y;
                     });
 
                 } else if (state.phase === "held") {
-                    const HELD_Y = 2.6;
+                    const HELD_Y = 2.0;
                     const SPRING = 0.20;
                     const wp = cursorToWorld(THREE, mouseRef.current.x, mouseRef.current.y,
                                              state.containerW, state.containerH, camera, HELD_Y);
 
                     state.dice.forEach((die, i) => {
-                        const tx = wp ? wp.x + (i - 1.5) * 2.3 : die.pos.x;
+                        const tx = wp ? wp.x + (i - (state.dice.length-1)/2) * 1.2 : die.pos.x;
                         const tz = wp ? wp.z : die.pos.z;
                         die.vel.x += (tx     - die.pos.x) * SPRING;
                         die.vel.y += (HELD_Y - die.pos.y) * SPRING;
@@ -358,12 +641,15 @@ export function useFateDiceSimulation({
 
             requestAnimationFrame(animate);
 
-            // ── Handlers ──────────────────────────────────────────────────────
+            // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             function startHold(cx: number, cy: number) {
                 if (state.phase !== "idle") return;
+                if (state.dice.length === 0) return;
+                if (performance.now() < interactionReadyAtRef.current) return;
                 mouseRef.current = mousePrevRef.current = { x: cx, y: cy };
                 mouseVelRef.current = { x: 0, y: 0 };
                 isHeldRef.current = true;
+                holdStartedAtRef.current = performance.now();
                 state.phase = "held";
                 setUiPhase("held");
             }
@@ -394,6 +680,12 @@ export function useFateDiceSimulation({
                 const mvy = mouseVelRef.current.y;
                 const speed = Math.hypot(mvx, mvy);
                 const threw = speed > 3;
+                const holdMs = performance.now() - holdStartedAtRef.current;
+                if (holdMs < MIN_HOLD_TO_THROW_MS && speed < 3) {
+                    state.phase = "idle";
+                    setUiPhase("idle");
+                    return;
+                }
 
                 if (randBufRef.current.length < 10) {
                     fetchRandomOrg(80).then(nums => { randBufRef.current = [...randBufRef.current, ...nums]; });
@@ -455,6 +747,10 @@ export function useFateDiceSimulation({
             window.addEventListener("resize", onResize);
 
             cleanup = () => {
+                if (settleTimeoutRef.current !== null) {
+                    window.clearTimeout(settleTimeoutRef.current);
+                    settleTimeoutRef.current = null;
+                }
                 window.removeEventListener("resize", onResize);
                 container.removeEventListener("mousedown",  onMouseDown);
                 container.removeEventListener("mousemove",  onMouseMove);
@@ -474,11 +770,20 @@ export function useFateDiceSimulation({
             alive = false;
             cleanup?.();
         };
-    }, [isVisible, accentColor]);
+    }, [isVisible, accentColor, dicePool]); // Re-run when dicePool changes
+
+    const updatePool = (newPool: DicePoolEntry[]) => {
+        setDicePool(newPool);
+    };
 
     const autoRoll = () => {
         const state = sceneRef.current;
-        if (!state || state.phase !== "idle") return;
+        if (!state || !webglReadyRef.current) {
+            settleInstantRoll();
+            return;
+        }
+        if (state.phase !== "idle") return;
+        if (performance.now() < interactionReadyAtRef.current) return;
         
         function consumeRand(): number {
             if (randBufRef.current.length > 0) return randBufRef.current.shift()!;
@@ -503,12 +808,59 @@ export function useFateDiceSimulation({
         setUiPhase("thrown");
     };
 
+    const manualRollExpression = (expression: string): string | null => {
+        const state = sceneRef.current;
+        if (state && state.phase !== "idle" && state.phase !== "done") {
+            return "Aguarde a rolagem atual terminar para usar a entrada manual.";
+        }
+
+        const consumeRand = () => {
+            if (randBufRef.current.length > 0) return randBufRef.current.shift()!;
+            return Math.random();
+        };
+
+        if (randBufRef.current.length < 20) {
+            fetchRandomOrg(80).then(nums => {
+                randBufRef.current = [...randBufRef.current, ...nums];
+            });
+        }
+
+        const parsed = parseManualDiceExpression(expression, consumeRand);
+        if (parsed.error) return parsed.error;
+
+        if (settleTimeoutRef.current !== null) {
+            window.clearTimeout(settleTimeoutRef.current);
+            settleTimeoutRef.current = null;
+        }
+
+        if (state) {
+            state.phase = "done";
+        }
+
+        setUiPhase("done");
+        setUiResults(parsed.results);
+        setUiBreakdown(null);
+        onPreResultRef.current?.(parsed.results);
+
+        settleTimeoutRef.current = window.setTimeout(() => {
+            onSettledRef.current(parsed.results, undefined);
+            settleTimeoutRef.current = null;
+        }, MANUAL_SETTLE_DELAY_MS);
+
+        return null;
+    };
+
     return {
         mountRef,
         uiPhase,
         uiResults,
+        uiBreakdown,
         autoRoll,
+        manualRollExpression,
         resolvedAccent,
         resolvedDanger,
+        dicePool,
+        updatePool,
     };
 }
+

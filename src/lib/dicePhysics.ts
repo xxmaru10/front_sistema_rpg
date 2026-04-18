@@ -1,12 +1,21 @@
 /**
- * Lógica de física e colisão para os dados Fate.
- * Extraído de FateDice3D para facilitar manutenção e reuso.
+ * LÃ³gica de fÃ­sica e colisÃ£o para os dados Fate.
+ * ExtraÃ­do de FateDice3D para facilitar manutenÃ§Ã£o e reuso.
  */
 
-// ─── Interfaces ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Interfaces â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+import { DieType } from "../types/domain";
+
+export interface FacedDieGeometry {
+    geometry: any;
+    faceNormals: any[]; // Vector3 em espaÃ§o local do mesh, um por face
+    faceValues: number[]; // valor numÃ©rico correspondente a cada face (mesmo Ã­ndice de faceNormals)
+}
 
 export interface PhysicsDie {
     mesh: any;
+    type: DieType;
     pos: { x: number; y: number; z: number };
     vel: { x: number; y: number; z: number };
     angVel: { x: number; y: number; z: number };
@@ -14,13 +23,13 @@ export interface PhysicsDie {
 }
 
 export interface TrapWalls {
-    xNear: number;  // x máx no lado near (baixo da tela, z positivo)
-    xFar:  number;  // x máx no lado far  (cima da tela, z negativo)
+    xNear: number;  // x mÃ¡x no lado near (baixo da tela, z positivo)
+    xFar:  number;  // x mÃ¡x no lado far  (cima da tela, z negativo)
     zNear: number;  // parede z perto (positivo, borda inferior)
     zFar:  number;  // parede z longe (negativo, borda superior)
 }
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const GRAVITY        = 0.012;
 export const FLOOR_Y        = 0;
@@ -36,10 +45,10 @@ export const SETTLE_ANG     = 0.018;
 export const SETTLE_FRAMES  = 35;
 export const THROW_TIMEOUT  = 11000;
 
-// ─── Funções de Cálculo ────────────────────────────────────────────────────────
+// â”€â”€â”€ FunÃ§Ãµes de CÃ¡lculo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
- * Projeta os limites da tela no plano do chão para obter as paredes de contenção.
+ * Projeta os limites da tela no plano do chÃ£o para obter as paredes de contenÃ§Ã£o.
  */
 export function computeTrapWalls(THREE: any, camera: any): TrapWalls {
     const raycaster = new THREE.Raycaster();
@@ -62,7 +71,7 @@ export function computeTrapWalls(THREE: any, camera: any): TrapWalls {
 }
 
 /**
- * Executa um passo da simulação física para um dado.
+ * Executa um passo da simulaÃ§Ã£o fÃ­sica para um dado.
  */
 export function physicsStep(die: PhysicsDie, walls: TrapWalls): void {
     die.vel.y -= GRAVITY;
@@ -117,7 +126,7 @@ export function isSettled(die: PhysicsDie): boolean {
 }
 
 /**
- * Resolve colisões entre múltiplos dados.
+ * Resolve colisÃµes entre mÃºltiplos dados.
  */
 export function resolveCollisions(dice: PhysicsDie[]): void {
     const MIN_DIST = 2.3;
@@ -157,7 +166,7 @@ export function resolveCollisions(dice: PhysicsDie[]): void {
 }
 
 /**
- * Converte coordenadas de mouse para posição no mundo 3D.
+ * Converte coordenadas de mouse para posiÃ§Ã£o no mundo 3D.
  */
 export function cursorToWorld(
     THREE: any,
@@ -176,25 +185,318 @@ export function cursorToWorld(
 }
 
 /**
- * Lê qual face do dado está voltada para cima.
+ * ConstrÃ³i uma BufferGeometry com um grupo de material por face, a partir
+ * de um conjunto de faces definido por vÃ©rtices ordenados em CCW (vista de fora).
+ * Cada face recebe UVs planares normalizadas em [0,1]Ã—[0,1] para permitir
+ * textura independente (nÃºmero/sÃ­mbolo) por face.
  */
-export function readFaceUpWithIndex(mesh: any, THREE: any): { value: number; matIndex: number } {
+export function buildFacedGeometry(
+    faces: Array<{ vertices: [number, number, number][]; value: number }>,
+    THREE: any,
+): FacedDieGeometry {
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const faceNormals: any[] = [];
+    const faceValues: number[] = [];
+    const geo = new THREE.BufferGeometry();
+    let triOffset = 0;
+
+    faces.forEach((face, faceIdx) => {
+        const n = face.vertices.length;
+        const verts = face.vertices.map(([x, y, z]) => new THREE.Vector3(x, y, z));
+
+        const center = verts
+            .reduce((acc: any, v: any) => acc.add(v.clone()), new THREE.Vector3())
+            .divideScalar(n);
+
+        const normal = new THREE.Vector3()
+            .crossVectors(verts[1].clone().sub(verts[0]), verts[2].clone().sub(verts[0]))
+            .normalize();
+
+        // Base tangente no plano da face (remove componente normal)
+        const rawTangent = verts[0].clone().sub(center);
+        const tangent = rawTangent
+            .sub(normal.clone().multiplyScalar(rawTangent.dot(normal)))
+            .normalize();
+        const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+
+        // Projeta cada vÃ©rtice no plano 2D da face (u, w)
+        const proj = verts.map((v: any) => {
+            const rel = v.clone().sub(center);
+            return { u: rel.dot(tangent), w: rel.dot(bitangent) };
+        });
+        const maxR = Math.max(...proj.map((p: any) => Math.hypot(p.u, p.w))) || 1;
+        const scale = 0.495 / maxR; // Deixa ~8% de margem entre vÃ©rtice e borda do patch
+        const uvs2D = proj.map((p: any) => [0.5 + p.u * scale, 0.5 + p.w * scale]);
+
+        // Triangula como leque a partir do vÃ©rtice 0
+        for (let i = 1; i < n - 1; i++) {
+            positions.push(...face.vertices[0], ...face.vertices[i], ...face.vertices[i + 1]);
+            uvs.push(...uvs2D[0], ...uvs2D[i], ...uvs2D[i + 1]);
+        }
+        const triCount = n - 2;
+        geo.addGroup(triOffset * 3, triCount * 3, faceIdx);
+        triOffset += triCount;
+
+        faceNormals.push(normal);
+        faceValues.push(face.value);
+    });
+
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    return { geometry: geo, faceNormals, faceValues };
+}
+
+/**
+ * Agrupa os triÃ¢ngulos de uma geometria Three.js nativa em N grupos de
+ * `trianglesPerFace` triÃ¢ngulos cada. Usado para transformar
+ * TetrahedronGeometry/OctahedronGeometry/DodecahedronGeometry/IcosahedronGeometry
+ * em malhas com um material-index por face + UVs planares por face.
+ */
+function rebuildWithFaceGroups(
+    sourceGeo: any,
+    trianglesPerFace: number,
+    THREE: any,
+    valueFromIndex: (i: number) => number = (i) => i + 1,
+): FacedDieGeometry {
+    const src: Float32Array = sourceGeo.attributes.position.array;
+    const totalTris = src.length / 9;
+    const totalFaces = Math.floor(totalTris / trianglesPerFace);
+    const geo = new THREE.BufferGeometry();
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const faceNormals: any[] = [];
+    const faceValues: number[] = [];
+
+    for (let f = 0; f < totalFaces; f++) {
+        const faceVerts: any[] = [];
+        for (let t = 0; t < trianglesPerFace; t++) {
+            for (let v = 0; v < 3; v++) {
+                const o = (f * trianglesPerFace + t) * 9 + v * 3;
+                faceVerts.push(new THREE.Vector3(src[o], src[o + 1], src[o + 2]));
+            }
+        }
+
+        const center = faceVerts
+            .reduce((acc: any, v: any) => acc.add(v.clone()), new THREE.Vector3())
+            .divideScalar(faceVerts.length);
+
+        const v0 = faceVerts[0], v1 = faceVerts[1], v2 = faceVerts[2];
+        const normal = new THREE.Vector3()
+            .crossVectors(v1.clone().sub(v0), v2.clone().sub(v0))
+            .normalize();
+
+        const rawT = faceVerts[0].clone().sub(center);
+        const tangent = rawT.sub(normal.clone().multiplyScalar(rawT.dot(normal))).normalize();
+        const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+
+        const proj = faceVerts.map((v: any) => {
+            const rel = v.clone().sub(center);
+            return [rel.dot(tangent), rel.dot(bitangent)];
+        });
+        const maxR = Math.max(...proj.map(([u, w]: number[]) => Math.hypot(u, w))) || 1;
+        const scale = 0.495 / maxR;
+
+        faceVerts.forEach((v: any, idx: number) => {
+            const [u, w] = proj[idx];
+            positions.push(v.x, v.y, v.z);
+            uvs.push(0.5 + u * scale, 0.5 + w * scale);
+        });
+
+        geo.addGroup(f * trianglesPerFace * 3, trianglesPerFace * 3, f);
+        faceNormals.push(normal);
+        faceValues.push(valueFromIndex(f));
+    }
+
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    return { geometry: geo, faceNormals, faceValues };
+}
+
+/**
+ * ConstrÃ³i a geometria de um dado do tipo solicitado, com:
+ *  - grupos de material por face (um material por face),
+ *  - UVs por face apontando para [0,1]Ã—[0,1] (cada face renderiza a textura inteira daquele material),
+ *  - lista de normais + valores por face para leitura determinÃ­stica de "face up".
+ *
+ * Notas:
+ *  - d4 usa convenÃ§Ã£o "face inferior" â€” quem chama deve inverter o dot para leitura.
+ *  - d10 (e cada metade de d100) usa bipirÃ¢mide pentagonal com 10 faces triangulares.
+ */
+export function createFacedDieGeometry(type: DieType, THREE: any): FacedDieGeometry {
+    if (type === "d4") {
+        return rebuildWithFaceGroups(new THREE.TetrahedronGeometry(1), 1, THREE);
+    }
+    if (type === "d8") {
+        return rebuildWithFaceGroups(new THREE.OctahedronGeometry(1), 1, THREE);
+    }
+    if (type === "d20") {
+        return rebuildWithFaceGroups(new THREE.IcosahedronGeometry(1), 1, THREE);
+    }
+    if (type === "d12") {
+        // DodecahedronGeometry do Three.js jÃ¡ produz 12 pentÃ¡gonos em fans de 3 triÃ¢ngulos
+        return rebuildWithFaceGroups(new THREE.DodecahedronGeometry(1), 3, THREE);
+    }
+    if (type === "d10" || type === "d100") {
+        // BipirÃ¢mide pentagonal: 7 vÃ©rtices, 10 faces triangulares
+        const R = 1;
+        const APEX_Y = 0.95;
+        const equator: [number, number, number][] = [];
+        for (let i = 0; i < 5; i++) {
+            const ang = (i * 2 * Math.PI) / 5;
+            equator.push([R * Math.cos(ang), 0, R * Math.sin(ang)]);
+        }
+        const top: [number, number, number] = [0, APEX_Y, 0];
+        const bot: [number, number, number] = [0, -APEX_Y, 0];
+        const faces: Array<{ vertices: [number, number, number][]; value: number }> = [];
+        for (let i = 0; i < 5; i++) {
+            const a = equator[i], b = equator[(i + 1) % 5];
+            // Faces superiores (CCW visto de fora â†’ topo, b, a)
+            faces.push({ vertices: [top, b, a], value: i + 1 });
+        }
+        for (let i = 0; i < 5; i++) {
+            const a = equator[i], b = equator[(i + 1) % 5];
+            // Faces inferiores (CCW visto de fora â†’ bot, a, b)
+            faces.push({ vertices: [bot, a, b], value: i + 6 });
+        }
+        return buildFacedGeometry(faces, THREE);
+    }
+    // dF e d6 continuam usando BoxGeometry nativa (6 grupos jÃ¡ embutidos); sem userData
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    return { geometry: geo, faceNormals: [], faceValues: [] };
+}
+
+/**
+ * LÃª qual face do dado estÃ¡ voltada para cima.
+ *
+ * Se o mesh tiver `userData.faceNormals` e `userData.faceValues` preenchidos
+ * (geometrias construÃ­das via `createFacedDieGeometry`), usa essas normais em
+ * espaÃ§o local rotacionadas pela orientaÃ§Ã£o atual do mesh. Para d4 usa a
+ * convenÃ§Ã£o "face inferior" (retorna o valor da face cuja normal aponta mais
+ * para baixo). Caso contrÃ¡rio cai no mapeamento legado (dF/d6).
+ */
+export function readFaceUpWithIndex(mesh: any, type: DieType, THREE: any): { value: number; matIndex: number } {
     const worldUp = new THREE.Vector3(0, 1, 0);
     const mat     = new THREE.Matrix4().makeRotationFromEuler(mesh.rotation);
 
-    // Layout do BoxGeometry (materialIndex):
-    // 0=+X, 1=-X (0), 2=+Y, 3=-Y (+1), 4=+Z, 5=-Z (-1)
-    const faces = [
-        { n: new THREE.Vector3( 1, 0, 0), v:  0, idx: 0 },
-        { n: new THREE.Vector3(-1, 0, 0), v:  0, idx: 1 },
-        { n: new THREE.Vector3( 0, 1, 0), v:  1, idx: 2 },
-        { n: new THREE.Vector3( 0,-1, 0), v:  1, idx: 3 },
-        { n: new THREE.Vector3( 0, 0, 1), v: -1, idx: 4 },
-        { n: new THREE.Vector3( 0, 0,-1), v: -1, idx: 5 },
-    ] as const;
+    const udNormals = mesh?.userData?.faceNormals;
+    const udValues = mesh?.userData?.faceValues;
+    if (Array.isArray(udNormals) && udNormals.length > 0 && Array.isArray(udValues)) {
+        const invert = type === "d4"; // d4 tradicional: lÃª face que estÃ¡ no chÃ£o
+        let best = -Infinity;
+        let result = { value: udValues[0], matIndex: 0 };
+        for (let i = 0; i < udNormals.length; i++) {
+            const rawDot = udNormals[i].clone().applyMatrix4(mat).dot(worldUp);
+            const cmp = invert ? -rawDot : rawDot;
+            if (cmp > best) {
+                best = cmp;
+                result = { value: udValues[i], matIndex: i };
+            }
+        }
+        return result;
+    }
+
+    let faces: Array<{ n: any, v: number, idx: number }>;
+
+    if (type === "dF") {
+        faces = [
+            { n: new THREE.Vector3( 1, 0, 0), v:  0, idx: 0 },
+            { n: new THREE.Vector3(-1, 0, 0), v:  0, idx: 1 },
+            { n: new THREE.Vector3( 0, 1, 0), v:  1, idx: 2 },
+            { n: new THREE.Vector3( 0,-1, 0), v:  1, idx: 3 },
+            { n: new THREE.Vector3( 0, 0, 1), v: -1, idx: 4 },
+            { n: new THREE.Vector3( 0, 0,-1), v: -1, idx: 5 },
+        ];
+    } else if (type === "d6") {
+        faces = [
+            { n: new THREE.Vector3( 1, 0, 0), v: 4, idx: 0 },
+            { n: new THREE.Vector3(-1, 0, 0), v: 3, idx: 1 },
+            { n: new THREE.Vector3( 0, 1, 0), v: 2, idx: 2 },
+            { n: new THREE.Vector3( 0,-1, 0), v: 5, idx: 3 },
+            { n: new THREE.Vector3( 0, 0, 1), v: 6, idx: 4 },
+            { n: new THREE.Vector3( 0, 0,-1), v: 1, idx: 5 },
+        ];
+    } else if (type === "d4") {
+        // Tetraedro: normal de cada face
+        const s = 1/Math.sqrt(3);
+        faces = [
+            { n: new THREE.Vector3( s,  s,  s), v: 1, idx: 0 },
+            { n: new THREE.Vector3( s, -s, -s), v: 2, idx: 1 },
+            { n: new THREE.Vector3(-s,  s, -s), v: 3, idx: 2 },
+            { n: new THREE.Vector3(-s, -s,  s), v: 4, idx: 3 },
+        ];
+    } else if (type === "d8") {
+        const s = 1/Math.sqrt(3);
+        faces = [
+            { n: new THREE.Vector3( s,  s,  s), v: 1, idx: 0 },
+            { n: new THREE.Vector3( s,  s, -s), v: 2, idx: 1 },
+            { n: new THREE.Vector3( s, -s,  s), v: 3, idx: 2 },
+            { n: new THREE.Vector3( s, -s, -s), v: 4, idx: 3 },
+            { n: new THREE.Vector3(-s,  s,  s), v: 5, idx: 4 },
+            { n: new THREE.Vector3(-s,  s, -s), v: 6, idx: 5 },
+            { n: new THREE.Vector3(-s, -s,  s), v: 7, idx: 6 },
+            { n: new THREE.Vector3(-s, -s, -s), v: 8, idx: 7 },
+        ];
+    } else if (type === "d12") {
+        // AproximaÃ§Ã£o das normais do dodecaedro (Faces sÃ£o pentÃ¡gonos)
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const invPhi = 1 / phi;
+        const normals = [
+            [0, invPhi, phi], [0, invPhi, -phi], [0, -invPhi, phi], [0, -invPhi, -phi],
+            [invPhi, phi, 0], [invPhi, -phi, 0], [-invPhi, phi, 0], [-invPhi, -phi, 0],
+            [phi, 0, invPhi], [phi, 0, -invPhi], [-phi, 0, invPhi], [-phi, 0, -invPhi],
+        ];
+        faces = normals.map((n, i) => ({ n: new THREE.Vector3(...n).normalize(), v: i + 1, idx: i }));
+    } else if (type === "d20") {
+        // Icosaedro: 20 faces triangulares
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const vertices = [
+            [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
+            [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
+            [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
+        ];
+        // Faces do icosaedro (Ã­ndices de vÃ©rtices)
+        const faceIndices = [
+            [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+            [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+            [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+            [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+        ];
+        faces = faceIndices.map((fi, i) => {
+            const v0 = new THREE.Vector3(...vertices[fi[0]]);
+            const v1 = new THREE.Vector3(...vertices[fi[1]]);
+            const v2 = new THREE.Vector3(...vertices[fi[2]]);
+            const normal = new THREE.Vector3().crossVectors(
+                v1.clone().sub(v0),
+                v2.clone().sub(v0)
+            ).normalize();
+            return { n: normal, v: i + 1, idx: i };
+        });
+    } else if (type === "d10" || type === "d100") {
+        // d10 is complex to normalize manually, but let's use a simplified approach
+        // 10 faces (pentagonal trapezohedron)
+        // For d10, we'll assume a standard mapping or just use 10 directions
+        const angles = Array.from({length: 10}, (_, i) => (i * Math.PI * 2) / 10);
+        faces = angles.map((ang, i) => {
+            const y = i % 2 === 0 ? 0.5 : -0.5;
+            const horizontal = 0.866;
+            return {
+                n: new THREE.Vector3(Math.cos(ang) * horizontal, y, Math.sin(ang) * horizontal).normalize(),
+                v: i + 1,
+                idx: i
+            };
+        });
+    } else {
+        // Fallback or dF
+        faces = [
+            { n: new THREE.Vector3( 0, 1, 0), v: 1, idx: 2 }
+        ];
+    }
 
     let best = -Infinity;
-    let result = { value: 0, matIndex: 2 };
+    let result = { value: 0, matIndex: 0 };
     for (const { n, v, idx } of faces) {
         const dot = n.clone().applyMatrix4(mat).dot(worldUp);
         if (dot > best) { best = dot; result = { value: v, matIndex: idx }; }
@@ -203,7 +505,7 @@ export function readFaceUpWithIndex(mesh: any, THREE: any): { value: number; mat
 }
 
 /**
- * Busca números aleatórios do random.org.
+ * Busca nÃºmeros aleatÃ³rios do random.org.
  */
 export async function fetchRandomOrg(n: number): Promise<number[]> {
     const controller = new AbortController();

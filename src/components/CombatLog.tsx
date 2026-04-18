@@ -52,6 +52,23 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         return normalized === "exploracao" || normalized === "combate";
     };
 
+    const isExplorationChallenge = (value?: string) => {
+        if (!value) return false;
+        return normalizeLabel(value) === "exploracao";
+    };
+
+    const isFateDiceArray = (dice: number[]) =>
+        dice.length === 4 && dice.every((d) => d === -1 || d === 0 || d === 1);
+
+    const formatFallbackDice = (dice: unknown) => {
+        if (!Array.isArray(dice) || dice.length === 0) return "";
+        const typed = dice as number[];
+        if (isFateDiceArray(typed)) {
+            return typed.map((d) => (d > 0 ? "+" : d < 0 ? "-" : "0")).join("");
+        }
+        return typed.join(", ");
+    };
+
     const getCompactRollMeta = (event: ActionEvent) => {
         if (event.type !== "ROLL_RESOLVED") return null;
 
@@ -61,9 +78,9 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             || payload.targetCharacterIds?.map((id: string) => characters[id]?.name.toUpperCase() || "ALVO").join(", ")
             || (payload.targetCharacterId ? characters[payload.targetCharacterId]?.name.toUpperCase() || "ALVO" : "");
         const targetLabel = shouldHideChallengeLabel(rawTargetLabel) ? "" : (rawTargetLabel || "");
-        const diceFaces = Array.isArray(payload.dice)
-            ? payload.dice.map((d: number) => (d > 0 ? "+" : d < 0 ? "-" : "0")).join("")
-            : "";
+        const diceFaces = payload.diceBreakdown
+            ? payload.diceBreakdown.map((b: any) => `${b.values.length}${b.type}`).join(" ")
+            : formatFallbackDice(payload.dice);
 
         const modifiers: string[] = [];
         if (payload.skill?.rank) {
@@ -76,18 +93,22 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             modifiers.push(`BONUS ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}`);
         }
 
-        const diff = payload.targetDiff !== undefined
+        const hasTargetDiff = payload.targetDiff !== undefined;
+        const diff = hasTargetDiff
             ? payload.total - (payload.targetDiff || 0)
             : payload.total;
+        const isStyleSuccess = hasTargetDiff && isExplorationChallenge(payload.challengeDescription) && diff >= 3;
         const isSuccess = diff >= 0;
+        const tone = isStyleSuccess ? "style" : isSuccess ? "good" : "bad";
 
         return {
             actionLabel,
             targetLabel,
             diceFaces,
             modifierText: modifiers.join(" "),
-            outcomeLabel: isSuccess ? "Sucesso" : "Fracasso",
+            outcomeLabel: isStyleSuccess ? "Sucesso com Estilo" : isSuccess ? "Sucesso" : "Fracasso",
             isSuccess,
+            tone,
             totalLabel: payload.total >= 0 ? `+${payload.total}` : String(payload.total),
         };
     };
@@ -99,9 +120,9 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             const targetLabel = payload.challengeDescription
                 || payload.targetCharacterIds?.map((id: string) => characters[id]?.name.toUpperCase() || "ALVO").join(", ")
                 || (payload.targetCharacterId ? characters[payload.targetCharacterId]?.name.toUpperCase() || "ALVO" : "");
-            const diceFaces = Array.isArray(payload.dice)
-                ? payload.dice.map((d: number) => d > 0 ? "+" : d < 0 ? "-" : "0").join("")
-                : "";
+            const diceFaces = payload.diceBreakdown
+                ? payload.diceBreakdown.map((b: any) => `${b.values.length}${b.type}`).join(" ")
+                : formatFallbackDice(payload.dice);
             const skillMod = payload.skill?.rank ? ` Per ${payload.skill.rank >= 0 ? `+${payload.skill.rank}` : payload.skill.rank}` : "";
             const itemMod = payload.item?.bonus ? ` Item ${payload.item.bonus >= 0 ? `+${payload.item.bonus}` : payload.item.bonus}` : "";
             const bonusMod = payload.manualBonus ? ` Bônus ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}` : "";
@@ -109,7 +130,8 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             let outcome = "";
             if (payload.targetDiff !== undefined) {
                 const diff = payload.total - (payload.targetDiff || 0);
-                outcome = diff >= 0 ? "Sucesso" : "Fracasso";
+                const isStyleSuccess = isExplorationChallenge(payload.challengeDescription) && diff >= 3;
+                outcome = isStyleSuccess ? "Sucesso com Estilo" : diff >= 0 ? "Sucesso" : "Fracasso";
             }
 
             return `${action}${targetLabel ? ` • ${targetLabel}` : ""} • ${diceFaces}${skillMod}${itemMod}${bonusMod}${outcome ? ` • ${outcome}` : ""}`;
@@ -186,7 +208,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                             className={`combat-entry compact-line animate-fade-in ${(() => {
                                 const rollMeta = getCompactRollMeta(event);
                                 if (!rollMeta) return "";
-                                return rollMeta.isSuccess ? "roll-good" : "roll-bad";
+                                return `roll-${rollMeta.tone}`;
                             })()}`}
                         >
                             <span className="compact-time">{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
@@ -213,7 +235,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                                 </>
                                             )}
                                             <span className="compact-sep"> • </span>
-                                            <span className={`compact-outcome ${rollMeta.isSuccess ? "good" : "bad"}`}>
+                                            <span className={`compact-outcome ${rollMeta.tone}`}>
                                                 {rollMeta.outcomeLabel}
                                             </span>
                                         </>
@@ -223,7 +245,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                             {(() => {
                                 const rollMeta = getCompactRollMeta(event);
                                 if (!rollMeta) return <span className="compact-total muted"></span>;
-                                return <span className={`compact-total ${rollMeta.isSuccess ? "good" : "bad"}`}>{rollMeta.totalLabel}</span>;
+                                return <span className={`compact-total ${rollMeta.tone}`}>{rollMeta.totalLabel}</span>;
                             })()}
                         </div>
                     ) : (
@@ -283,10 +305,34 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                             )}
                                         </div>
                                         <div className="roll-math" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                            <span className="dice" title="Dados FATE">
-                                                {event.payload.dice.map((d: number) => d > 0 ? "+" : d < 0 ? "-" : "0").join("")}
-                                                <span className="val">({event.payload.diceSum >= 0 ? `+${event.payload.diceSum}` : event.payload.diceSum})</span>
-                                            </span>
+                                            {event.payload.diceBreakdown ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                                                    {event.payload.diceBreakdown.map((entry: any, ei: number) => (
+                                                        <span key={ei} className="dice-group" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '4px' }}>
+                                                            <span style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 'bold' }}>{entry.type}</span>
+                                                            <span className="dice" style={{ fontSize: '1rem', letterSpacing: entry.type === 'dF' ? '3px' : '1px' }}>
+                                                                {entry.type === 'dF' 
+                                                                    ? entry.values.map((v: number) => v > 0 ? "+" : v < 0 ? "−" : "●").join("") 
+                                                                    : entry.values.join(", ")}
+                                                            </span>
+                                                        </span>
+                                                    ))}
+                                                    <span className="val" style={{ opacity: 0.6, fontSize: '0.9rem' }}>({event.payload.diceSum >= 0 ? `+${event.payload.diceSum}` : event.payload.diceSum})</span>
+                                                </div>
+                                            ) : (
+                                                (() => {
+                                                    const diceValues = Array.isArray(event.payload.dice) ? event.payload.dice as number[] : [];
+                                                    const fateLike = isFateDiceArray(diceValues);
+                                                    return (
+                                                        <span className="dice" title={fateLike ? "Dados FATE" : "Resultados de dados"} style={{ letterSpacing: fateLike ? "4px" : "1px" }}>
+                                                            {fateLike
+                                                                ? diceValues.map((d: number) => d > 0 ? "+" : d < 0 ? "-" : "0").join("")
+                                                                : diceValues.join(", ")}
+                                                            <span className="val">({event.payload.diceSum >= 0 ? `+${event.payload.diceSum}` : event.payload.diceSum})</span>
+                                                        </span>
+                                                    );
+                                                })()
+                                            )}
 
                                             {event.payload.skill && (
                                                 <span className="mod skill" title={`Perícia: ${event.payload.skill.name}`}>
@@ -316,7 +362,12 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                             <div className="roll-result-outcome" style={{ marginTop: '5px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                 {(() => {
                                                     const diff = event.payload.total - (event.payload.targetDiff || 0);
-                                                    if (diff >= 3) return <span style={{ color: '#00cc88', textShadow: '0 0 10px rgba(0,204,136,0.5)' }}>SUCESSO COM ESTILO!</span>;
+                                                    const isExploration = isExplorationChallenge(event.payload.challengeDescription);
+                                                    if (diff >= 3) {
+                                                        return isExploration
+                                                            ? <span style={{ color: '#4da3ff', textShadow: '0 0 10px rgba(77,163,255,0.5)' }}>SUCESSO COM ESTILO!</span>
+                                                            : <span style={{ color: '#00cc88', textShadow: '0 0 10px rgba(0,204,136,0.5)' }}>SUCESSO COM ESTILO!</span>;
+                                                    }
                                                     if (diff >= 0) return <span style={{ color: '#00cc88' }}>SUCESSO</span>;
                                                     if (diff <= -3) return <span style={{ color: '#ff3333', textShadow: '0 0 10px rgba(255,51,51,0.5)' }}>FRACASSO TERRÍVEL!</span>;
                                                     return <span style={{ color: '#ff3333' }}>FRACASSO</span>;
@@ -369,6 +420,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     background: rgba(5, 5, 5, 0.75);
                     display: flex;
                     flex-direction: column;
+                    min-height: 0;
                     border: 1px solid var(--border-color);
                     box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
                 }
@@ -398,7 +450,12 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .log-entries-scroll {
                     flex-grow: 1;
+                    min-height: 0;
                     overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-y: contain;
+                    touch-action: pan-y;
+                    pointer-events: auto;
                     padding: 20px;
                     display: flex;
                     flex-direction: column;
@@ -430,6 +487,10 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     padding: 8px 10px;
                     overflow-x: hidden;
                     overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-y: contain;
+                    touch-action: pan-y;
+                    pointer-events: auto;
                 }
 
                 .combat-entry {
@@ -473,6 +534,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 .combat-entry.compact-line.roll-good {
                     border-left: 2px solid rgba(50, 213, 131, 0.75);
                     background: linear-gradient(90deg, rgba(15, 70, 43, 0.42), rgba(15, 25, 20, 0));
+                }
+
+                .combat-entry.compact-line.roll-style {
+                    border-left: 2px solid rgba(77, 163, 255, 0.82);
+                    background: linear-gradient(90deg, rgba(10, 40, 85, 0.48), rgba(9, 20, 36, 0));
                 }
 
                 .combat-entry.compact-line.roll-bad {
@@ -529,6 +595,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     font-weight: 700;
                 }
 
+                .compact-outcome.style {
+                    color: #4da3ff;
+                    font-weight: 700;
+                }
+
                 .compact-outcome.bad {
                     color: #ff5a5a;
                     font-weight: 700;
@@ -546,6 +617,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 .compact-total.good {
                     color: #32d583;
                     text-shadow: 0 0 10px rgba(50, 213, 131, 0.28);
+                }
+
+                .compact-total.style {
+                    color: #4da3ff;
+                    text-shadow: 0 0 10px rgba(77, 163, 255, 0.32);
                 }
 
                 .compact-total.bad {
