@@ -1,9 +1,9 @@
 /**
- * Funções de desenho de Canvas para os dados Fate.
- * Extraído de FateDice3D para permitir reuso e organização.
+ * FunÃƒÂ§ÃƒÂµes de desenho de Canvas para os dados Fate.
+ * ExtraÃƒÂ­do de FateDice3D para permitir reuso e organizaÃƒÂ§ÃƒÂ£o.
  */
 
-/** Garante cor vibrante para neon — evita vermelhos muito escuros */
+/** Garante cor vibrante para neon Ã¢â‚¬â€ evita vermelhos muito escuros */
 export function getVibrantDanger(hex: string): string {
     if (!hex || hex.length < 7 || hex[0] !== '#') return '#ff2255';
     const r = parseInt(hex.slice(1, 3), 16);
@@ -20,7 +20,7 @@ export function hexToRgba(hex: string, alpha: number): string {
     return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/** Desenha retângulo arredondado */
+/** Desenha retÃƒÂ¢ngulo arredondado */
 export function drawRRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -35,7 +35,7 @@ export function drawRRect(ctx: CanvasRenderingContext2D, x: number, y: number, w
     ctx.closePath();
 }
 
-/** Fundo temático para a face do dado */
+/** Fundo temÃƒÂ¡tico para a face do dado */
 export function drawThemeFaceBackground(ctx: CanvasRenderingContext2D, S: number, bgHex: string, themeName: string) {
     if (themeName === 'medieval') {
         ctx.fillStyle = '#3a1c07';
@@ -152,7 +152,7 @@ export function drawThemeFaceBackground(ctx: CanvasRenderingContext2D, S: number
     }
 }
 
-/** Borda temática para a face do dado */
+/** Borda temÃƒÂ¡tica para a face do dado */
 export function drawThemeFaceBorder(ctx: CanvasRenderingContext2D, S: number, accentHex: string, themeName: string) {
     if (themeName === 'comic') {
         ctx.strokeStyle = '#111111';
@@ -203,19 +203,20 @@ export function drawThemeFaceBorder(ctx: CanvasRenderingContext2D, S: number, ac
     }
 }
 
-/** Preenche a forma geométrica do símbolo (neon tube shape) */
+/** Preenche a forma geomÃƒÂ©trica do sÃƒÂ­mbolo (neon tube shape) */
 export function fillSymbolShape(ctx: CanvasRenderingContext2D, S: number, symbol: string) {
     const cx = S / 2, cy = S / 2;
     if (symbol === '+') {
         drawRRect(ctx, cx - 17, cy - 102, 34, 204, 14); ctx.fill();
         drawRRect(ctx, cx - 102, cy - 17, 204, 34, 14); ctx.fill();
-    } else if (symbol === '−') {
+    } else if (symbol === 'Ã¢Ë†â€™') {
         drawRRect(ctx, cx - 105, cy - 16, 210, 32, 14); ctx.fill();
-    } else if (symbol === '●') {
+    } else if (symbol === 'Ã¢â€”Â') {
         ctx.beginPath(); ctx.arc(cx, cy, 52, 0, Math.PI * 2); ctx.fill();
     } else if (/^\d+$/.test(symbol)) {
-        // Se for um número, usa fonte grande
-        ctx.font = `800 ${S * 0.44}px var(--font-header, 'Cinzel', serif), serif`;
+        // Canvas 2D nÃ£o resolve CSS var() em font-family com consistÃªncia.
+        // Stack direta para garantir renderizaÃ§Ã£o dos numerais.
+        ctx.font = `800 ${S * 0.44}px "Cinzel", "Times New Roman", serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(symbol, cx, cy + S * 0.05);
@@ -237,7 +238,7 @@ export function fillSymbolShape(ctx: CanvasRenderingContext2D, S: number, symbol
     }
 }
 
-/** Desenha o símbolo neon lâmpada */
+/** Desenha o sÃƒÂ­mbolo neon lÃƒÂ¢mpada */
 export function drawNeonLampSymbol(ctx: CanvasRenderingContext2D, S: number, symbol: string, colorHex: string, themeName: string) {
     const isComic = themeName === 'comic';
     if (isComic) {
@@ -249,9 +250,9 @@ export function drawNeonLampSymbol(ctx: CanvasRenderingContext2D, S: number, sym
             if (symbol === '+') {
                 ctx.beginPath(); ctx.moveTo(cx, cy-100); ctx.lineTo(cx, cy+100); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(cx-100, cy); ctx.lineTo(cx+100, cy); ctx.stroke();
-            } else if (symbol === '−') {
+            } else if (symbol === 'Ã¢Ë†â€™') {
                 ctx.beginPath(); ctx.moveTo(cx-100, cy); ctx.lineTo(cx+100, cy); ctx.stroke();
-            } else if (symbol === '●') {
+            } else if (symbol === 'Ã¢â€”Â') {
                 ctx.beginPath(); ctx.arc(cx, cy, 52, 0, Math.PI*2); ctx.stroke();
             } else {
                  fillSymbolShape(ctx, S, symbol);
@@ -265,15 +266,15 @@ export function drawNeonLampSymbol(ctx: CanvasRenderingContext2D, S: number, sym
         return;
     }
 
-    // ── Canvas offscreen para acúmulo aditivo ────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Canvas offscreen para acÃƒÂºmulo aditivo Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const gc = document.createElement('canvas');
     gc.width = S; gc.height = S;
     const g = gc.getContext('2d')!;
 
-    // Blending aditivo: cada camada soma os valores de cor — o centro fica branco
+    // Blending aditivo: cada camada soma os valores de cor Ã¢â‚¬â€ o centro fica branco
     g.globalCompositeOperation = 'lighter';
 
-    // 10 camadas — halo largo até o core incandescente
+    // 10 camadas Ã¢â‚¬â€ halo largo atÃƒÂ© o core incandescente
     const layers: [number, number][] = [
         [210, 0.07], [154, 0.13], [112, 0.21], [77,  0.31], [50,  0.42],
         [31,  0.53], [17,  0.62], [8,   0.67], [3,   0.70], [1,   0.70],
@@ -287,7 +288,7 @@ export function drawNeonLampSymbol(ctx: CanvasRenderingContext2D, S: number, sym
         g.restore();
     }
 
-    // Núcleo branco quente — duas passagens
+    // NÃƒÂºcleo branco quente Ã¢â‚¬â€ duas passagens
     g.globalCompositeOperation = 'source-over';
     g.save();
     g.shadowColor = '#ffffff';
@@ -304,7 +305,7 @@ export function drawNeonLampSymbol(ctx: CanvasRenderingContext2D, S: number, sym
     fillSymbolShape(g, S, symbol);
     g.restore();
 
-    // Compõe o glow sobre o canvas principal
+    // CompÃƒÂµe o glow sobre o canvas principal
     ctx.drawImage(gc, 0, 0);
 
     // Passe extra no canvas principal

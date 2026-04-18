@@ -332,6 +332,17 @@ export function useFateDiceSimulation({
                     mesh.userData.faceNormals = faced.faceNormals;
                     mesh.userData.faceValues = faced.faceValues;
                 }
+                if (entry.renderType !== "dF" && entry.renderType !== "d6") {
+                    const edgeGeo = new THREE.EdgesGeometry(geo, 28);
+                    const edgeMat = new THREE.LineBasicMaterial({
+                        color: accentNum,
+                        transparent: true,
+                        opacity: 0.68,
+                    });
+                    const edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
+                    edgeLines.renderOrder = 2;
+                    mesh.add(edgeLines);
+                }
                 
                 const r = Math.floor(i / COLS);
                 const c = i % COLS;

@@ -389,6 +389,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     background: rgba(5, 5, 5, 0.75);
                     display: flex;
                     flex-direction: column;
+                    min-height: 0;
                     border: 1px solid var(--border-color);
                     box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
                 }
@@ -418,7 +419,12 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
 
                 .log-entries-scroll {
                     flex-grow: 1;
+                    min-height: 0;
                     overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-y: contain;
+                    touch-action: pan-y;
+                    pointer-events: auto;
                     padding: 20px;
                     display: flex;
                     flex-direction: column;
@@ -450,6 +456,10 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     padding: 8px 10px;
                     overflow-x: hidden;
                     overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-y: contain;
+                    touch-action: pan-y;
+                    pointer-events: auto;
                 }
 
                 .combat-entry {

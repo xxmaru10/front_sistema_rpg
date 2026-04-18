@@ -1,16 +1,16 @@
 /**
- * Lógica de física e colisão para os dados Fate.
- * Extraído de FateDice3D para facilitar manutenção e reuso.
+ * LÃ³gica de fÃ­sica e colisÃ£o para os dados Fate.
+ * ExtraÃ­do de FateDice3D para facilitar manutenÃ§Ã£o e reuso.
  */
 
-// ─── Interfaces ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Interfaces â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 import { DieType } from "../types/domain";
 
 export interface FacedDieGeometry {
     geometry: any;
-    faceNormals: any[]; // Vector3 em espaço local do mesh, um por face
-    faceValues: number[]; // valor numérico correspondente a cada face (mesmo índice de faceNormals)
+    faceNormals: any[]; // Vector3 em espaÃ§o local do mesh, um por face
+    faceValues: number[]; // valor numÃ©rico correspondente a cada face (mesmo Ã­ndice de faceNormals)
 }
 
 export interface PhysicsDie {
@@ -23,13 +23,13 @@ export interface PhysicsDie {
 }
 
 export interface TrapWalls {
-    xNear: number;  // x máx no lado near (baixo da tela, z positivo)
-    xFar:  number;  // x máx no lado far  (cima da tela, z negativo)
+    xNear: number;  // x mÃ¡x no lado near (baixo da tela, z positivo)
+    xFar:  number;  // x mÃ¡x no lado far  (cima da tela, z negativo)
     zNear: number;  // parede z perto (positivo, borda inferior)
     zFar:  number;  // parede z longe (negativo, borda superior)
 }
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const GRAVITY        = 0.012;
 export const FLOOR_Y        = 0;
@@ -45,10 +45,10 @@ export const SETTLE_ANG     = 0.018;
 export const SETTLE_FRAMES  = 35;
 export const THROW_TIMEOUT  = 11000;
 
-// ─── Funções de Cálculo ────────────────────────────────────────────────────────
+// â”€â”€â”€ FunÃ§Ãµes de CÃ¡lculo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
- * Projeta os limites da tela no plano do chão para obter as paredes de contenção.
+ * Projeta os limites da tela no plano do chÃ£o para obter as paredes de contenÃ§Ã£o.
  */
 export function computeTrapWalls(THREE: any, camera: any): TrapWalls {
     const raycaster = new THREE.Raycaster();
@@ -71,7 +71,7 @@ export function computeTrapWalls(THREE: any, camera: any): TrapWalls {
 }
 
 /**
- * Executa um passo da simulação física para um dado.
+ * Executa um passo da simulaÃ§Ã£o fÃ­sica para um dado.
  */
 export function physicsStep(die: PhysicsDie, walls: TrapWalls): void {
     die.vel.y -= GRAVITY;
@@ -126,7 +126,7 @@ export function isSettled(die: PhysicsDie): boolean {
 }
 
 /**
- * Resolve colisões entre múltiplos dados.
+ * Resolve colisÃµes entre mÃºltiplos dados.
  */
 export function resolveCollisions(dice: PhysicsDie[]): void {
     const MIN_DIST = 2.3;
@@ -166,7 +166,7 @@ export function resolveCollisions(dice: PhysicsDie[]): void {
 }
 
 /**
- * Converte coordenadas de mouse para posição no mundo 3D.
+ * Converte coordenadas de mouse para posiÃ§Ã£o no mundo 3D.
  */
 export function cursorToWorld(
     THREE: any,
@@ -185,10 +185,10 @@ export function cursorToWorld(
 }
 
 /**
- * Constrói uma BufferGeometry com um grupo de material por face, a partir
- * de um conjunto de faces definido por vértices ordenados em CCW (vista de fora).
- * Cada face recebe UVs planares normalizadas em [0,1]×[0,1] para permitir
- * textura independente (número/símbolo) por face.
+ * ConstrÃ³i uma BufferGeometry com um grupo de material por face, a partir
+ * de um conjunto de faces definido por vÃ©rtices ordenados em CCW (vista de fora).
+ * Cada face recebe UVs planares normalizadas em [0,1]Ã—[0,1] para permitir
+ * textura independente (nÃºmero/sÃ­mbolo) por face.
  */
 export function buildFacedGeometry(
     faces: Array<{ vertices: [number, number, number][]; value: number }>,
@@ -220,16 +220,16 @@ export function buildFacedGeometry(
             .normalize();
         const bitangent = new THREE.Vector3().crossVectors(normal, tangent).normalize();
 
-        // Projeta cada vértice no plano 2D da face (u, w)
+        // Projeta cada vÃ©rtice no plano 2D da face (u, w)
         const proj = verts.map((v: any) => {
             const rel = v.clone().sub(center);
             return { u: rel.dot(tangent), w: rel.dot(bitangent) };
         });
         const maxR = Math.max(...proj.map((p: any) => Math.hypot(p.u, p.w))) || 1;
-        const scale = 0.42 / maxR; // Deixa ~8% de margem entre vértice e borda do patch
+        const scale = 0.495 / maxR; // Deixa ~8% de margem entre vÃ©rtice e borda do patch
         const uvs2D = proj.map((p: any) => [0.5 + p.u * scale, 0.5 + p.w * scale]);
 
-        // Triangula como leque a partir do vértice 0
+        // Triangula como leque a partir do vÃ©rtice 0
         for (let i = 1; i < n - 1; i++) {
             positions.push(...face.vertices[0], ...face.vertices[i], ...face.vertices[i + 1]);
             uvs.push(...uvs2D[0], ...uvs2D[i], ...uvs2D[i + 1]);
@@ -249,8 +249,8 @@ export function buildFacedGeometry(
 }
 
 /**
- * Agrupa os triângulos de uma geometria Three.js nativa em N grupos de
- * `trianglesPerFace` triângulos cada. Usado para transformar
+ * Agrupa os triÃ¢ngulos de uma geometria Three.js nativa em N grupos de
+ * `trianglesPerFace` triÃ¢ngulos cada. Usado para transformar
  * TetrahedronGeometry/OctahedronGeometry/DodecahedronGeometry/IcosahedronGeometry
  * em malhas com um material-index por face + UVs planares por face.
  */
@@ -296,7 +296,7 @@ function rebuildWithFaceGroups(
             return [rel.dot(tangent), rel.dot(bitangent)];
         });
         const maxR = Math.max(...proj.map(([u, w]: number[]) => Math.hypot(u, w))) || 1;
-        const scale = 0.42 / maxR;
+        const scale = 0.495 / maxR;
 
         faceVerts.forEach((v: any, idx: number) => {
             const [u, w] = proj[idx];
@@ -316,14 +316,14 @@ function rebuildWithFaceGroups(
 }
 
 /**
- * Constrói a geometria de um dado do tipo solicitado, com:
+ * ConstrÃ³i a geometria de um dado do tipo solicitado, com:
  *  - grupos de material por face (um material por face),
- *  - UVs por face apontando para [0,1]×[0,1] (cada face renderiza a textura inteira daquele material),
- *  - lista de normais + valores por face para leitura determinística de "face up".
+ *  - UVs por face apontando para [0,1]Ã—[0,1] (cada face renderiza a textura inteira daquele material),
+ *  - lista de normais + valores por face para leitura determinÃ­stica de "face up".
  *
  * Notas:
- *  - d4 usa convenção "face inferior" — quem chama deve inverter o dot para leitura.
- *  - d10 (e cada metade de d100) usa bipirâmide pentagonal com 10 faces triangulares.
+ *  - d4 usa convenÃ§Ã£o "face inferior" â€” quem chama deve inverter o dot para leitura.
+ *  - d10 (e cada metade de d100) usa bipirÃ¢mide pentagonal com 10 faces triangulares.
  */
 export function createFacedDieGeometry(type: DieType, THREE: any): FacedDieGeometry {
     if (type === "d4") {
@@ -336,11 +336,11 @@ export function createFacedDieGeometry(type: DieType, THREE: any): FacedDieGeome
         return rebuildWithFaceGroups(new THREE.IcosahedronGeometry(1), 1, THREE);
     }
     if (type === "d12") {
-        // DodecahedronGeometry do Three.js já produz 12 pentágonos em fans de 3 triângulos
+        // DodecahedronGeometry do Three.js jÃ¡ produz 12 pentÃ¡gonos em fans de 3 triÃ¢ngulos
         return rebuildWithFaceGroups(new THREE.DodecahedronGeometry(1), 3, THREE);
     }
     if (type === "d10" || type === "d100") {
-        // Bipirâmide pentagonal: 7 vértices, 10 faces triangulares
+        // BipirÃ¢mide pentagonal: 7 vÃ©rtices, 10 faces triangulares
         const R = 1;
         const APEX_Y = 0.95;
         const equator: [number, number, number][] = [];
@@ -353,29 +353,29 @@ export function createFacedDieGeometry(type: DieType, THREE: any): FacedDieGeome
         const faces: Array<{ vertices: [number, number, number][]; value: number }> = [];
         for (let i = 0; i < 5; i++) {
             const a = equator[i], b = equator[(i + 1) % 5];
-            // Faces superiores (CCW visto de fora → topo, b, a)
+            // Faces superiores (CCW visto de fora â†’ topo, b, a)
             faces.push({ vertices: [top, b, a], value: i + 1 });
         }
         for (let i = 0; i < 5; i++) {
             const a = equator[i], b = equator[(i + 1) % 5];
-            // Faces inferiores (CCW visto de fora → bot, a, b)
+            // Faces inferiores (CCW visto de fora â†’ bot, a, b)
             faces.push({ vertices: [bot, a, b], value: i + 6 });
         }
         return buildFacedGeometry(faces, THREE);
     }
-    // dF e d6 continuam usando BoxGeometry nativa (6 grupos já embutidos); sem userData
+    // dF e d6 continuam usando BoxGeometry nativa (6 grupos jÃ¡ embutidos); sem userData
     const geo = new THREE.BoxGeometry(1, 1, 1);
     return { geometry: geo, faceNormals: [], faceValues: [] };
 }
 
 /**
- * Lê qual face do dado está voltada para cima.
+ * LÃª qual face do dado estÃ¡ voltada para cima.
  *
  * Se o mesh tiver `userData.faceNormals` e `userData.faceValues` preenchidos
- * (geometrias construídas via `createFacedDieGeometry`), usa essas normais em
- * espaço local rotacionadas pela orientação atual do mesh. Para d4 usa a
- * convenção "face inferior" (retorna o valor da face cuja normal aponta mais
- * para baixo). Caso contrário cai no mapeamento legado (dF/d6).
+ * (geometrias construÃ­das via `createFacedDieGeometry`), usa essas normais em
+ * espaÃ§o local rotacionadas pela orientaÃ§Ã£o atual do mesh. Para d4 usa a
+ * convenÃ§Ã£o "face inferior" (retorna o valor da face cuja normal aponta mais
+ * para baixo). Caso contrÃ¡rio cai no mapeamento legado (dF/d6).
  */
 export function readFaceUpWithIndex(mesh: any, type: DieType, THREE: any): { value: number; matIndex: number } {
     const worldUp = new THREE.Vector3(0, 1, 0);
@@ -384,7 +384,7 @@ export function readFaceUpWithIndex(mesh: any, type: DieType, THREE: any): { val
     const udNormals = mesh?.userData?.faceNormals;
     const udValues = mesh?.userData?.faceValues;
     if (Array.isArray(udNormals) && udNormals.length > 0 && Array.isArray(udValues)) {
-        const invert = type === "d4"; // d4 tradicional: lê face que está no chão
+        const invert = type === "d4"; // d4 tradicional: lÃª face que estÃ¡ no chÃ£o
         let best = -Infinity;
         let result = { value: udValues[0], matIndex: 0 };
         for (let i = 0; i < udNormals.length; i++) {
@@ -440,7 +440,7 @@ export function readFaceUpWithIndex(mesh: any, type: DieType, THREE: any): { val
             { n: new THREE.Vector3(-s, -s, -s), v: 8, idx: 7 },
         ];
     } else if (type === "d12") {
-        // Aproximação das normais do dodecaedro (Faces são pentágonos)
+        // AproximaÃ§Ã£o das normais do dodecaedro (Faces sÃ£o pentÃ¡gonos)
         const phi = (1 + Math.sqrt(5)) / 2;
         const invPhi = 1 / phi;
         const normals = [
@@ -457,7 +457,7 @@ export function readFaceUpWithIndex(mesh: any, type: DieType, THREE: any): { val
             [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
             [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
         ];
-        // Faces do icosaedro (índices de vértices)
+        // Faces do icosaedro (Ã­ndices de vÃ©rtices)
         const faceIndices = [
             [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
             [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
@@ -505,7 +505,7 @@ export function readFaceUpWithIndex(mesh: any, type: DieType, THREE: any): { val
 }
 
 /**
- * Busca números aleatórios do random.org.
+ * Busca nÃºmeros aleatÃ³rios do random.org.
  */
 export async function fetchRandomOrg(n: number): Promise<number[]> {
     const controller = new AbortController();
