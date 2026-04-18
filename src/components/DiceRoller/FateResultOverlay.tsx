@@ -76,7 +76,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     const totalDiceCount = useMemo(() => dicePool.reduce((acc, curr) => acc + curr.count, 0), [dicePool]);
 
     const notationText = useMemo(() => {
-        if (totalDiceCount === 0) return "Caixa vazia Ã¢â‚¬â€ selecione um tipo de dado";
+        if (totalDiceCount === 0) return "Caixa vazia - selecione um tipo de dado";
         return dicePool
             .filter(p => p.count > 0)
             .sort((a, b) => {
