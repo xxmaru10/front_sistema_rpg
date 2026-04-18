@@ -131,6 +131,7 @@ export function useFateDiceSimulation({
     const interactionReadyAtRef = useRef(0);
     const holdStartedAtRef = useRef(0);
     const webglReadyRef = useRef(false);
+    const settleTimeoutRef = useRef<number | null>(null);
 
     const [uiPhase, setUiPhase] = useState<"idle" | "held" | "thrown" | "snapping" | "done">("idle");
     const [uiResults, setUiResults] = useState<number[] | null>(null);
@@ -144,7 +145,7 @@ export function useFateDiceSimulation({
         setUiResults(results);
         setUiBreakdown(breakdown);
         onPreResultRef.current?.(results);
-        setTimeout(() => onSettledRef.current(results, breakdown), 120);
+        onSettledRef.current(results, breakdown);
     };
 
     useEffect(() => {
@@ -160,6 +161,10 @@ export function useFateDiceSimulation({
         holdStartedAtRef.current = 0;
         interactionReadyAtRef.current = performance.now() + OPEN_INTERACTION_GUARD_MS;
         webglReadyRef.current = false;
+        if (settleTimeoutRef.current !== null) {
+            window.clearTimeout(settleTimeoutRef.current);
+            settleTimeoutRef.current = null;
+        }
 
         // PrÃ©-busca nÃºmeros aleatÃ³rios
         fetchRandomOrg(80).then(nums => { if (alive) randBufRef.current = nums; });
@@ -211,8 +216,12 @@ export function useFateDiceSimulation({
                 // Tratar perda de contexto WebGL
                 renderer.domElement.addEventListener("webglcontextlost", (event: Event) => {
                     event.preventDefault();
-                    console.warn("WebGL Context Lost! Fallback para rolagem instantÃ¢nea.");
-                    bailOutAndRollInstantly();
+                    webglReadyRef.current = false;
+                    const activePhase = sceneRef.current?.phase ?? "idle";
+                    console.warn("WebGL Context Lost! phase=", activePhase);
+                    if (activePhase !== "idle") {
+                        bailOutAndRollInstantly();
+                    }
                 }, false);
 
                 webglReadyRef.current = true;
@@ -281,7 +290,7 @@ export function useFateDiceSimulation({
                         map: tex,
                         emissiveMap: tex,
                         emissive: new THREE.Color(1, 1, 1),
-                        emissiveIntensity: 1.8,
+                        emissiveIntensity: 1.1,
                         roughness: rough,
                         metalness: metal,
                     });
@@ -432,10 +441,10 @@ export function useFateDiceSimulation({
                     materials.forEach((mat: THREE.MeshStandardMaterial, mi: number) => {
                         if (mi === matIndex) {
                             mat.emissive.setHex(accentNum);
-                            mat.emissiveIntensity = 2.4;
+                            mat.emissiveIntensity = 1.35;
                         } else {
                             mat.color.setHex(0x2a2a2a);
-                            mat.emissiveIntensity = 0.08;
+                            mat.emissiveIntensity = 0.04;
                         }
                     });
                     if (die.sourceType === "d100") {
@@ -483,7 +492,14 @@ export function useFateDiceSimulation({
                 setUiResults(results);
                 setUiBreakdown(breakdown);
                 onPreResultRef.current?.(results);
-                setTimeout(() => onSettledRef.current(results, breakdown), 2000);
+                if (settleTimeoutRef.current !== null) {
+                    window.clearTimeout(settleTimeoutRef.current);
+                }
+                settleTimeoutRef.current = window.setTimeout(() => {
+                    if (!alive) return;
+                    onSettledRef.current(results, breakdown);
+                    settleTimeoutRef.current = null;
+                }, 2000);
             }
 
             function animate() {
@@ -664,6 +680,10 @@ export function useFateDiceSimulation({
             window.addEventListener("resize", onResize);
 
             cleanup = () => {
+                if (settleTimeoutRef.current !== null) {
+                    window.clearTimeout(settleTimeoutRef.current);
+                    settleTimeoutRef.current = null;
+                }
                 window.removeEventListener("resize", onResize);
                 container.removeEventListener("mousedown",  onMouseDown);
                 container.removeEventListener("mousemove",  onMouseMove);
