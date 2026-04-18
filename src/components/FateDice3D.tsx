@@ -37,8 +37,8 @@ export default function FateDice3D({
     accentColor = "#C5A059",
     onSettled,
     onPreResult,
-    userRole,
-    activeTab,
+    userRole: _userRole,
+    activeTab: _activeTab,
     calculationBreakdown,
     resultOverlay,
 }: FateDice3DProps) {
@@ -72,7 +72,7 @@ export default function FateDice3D({
     // 1. NÃO for GM
     // 2. NÃO estiver na Arena (activeTab !== 'combat')
     // 3. NÃO tiver terminado a rolagem (uiPhase !== 'done')
-    const shouldBlock = userRole !== "GM" && activeTab !== "combat" && uiPhase !== "done";
+    const shouldBlock = uiPhase !== "done";
 
     return (
         <div
@@ -119,7 +119,7 @@ export default function FateDice3D({
                     height: "100%", 
                     position: "absolute", 
                     inset: 0,
-                    pointerEvents: "auto", 
+                    pointerEvents: uiPhase === "done" ? "none" : "auto", 
                     zIndex: 2, 
                     opacity: uiPhase === 'done' ? 0 : 1,
                     transition: "opacity 0.4s ease-out",

@@ -1,6 +1,6 @@
-/**
- * Hook customizado para gerenciar a simulação 3D dos dados Fate.
- * Encapsula Three.js, física e interações.
+﻿/**
+ * Hook customizado para gerenciar a simulaÃ§Ã£o 3D dos dados Fate.
+ * Encapsula Three.js, fÃ­sica e interaÃ§Ãµes.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -46,6 +46,43 @@ function sortBreakdown(entries: DiceBreakdownEntry[]): DiceBreakdownEntry[] {
         .sort((a, b) => DICE_ORDER.indexOf(a.type) - DICE_ORDER.indexOf(b.type));
 }
 
+function buildInstantResultsFromPool(pool: DicePoolEntry[]): { results: number[]; breakdown: DiceBreakdownEntry[] } {
+    const results: number[] = [];
+    const breakdown: DiceBreakdownEntry[] = [];
+
+    pool.forEach((p) => {
+        const values: number[] = [];
+        for (let i = 0; i < p.count; i++) {
+            let v = 0;
+            if (p.type === "dF") {
+                v = Math.floor(Math.random() * 3) - 1;
+            } else if (p.type === "d100") {
+                const tens = Math.floor(Math.random() * 10);
+                const units = Math.floor(Math.random() * 10);
+                v = tens === 0 && units === 0 ? 100 : tens * 10 + units;
+            } else {
+                const sides = parseInt(p.type.substring(1), 10) || 6;
+                v = Math.floor(Math.random() * sides) + 1;
+            }
+            results.push(v);
+            values.push(v);
+        }
+        breakdown.push({ type: p.type, values });
+    });
+
+    if (results.length === 0) {
+        const values: number[] = [];
+        for (let i = 0; i < 4; i++) {
+            const v = Math.floor(Math.random() * 3) - 1;
+            results.push(v);
+            values.push(v);
+        }
+        breakdown.push({ type: "dF", values });
+    }
+
+    return { results, breakdown: sortBreakdown(breakdown) };
+}
+
 interface SceneState {
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
@@ -82,7 +119,7 @@ export function useFateDiceSimulation({
     const onSettledRef = useRef(onSettled);
     const onPreResultRef = useRef(onPreResult);
     
-    // Atualiza refs para evitar stale closures no loop de animação
+    // Atualiza refs para evitar stale closures no loop de animaÃ§Ã£o
     onSettledRef.current = onSettled;
     onPreResultRef.current = onPreResult;
 
@@ -93,12 +130,22 @@ export function useFateDiceSimulation({
     const randBufRef = useRef<number[]>([]);
     const interactionReadyAtRef = useRef(0);
     const holdStartedAtRef = useRef(0);
+    const webglReadyRef = useRef(false);
 
     const [uiPhase, setUiPhase] = useState<"idle" | "held" | "thrown" | "snapping" | "done">("idle");
     const [uiResults, setUiResults] = useState<number[] | null>(null);
     const [uiBreakdown, setUiBreakdown] = useState<DiceBreakdownEntry[] | null>(null);
     const [resolvedAccent, setResolvedAccent] = useState(accentColor);
     const [resolvedDanger, setResolvedDanger] = useState("#ff2255");
+
+    const settleInstantRoll = () => {
+        const { results, breakdown } = buildInstantResultsFromPool(dicePool);
+        setUiPhase("done");
+        setUiResults(results);
+        setUiBreakdown(breakdown);
+        onPreResultRef.current?.(results);
+        setTimeout(() => onSettledRef.current(results, breakdown), 120);
+    };
 
     useEffect(() => {
         if (!isVisible || !mountRef.current) return;
@@ -112,8 +159,9 @@ export function useFateDiceSimulation({
         isHeldRef.current = false;
         holdStartedAtRef.current = 0;
         interactionReadyAtRef.current = performance.now() + OPEN_INTERACTION_GUARD_MS;
+        webglReadyRef.current = false;
 
-        // Pré-busca números aleatórios
+        // PrÃ©-busca nÃºmeros aleatÃ³rios
         fetchRandomOrg(80).then(nums => { if (alive) randBufRef.current = nums; });
 
         import("three").then((THREE) => {
@@ -124,7 +172,7 @@ export function useFateDiceSimulation({
                 return Math.random();
             }
 
-            // ── Ler variáveis CSS ─────────────────────────────────────────────
+            // â”€â”€ Ler variÃ¡veis CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const root = document.documentElement;
             const cssProp = (name: string, fallback: string) =>
                 getComputedStyle(root).getPropertyValue(name).trim() || fallback;
@@ -142,66 +190,35 @@ export function useFateDiceSimulation({
             const W = container.clientWidth;
             const H = container.clientHeight;
 
-            // ── Renderer ──────────────────────────────────────────────────────
+            // â”€â”€ Renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                        function bailOutAndRollInstantly() {
+                const { results, breakdown } = buildInstantResultsFromPool(dicePool);
+                setUiPhase("done");
+                setUiResults(results);
+                setUiBreakdown(breakdown);
+                onPreResultRef.current?.(results);
+                onSettledRef.current(results, breakdown);
+            }
+
             let renderer: THREE.WebGLRenderer;
             try {
-                renderer = new THREE.WebGLRenderer({ 
-                    antialias: false, // Otimizado para low-end (removido MSAA) 
+                renderer = new THREE.WebGLRenderer({
+                    antialias: false, // Otimizado para low-end (removido MSAA)
                     alpha: true,
-                    powerPreference: "low-power" // Sugere que use menos GPU se possível
+                    powerPreference: "low-power", // Sugere que use menos GPU se possÃ­vel
                 });
-                
+
                 // Tratar perda de contexto WebGL
                 renderer.domElement.addEventListener("webglcontextlost", (event: Event) => {
                     event.preventDefault();
-                    console.warn("WebGL Context Lost! Fallback para rolagem instantânea.");
+                    console.warn("WebGL Context Lost! Fallback para rolagem instantÃ¢nea.");
                     bailOutAndRollInstantly();
                 }, false);
 
+                webglReadyRef.current = true;
             } catch (e) {
-                console.warn("Falha crítica ao iniciar WebGL. Usando fallback 2D.", e);
-                bailOutAndRollInstantly();
+                console.warn("Falha crÃ­tica ao iniciar WebGL. Mantendo overlay em fallback atÃ© click em Play.", e);
                 return;
-            }
-            function bailOutAndRollInstantly() {
-                const results: number[] = [];
-                const breakdown: DiceBreakdownEntry[] = [];
-                dicePool.forEach(p => {
-                    const values: number[] = [];
-                    for (let i = 0; i < p.count; i++) {
-                        let v = 0;
-                        if (p.type === "dF") {
-                            v = Math.floor(Math.random() * 3) - 1;
-                        } else if (p.type === "d100") {
-                            const tens = Math.floor(Math.random() * 10);
-                            const units = Math.floor(Math.random() * 10);
-                            v = tens === 0 && units === 0 ? 100 : tens * 10 + units;
-                        } else {
-                            const sides = parseInt(p.type.substring(1), 10) || 6;
-                            v = Math.floor(Math.random() * sides) + 1;
-                        }
-                        results.push(v);
-                        values.push(v);
-                    }
-                    breakdown.push({ type: p.type, values });
-                });
-
-                if (results.length === 0) { // Fallback 4dF
-                    const values: number[] = [];
-                    for (let i = 0; i < 4; i++) {
-                        const v = Math.floor(Math.random() * 3) - 1;
-                        results.push(v);
-                        values.push(v);
-                    }
-                    breakdown.push({ type: "dF", values });
-                }
-
-                const sortedBreakdown = sortBreakdown(breakdown);
-                setUiPhase("done");
-                setUiResults(results);
-                setUiBreakdown(sortedBreakdown);
-                onPreResultRef.current?.(results);
-                onSettledRef.current(results, sortedBreakdown);
             }
 
             renderer.setSize(W, H);
@@ -209,14 +226,14 @@ export function useFateDiceSimulation({
             renderer.shadowMap.enabled = false; // Sombras desativadas para performance no mobile
             container.appendChild(renderer.domElement);
 
-            // ── Cena e câmera ─────────────────────────────────────────────────
+            // â”€â”€ Cena e cÃ¢mera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
             const cameraXOffset = -0.65; // Deslocamento para alinhar com o 'left: 52.5%'
             camera.position.set(cameraXOffset, 9, 13);
             camera.lookAt(cameraXOffset, 0, 0);
 
-            // ── Iluminação ────────────────────────────────────────────────────
+            // â”€â”€ IluminaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const dirLight = new THREE.DirectionalLight(0xffdda0, 1.0);
             dirLight.position.set(4, 14, 7);
@@ -227,21 +244,21 @@ export function useFateDiceSimulation({
             fillLight.position.set(-6, 4, -4);
             scene.add(fillLight);
 
-            // ── Mesa ──────────────────────────────────────────────────────────
+            // â”€â”€ Mesa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const bgNum = parseInt(themeBg.replace('#', ''), 16) || 0x080808;
             const tableGeo = new THREE.PlaneGeometry(80, 60);
             const tableMat = new THREE.MeshStandardMaterial({
                 color: bgNum,
                 roughness: 0.95,
                 transparent: true,
-                opacity: 0, // Piso invisível para os dados flutuarem sobre a arena
+                opacity: 0, // Piso invisÃ­vel para os dados flutuarem sobre a arena
             });
             const tableMesh = new THREE.Mesh(tableGeo, tableMat);
             tableMesh.rotation.x = -Math.PI / 2;
             tableMesh.position.y = FLOOR_Y;
             scene.add(tableMesh);
 
-            // ── Texturas e Materiais ──────────────────────────────────────────
+            // â”€â”€ Texturas e Materiais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const textureCache = new Map<string, any>();
             function getCachedTexture(symbol: string) {
                 const key = `${symbol}|${themeAccent}|${themeBg}|${themeName}`;
@@ -274,7 +291,7 @@ export function useFateDiceSimulation({
                     return [
                         getCachedTexture(""), getCachedTexture(""),
                         getCachedTexture("+"), getCachedTexture("+"),
-                        getCachedTexture("−"), getCachedTexture("−")
+                        getCachedTexture("âˆ’"), getCachedTexture("âˆ’")
                     ].map(m);
                 }
                 if (type === "d6") {
@@ -305,7 +322,7 @@ export function useFateDiceSimulation({
                 return [getCachedTexture("?")].map(m);
             }
 
-            // ── Dados ─────────────────────────────────────────────────────────
+            // â”€â”€ Dados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const dice: RuntimeDie[] = [];
             const flatPool: Array<{
                 renderType: Exclude<DieType, "d100">;
@@ -541,9 +558,10 @@ export function useFateDiceSimulation({
 
             requestAnimationFrame(animate);
 
-            // ── Handlers ──────────────────────────────────────────────────────
+            // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             function startHold(cx: number, cy: number) {
                 if (state.phase !== "idle") return;
+                if (state.dice.length === 0) return;
                 if (performance.now() < interactionReadyAtRef.current) return;
                 mouseRef.current = mousePrevRef.current = { x: cx, y: cy };
                 mouseVelRef.current = { x: 0, y: 0 };
@@ -673,7 +691,11 @@ export function useFateDiceSimulation({
 
     const autoRoll = () => {
         const state = sceneRef.current;
-        if (!state || state.phase !== "idle") return;
+        if (!state || !webglReadyRef.current) {
+            settleInstantRoll();
+            return;
+        }
+        if (state.phase !== "idle") return;
         if (performance.now() < interactionReadyAtRef.current) return;
         
         function consumeRand(): number {
@@ -711,3 +733,4 @@ export function useFateDiceSimulation({
         updatePool,
     };
 }
+
