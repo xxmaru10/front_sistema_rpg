@@ -52,6 +52,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         return normalized === "exploracao" || normalized === "combate";
     };
 
+    const isExplorationChallenge = (value?: string) => {
+        if (!value) return false;
+        return normalizeLabel(value) === "exploracao";
+    };
+
     const isFateDiceArray = (dice: number[]) =>
         dice.length === 4 && dice.every((d) => d === -1 || d === 0 || d === 1);
 
@@ -88,18 +93,22 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             modifiers.push(`BONUS ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}`);
         }
 
-        const diff = payload.targetDiff !== undefined
+        const hasTargetDiff = payload.targetDiff !== undefined;
+        const diff = hasTargetDiff
             ? payload.total - (payload.targetDiff || 0)
             : payload.total;
+        const isStyleSuccess = hasTargetDiff && isExplorationChallenge(payload.challengeDescription) && diff >= 3;
         const isSuccess = diff >= 0;
+        const tone = isStyleSuccess ? "style" : isSuccess ? "good" : "bad";
 
         return {
             actionLabel,
             targetLabel,
             diceFaces,
             modifierText: modifiers.join(" "),
-            outcomeLabel: isSuccess ? "Sucesso" : "Fracasso",
+            outcomeLabel: isStyleSuccess ? "Sucesso com Estilo" : isSuccess ? "Sucesso" : "Fracasso",
             isSuccess,
+            tone,
             totalLabel: payload.total >= 0 ? `+${payload.total}` : String(payload.total),
         };
     };
@@ -121,7 +130,8 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             let outcome = "";
             if (payload.targetDiff !== undefined) {
                 const diff = payload.total - (payload.targetDiff || 0);
-                outcome = diff >= 0 ? "Sucesso" : "Fracasso";
+                const isStyleSuccess = isExplorationChallenge(payload.challengeDescription) && diff >= 3;
+                outcome = isStyleSuccess ? "Sucesso com Estilo" : diff >= 0 ? "Sucesso" : "Fracasso";
             }
 
             return `${action}${targetLabel ? ` • ${targetLabel}` : ""} • ${diceFaces}${skillMod}${itemMod}${bonusMod}${outcome ? ` • ${outcome}` : ""}`;
@@ -198,7 +208,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                             className={`combat-entry compact-line animate-fade-in ${(() => {
                                 const rollMeta = getCompactRollMeta(event);
                                 if (!rollMeta) return "";
-                                return rollMeta.isSuccess ? "roll-good" : "roll-bad";
+                                return `roll-${rollMeta.tone}`;
                             })()}`}
                         >
                             <span className="compact-time">{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
@@ -225,7 +235,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                                 </>
                                             )}
                                             <span className="compact-sep"> • </span>
-                                            <span className={`compact-outcome ${rollMeta.isSuccess ? "good" : "bad"}`}>
+                                            <span className={`compact-outcome ${rollMeta.tone}`}>
                                                 {rollMeta.outcomeLabel}
                                             </span>
                                         </>
@@ -235,7 +245,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                             {(() => {
                                 const rollMeta = getCompactRollMeta(event);
                                 if (!rollMeta) return <span className="compact-total muted"></span>;
-                                return <span className={`compact-total ${rollMeta.isSuccess ? "good" : "bad"}`}>{rollMeta.totalLabel}</span>;
+                                return <span className={`compact-total ${rollMeta.tone}`}>{rollMeta.totalLabel}</span>;
                             })()}
                         </div>
                     ) : (
@@ -352,7 +362,12 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                             <div className="roll-result-outcome" style={{ marginTop: '5px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                 {(() => {
                                                     const diff = event.payload.total - (event.payload.targetDiff || 0);
-                                                    if (diff >= 3) return <span style={{ color: '#00cc88', textShadow: '0 0 10px rgba(0,204,136,0.5)' }}>SUCESSO COM ESTILO!</span>;
+                                                    const isExploration = isExplorationChallenge(event.payload.challengeDescription);
+                                                    if (diff >= 3) {
+                                                        return isExploration
+                                                            ? <span style={{ color: '#4da3ff', textShadow: '0 0 10px rgba(77,163,255,0.5)' }}>SUCESSO COM ESTILO!</span>
+                                                            : <span style={{ color: '#00cc88', textShadow: '0 0 10px rgba(0,204,136,0.5)' }}>SUCESSO COM ESTILO!</span>;
+                                                    }
                                                     if (diff >= 0) return <span style={{ color: '#00cc88' }}>SUCESSO</span>;
                                                     if (diff <= -3) return <span style={{ color: '#ff3333', textShadow: '0 0 10px rgba(255,51,51,0.5)' }}>FRACASSO TERRÍVEL!</span>;
                                                     return <span style={{ color: '#ff3333' }}>FRACASSO</span>;
@@ -521,6 +536,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     background: linear-gradient(90deg, rgba(15, 70, 43, 0.42), rgba(15, 25, 20, 0));
                 }
 
+                .combat-entry.compact-line.roll-style {
+                    border-left: 2px solid rgba(77, 163, 255, 0.82);
+                    background: linear-gradient(90deg, rgba(10, 40, 85, 0.48), rgba(9, 20, 36, 0));
+                }
+
                 .combat-entry.compact-line.roll-bad {
                     border-left: 2px solid rgba(255, 90, 90, 0.78);
                     background: linear-gradient(90deg, rgba(80, 18, 18, 0.42), rgba(28, 14, 14, 0));
@@ -575,6 +595,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                     font-weight: 700;
                 }
 
+                .compact-outcome.style {
+                    color: #4da3ff;
+                    font-weight: 700;
+                }
+
                 .compact-outcome.bad {
                     color: #ff5a5a;
                     font-weight: 700;
@@ -592,6 +617,11 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 .compact-total.good {
                     color: #32d583;
                     text-shadow: 0 0 10px rgba(50, 213, 131, 0.28);
+                }
+
+                .compact-total.style {
+                    color: #4da3ff;
+                    text-shadow: 0 0 10px rgba(77, 163, 255, 0.32);
                 }
 
                 .compact-total.bad {

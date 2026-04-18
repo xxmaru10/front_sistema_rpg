@@ -168,16 +168,30 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     const hasModifiers = totalBonus !== 0 || !!calculationBreakdown;
 
     const successGreen = "#4ade80";
+    const styleBlue = "#4da3ff";
     const failRed = "#ff3333";
     const neutralTone = accentColor;
+    const challengeDiff =
+        resultOverlay?.mode === "challenge"
+            ? grandTotal - (resultOverlay.targetDifficulty ?? 0)
+            : null;
+    const isChallengeStyleSuccess = challengeDiff !== null && challengeDiff >= 3;
+    const challengeOutcomeLabel =
+        challengeDiff === null
+            ? ""
+            : isChallengeStyleSuccess
+            ? "SUCESSO COM ESTILO"
+            : challengeDiff >= 0
+            ? "SUCESSO"
+            : "FRACASSO";
 
     let totalColor = neutralTone;
     if (resultOverlay?.mode === "combat") {
         if (grandTotal > 0) totalColor = successGreen;
         else if (grandTotal < 0) totalColor = failRed;
     } else if (resultOverlay?.mode === "challenge") {
-        const diff = resultOverlay.targetDifficulty ?? 0;
-        totalColor = grandTotal >= diff ? successGreen : failRed;
+        if (isChallengeStyleSuccess) totalColor = styleBlue;
+        else totalColor = (challengeDiff ?? -999) >= 0 ? successGreen : failRed;
     }
 
     return (
@@ -737,7 +751,9 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         color: totalColor,
                         opacity: 0.65,
                     }}>
-                        {ladderLabel(grandTotal).toUpperCase()}
+                        {resultOverlay?.mode === "challenge"
+                            ? challengeOutcomeLabel
+                            : ladderLabel(grandTotal).toUpperCase()}
                     </div>
                 </div>
             )}

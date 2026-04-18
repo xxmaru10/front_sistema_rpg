@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-18 (story-44 compliance audit: manual input + random.org parity)
+last_updated: 2026-04-18 (story-44 exploration style-success visual rule)
 status: ativo
 ---
 
@@ -189,6 +189,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Blindagem contra auto-roll acidental**: o fluxo `idle -> held -> thrown` agora exige um hold minimo antes do lancamento e aplica guarda curta na abertura da camara, evitando disparos involuntarios ao abrir/editar a caixa de dados.
 - **Expressao manual inline (`+`) sem 3D**: o seletor do overlay ganhou entrada textual para rolagens como `2d6+d20+4`, resolvidas de forma instantanea (sem simulacao 3D) e emitidas no mesmo pipeline de eventos, com fallback visual do log ajustado para exibir valores numericos quando nao houver `diceBreakdown`.
 - **Paridade de entropia e foco de input no modo manual**: a expressao manual passou a consumir o mesmo buffer prefetchado de `random.org` (com fallback local apenas quando necessario), e o painel removeu `preventDefault` no campo para preservar foco/digitacao sem click-through para o canvas.
+- **Exploracao com margem >=3**: no modo de desafio (`challenge`), quando `total - dificuldade >= 3`, o resultado agora sobe para `SUCESSO COM ESTILO` e a acentuacao visual muda para azul (overlay e log compacto), em vez de verde de sucesso padrao.
 
 ## PadrÃµes Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) tÃªm sua prÃ³pria subpasta com hooks e estilos.
