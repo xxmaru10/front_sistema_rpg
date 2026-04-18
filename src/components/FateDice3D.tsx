@@ -10,7 +10,7 @@ interface FateDice3DProps {
     initialPool?: DicePoolEntry[];
     onPoolChange?: (pool: DicePoolEntry[]) => void;
     accentColor?: string;
-    onSettled: (results: number[], breakdown: DiceBreakdownEntry[]) => void;
+    onSettled: (results: number[], breakdown?: DiceBreakdownEntry[]) => void;
     onPreResult?: (results: number[]) => void;
     userRole?: "GM" | "PLAYER";
     activeTab?: string;
@@ -48,6 +48,7 @@ export default function FateDice3D({
         uiResults,
         uiBreakdown,
         autoRoll,
+        manualRollExpression,
         resolvedAccent,
         resolvedDanger,
         dicePool,
@@ -135,6 +136,7 @@ export default function FateDice3D({
                     accentColor={resolvedAccent}
                     dangerColor={resolvedDanger}
                     onAutoRoll={autoRoll}
+                    onManualExpressionRoll={manualRollExpression}
                     dicePool={dicePool}
                     onPoolChange={handlePoolChange}
                     calculationBreakdown={calculationBreakdown}

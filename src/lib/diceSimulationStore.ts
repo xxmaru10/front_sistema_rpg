@@ -7,7 +7,7 @@ export type DiceResultOverlayMode = "combat" | "challenge";
 
 import { DiceBreakdownEntry, DicePoolEntry } from "@/types/domain";
 
-type DiceSettledCallback = (results: number[], breakdown: DiceBreakdownEntry[]) => void;
+type DiceSettledCallback = (results: number[], breakdown?: DiceBreakdownEntry[]) => void;
 type DicePreviewCallback = (results: number[]) => void;
 
 interface DiceSimulationParams {

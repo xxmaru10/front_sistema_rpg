@@ -52,6 +52,18 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         return normalized === "exploracao" || normalized === "combate";
     };
 
+    const isFateDiceArray = (dice: number[]) =>
+        dice.length === 4 && dice.every((d) => d === -1 || d === 0 || d === 1);
+
+    const formatFallbackDice = (dice: unknown) => {
+        if (!Array.isArray(dice) || dice.length === 0) return "";
+        const typed = dice as number[];
+        if (isFateDiceArray(typed)) {
+            return typed.map((d) => (d > 0 ? "+" : d < 0 ? "-" : "0")).join("");
+        }
+        return typed.join(", ");
+    };
+
     const getCompactRollMeta = (event: ActionEvent) => {
         if (event.type !== "ROLL_RESOLVED") return null;
 
@@ -63,9 +75,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         const targetLabel = shouldHideChallengeLabel(rawTargetLabel) ? "" : (rawTargetLabel || "");
         const diceFaces = payload.diceBreakdown
             ? payload.diceBreakdown.map((b: any) => `${b.values.length}${b.type}`).join(" ")
-            : (Array.isArray(payload.dice)
-                ? payload.dice.map((d: number) => (d > 0 ? "+" : d < 0 ? "-" : "0")).join("")
-                : "");
+            : formatFallbackDice(payload.dice);
 
         const modifiers: string[] = [];
         if (payload.skill?.rank) {
@@ -103,9 +113,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                 || (payload.targetCharacterId ? characters[payload.targetCharacterId]?.name.toUpperCase() || "ALVO" : "");
             const diceFaces = payload.diceBreakdown
                 ? payload.diceBreakdown.map((b: any) => `${b.values.length}${b.type}`).join(" ")
-                : (Array.isArray(payload.dice)
-                    ? payload.dice.map((d: number) => d > 0 ? "+" : d < 0 ? "-" : "0").join("")
-                    : "");
+                : formatFallbackDice(payload.dice);
             const skillMod = payload.skill?.rank ? ` Per ${payload.skill.rank >= 0 ? `+${payload.skill.rank}` : payload.skill.rank}` : "";
             const itemMod = payload.item?.bonus ? ` Item ${payload.item.bonus >= 0 ? `+${payload.item.bonus}` : payload.item.bonus}` : "";
             const bonusMod = payload.manualBonus ? ` Bônus ${payload.manualBonus >= 0 ? `+${payload.manualBonus}` : payload.manualBonus}` : "";
@@ -302,10 +310,18 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                                     <span className="val" style={{ opacity: 0.6, fontSize: '0.9rem' }}>({event.payload.diceSum >= 0 ? `+${event.payload.diceSum}` : event.payload.diceSum})</span>
                                                 </div>
                                             ) : (
-                                                <span className="dice" title="Dados FATE">
-                                                    {event.payload.dice.map((d: number) => d > 0 ? "+" : d < 0 ? "−" : "●").join("")}
-                                                    <span className="val">({event.payload.diceSum >= 0 ? `+${event.payload.diceSum}` : event.payload.diceSum})</span>
-                                                </span>
+                                                (() => {
+                                                    const diceValues = Array.isArray(event.payload.dice) ? event.payload.dice as number[] : [];
+                                                    const fateLike = isFateDiceArray(diceValues);
+                                                    return (
+                                                        <span className="dice" title={fateLike ? "Dados FATE" : "Resultados de dados"} style={{ letterSpacing: fateLike ? "4px" : "1px" }}>
+                                                            {fateLike
+                                                                ? diceValues.map((d: number) => d > 0 ? "+" : d < 0 ? "-" : "0").join("")
+                                                                : diceValues.join(", ")}
+                                                            <span className="val">({event.payload.diceSum >= 0 ? `+${event.payload.diceSum}` : event.payload.diceSum})</span>
+                                                        </span>
+                                                    );
+                                                })()
                                             )}
 
                                             {event.payload.skill && (

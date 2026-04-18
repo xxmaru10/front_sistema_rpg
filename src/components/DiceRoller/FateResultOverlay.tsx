@@ -18,6 +18,7 @@ interface FateResultOverlayProps {
     accentColor: string;
     dangerColor: string;
     onAutoRoll: () => void;
+    onManualExpressionRoll?: (expression: string) => string | null;
     calculationBreakdown?: {
         baseSkillValue?: number;
         itemBonusValue?: number;
@@ -61,22 +62,28 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     accentColor,
     dangerColor,
     onAutoRoll,
+    onManualExpressionRoll,
     calculationBreakdown,
     resultOverlay,
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [limitToast, setLimitToast] = useState(false);
+    const [isManualInputOpen, setIsManualInputOpen] = useState(false);
+    const [manualExpression, setManualExpression] = useState("");
+    const [manualError, setManualError] = useState<string | null>(null);
 
     useEffect(() => {
         if (phase !== "idle" && isEditing) {
             setIsEditing(false);
+            setIsManualInputOpen(false);
+            setManualError(null);
         }
     }, [phase, isEditing]);
 
     const totalDiceCount = useMemo(() => dicePool.reduce((acc, curr) => acc + curr.count, 0), [dicePool]);
 
     const notationText = useMemo(() => {
-        if (totalDiceCount === 0) return "Caixa vazia - selecione um tipo de dado";
+        if (totalDiceCount === 0) return "Caixa vazia selecione um tipo de dado";
         return dicePool
             .filter(p => p.count > 0)
             .sort((a, b) => {
@@ -105,6 +112,25 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
 
     const handleClear = () => {
         onPoolChange([]);
+    };
+
+    const submitManualExpression = () => {
+        const expression = manualExpression.trim();
+        if (!expression) {
+            setManualError("Digite uma expressão, ex: 2d6+d20");
+            return;
+        }
+
+        const maybeError = onManualExpressionRoll?.(expression);
+        if (maybeError) {
+            setManualError(maybeError);
+            return;
+        }
+
+        setManualError(null);
+        setManualExpression("");
+        setIsManualInputOpen(false);
+        setIsEditing(false);
     };
 
     const blockPointerDown = (e: React.MouseEvent | React.TouchEvent) => {
@@ -223,7 +249,14 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                             onTouchStart={blockPointerDown}
                             onClick={(e) => {
                                 blockClick(e);
-                                setIsEditing((prev) => !prev);
+                                setIsEditing((prev) => {
+                                    const next = !prev;
+                                    if (!next) {
+                                        setIsManualInputOpen(false);
+                                        setManualError(null);
+                                    }
+                                    return next;
+                                });
                             }}
                             style={{
                                 background: isEditing ? `${accentColor}22` : "rgba(0,0,0,0.45)",
@@ -383,6 +416,106 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                                     {type}
                                 </button>
                              ))}
+                             <button
+                                onMouseDown={blockPointerDown}
+                                onTouchStart={blockPointerDown}
+                                onClick={(e) => {
+                                    blockClick(e);
+                                    setIsManualInputOpen((prev) => !prev);
+                                    setManualError(null);
+                                }}
+                                style={{
+                                    gridColumn: "1 / -1",
+                                    background: isManualInputOpen ? `${accentColor}22` : "rgba(255,255,255,0.05)",
+                                    border: `1px solid ${isManualInputOpen ? accentColor : "rgba(255,255,255,0.12)"}`,
+                                    borderRadius: "8px",
+                                    padding: "8px 10px",
+                                    color: "rgba(230,225,210,0.95)",
+                                    fontFamily: "var(--font-header, 'Cinzel', serif)",
+                                    fontSize: "0.72rem",
+                                    letterSpacing: "0.12em",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s",
+                                    textTransform: "uppercase",
+                                }}
+                                title="Digitar expressão de dados sem 3D"
+                            >
+                                + Digitar dado
+                            </button>
+                            {isManualInputOpen && (
+                                <div
+                                    style={{
+                                        gridColumn: "1 / -1",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "8px",
+                                        marginTop: "4px",
+                                    }}
+                                    onMouseDown={blockPointerDown}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <input
+                                        value={manualExpression}
+                                        onChange={(e) => {
+                                            setManualExpression(e.target.value);
+                                            if (manualError) setManualError(null);
+                                        }}
+                                        onMouseDown={blockPointerDown}
+                                        onTouchStart={blockPointerDown}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                submitManualExpression();
+                                            }
+                                        }}
+                                        placeholder="Ex: 2d6+d20+4"
+                                        style={{
+                                            width: "100%",
+                                            borderRadius: "8px",
+                                            border: `1px solid ${accentColor}44`,
+                                            background: "rgba(0,0,0,0.4)",
+                                            color: "rgba(230,225,210,0.95)",
+                                            padding: "8px 10px",
+                                            fontFamily: "var(--font-main, serif)",
+                                            fontSize: "0.78rem",
+                                            outline: "none",
+                                        }}
+                                    />
+                                    <button
+                                        onMouseDown={blockPointerDown}
+                                        onTouchStart={blockPointerDown}
+                                        onClick={(e) => {
+                                            blockClick(e);
+                                            submitManualExpression();
+                                        }}
+                                        style={{
+                                            width: "100%",
+                                            borderRadius: "8px",
+                                            border: `1px solid ${accentColor}66`,
+                                            background: `${accentColor}22`,
+                                            color: accentColor,
+                                            padding: "8px 10px",
+                                            fontFamily: "var(--font-header, 'Cinzel', serif)",
+                                            fontSize: "0.72rem",
+                                            textTransform: "uppercase",
+                                            letterSpacing: "0.12em",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        Rolar resultado
+                                    </button>
+                                    {manualError && (
+                                        <div style={{
+                                            color: "#ff8a8a",
+                                            fontSize: "0.68rem",
+                                            lineHeight: 1.3,
+                                            fontFamily: "var(--font-main, serif)",
+                                        }}>
+                                            {manualError}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 

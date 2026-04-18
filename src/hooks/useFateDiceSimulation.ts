@@ -33,6 +33,8 @@ const DIE_VISUAL_SCALE = 0.7;
 const POOL_CENTER_Z = -0.35;
 const OPEN_INTERACTION_GUARD_MS = 240;
 const MIN_HOLD_TO_THROW_MS = 120;
+const MANUAL_DICE_MAX = 40;
+const MANUAL_SETTLE_DELAY_MS = 500;
 
 interface RuntimeDie extends PhysicsDie {
     sourceType: DieType;
@@ -83,6 +85,68 @@ function buildInstantResultsFromPool(pool: DicePoolEntry[]): { results: number[]
     return { results, breakdown: sortBreakdown(breakdown) };
 }
 
+function parseManualDiceExpression(rawExpression: string): { results: number[]; error?: string } {
+    const expression = rawExpression.replace(/\s+/g, "").toLowerCase();
+    if (!expression) {
+        return { results: [], error: "Digite uma expressão de dados (ex: 2d6+d20)." };
+    }
+
+    const terms = expression.split("+").map((term) => term.trim()).filter(Boolean);
+    if (terms.length === 0) {
+        return { results: [], error: "Expressão inválida. Use o formato 2d6+d20." };
+    }
+
+    let totalDice = 0;
+    const results: number[] = [];
+
+    for (const term of terms) {
+        const diceMatch = term.match(/^(\d*)d(f|\d+)$/i);
+        if (diceMatch) {
+            const count = diceMatch[1] ? parseInt(diceMatch[1], 10) : 1;
+            if (!Number.isFinite(count) || count < 1) {
+                return { results: [], error: `Quantidade inválida em "${term}".` };
+            }
+
+            totalDice += count;
+            if (totalDice > MANUAL_DICE_MAX) {
+                return { results: [], error: `Limite atingido: máximo de ${MANUAL_DICE_MAX} dados.` };
+            }
+
+            const faceToken = diceMatch[2].toLowerCase();
+            if (faceToken === "f") {
+                for (let i = 0; i < count; i++) {
+                    results.push(Math.floor(Math.random() * 3) - 1);
+                }
+                continue;
+            }
+
+            const faces = parseInt(faceToken, 10);
+            if (!Number.isFinite(faces) || faces < 2 || faces > 1000) {
+                return { results: [], error: `Faces inválidas em "${term}" (use d2 até d1000).` };
+            }
+
+            for (let i = 0; i < count; i++) {
+                results.push(Math.floor(Math.random() * faces) + 1);
+            }
+            continue;
+        }
+
+        const modifierMatch = term.match(/^-?\d+$/);
+        if (modifierMatch) {
+            results.push(parseInt(term, 10));
+            continue;
+        }
+
+        return { results: [], error: `Termo inválido: "${term}". Use algo como d20, 2d6 ou +4.` };
+    }
+
+    if (results.length === 0) {
+        return { results: [], error: "Nenhum dado válido foi encontrado." };
+    }
+
+    return { results };
+}
+
 interface SceneState {
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
@@ -102,7 +166,7 @@ interface UseFateDiceSimulationProps {
     isVisible: boolean;
     initialPool?: DicePoolEntry[];
     accentColor: string;
-    onSettled: (results: number[], breakdown: DiceBreakdownEntry[]) => void;
+    onSettled: (results: number[], breakdown?: DiceBreakdownEntry[]) => void;
     onPreResult?: (results: number[]) => void;
 }
 
@@ -741,12 +805,44 @@ export function useFateDiceSimulation({
         setUiPhase("thrown");
     };
 
+    const manualRollExpression = (expression: string): string | null => {
+        const state = sceneRef.current;
+        if (state && state.phase !== "idle" && state.phase !== "done") {
+            return "Aguarde a rolagem atual terminar para usar a entrada manual.";
+        }
+
+        const parsed = parseManualDiceExpression(expression);
+        if (parsed.error) return parsed.error;
+
+        if (settleTimeoutRef.current !== null) {
+            window.clearTimeout(settleTimeoutRef.current);
+            settleTimeoutRef.current = null;
+        }
+
+        if (state) {
+            state.phase = "done";
+        }
+
+        setUiPhase("done");
+        setUiResults(parsed.results);
+        setUiBreakdown(null);
+        onPreResultRef.current?.(parsed.results);
+
+        settleTimeoutRef.current = window.setTimeout(() => {
+            onSettledRef.current(parsed.results, undefined);
+            settleTimeoutRef.current = null;
+        }, MANUAL_SETTLE_DELAY_MS);
+
+        return null;
+    };
+
     return {
         mountRef,
         uiPhase,
         uiResults,
         uiBreakdown,
         autoRoll,
+        manualRollExpression,
         resolvedAccent,
         resolvedDanger,
         dicePool,

@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-18 (story-44 interaction guard and numeric readability)
+last_updated: 2026-04-18 (story-44 manual inline expression without 3D)
 status: ativo
 ---
 
@@ -187,6 +187,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Modelagem de `d100` como entidade de dominio**: a simulacao continua renderizando dois d10 fisicos, mas persiste `d100` consolidado (1..100) no payload, mantendo semantica de regra sem alterar o backend.
 - **Fallback deterministico para caixa vazia**: quando o pool esta vazio no momento do settle/fallback WebGL, o sistema gera `4dF` automaticamente para manter o fluxo rapido sem regressao.
 - **Blindagem contra auto-roll acidental**: o fluxo `idle -> held -> thrown` agora exige um hold minimo antes do lancamento e aplica guarda curta na abertura da camara, evitando disparos involuntarios ao abrir/editar a caixa de dados.
+- **Expressao manual inline (`+`) sem 3D**: o seletor do overlay ganhou entrada textual para rolagens como `2d6+d20+4`, resolvidas de forma instantanea (sem simulacao 3D) e emitidas no mesmo pipeline de eventos, com fallback visual do log ajustado para exibir valores numericos quando nao houver `diceBreakdown`.
 
 ## PadrÃµes Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) tÃªm sua prÃ³pria subpasta com hooks e estilos.
