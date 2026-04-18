@@ -4,10 +4,9 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { Plus, Minus, RotateCcw, Check, X } from "lucide-react";
 import { createPortal } from "react-dom";
 
-
 export interface ImageCropperProps {
     src: string;
-    /** width / height ratio — e.g. 1 for square, 1200/720 for map */
+    /** width / height ratio, e.g. 1 for square, 1200/720 for map */
     aspectRatio: number;
     outputWidth: number;
     outputHeight: number;
@@ -40,13 +39,6 @@ export function ImageCropper({
     onConfirm,
     onCancel,
 }: ImageCropperProps) {
-    useEffect(() => {
-        console.log("[ImageCropper] MOUNTED with src:", src.substring(0, 50));
-        setTimeout(() => {
-            const el = document.querySelector('.ic-overlay');
-            console.log("[ImageCropper] DOM Check after mount:", el ? "FOUND" : "NOT FOUND", el);
-        }, 100);
-    }, [src]);
     const frameW = aspectRatio >= 1 ? MAX_FRAME_DIM : Math.round(MAX_FRAME_DIM * aspectRatio);
     const frameH = aspectRatio >= 1 ? Math.round(MAX_FRAME_DIM / aspectRatio) : MAX_FRAME_DIM;
 
@@ -59,6 +51,7 @@ export function ImageCropper({
     const [transform, setTransform] = useState({ zoom: 1, x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [imgLoaded, setImgLoaded] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const initTransform = useCallback(
         (img: HTMLImageElement) => {
@@ -71,29 +64,73 @@ export function ImageCropper({
         [frameW, frameH]
     );
 
-    // Load source image — crossOrigin needed for external URLs (Supabase) to allow canvas toDataURL
-    // blob: URLs are same-origin and don't need crossOrigin (would cause unnecessary preflight)
+    // External URLs should try CORS first to preserve canvas export (toDataURL).
+    // If that fails, fallback to normal image load so authenticated/same-origin
+    // URLs can still work.
     useEffect(() => {
-        const img = new Image();
-        if (!src.startsWith("data:") && !src.startsWith("blob:")) {
-            img.crossOrigin = "anonymous";
-        }
-        img.onload = () => {
-            imgRef.current = img;
-            setImgLoaded(true);
-            initTransform(img);
-        };
-        img.onerror = () => {
-            // If CORS fails, retry without crossOrigin (image will be tainted but visible)
+        let cancelled = false;
+        setImgLoaded(false);
+        setLoadError(null);
+        imgRef.current = null;
+
+        const isExternal = !src.startsWith("data:") && !src.startsWith("blob:");
+
+        const loadAsRegularImage = () => {
             const fallback = new Image();
             fallback.onload = () => {
+                clearTimeout(timeoutId);
+                if (cancelled) return;
                 imgRef.current = fallback;
                 setImgLoaded(true);
+                setLoadError(null);
                 initTransform(fallback);
+            };
+            fallback.onerror = () => {
+                clearTimeout(timeoutId);
+                failLoad("Nao foi possivel carregar essa imagem para recorte.");
             };
             fallback.src = src;
         };
+
+        const img = new Image();
+        if (isExternal) img.crossOrigin = "anonymous";
+
+        const failLoad = (message: string) => {
+            if (cancelled) return;
+            imgRef.current = null;
+            setImgLoaded(false);
+            setLoadError(message);
+        };
+
+        const timeoutId = setTimeout(() => {
+            failLoad("Falha ao carregar a imagem para recorte. Tente reenviar o retrato.");
+        }, 15000);
+
+        img.onload = () => {
+            clearTimeout(timeoutId);
+            if (cancelled) return;
+            imgRef.current = img;
+            setImgLoaded(true);
+            setLoadError(null);
+            initTransform(img);
+        };
+
+        img.onerror = () => {
+            if (!isExternal) {
+                clearTimeout(timeoutId);
+                failLoad("Nao foi possivel carregar essa imagem para recorte.");
+                return;
+            }
+            // Retry without crossOrigin for URLs that depend on auth/session context.
+            loadAsRegularImage();
+        };
+
         img.src = src;
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
     }, [src, initTransform]);
 
     // Draw canvas whenever transform changes
@@ -117,8 +154,9 @@ export function ImageCropper({
         if (!el) return;
         const onWheel = (e: WheelEvent) => {
             e.preventDefault();
+            if (loadError) return;
             const factor = e.deltaY > 0 ? 0.92 : 1.08;
-            setTransform(prev => {
+            setTransform((prev) => {
                 const img = imgRef.current;
                 if (!img) return prev;
                 const newZoom = Math.max(minZoomRef.current, Math.min(10, prev.zoom * factor));
@@ -128,10 +166,10 @@ export function ImageCropper({
         };
         el.addEventListener("wheel", onWheel, { passive: false });
         return () => el.removeEventListener("wheel", onWheel);
-    }, [frameW, frameH]);
+    }, [frameW, frameH, loadError]);
 
-    // ── Mouse handlers ────────────────────────────────────────────────────────
     const handleMouseDown = (e: React.MouseEvent) => {
+        if (!imgLoaded || loadError) return;
         setIsDragging(true);
         dragStart.current = { x: e.clientX, y: e.clientY, ox: transform.x, oy: transform.y };
     };
@@ -149,14 +187,13 @@ export function ImageCropper({
             frameW,
             frameH
         );
-        setTransform(prev => ({ ...prev, ...clamped }));
+        setTransform((prev) => ({ ...prev, ...clamped }));
     };
 
     const handleMouseUp = () => setIsDragging(false);
 
-    // ── Touch handlers ────────────────────────────────────────────────────────
     const handleTouchStart = (e: React.TouchEvent) => {
-        if (e.touches.length !== 1) return;
+        if (!imgLoaded || loadError || e.touches.length !== 1) return;
         setIsDragging(true);
         dragStart.current = {
             x: e.touches[0].clientX,
@@ -179,14 +216,14 @@ export function ImageCropper({
             frameW,
             frameH
         );
-        setTransform(prev => ({ ...prev, ...clamped }));
+        setTransform((prev) => ({ ...prev, ...clamped }));
     };
 
     const handleTouchEnd = () => setIsDragging(false);
 
-    // ── Zoom controls ─────────────────────────────────────────────────────────
     const adjustZoom = (factor: number) => {
-        setTransform(prev => {
+        if (loadError) return;
+        setTransform((prev) => {
             const img = imgRef.current;
             if (!img) return prev;
             const newZoom = Math.max(minZoomRef.current, Math.min(10, prev.zoom * factor));
@@ -196,13 +233,13 @@ export function ImageCropper({
     };
 
     const handleReset = () => {
-        if (imgRef.current) initTransform(imgRef.current);
+        if (imgRef.current && !loadError) initTransform(imgRef.current);
     };
 
-    // ── Confirm: extract visible region → output canvas ───────────────────────
     const handleConfirm = () => {
         const img = imgRef.current;
         if (!img) return;
+
         const outputCanvas = document.createElement("canvas");
         outputCanvas.width = outputWidth;
         outputCanvas.height = outputHeight;
@@ -215,87 +252,110 @@ export function ImageCropper({
         const srcH = frameH / transform.zoom;
 
         ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outputWidth, outputHeight);
-        onConfirm(outputCanvas.toDataURL("image/jpeg", 0.7));
+        try {
+            onConfirm(outputCanvas.toDataURL("image/jpeg", 0.7));
+        } catch (err) {
+            console.error("[ImageCropper] Falha ao exportar imagem recortada:", err);
+            setLoadError("Imagem carregada, mas bloqueada para recorte pelo navegador (CORS).");
+        }
     };
 
+    const isConfirmDisabled = !imgLoaded || !!loadError;
+
     const overlayStyle: React.CSSProperties = {
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0, 0, 0, 0.95)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2147483647 // max int z-index
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0, 0, 0, 0.95)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 2147483647,
     };
 
     const containerStyle: React.CSSProperties = {
-        background: '#0a0a0a',
-        border: '2px solid #C5A059',
-        borderRadius: '4px',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '14px',
-        boxShadow: '0 0 50px rgba(197, 160, 89, 0.4), 0 20px 60px rgba(0, 0, 0, 0.9)',
-        maxWidth: '95vw',
-        maxHeight: '95vh',
-        zIndex: 2147483647
+        background: "#0a0a0a",
+        border: "2px solid #C5A059",
+        borderRadius: "4px",
+        padding: "24px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "14px",
+        boxShadow: "0 0 50px rgba(197, 160, 89, 0.4), 0 20px 60px rgba(0, 0, 0, 0.9)",
+        maxWidth: "95vw",
+        maxHeight: "95vh",
+        zIndex: 2147483647,
     };
 
     const content = (
         <div className="ic-overlay" style={overlayStyle} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-                <div className="ic-container" style={containerStyle} onClick={e => e.stopPropagation()}>
-                    <div className="ic-header">
-                        <span className="ic-title">AJUSTAR ENQUADRAMENTO</span>
-                        <button className="ic-close" onClick={onCancel} aria-label="Fechar">
-                            <X size={15} />
-                        </button>
-                    </div>
+            <div className="ic-container" style={containerStyle} onClick={(e) => e.stopPropagation()}>
+                <div className="ic-header">
+                    <span className="ic-title">AJUSTAR ENQUADRAMENTO</span>
+                    <button type="button" className="ic-close" onClick={onCancel} aria-label="Fechar">
+                        <X size={15} />
+                    </button>
+                </div>
 
-                    <p className="ic-hint">Arraste para posicionar · Scroll ou botões para zoom</p>
+                <p className="ic-hint">Arraste para posicionar - Scroll ou botoes para zoom</p>
+                {loadError ? (
+                    <p className="ic-hint" style={{ color: "#cc6b6b", margin: 0 }}>{loadError}</p>
+                ) : !imgLoaded ? (
+                    <p className="ic-hint" style={{ margin: 0 }}>Carregando imagem...</p>
+                ) : null}
 
-                    <div
-                        ref={frameRef}
-                        className="ic-frame"
-                        style={{
-                            width: frameW,
-                            height: frameH,
-                            cursor: isDragging ? "grabbing" : "grab",
-                        }}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
+                <div
+                    ref={frameRef}
+                    className="ic-frame"
+                    style={{
+                        width: frameW,
+                        height: frameH,
+                        cursor: isDragging ? "grabbing" : isConfirmDisabled ? "not-allowed" : "grab",
+                    }}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <canvas ref={canvasRef} width={frameW} height={frameH} className="ic-canvas" />
+                    <div className="ic-border-overlay" />
+                </div>
+
+                <div className="ic-controls">
+                    <button type="button" className="ic-btn" onClick={() => adjustZoom(0.85)} title="Reduzir zoom">
+                        <Minus size={14} />
+                    </button>
+                    <button type="button" className="ic-btn" onClick={handleReset} title="Resetar">
+                        <RotateCcw size={13} />
+                    </button>
+                    <button type="button" className="ic-btn" onClick={() => adjustZoom(1.18)} title="Aumentar zoom">
+                        <Plus size={14} />
+                    </button>
+                    <span className="ic-zoom-label">{Math.round(transform.zoom * 100)}%</span>
+                </div>
+
+                <div className="ic-footer">
+                    <button type="button" className="ic-cancel-btn" onClick={onCancel}>
+                        CANCELAR
+                    </button>
+                    <button
+                        type="button"
+                        className="ic-confirm-btn"
+                        onClick={handleConfirm}
+                        disabled={isConfirmDisabled}
+                        style={isConfirmDisabled ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
                     >
-                        <canvas ref={canvasRef} width={frameW} height={frameH} className="ic-canvas" />
-                        <div className="ic-border-overlay" />
-                    </div>
-
-                    <div className="ic-controls">
-                        <button className="ic-btn" onClick={() => adjustZoom(0.85)} title="Reduzir zoom">
-                            <Minus size={14} />
-                        </button>
-                        <button className="ic-btn" onClick={handleReset} title="Resetar">
-                            <RotateCcw size={13} />
-                        </button>
-                        <button className="ic-btn" onClick={() => adjustZoom(1.18)} title="Aumentar zoom">
-                            <Plus size={14} />
-                        </button>
-                        <span className="ic-zoom-label">{Math.round(transform.zoom * 100)}%</span>
-                    </div>
-
-                    <div className="ic-footer">
-                        <button className="ic-cancel-btn" onClick={onCancel}>CANCELAR</button>
-                        <button className="ic-confirm-btn" onClick={handleConfirm}>
-                            <Check size={13} />
-                            CONFIRMAR
-                        </button>
-                    </div>
+                        <Check size={13} />
+                        CONFIRMAR
+                    </button>
                 </div>
             </div>
+        </div>
     );
 
     if (typeof document !== "undefined") {

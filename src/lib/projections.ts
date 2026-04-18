@@ -26,6 +26,7 @@ export const initialState: SessionState = {
     items: [],
     sessionNumber: 1,
     stickyNotes: [],
+    themeLocked: false,
 
     soundSettings: {
 
@@ -1130,6 +1131,12 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 } : s)
             };
         }
+
+        case "SESSION_THEME_LOCK_UPDATED":
+            return {
+                ...state,
+                themeLocked: payload.locked
+            };
 
         case "GLOBAL_ITEM_NOTE_ADDED": {
             const items = state.items || [];

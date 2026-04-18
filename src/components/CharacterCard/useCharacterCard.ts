@@ -6,6 +6,20 @@ import { globalEventStore } from "@/lib/eventStore";
 import { uploadImage } from '@/lib/apiClient';
 import { v4 as uuidv4 } from "uuid";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+// Converts a public S3 URL to go through the backend proxy, which adds
+// Access-Control-Allow-Origin: * so the canvas can call toDataURL().
+function toProxyUrl(imageUrl: string): string {
+    if (!imageUrl || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) return imageUrl;
+    try {
+        const key = new URL(imageUrl).pathname.slice(1);
+        return `${API_BASE}/api/storage/file/${key}`;
+    } catch {
+        return imageUrl;
+    }
+}
+
 interface UseCharacterCardOptions {
     character: Character;
     sessionId: string;
@@ -127,6 +141,8 @@ export function useCharacterCard({
     const [tempCropSrc, setTempCropSrc] = useState<string | null>(null);
     const [arenaFocusSrc, setArenaFocusSrc] = useState<string | null>(null);
     const [pendingPortraitBase64, setPendingPortraitBase64] = useState<string | null>(null);
+    // When true, arena focus confirm updates only the focus coords (no re-upload)
+    const [isReArenaFocusMode, setIsReArenaFocusMode] = useState(false);
 
     const openArenaFocusStep = (base64: string) => {
         setPendingPortraitBase64(base64);
@@ -231,9 +247,27 @@ export function useCharacterCard({
 
     const handleArenaFocusConfirm = async (focus: ArenaPortraitFocus) => {
         const base64 = pendingPortraitBase64;
+        const focusOnly = isReArenaFocusMode;
         setIsArenaFocusCropping(false);
         setArenaFocusSrc(null);
         setPendingPortraitBase64(null);
+        setIsReArenaFocusMode(false);
+
+        const clampedFocus = {
+            x: Math.max(0, Math.min(100, Number.isFinite(focus.x) ? focus.x : 50)),
+            y: Math.max(0, Math.min(100, Number.isFinite(focus.y) ? focus.y : 30)),
+            zoom: Math.max(1, Math.min(3, Number.isFinite(focus.zoom) ? focus.zoom : 1)),
+        };
+
+        if (focusOnly) {
+            globalEventStore.append({
+                id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_UPDATED", actorUserId: normalizedUserId,
+                createdAt: new Date().toISOString(), visibility: "PUBLIC",
+                payload: { characterId: character.id, changes: { arenaPortraitFocus: clampedFocus } }
+            } as any);
+            setIsImageProcessing(false);
+            return;
+        }
 
         if (!base64) {
             setIsImageProcessing(false);
@@ -253,7 +287,23 @@ export function useCharacterCard({
         setIsArenaFocusCropping(false);
         setArenaFocusSrc(null);
         setPendingPortraitBase64(null);
+        setIsReArenaFocusMode(false);
         setIsImageProcessing(false);
+    };
+
+    const handleReArenaFocus = () => {
+        if (!isGM || !character.imageUrl || isImageProcessing) return;
+        setArenaFocusSrc(character.imageUrl);
+        setIsArenaFocusCropping(true);
+        setIsImageProcessing(true);
+        setIsReArenaFocusMode(true);
+    };
+
+    const handleReCrop = () => {
+        if (!isGM || !character.imageUrl || isImageProcessing) return;
+        setTempCropSrc(toProxyUrl(character.imageUrl));
+        setIsCropping(true);
+        setIsImageProcessing(true);
     };
 
     // ── Bio Handlers ──────────────────────────────────────────────────────────
@@ -437,6 +487,6 @@ export function useCharacterCard({
         // Cropper
         isCropping, tempCropSrc, handleCropConfirm, handleCropCancel,
         isArenaFocusCropping, arenaFocusSrc, handleArenaFocusConfirm, handleArenaFocusCancel,
-        isImageProcessing,
+        isImageProcessing, handleReCrop, handleReArenaFocus
     };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { Pencil, Crosshair } from "lucide-react";
 
 interface CharacterPortraitProps {
     name: string;
@@ -16,6 +17,8 @@ interface CharacterPortraitProps {
     onCancelEditName: () => void;
     onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     isImageProcessing: boolean;
+    onReCrop?: () => void;
+    onReArenaFocus?: () => void;
 }
 
 export function CharacterPortrait({
@@ -32,6 +35,8 @@ export function CharacterPortrait({
     onCancelEditName,
     onImageUpload,
     isImageProcessing,
+    onReCrop,
+    onReArenaFocus,
 }: CharacterPortraitProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,7 +105,32 @@ export function CharacterPortrait({
                     <div
                         className="portrait-image"
                         style={{ backgroundImage: `url(${imageUrl})` }}
-                    />
+                    >
+                        {isGM && !isImageProcessing && onReCrop && (
+                            <button
+                                className="re-crop-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onReCrop();
+                                }}
+                                title="Reajustar enquadramento do retrato"
+                            >
+                                <Pencil size={14} />
+                            </button>
+                        )}
+                        {isGM && !isImageProcessing && onReArenaFocus && (
+                            <button
+                                className="re-crop-btn re-arena-focus-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onReArenaFocus();
+                                }}
+                                title="Reajustar foco da arena"
+                            >
+                                <Crosshair size={14} />
+                            </button>
+                        )}
+                    </div>
                 ) : (
                     /* Sem imagem: mostra overlay de upload */
                     <div className="portrait-upload-overlay">
@@ -185,6 +215,38 @@ export function CharacterPortrait({
 
                 .character-portrait.editable:hover .portrait-upload-overlay {
                     background: rgba(var(--accent-rgb), 0.08);
+                }
+
+                .re-crop-btn {
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: rgba(0, 0, 0, 0.6);
+                    border: 1px solid var(--accent-color);
+                    color: var(--accent-color);
+                    border-radius: 50%;
+                    width: 28px;
+                    height: 28px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    opacity: 0.4;
+                    transition: all 0.2s ease;
+                    z-index: 10;
+                    backdrop-filter: blur(4px);
+                }
+
+                .re-crop-btn:hover {
+                    opacity: 1;
+                    background: var(--accent-color);
+                    color: #000;
+                    transform: scale(1.1);
+                    box-shadow: 0 0 10px var(--accent-color);
+                }
+
+                .re-arena-focus-btn {
+                    top: 44px;
                 }
 
                 .upload-icon {

@@ -13,6 +13,44 @@ import { useHeaderLogic } from "@/hooks/useHeaderLogic";
 import { ThemeSelector } from "@/components/header/ThemeSelector";
 import { BattlemapToolbar } from "@/components/header/BattlemapToolbar";
 import { UnifiedSoundPanel } from "@/components/header/UnifiedSoundPanel";
+import { generateThemeCSS, getThemePreset } from "@/lib/themePresets";
+
+type LocalThemePreference = {
+    preset?: string;
+    color?: string;
+};
+
+function normalizeUserId(userId: string): string {
+    return userId.trim().toLowerCase();
+}
+
+function getLocalThemeKey(sessionId: string, userId: string): string | null {
+    const normalizedUserId = normalizeUserId(userId);
+    if (!sessionId || !normalizedUserId) return null;
+    return `cronos_local_theme_${sessionId}_${normalizedUserId}`;
+}
+
+function readLocalThemePreference(sessionId: string, userId: string): LocalThemePreference {
+    const key = getLocalThemeKey(sessionId, userId);
+    if (key) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw) as LocalThemePreference;
+                return {
+                    preset: parsed.preset || undefined,
+                    color: parsed.color || undefined,
+                };
+            } catch {
+                // Ignore parse errors and fallback to legacy storage keys.
+            }
+        }
+    }
+
+    const legacyPreset = localStorage.getItem(`theme_preset_${sessionId}`) || undefined;
+    const legacyColor = localStorage.getItem(`theme_color_${sessionId}`) || undefined;
+    return { preset: legacyPreset, color: legacyColor };
+}
 
 export function HeaderWrapper() {
     const pathname = usePathname();
@@ -45,14 +83,81 @@ export function HeaderWrapper() {
         customColorG,
         customColorB,
         isTheaterMode,
+        themeLocked,
         changeSessionNumber,
     } = useHeaderLogic(sessionId, searchParams);
+
+    const [localUpdateKey, setLocalUpdateKey] = useState(0);
+    const isGM = userRole === "GM";
 
     useEffect(() => {
         if (sessionId && userId) {
             floatingNotesStore.init(sessionId, userId);
         }
     }, [sessionId, userId]);
+
+    // ─── Local Theme Override Injection ───
+    useEffect(() => {
+        if (isGM || !sessionId || themeLocked) {
+            const el = document.getElementById("theme-player-override");
+            if (el) el.remove();
+            return;
+        }
+
+        const localThemeKey = getLocalThemeKey(sessionId, userId);
+        if (!localThemeKey) {
+            const el = document.getElementById("theme-player-override");
+            if (el) el.remove();
+            return;
+        }
+        const { preset: localPreset, color: localColor } = readLocalThemePreference(sessionId, userId);
+
+        if (!localPreset && !localColor) {
+            const el = document.getElementById("theme-player-override");
+            if (el) el.remove();
+            return;
+        }
+
+        const theme = getThemePreset((localPreset as any) || themePreset);
+        let css = generateThemeCSS(theme);
+
+        if (localColor) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(localColor);
+            if (result) {
+                const r = parseInt(result[1], 16);
+                const g = parseInt(result[2], 16);
+                const b = parseInt(result[3], 16);
+                css += `
+                    :root {
+                        --accent-color: ${localColor} !important;
+                        --accent-rgb: ${r}, ${g}, ${b} !important;
+                        --accent-glow: ${localColor}4D !important;
+                        --border-color: rgba(${r}, ${g}, ${b}, 0.2) !important;
+                        --ornament-glow: 0 0 15px rgba(${r}, ${g}, ${b}, 0.15) !important;
+                        --theme-modal-border: ${localColor} !important;
+                        --theme-scrollbar-thumb: rgba(${r}, ${g}, ${b}, 0.2) !important;
+                        --gold-gradient: linear-gradient(135deg, ${localColor} 0%, rgba(${Math.min(255, r + 60)}, ${Math.min(255, g + 60)}, ${Math.min(255, b + 60)}, 1) 50%, ${localColor} 100%) !important;
+                    }
+                `;
+            }
+        }
+
+        let styleEl = document.getElementById("theme-player-override") as HTMLStyleElement | null;
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "theme-player-override";
+            document.head.appendChild(styleEl);
+        }
+
+        if (styleEl.textContent !== css) {
+            styleEl.textContent = css;
+        }
+        // Keep this style as the last <head> child so it overrides session theme styles.
+        document.head.appendChild(styleEl);
+    }, [isGM, sessionId, userId, localUpdateKey, themePreset, themeLocked]);
+    // Note: themeLocked is a dependency here so that if the GM locks it, 
+    // the effect re-runs, localStorage is cleared by ThemeSelector(or here), 
+    // and the override is removed.
 
     if (pathname === "/") {
         return null;
@@ -63,7 +168,7 @@ export function HeaderWrapper() {
             <div className="container header-content">
                 <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                     <h1>{sessionId ? `Sessão: ${sessionNumber}` : "Cronos Vtt"}</h1>
-                    {sessionId && userRole === "GM" && (
+                    {sessionId && isGM && (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <div
                                 style={{
@@ -100,17 +205,21 @@ export function HeaderWrapper() {
                                     <ChevronDown size={16} />
                                 </button>
                             </div>
-
-                            <ThemeSelector
-                                sessionId={sessionId}
-                                userId={userId}
-                                themePreset={themePreset}
-                                themeColor={themeColor}
-                                customColorR={customColorR}
-                                customColorG={customColorG}
-                                customColorB={customColorB}
-                            />
                         </div>
+                    )}
+                    {sessionId && (
+                        <ThemeSelector
+                            sessionId={sessionId}
+                            userId={userId}
+                            themePreset={themePreset}
+                            themeColor={themeColor}
+                            customColorR={customColorR}
+                            customColorG={customColorG}
+                            customColorB={customColorB}
+                            isGM={isGM}
+                            themeLocked={themeLocked}
+                            onLocalUpdate={() => setLocalUpdateKey(k => k + 1)}
+                        />
                     )}
                 </div>
 

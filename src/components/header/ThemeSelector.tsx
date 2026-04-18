@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
-import { Palette } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Lock, Palette } from "lucide-react";
 import { globalEventStore } from "@/lib/eventStore";
 import { THEME_LIST, getThemePreset } from "@/lib/themePresets";
 import { v4 as uuidv4 } from "uuid";
@@ -14,6 +14,63 @@ interface ThemeSelectorProps {
     customColorR: number;
     customColorG: number;
     customColorB: number;
+    isGM: boolean;
+    themeLocked: boolean;
+    onLocalUpdate?: () => void;
+}
+
+type LocalThemePreference = {
+    preset?: string;
+    color?: string;
+};
+
+function normalizeUserId(userId: string): string {
+    return userId.trim().toLowerCase();
+}
+
+function getLocalThemeKey(sessionId: string, userId: string): string | null {
+    const normalizedUserId = normalizeUserId(userId);
+    if (!sessionId || !normalizedUserId) return null;
+    return `cronos_local_theme_${sessionId}_${normalizedUserId}`;
+}
+
+function readLocalThemePreference(sessionId: string, userId: string): LocalThemePreference {
+    const key = getLocalThemeKey(sessionId, userId);
+    if (key) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw) as LocalThemePreference;
+                return {
+                    preset: parsed.preset || undefined,
+                    color: parsed.color || undefined,
+                };
+            } catch {
+                // Fallback to legacy keys below.
+            }
+        }
+    }
+
+    const legacyPreset = localStorage.getItem(`theme_preset_${sessionId}`) || undefined;
+    const legacyColor = localStorage.getItem(`theme_color_${sessionId}`) || undefined;
+    return { preset: legacyPreset, color: legacyColor };
+}
+
+function writeLocalThemePreference(sessionId: string, userId: string, preference: LocalThemePreference) {
+    const key = getLocalThemeKey(sessionId, userId);
+    if (!key) return;
+
+    const normalized: LocalThemePreference = {
+        preset: preference.preset || undefined,
+        color: preference.color || undefined,
+    };
+
+    if (!normalized.preset && !normalized.color) {
+        localStorage.removeItem(key);
+        return;
+    }
+
+    localStorage.setItem(key, JSON.stringify(normalized));
 }
 
 export function ThemeSelector({
@@ -24,13 +81,125 @@ export function ThemeSelector({
     customColorR,
     customColorG,
     customColorB,
+    isGM,
+    themeLocked,
+    onLocalUpdate,
 }: ThemeSelectorProps) {
     const [showPanel, setShowPanel] = useState(false);
+
+    // Local Theme State (Players Only)
+    const [localPreset, setLocalPreset] = useState<string | null>(null);
+    const [localColor, setLocalColor] = useState<string | null>(null);
+
+    const isPlayerLocked = themeLocked && !isGM;
+
+    // Load from localStorage on mount and when user changes
+    useEffect(() => {
+        if (!isGM) {
+            const pref = readLocalThemePreference(sessionId, userId);
+            setLocalPreset(pref.preset || null);
+            setLocalColor(pref.color || null);
+        }
+    }, [isGM, sessionId, userId]);
+
+    // Handle lock synchronization
+    useEffect(() => {
+        if (themeLocked && !isGM) {
+            // GM locked the theme: temporary clear local override state to force session theme
+            // but keep localStorage so it returns when unlocked
+            setShowPanel(false);
+            setLocalPreset(null);
+            setLocalColor(null);
+        } else if (!themeLocked && !isGM) {
+            // Re-load from storage when unlocked
+            const pref = readLocalThemePreference(sessionId, userId);
+            setLocalPreset(pref.preset || null);
+            setLocalColor(pref.color || null);
+        }
+    }, [themeLocked, isGM, sessionId, userId]);
+
+    const activePreset = !isGM && localPreset ? localPreset : themePreset;
+    const activeColor = !isGM && localColor ? localColor : themeColor;
+
+    const handlePresetChange = (presetId: string) => {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId) return;
+
+        if (isGM) {
+            globalEventStore.append({
+                id: uuidv4(),
+                sessionId,
+                seq: 0,
+                type: "SESSION_THEME_PRESET_UPDATED",
+                actorUserId: normalizedUserId,
+                createdAt: new Date().toISOString(),
+                visibility: "PUBLIC",
+                payload: { preset: presetId },
+            } as any);
+        } else if (!themeLocked) {
+            setLocalPreset(presetId);
+            writeLocalThemePreference(sessionId, userId, {
+                preset: presetId,
+                color: localColor || undefined,
+            });
+            onLocalUpdate?.();
+        }
+    };
+
+    const handleColorChange = (hex: string) => {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId) return;
+
+        if (isGM) {
+            globalEventStore.append({
+                id: uuidv4(),
+                sessionId,
+                seq: 0,
+                type: "SESSION_THEME_UPDATED",
+                actorUserId: normalizedUserId,
+                createdAt: new Date().toISOString(),
+                visibility: "PUBLIC",
+                payload: { color: hex },
+            } as any);
+        } else if (!themeLocked) {
+            const normalizedHex = hex || null;
+            setLocalColor(normalizedHex);
+            writeLocalThemePreference(sessionId, userId, {
+                preset: localPreset || undefined,
+                color: normalizedHex || undefined,
+            });
+            onLocalUpdate?.();
+        }
+    };
+
+    const toggleLock = (locked: boolean) => {
+        if (!isGM) return;
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId) return;
+
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "SESSION_THEME_LOCK_UPDATED",
+            actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: { locked },
+        } as any);
+    };
 
     return (
         <div style={{ position: "relative" }}>
             <button
-                onClick={() => setShowPanel(!showPanel)}
+                type="button"
+                onClick={() => {
+                    if (isPlayerLocked) return;
+                    setShowPanel(!showPanel);
+                }}
+                title={isPlayerLocked ? "Tema bloqueado pelo Mestre" : "Abrir seletor de tema"}
+                aria-disabled={isPlayerLocked}
+                disabled={isPlayerLocked}
                 style={{
                     background: showPanel
                         ? "var(--accent-color)"
@@ -39,7 +208,7 @@ export function ThemeSelector({
                     color: showPanel ? "#000" : "var(--accent-color)",
                     fontSize: "0.65rem",
                     padding: "4px 10px",
-                    cursor: "pointer",
+                    cursor: isPlayerLocked ? "not-allowed" : "pointer",
                     fontFamily: "var(--font-header)",
                     letterSpacing: "0.1em",
                     borderRadius: "var(--border-radius)",
@@ -49,10 +218,12 @@ export function ThemeSelector({
                     gap: "6px",
                     marginLeft: "8px",
                     height: "32px",
+                    opacity: isPlayerLocked ? 0.55 : 1,
                 }}
             >
                 <Palette size={14} />
-                <span>TEMA</span>
+                <span>{isPlayerLocked ? "TEMA BLOQUEADO" : "TEMA"}</span>
+                {isPlayerLocked ? <Lock size={12} /> : null}
             </button>
 
             {showPanel && (
@@ -94,12 +265,12 @@ export function ThemeSelector({
                                     justifyContent: "space-between",
                                 }}
                             >
-                                <span>⚜ PRESETS TEMÁTICOS</span>
+                                <span>PRESETS TEMATICOS</span>
                                 <span
                                     onClick={() => setShowPanel(false)}
                                     style={{ cursor: "pointer", opacity: 0.5 }}
                                 >
-                                    ✕
+                                    x
                                 </span>
                             </div>
                             <div
@@ -110,23 +281,12 @@ export function ThemeSelector({
                                 }}
                             >
                                 {THEME_LIST.map((theme) => {
-                                    const isActive = themePreset === theme.id;
+                                    const isActive = activePreset === theme.id;
                                     return (
                                         <button
                                             key={theme.id}
                                             title={theme.description}
-                                            onClick={() => {
-                                                globalEventStore.append({
-                                                    id: uuidv4(),
-                                                    sessionId,
-                                                    seq: 0,
-                                                    type: "SESSION_THEME_PRESET_UPDATED",
-                                                    actorUserId: userId,
-                                                    createdAt: new Date().toISOString(),
-                                                    visibility: "PUBLIC",
-                                                    payload: { preset: theme.id },
-                                                } as any);
-                                            }}
+                                            onClick={() => handlePresetChange(theme.id)}
                                             style={{
                                                 background: isActive
                                                     ? `linear-gradient(135deg, ${theme.accentColor}, rgba(${theme.accentRgb}, 0.7))`
@@ -135,7 +295,7 @@ export function ThemeSelector({
                                                 color: isActive ? "#000" : theme.accentColor,
                                                 fontSize: "0.6rem",
                                                 padding: "10px 4px",
-                                                cursor: "pointer",
+                                                cursor: isPlayerLocked ? "not-allowed" : "pointer",
                                                 fontFamily: "var(--font-header)",
                                                 letterSpacing: "0.05em",
                                                 borderRadius: "4px",
@@ -148,6 +308,7 @@ export function ThemeSelector({
                                                     ? `0 0 15px rgba(${theme.accentRgb}, 0.2)`
                                                     : "none",
                                                 transform: isActive ? "scale(1.03)" : "scale(1)",
+                                                opacity: isPlayerLocked ? 0.5 : 1,
                                             }}
                                         >
                                             <span style={{ fontSize: "1.2rem" }}>{theme.icon}</span>
@@ -171,7 +332,7 @@ export function ThemeSelector({
                                     borderBottom: "1px solid rgba(var(--accent-rgb), 0.15)",
                                 }}
                             >
-                                🎨 COR PERSONALIZADA
+                                COR PERSONALIZADA
                             </div>
                             <div
                                 style={{
@@ -183,28 +344,17 @@ export function ThemeSelector({
                                 <input
                                     type="color"
                                     value={
-                                        themeColor ||
-                                        getThemePreset(themePreset as any).accentColor
+                                        activeColor ||
+                                        getThemePreset(activePreset as any).accentColor
                                     }
-                                    onChange={(e) => {
-                                        const hex = e.target.value;
-                                        globalEventStore.append({
-                                            id: uuidv4(),
-                                            sessionId,
-                                            seq: 0,
-                                            type: "SESSION_THEME_UPDATED",
-                                            actorUserId: userId,
-                                            createdAt: new Date().toISOString(),
-                                            visibility: "PUBLIC",
-                                            payload: { color: hex },
-                                        } as any);
-                                    }}
+                                    disabled={isPlayerLocked}
+                                    onChange={(e) => handleColorChange(e.target.value)}
                                     style={{
                                         width: "44px",
                                         height: "44px",
                                         border: "2px solid rgba(var(--accent-rgb), 0.3)",
                                         borderRadius: "6px",
-                                        cursor: "pointer",
+                                        cursor: isPlayerLocked ? "not-allowed" : "pointer",
                                         background: "transparent",
                                         padding: 0,
                                     }}
@@ -257,6 +407,7 @@ export function ThemeSelector({
                                                     max={255}
                                                     value={val}
                                                     onChange={(e) => {
+                                                        if (isPlayerLocked) return;
                                                         const v = Math.max(
                                                             0,
                                                             Math.min(255, parseInt(e.target.value) || 0)
@@ -269,16 +420,7 @@ export function ThemeSelector({
                                                             [r, g, b]
                                                                 .map((x) => x.toString(16).padStart(2, "0"))
                                                                 .join("");
-                                                        globalEventStore.append({
-                                                            id: uuidv4(),
-                                                            sessionId,
-                                                            seq: 0,
-                                                            type: "SESSION_THEME_UPDATED",
-                                                            actorUserId: userId,
-                                                            createdAt: new Date().toISOString(),
-                                                            visibility: "PUBLIC",
-                                                            payload: { color: hex },
-                                                        } as any);
+                                                        handleColorChange(hex);
                                                     }}
                                                     style={{
                                                         width: "100%",
@@ -297,21 +439,10 @@ export function ThemeSelector({
                                         );
                                     })}
                                 </div>
-                                {themeColor && (
+                                {(isGM ? !!themeColor : !!localColor) && (
                                     <button
                                         title="Resetar para cor do preset"
-                                        onClick={() => {
-                                            globalEventStore.append({
-                                                id: uuidv4(),
-                                                sessionId,
-                                                seq: 0,
-                                                type: "SESSION_THEME_UPDATED",
-                                                actorUserId: userId,
-                                                createdAt: new Date().toISOString(),
-                                                visibility: "PUBLIC",
-                                                payload: { color: "" },
-                                            } as any);
-                                        }}
+                                        onClick={() => handleColorChange("")}
                                         style={{
                                             background: "rgba(255,100,100,0.1)",
                                             border: "1px solid rgba(255,100,100,0.3)",
@@ -323,11 +454,40 @@ export function ThemeSelector({
                                             transition: "all 0.2s",
                                         }}
                                     >
-                                        ✕
+                                        RESET
                                     </button>
                                 )}
                             </div>
                         </div>
+
+                        {/* Section: GM Focus (Lock) */}
+                        {isGM && (
+                            <div style={{ marginTop: "10px", borderTop: "1px solid rgba(var(--accent-rgb), 0.15)", paddingTop: "15px" }}>
+                                <button
+                                    onClick={() => toggleLock(!themeLocked)}
+                                    style={{
+                                        width: "100%",
+                                        background: themeLocked ? "rgba(220, 50, 50, 0.15)" : "rgba(255, 255, 255, 0.03)",
+                                        border: `1px solid ${themeLocked ? "#dc3232" : "rgba(var(--accent-rgb), 0.3)"}`,
+                                        color: themeLocked ? "#ff6b6b" : "var(--accent-color)",
+                                        fontSize: "0.6rem",
+                                        padding: "10px",
+                                        cursor: "pointer",
+                                        fontFamily: "var(--font-header)",
+                                        letterSpacing: "0.15em",
+                                        borderRadius: "4px",
+                                        transition: "all 0.3s",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "8px"
+                                    }}
+                                >
+                                    <span style={{ fontSize: "1rem" }}>{themeLocked ? "🔒" : "🔓"}</span>
+                                    <span>{themeLocked ? "DESBLOQUEAR TEMAS" : "FORCAR TEMA PARA TODOS (SOMENTE MESTRE)"}</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </>
             )}
