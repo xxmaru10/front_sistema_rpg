@@ -31,6 +31,8 @@ const DICE_ORDER: DieType[] = ["dF", "d4", "d6", "d8", "d10", "d12", "d20", "d10
 const IDLE_Y = FLOOR_Y + 1.45;
 const DIE_VISUAL_SCALE = 0.7;
 const POOL_CENTER_Z = -0.35;
+const OPEN_INTERACTION_GUARD_MS = 240;
+const MIN_HOLD_TO_THROW_MS = 120;
 
 interface RuntimeDie extends PhysicsDie {
     sourceType: DieType;
@@ -89,6 +91,8 @@ export function useFateDiceSimulation({
     const mouseVelRef = useRef({ x: 0, y: 0 });
     const isHeldRef = useRef(false);
     const randBufRef = useRef<number[]>([]);
+    const interactionReadyAtRef = useRef(0);
+    const holdStartedAtRef = useRef(0);
 
     const [uiPhase, setUiPhase] = useState<"idle" | "held" | "thrown" | "snapping" | "done">("idle");
     const [uiResults, setUiResults] = useState<number[] | null>(null);
@@ -106,6 +110,8 @@ export function useFateDiceSimulation({
         setUiResults(null);
         setUiBreakdown(null);
         isHeldRef.current = false;
+        holdStartedAtRef.current = 0;
+        interactionReadyAtRef.current = performance.now() + OPEN_INTERACTION_GUARD_MS;
 
         // Pré-busca números aleatórios
         fetchRandomOrg(80).then(nums => { if (alive) randBufRef.current = nums; });
@@ -538,9 +544,11 @@ export function useFateDiceSimulation({
             // ── Handlers ──────────────────────────────────────────────────────
             function startHold(cx: number, cy: number) {
                 if (state.phase !== "idle") return;
+                if (performance.now() < interactionReadyAtRef.current) return;
                 mouseRef.current = mousePrevRef.current = { x: cx, y: cy };
                 mouseVelRef.current = { x: 0, y: 0 };
                 isHeldRef.current = true;
+                holdStartedAtRef.current = performance.now();
                 state.phase = "held";
                 setUiPhase("held");
             }
@@ -571,6 +579,12 @@ export function useFateDiceSimulation({
                 const mvy = mouseVelRef.current.y;
                 const speed = Math.hypot(mvx, mvy);
                 const threw = speed > 3;
+                const holdMs = performance.now() - holdStartedAtRef.current;
+                if (holdMs < MIN_HOLD_TO_THROW_MS && speed < 3) {
+                    state.phase = "idle";
+                    setUiPhase("idle");
+                    return;
+                }
 
                 if (randBufRef.current.length < 10) {
                     fetchRandomOrg(80).then(nums => { randBufRef.current = [...randBufRef.current, ...nums]; });
@@ -660,6 +674,7 @@ export function useFateDiceSimulation({
     const autoRoll = () => {
         const state = sceneRef.current;
         if (!state || state.phase !== "idle") return;
+        if (performance.now() < interactionReadyAtRef.current) return;
         
         function consumeRand(): number {
             if (randBufRef.current.length > 0) return randBufRef.current.shift()!;

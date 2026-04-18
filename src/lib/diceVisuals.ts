@@ -216,10 +216,10 @@ export function fillSymbolShape(ctx: CanvasRenderingContext2D, S: number, symbol
     } else if (/^\d+$/.test(symbol)) {
         // Canvas 2D nÃ£o resolve CSS var() em font-family com consistÃªncia.
         // Stack direta para garantir renderizaÃ§Ã£o dos numerais.
-        ctx.font = `800 ${S * 0.44}px "Cinzel", "Times New Roman", serif`;
+        ctx.font = `800 ${S * 0.34}px "Cinzel", "Times New Roman", serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(symbol, cx, cy + S * 0.05);
+        ctx.fillText(symbol, cx, cy + S * 0.035);
     } else if (symbol.startsWith("pip:")) {
         const count = parseInt(symbol.split(":")[1]);
         const d = S * 0.22;

@@ -6,7 +6,7 @@
 import React from "react";
 import { Play, Pencil, Trash2, X, AlertCircle } from "lucide-react";
 import { DiceBreakdownEntry, DicePoolEntry, DieType } from "@/types/domain";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { DiceResultOverlayMode } from "@/lib/diceSimulationStore";
 
 interface FateResultOverlayProps {
@@ -67,6 +67,12 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [limitToast, setLimitToast] = useState(false);
 
+    useEffect(() => {
+        if (phase !== "idle" && isEditing) {
+            setIsEditing(false);
+        }
+    }, [phase, isEditing]);
+
     const totalDiceCount = useMemo(() => dicePool.reduce((acc, curr) => acc + curr.count, 0), [dicePool]);
 
     const notationText = useMemo(() => {
@@ -99,6 +105,16 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
 
     const handleClear = () => {
         onPoolChange([]);
+    };
+
+    const blockPointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const blockClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
     };
 
     const label =
@@ -165,7 +181,12 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                     }}>
                         {/* BotÃƒÂ£o de LÃƒÂ¡pis */}
                         <button
-                            onClick={onAutoRoll}
+                            onMouseDown={blockPointerDown}
+                            onTouchStart={blockPointerDown}
+                            onClick={(e) => {
+                                blockClick(e);
+                                onAutoRoll();
+                            }}
                             style={{
                                 background: "rgba(0,0,0,0.45)",
                                 border: `1px solid ${accentColor}33`,
@@ -198,7 +219,12 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                             <Play size={16} fill="currentColor" style={{ marginLeft: "1px" }} />
                         </button>
                         <button
-                            onClick={() => setIsEditing(!isEditing)}
+                            onMouseDown={blockPointerDown}
+                            onTouchStart={blockPointerDown}
+                            onClick={(e) => {
+                                blockClick(e);
+                                setIsEditing((prev) => !prev);
+                            }}
                             style={{
                                 background: isEditing ? `${accentColor}22` : "rgba(0,0,0,0.45)",
                                 border: `1px solid ${isEditing ? accentColor : accentColor + "33"}`,
@@ -245,13 +271,21 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         transition: "all 0.3s ease",
                         pointerEvents: "auto",
                     }}
-                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
                     onMouseUp={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}>
                         {notationText}
                         {isEditing && totalDiceCount > 0 && (
                             <button
-                                onClick={handleClear}
+                                onMouseDown={blockPointerDown}
+                                onTouchStart={blockPointerDown}
+                                onClick={(e) => {
+                                    blockClick(e);
+                                    handleClear();
+                                }}
                                 style={{
                                     background: "transparent",
                                     border: "none",
@@ -292,15 +326,35 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                             pointerEvents: "auto",
                             zIndex: 20,
                             animation: "panelFadeIn 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
-                        }}>
+                        }}
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
+                        onClick={(e) => e.stopPropagation()}>
                              <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                                 <span style={{ color: "rgba(230,225,210,0.5)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pool de Dados</span>
-                                <button onClick={() => setIsEditing(false)} style={{ background: "transparent", border: "none", color: "rgba(230,225,210,0.4)", cursor: "pointer" }}><X size={14} /></button>
+                                <button
+                                    onMouseDown={blockPointerDown}
+                                    onTouchStart={blockPointerDown}
+                                    onClick={(e) => {
+                                        blockClick(e);
+                                        setIsEditing(false);
+                                    }}
+                                    style={{ background: "transparent", border: "none", color: "rgba(230,225,210,0.4)", cursor: "pointer" }}
+                                >
+                                    <X size={14} />
+                                </button>
                              </div>
                              {(["dF", "d4", "d6", "d8", "d10", "d12", "d20", "d100"] as DieType[]).map(type => (
                                 <button
                                     key={type}
-                                    onClick={() => handleAddDie(type)}
+                                    onMouseDown={blockPointerDown}
+                                    onTouchStart={blockPointerDown}
+                                    onClick={(e) => {
+                                        blockClick(e);
+                                        handleAddDie(type);
+                                    }}
                                     style={{
                                         background: "rgba(255,255,255,0.03)",
                                         border: "1px solid rgba(255,255,255,0.08)",
