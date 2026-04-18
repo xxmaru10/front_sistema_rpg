@@ -138,6 +138,10 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
         e.stopPropagation();
     };
 
+    const stopPointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+        e.stopPropagation();
+    };
+
     const blockClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -360,10 +364,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                             zIndex: 20,
                             animation: "panelFadeIn 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
                         }}
-                        onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}>
                              <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                                 <span style={{ color: "rgba(230,225,210,0.5)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pool de Dados</span>
@@ -451,7 +452,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                                         gap: "8px",
                                         marginTop: "4px",
                                     }}
-                                    onMouseDown={blockPointerDown}
+                                    onMouseDown={stopPointerDown}
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <input
@@ -460,8 +461,8 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                                             setManualExpression(e.target.value);
                                             if (manualError) setManualError(null);
                                         }}
-                                        onMouseDown={blockPointerDown}
-                                        onTouchStart={blockPointerDown}
+                                        onMouseDown={stopPointerDown}
+                                        onTouchStart={stopPointerDown}
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") {
                                                 e.preventDefault();

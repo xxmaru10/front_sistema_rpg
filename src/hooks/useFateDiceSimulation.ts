@@ -85,7 +85,10 @@ function buildInstantResultsFromPool(pool: DicePoolEntry[]): { results: number[]
     return { results, breakdown: sortBreakdown(breakdown) };
 }
 
-function parseManualDiceExpression(rawExpression: string): { results: number[]; error?: string } {
+function parseManualDiceExpression(
+    rawExpression: string,
+    nextRandomUnit: () => number,
+): { results: number[]; error?: string } {
     const expression = rawExpression.replace(/\s+/g, "").toLowerCase();
     if (!expression) {
         return { results: [], error: "Digite uma expressão de dados (ex: 2d6+d20)." };
@@ -115,7 +118,7 @@ function parseManualDiceExpression(rawExpression: string): { results: number[]; 
             const faceToken = diceMatch[2].toLowerCase();
             if (faceToken === "f") {
                 for (let i = 0; i < count; i++) {
-                    results.push(Math.floor(Math.random() * 3) - 1);
+                    results.push(Math.floor(nextRandomUnit() * 3) - 1);
                 }
                 continue;
             }
@@ -126,7 +129,7 @@ function parseManualDiceExpression(rawExpression: string): { results: number[]; 
             }
 
             for (let i = 0; i < count; i++) {
-                results.push(Math.floor(Math.random() * faces) + 1);
+                results.push(Math.floor(nextRandomUnit() * faces) + 1);
             }
             continue;
         }
@@ -811,7 +814,18 @@ export function useFateDiceSimulation({
             return "Aguarde a rolagem atual terminar para usar a entrada manual.";
         }
 
-        const parsed = parseManualDiceExpression(expression);
+        const consumeRand = () => {
+            if (randBufRef.current.length > 0) return randBufRef.current.shift()!;
+            return Math.random();
+        };
+
+        if (randBufRef.current.length < 20) {
+            fetchRandomOrg(80).then(nums => {
+                randBufRef.current = [...randBufRef.current, ...nums];
+            });
+        }
+
+        const parsed = parseManualDiceExpression(expression, consumeRand);
         if (parsed.error) return parsed.error;
 
         if (settleTimeoutRef.current !== null) {
