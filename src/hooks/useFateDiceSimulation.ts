@@ -13,6 +13,7 @@ import {
     isSettled, 
     resolveCollisions, 
     cursorToWorld, 
+    createFacedDieGeometry,
     readFaceUpWithIndex,
     fetchRandomOrg,
     FLOOR_Y,
@@ -298,20 +299,6 @@ export function useFateDiceSimulation({
                 return [getCachedTexture("?")].map(m);
             }
 
-            function createDieGeometry(type: DieType) {
-                if (type === "dF" || type === "d6") return new THREE.BoxGeometry(1, 1, 1);
-                if (type === "d4") return new THREE.TetrahedronGeometry(1.0);
-                if (type === "d8") return new THREE.OctahedronGeometry(1.0);
-                if (type === "d12") return new THREE.DodecahedronGeometry(1.0);
-                if (type === "d20") return new THREE.IcosahedronGeometry(1.0);
-                if (type === "d10" || type === "d100") {
-                    // d10 is a pentagonal trapezohedron. We'll use a simplified Cyrano geometry or Cylinder with 10 segments
-                    const geo = new THREE.CylinderGeometry(0, 1.1, 1.2, 10);
-                    return geo;
-                }
-                return new THREE.BoxGeometry(1, 1, 1);
-            }
-
             // ── Dados ─────────────────────────────────────────────────────────
             const dice: RuntimeDie[] = [];
             const flatPool: Array<{
@@ -337,9 +324,14 @@ export function useFateDiceSimulation({
             const COLS = N_TOTAL > 0 ? Math.ceil(N_TOTAL / ROWS) : 1;
             
             flatPool.forEach((entry, i) => {
-                const geo = createDieGeometry(entry.renderType);
+                const faced = createFacedDieGeometry(entry.renderType, THREE);
+                const geo = faced.geometry;
                 const mats = makeMats(entry.renderType);
                 const mesh = new THREE.Mesh(geo, mats);
+                if (faced.faceNormals.length > 0) {
+                    mesh.userData.faceNormals = faced.faceNormals;
+                    mesh.userData.faceValues = faced.faceValues;
+                }
                 
                 const r = Math.floor(i / COLS);
                 const c = i % COLS;

@@ -243,7 +243,11 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         alignItems: "center",
                         gap: "10px",
                         transition: "all 0.3s ease",
-                    }}>
+                        pointerEvents: "auto",
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}>
                         {notationText}
                         {isEditing && totalDiceCount > 0 && (
                             <button
