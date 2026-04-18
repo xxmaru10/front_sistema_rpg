@@ -27,7 +27,9 @@ import {
 import { DiceBreakdownEntry, DicePoolEntry, DieType } from "@/types/domain";
 
 const DICE_ORDER: DieType[] = ["dF", "d4", "d6", "d8", "d10", "d12", "d20", "d100"];
-const IDLE_Y = FLOOR_Y + 2.2;
+const IDLE_Y = FLOOR_Y + 1.45;
+const DIE_VISUAL_SCALE = 0.7;
+const POOL_CENTER_Z = -0.35;
 
 interface RuntimeDie extends PhysicsDie {
     sourceType: DieType;
@@ -330,7 +332,7 @@ export function useFateDiceSimulation({
             });
 
             const N_TOTAL = flatPool.length;
-            const SPACING = 1.6;
+            const SPACING = 1.2;
             const ROWS = N_TOTAL > 0 ? Math.ceil(Math.sqrt(N_TOTAL)) : 1;
             const COLS = N_TOTAL > 0 ? Math.ceil(N_TOTAL / ROWS) : 1;
             
@@ -342,9 +344,10 @@ export function useFateDiceSimulation({
                 const r = Math.floor(i / COLS);
                 const c = i % COLS;
                 const px = (c - (COLS-1)/2) * SPACING;
-                const pz = (r - (ROWS-1)/2) * SPACING;
+                const pz = (r - (ROWS-1)/2) * SPACING + POOL_CENTER_Z;
 
                 mesh.position.set(px, IDLE_Y, pz);
+                mesh.scale.setScalar(DIE_VISUAL_SCALE);
                 mesh.rotation.set(
                     Math.random() * Math.PI * 2,
                     Math.random() * Math.PI * 2,
@@ -470,18 +473,18 @@ export function useFateDiceSimulation({
                         die.mesh.rotation.x += die.angVel.x;
                         die.mesh.rotation.y += die.angVel.y;
                         die.mesh.rotation.z += die.angVel.z;
-                        die.pos.y = IDLE_Y + Math.sin(t + i * 1.3) * 0.2;
+                        die.pos.y = IDLE_Y + Math.sin(t + i * 1.3) * 0.1;
                         die.mesh.position.y = die.pos.y;
                     });
 
                 } else if (state.phase === "held") {
-                    const HELD_Y = 2.6;
+                    const HELD_Y = 2.0;
                     const SPRING = 0.20;
                     const wp = cursorToWorld(THREE, mouseRef.current.x, mouseRef.current.y,
                                              state.containerW, state.containerH, camera, HELD_Y);
 
                     state.dice.forEach((die, i) => {
-                        const tx = wp ? wp.x + (i - (state.dice.length-1)/2) * 1.5 : die.pos.x;
+                        const tx = wp ? wp.x + (i - (state.dice.length-1)/2) * 1.2 : die.pos.x;
                         const tz = wp ? wp.z : die.pos.z;
                         die.vel.x += (tx     - die.pos.x) * SPRING;
                         die.vel.y += (HELD_Y - die.pos.y) * SPRING;
