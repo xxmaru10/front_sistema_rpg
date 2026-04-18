@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-18 (story-44 manual inline expression without 3D)
+last_updated: 2026-04-18 (story-44 compliance audit: manual input + random.org parity)
 status: ativo
 ---
 
@@ -182,12 +182,13 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Persistencia por identidade normalizada**: chave de tema local passou a usar `sessionId + userId.trim().toLowerCase()` para evitar vazamento de preferencia entre usuarios no mesmo navegador e alinhar com `knowledge/conventions.md`.
 
 ## Registro de Decisoes (Story 44)
-- **Quebra de contrato corrigida no pipeline de dados**: o callback `onSettled` passou a transportar `results + diceBreakdown` em todo o caminho de simulacao, evitando descarte silencioso de breakdown antes do `ROLL_RESOLVED`.
+- **Contrato de settle unificado com fallback manual**: o callback `onSettled` foi mantido no mesmo pipeline de eventos com `results` e `diceBreakdown` opcional, permitindo rolagem manual sem 3D sem quebrar o fluxo legado de breakdown.
 - **Compatibilidade legado preservada por flatten centralizado**: `createRollEvent` agora recalcula `dice` a partir de `diceBreakdown` quando presente, garantindo coerencia entre leitores antigos (array linear) e novos (breakdown por tipo).
 - **Modelagem de `d100` como entidade de dominio**: a simulacao continua renderizando dois d10 fisicos, mas persiste `d100` consolidado (1..100) no payload, mantendo semantica de regra sem alterar o backend.
 - **Fallback deterministico para caixa vazia**: quando o pool esta vazio no momento do settle/fallback WebGL, o sistema gera `4dF` automaticamente para manter o fluxo rapido sem regressao.
 - **Blindagem contra auto-roll acidental**: o fluxo `idle -> held -> thrown` agora exige um hold minimo antes do lancamento e aplica guarda curta na abertura da camara, evitando disparos involuntarios ao abrir/editar a caixa de dados.
 - **Expressao manual inline (`+`) sem 3D**: o seletor do overlay ganhou entrada textual para rolagens como `2d6+d20+4`, resolvidas de forma instantanea (sem simulacao 3D) e emitidas no mesmo pipeline de eventos, com fallback visual do log ajustado para exibir valores numericos quando nao houver `diceBreakdown`.
+- **Paridade de entropia e foco de input no modo manual**: a expressao manual passou a consumir o mesmo buffer prefetchado de `random.org` (com fallback local apenas quando necessario), e o painel removeu `preventDefault` no campo para preservar foco/digitacao sem click-through para o canvas.
 
 ## PadrÃµes Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) tÃªm sua prÃ³pria subpasta com hooks e estilos.

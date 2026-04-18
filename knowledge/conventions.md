@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-10 (story-37/follow-up-menu-d20 & home-dropdown-login)
+last_updated: 2026-04-18 (story-44 compliance audit and knowledge sync)
 status: ativo
 ---
 
