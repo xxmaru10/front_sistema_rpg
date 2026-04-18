@@ -341,6 +341,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                 if (savedOutput) {
                     mgr.setOutputDevice(savedOutput).catch(console.warn);
                 }
+            } else if (savedInput) {
+                // Mic falhou com device salvo — provavelmente stale; limpa para próxima tentativa usar default
+                localStorage.removeItem('voice_input_device');
+                setAudioInputDeviceId('');
             }
         } finally {
             setIsJoining(false);
@@ -363,20 +367,25 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         if (isRefreshing) return;
         setIsRefreshing(true);
         try {
-            wasConnectedBeforeRefresh.current = isConnected;
-
-            // Limpar estados locais
-            setIsConnected(false);
-            setPeers([]);
-            setParticipants([]);
-            setLocalSpeaking(false);
-            setLocalAudioLevel(0);
-
-            // Trigger para recriar o manager via refreshKey (useEffect cleanup será chamado)
-            setRefreshKey((prev: number) => prev + 1);
-            
-            // Note: O auto-reconnect agora é tratado pelo useEffect de auto-join, 
-            // que aguarda isManagerReady ser true.
+            const mgr = managerRef.current;
+            if (mgr) {
+                // Soft reconnect: preserva a sessão de voz ativa, apenas reanuncia
+                // presença e reconecta peers com falha — sem destruir o manager.
+                mgr.softReconnect();
+                setPeers([]);
+                setParticipants([]);
+                setLocalSpeaking(false);
+                setLocalAudioLevel(0);
+            } else {
+                // Manager não existe — recriação completa necessária
+                wasConnectedBeforeRefresh.current = isConnected;
+                setIsConnected(false);
+                setPeers([]);
+                setParticipants([]);
+                setLocalSpeaking(false);
+                setLocalAudioLevel(0);
+                setRefreshKey((prev: number) => prev + 1);
+            }
         } finally {
             setIsRefreshing(false);
         }

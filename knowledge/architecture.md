@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-12 (damage modal fix + dice breakdown)
+last_updated: 2026-04-13 (story-41 voice stability + shared AudioContext)
 status: ativo
 ---
 
@@ -29,7 +29,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Projeções no Cliente | Reduz carga no backend e permite UI instantânea através de otimismo local. | 2026-02-15 |
 | WebRTC nativo | Suporte a áudio e vídeo sem latência sem depender de serviços externos caros. | 2026-03-01 |
 | Sincronia de Presença Híbrida | Uso combinado de WebRTC Signaling e Supabase Presence para limpar zombies e garantir lista de voz fiel. | 2026-03-31 |
-| Nuclear Refresh (WebRTC) | Re-instanciação total do módulo via React Keys para purga absoluta de estado e recuperação de áudio stalled sem F5. | 2026-03-31 |
+| Nuclear Refresh (WebRTC) | Re-instanciação total do módulo via React Keys para purga absoluta de estado e recuperação de áudio stalled sem F5. Desde Story 41, o refresh padrão é `softReconnect` (não-destrutivo); Nuclear Refresh reservado como fallback quando o manager é `null`. | 2026-03-31 |
 | Inventário Flutuante Lateral | Correção de visibilidade: movido para a esquerda (`left: -260px`) e habilitado `overflow: visible` no `.char-artifact` para evitar clipping. | 2026-03-31 |
 | Draggability & Persistence | Inventário agora é arrastável pelo cabeçalho, com posição salva no `localStorage` por personagem. | 2026-03-31 |
 | Restrição de Contexto | Inventário flutuante restrito à aba de Personagens; oculto em Arena e Bestiário para limpeza de UI. | 2026-03-31 |
@@ -161,6 +161,11 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Dropdown customizado na entrada da mesa**: a home deixou de usar `select` nativo para escolher sessão, adotando um dropdown React tematizado para evitar popup cinza do sistema operacional e manter legibilidade consistente no tema escuro.
 - **Bônus como parte do item global**: `GlobalItem` foi expandido com `bonus` opcional (fallback 0), preservando compatibilidade com itens legados sem migração destrutiva.
 - **Tamanho como parte do item global**: `GlobalItem` passou a aceitar `size` (`L | M | G`), definido no modal de cria??o/edi??o e reaproveitado quando o item ? materializado no invent?rio por sugest?o/autofill ou por men??o em notas.
+
+## Registro de Decisões (Story 41)
+- **Soft Reconnect como padrão de refresh de voz**: o botão "Reiniciar Conexão de Voz" no `VoiceChatPanel` deixou de destruir e recriar o `VoiceChatManager` via `refreshKey` (Nuclear Refresh) e passou a chamar `softReconnect()`, que re-anuncia presença, limpa peers com estado `failed`/`closed` e rebroadcasta `voice-join` — sem interromper a sessão de voz ativa. A recriação total (Nuclear Refresh) foi preservada como fallback automático quando o manager é `null`.
+- **AudioContext compartilhado entre peers**: `VoiceChatManager` substituiu o `Map<string, AudioContext>` (um contexto por peer) por um único `sharedPeerAudioContext` reutilizado por todos os peers. Reduz pressão sobre driver de áudio do SO (especialmente com apps externos como VLC), evita atingir limite de AudioContexts simultâneos do browser e elimina interferência indireta com `<audio>` elements do `MusicPlayer`.
+- **`setOutputDevice` resiliente**: migração de `Promise.all` para `Promise.allSettled` garante que falha de `setSinkId` em um peer audio element não bloqueia os demais, com logging individualizado por falha.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

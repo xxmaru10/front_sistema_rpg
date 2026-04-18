@@ -46,7 +46,7 @@ export class VoiceChatManager {
     private _isConnected: boolean = false;
 
     private localAudioContext: AudioContext | null = null;
-    private peerAudioContexts: Map<string, AudioContext> = new Map();
+    private sharedPeerAudioContext: AudioContext | null = null;
     private audioNodes: Map<string, {
         source: MediaStreamAudioSourceNode;
         gain: GainNode;
@@ -179,13 +179,12 @@ export class VoiceChatManager {
         return this.localAudioContext!;
     }
 
-    private getPeerAudioContext(peerId: string): AudioContext {
-        let ctx = this.peerAudioContexts.get(peerId);
-        if (!ctx) {
-            ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
-            this.peerAudioContexts.set(peerId, ctx);
+    private getSharedPeerAudioContext(): AudioContext {
+        if (typeof window === 'undefined') return {} as AudioContext;
+        if (!this.sharedPeerAudioContext || this.sharedPeerAudioContext.state === 'closed') {
+            this.sharedPeerAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
         }
-        return ctx;
+        return this.sharedPeerAudioContext;
     }
 
     private getPreferredAudioConstraints(deviceId?: string): MediaTrackConstraints {
@@ -437,10 +436,22 @@ export class VoiceChatManager {
             return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
         } catch (preferredError) {
             console.warn("[VoiceChat] Preferred mic constraints failed, trying fallback:", preferredError);
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: this.getFallbackAudioConstraints(resolvedDeviceId),
-            });
-            return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: this.getFallbackAudioConstraints(resolvedDeviceId),
+                });
+                return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+            } catch (fallbackError) {
+                // Device ID stale ou inválido — tenta sem deviceId (usa default do sistema)
+                if (resolvedDeviceId) {
+                    console.warn("[VoiceChat] Device ID inválido/stale, tentando sem deviceId:", fallbackError);
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: this.getFallbackAudioConstraints(undefined),
+                    });
+                    return await this.tryUpgradeFromBluetoothStream(stream, respectRequested);
+                }
+                throw fallbackError;
+            }
         }
     }
 
@@ -597,6 +608,10 @@ export class VoiceChatManager {
             this.localAudioContext.close().catch(() => {});
             this.localAudioContext = null;
         }
+        if (this.sharedPeerAudioContext) {
+            this.sharedPeerAudioContext.close().catch(() => {});
+            this.sharedPeerAudioContext = null;
+        }
 
         this.sendSignal({ type: 'voice-leave', from: this.userId, peerId: this.userId });
 
@@ -691,16 +706,18 @@ export class VoiceChatManager {
     }
 
     public async setOutputDevice(deviceId: string) {
-        try {
-            const promises = Array.from(this.peerAudioElements.values()).map(async (el) => {
+        const results = await Promise.allSettled(
+            Array.from(this.peerAudioElements.values()).map(async (el) => {
                 if ((el as any).setSinkId) {
                     await (el as any).setSinkId(deviceId);
                 }
-            });
-            await Promise.all(promises);
+            })
+        );
+        const failed = results.filter(r => r.status === 'rejected');
+        if (failed.length) {
+            failed.forEach(r => console.warn('[VoiceChat] setSinkId failed on a peer element:', (r as PromiseRejectedResult).reason));
+        } else {
             console.log(`[VoiceChat - ${this.userId}] Output device changed to:`, deviceId);
-        } catch (e) {
-            console.error('[VoiceChat] Failed to set sinkId on audio elements:', e);
         }
     }
 
@@ -710,7 +727,7 @@ export class VoiceChatManager {
         this.peerVolumes.set(peerId, clampedVol);
         const gainNode = this.audioNodes.get(peerId)?.gain;
         if (gainNode) {
-            const ctx = this.getPeerAudioContext(peerId);
+            const ctx = this.getSharedPeerAudioContext();
             gainNode.gain.setTargetAtTime(clampedVol, ctx.currentTime, 0.1);
         }
         this.updatePeerAudioOutputState();
@@ -759,6 +776,49 @@ export class VoiceChatManager {
         this.detachScreenShareLoopbackGuard();
     }
 
+    /**
+     * Soft reconnect: re-announces presence and reconnects failed peers WITHOUT
+     * dropping the active voice session. Safe to call during screen share restarts
+     * or UI refreshes that should not interrupt the call.
+     */
+    public softReconnect() {
+        const socket = getSocket(this.userId);
+
+        // Re-register presence handler in case it was inadvertently removed
+        socket.off('voice-presence-update');
+        socket.on('voice-presence-update', (participants: SessionParticipant[]) => {
+            const sanitized = this.sanitizePresence(participants);
+            this._sessionParticipants = sanitized;
+            this.onPresenceUpdate(sanitized);
+        });
+
+        // Re-announce our presence so late-joiners and stale state is refreshed
+        socket.emit('voice-presence', {
+            sessionId: this.sessionId,
+            userId: this.userId,
+            characterId: this.characterId,
+            inVoice: this._isConnected,
+        });
+        this.touchVoiceSeen(this.userId);
+
+        if (this._isConnected && this.localStream) {
+            // Drop failed/closed peer connections so they can be re-established
+            const toRemove: string[] = [];
+            this.peerConnections.forEach((pc, peerId) => {
+                if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                    toRemove.push(peerId);
+                }
+            });
+            toRemove.forEach(peerId => this.removePeer(peerId));
+
+            // Re-broadcast voice-join so peers re-negotiate if needed
+            this.sendVoiceJoin(undefined, true).catch(() => {});
+        }
+
+        this.notifyPeerUpdate();
+        console.log(`[VoiceChat - ${this.userId}] softReconnect — connected=${this._isConnected}, peers=${this.peerConnections.size}`);
+    }
+
     // ─── Cleanup ───────────────────────────────────────────────
 
     private cleanupAllPeers() {
@@ -779,8 +839,10 @@ export class VoiceChatManager {
         });
         this.audioNodes.clear();
 
-        this.peerAudioContexts.forEach(ctx => ctx.close().catch(() => {}));
-        this.peerAudioContexts.clear();
+        if (this.sharedPeerAudioContext) {
+            this.sharedPeerAudioContext.close().catch(() => {});
+            this.sharedPeerAudioContext = null;
+        }
 
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
@@ -807,9 +869,6 @@ export class VoiceChatManager {
 
         const pc = this.peerConnections.get(key);
         if (pc) { pc.close(); this.peerConnections.delete(key); }
-
-        const ctx = this.peerAudioContexts.get(key);
-        if (ctx) { ctx.close().catch(() => {}); this.peerAudioContexts.delete(key); }
 
         this.peerStreams.delete(key);
         this.peerVolumes.delete(key);
@@ -858,7 +917,7 @@ export class VoiceChatManager {
             const existingAnalyser = this.speakingAnalysers.get(peerId);
             if (existingAnalyser) { clearInterval(existingAnalyser.interval); this.speakingAnalysers.delete(peerId); }
 
-            const audioCtx = this.getPeerAudioContext(peerId);
+            const audioCtx = this.getSharedPeerAudioContext();
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume().catch(e => console.warn('[VoiceChat] Auto-resume AudioContext failed:', e));
             }
