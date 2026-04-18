@@ -89,6 +89,7 @@ export function CharacterCard({
                         onImageUpload={hook.handleImageUpload}
                         isImageProcessing={hook.isImageProcessing}
                         onReCrop={hook.handleReCrop}
+                        onReArenaFocus={hook.handleReArenaFocus}
                     />
 
                     <CharacterLore

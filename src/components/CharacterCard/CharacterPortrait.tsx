@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Crosshair } from "lucide-react";
 
 interface CharacterPortraitProps {
     name: string;
@@ -18,6 +18,7 @@ interface CharacterPortraitProps {
     onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     isImageProcessing: boolean;
     onReCrop?: () => void;
+    onReArenaFocus?: () => void;
 }
 
 export function CharacterPortrait({
@@ -35,6 +36,7 @@ export function CharacterPortrait({
     onImageUpload,
     isImageProcessing,
     onReCrop,
+    onReArenaFocus,
 }: CharacterPortraitProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,16 +106,28 @@ export function CharacterPortrait({
                         className="portrait-image"
                         style={{ backgroundImage: `url(${imageUrl})` }}
                     >
-                         {isGM && !isImageProcessing && onReCrop && (
-                            <button 
+                        {isGM && !isImageProcessing && onReCrop && (
+                            <button
                                 className="re-crop-btn"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onReCrop();
                                 }}
-                                title="Reajustar enquadramento"
+                                title="Reajustar enquadramento do retrato"
                             >
                                 <Pencil size={14} />
+                            </button>
+                        )}
+                        {isGM && !isImageProcessing && onReArenaFocus && (
+                            <button
+                                className="re-crop-btn re-arena-focus-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onReArenaFocus();
+                                }}
+                                title="Reajustar foco da arena"
+                            >
+                                <Crosshair size={14} />
                             </button>
                         )}
                     </div>
@@ -229,6 +243,10 @@ export function CharacterPortrait({
                     color: #000;
                     transform: scale(1.1);
                     box-shadow: 0 0 10px var(--accent-color);
+                }
+
+                .re-arena-focus-btn {
+                    top: 44px;
                 }
 
                 .upload-icon {
