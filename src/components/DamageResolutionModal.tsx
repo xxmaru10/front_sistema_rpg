@@ -3,18 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Character } from "@/types/domain";
+import { calculateAutomaticDamageSelection, getConsequenceSlotCapacity } from "@/lib/gameLogic";
 import { Shield, Swords, Skull, AlertTriangle, RefreshCw } from "lucide-react";
 import { ConsequenceModal } from "./ConsequenceModal";
 
-const CONSEQUENCE_CAPACITIES: Record<string, number> = {
-    mild: 2,
-    mild2: 2,
-    moderate: 4,
-    severe: 6,
-    extreme: 8,
-};
-
 const SLOT_ORDER = ["mild", "mild2", "moderate", "severe", "extreme"];
+const AUTO_CONSEQUENCE_TEXT = "DANO AUTOMÁTICO";
 
 const SLOT_LABEL: Record<string, string> = {
     mild: "Leve",
@@ -24,16 +18,6 @@ const SLOT_LABEL: Record<string, string> = {
     extreme: "Extrema",
 };
 
-function getSlotCapacity(slot: string): number {
-    if (CONSEQUENCE_CAPACITIES[slot] !== undefined) return CONSEQUENCE_CAPACITIES[slot];
-    const lower = slot.toLowerCase();
-    if (lower.includes("mild") || lower.includes("leve")) return 2;
-    if (lower.includes("moderate") || lower.includes("moderada")) return 4;
-    if (lower.includes("severe") || lower.includes("severa")) return 6;
-    if (lower.includes("extreme") || lower.includes("extrema")) return 8;
-    return 2;
-}
-
 function getSlotLabel(slot: string): string {
     if (SLOT_LABEL[slot]) return SLOT_LABEL[slot];
     return slot.charAt(0).toUpperCase() + slot.slice(1);
@@ -42,38 +26,6 @@ function getSlotLabel(slot: string): string {
 function getStressBoxValue(values: number[] | undefined, index: number): number {
     const raw = values?.[index];
     return raw !== undefined ? Math.max(1, Math.trunc(raw)) : index + 1;
-}
-
-function buildAllConsequenceSubsets(slots: string[]): string[][] {
-    const subsets: string[][] = [[]];
-    slots.forEach((slot) => {
-        const current = subsets.slice();
-        current.forEach((subset) => {
-            subsets.push([...subset, slot]);
-        });
-    });
-    return subsets;
-}
-
-type AutoDistributionCandidate = {
-    stressIndex?: number;
-    stressAbsorbed: number;
-    consequenceSlots: string[];
-    absorbed: number;
-    remaining: number;
-    maxConsequenceCapacity: number;
-    consequenceCapacitySum: number;
-};
-
-function compareAutoCandidates(a: AutoDistributionCandidate, b: AutoDistributionCandidate): number {
-    if (a.remaining !== b.remaining) return a.remaining - b.remaining;
-    if (a.maxConsequenceCapacity !== b.maxConsequenceCapacity) return a.maxConsequenceCapacity - b.maxConsequenceCapacity;
-    if (a.consequenceCapacitySum !== b.consequenceCapacitySum) return a.consequenceCapacitySum - b.consequenceCapacitySum;
-    if (a.stressAbsorbed !== b.stressAbsorbed) return a.stressAbsorbed - b.stressAbsorbed;
-    if (a.consequenceSlots.length !== b.consequenceSlots.length) return a.consequenceSlots.length - b.consequenceSlots.length;
-    const stressA = a.stressIndex === undefined ? Number.MAX_SAFE_INTEGER : a.stressIndex;
-    const stressB = b.stressIndex === undefined ? Number.MAX_SAFE_INTEGER : b.stressIndex;
-    return stressA - stressB;
 }
 
 export interface DamageResolutionApplied {
@@ -126,7 +78,7 @@ export function DamageResolutionModal({
 
     const orderedSlots = useMemo(() => {
         if (!defender) return [] as string[];
-        // Garante que os slots padrÃ£o sempre aparecem, mesmo se consequences estiver vazio
+        // Garante que os slots padrão sempre aparecem, mesmo se consequences estiver vazio
         const removedDefaults = new Set(defender.removedDefaultSlots || []);
         const defaultKeys = ["mild", "moderate", "severe"].filter((slot) => !removedDefaults.has(slot));
         const allKeys = new Set<string>([
@@ -140,7 +92,7 @@ export function DamageResolutionModal({
             if (ia !== -1 && ib !== -1) return ia - ib;
             if (ia !== -1) return -1;
             if (ib !== -1) return 1;
-            return getSlotCapacity(a) - getSlotCapacity(b);
+            return getConsequenceSlotCapacity(a) - getConsequenceSlotCapacity(b);
         });
     }, [defender]);
 
@@ -163,7 +115,7 @@ export function DamageResolutionModal({
         orderedSlots.forEach(slot => {
             const text = consequenceTexts[slot];
             if (text && text.trim().length > 0) {
-                absorbed += getSlotCapacity(slot);
+                absorbed += getConsequenceSlotCapacity(slot);
             }
         });
 
@@ -182,7 +134,6 @@ export function DamageResolutionModal({
 
     const overAbsorbed = remainingDamage < 0;
     const isLethal = remainingDamage > 0 && !hasAvailableSlots;
-    const canConfirm = true; // O mestre pode confirmar qualquer configuraÃ§Ã£o
 
     if (!mounted || !isOpen || !defender) return null;
 
@@ -226,51 +177,8 @@ export function DamageResolutionModal({
     const handleAutoFill = () => {
         if (!defender) return;
 
-        const stressTrack = track === "PHYSICAL" ? defender.stress.physical : defender.stress.mental;
-        const stressValues = track === "PHYSICAL" ? defender.stressValues?.physical : defender.stressValues?.mental;
-        const availableStress = stressTrack
-            .map((isMarked, index) => ({ index, isMarked, value: getStressBoxValue(stressValues, index) }))
-            .filter((box) => !box.isMarked);
-
-        const availableConsequenceSlots = orderedSlots.filter((slot) => {
-            const existing = defender.consequences?.[slot];
-            return !(existing?.text && existing.text.trim().length > 0);
-        });
-
-        const consequenceSubsets = buildAllConsequenceSubsets(availableConsequenceSlots);
-        const stressOptions: Array<{ index?: number; value: number }> = [
-            { index: undefined, value: 0 },
-            ...availableStress.map((box) => ({ index: box.index, value: box.value })),
-        ];
-
-        let bestCandidate: AutoDistributionCandidate | null = null;
-
-        consequenceSubsets.forEach((subset) => {
-            const consequenceCapacitySum = subset.reduce((sum, slot) => sum + getSlotCapacity(slot), 0);
-            const maxConsequenceCapacity = subset.length > 0 ? Math.max(...subset.map((slot) => getSlotCapacity(slot))) : 0;
-
-            stressOptions.forEach((stressOption) => {
-                const absorbed = consequenceCapacitySum + stressOption.value;
-                const remaining = Math.max(0, damage - absorbed);
-                const candidate: AutoDistributionCandidate = {
-                    stressIndex: stressOption.index,
-                    stressAbsorbed: stressOption.value,
-                    consequenceSlots: subset,
-                    absorbed,
-                    remaining,
-                    maxConsequenceCapacity,
-                    consequenceCapacitySum,
-                };
-
-                if (!bestCandidate || compareAutoCandidates(candidate, bestCandidate) < 0) {
-                    bestCandidate = candidate;
-                }
-            });
-        });
-
-        const resolvedCandidate = bestCandidate as AutoDistributionCandidate | null;
-        const selectedStressIndex = resolvedCandidate?.stressIndex;
-        const markedStress = selectedStressIndex !== undefined ? new Set([selectedStressIndex]) : new Set<number>();
+        const selection = calculateAutomaticDamageSelection(defender, damage, track);
+        const markedStress = new Set<number>(selection.stressToMarkIndices);
         if (track === "PHYSICAL") {
             setMarkedPhysical(markedStress);
             setMarkedMental(new Set());
@@ -280,8 +188,8 @@ export function DamageResolutionModal({
         }
 
         const newCons: Record<string, string> = {};
-        (resolvedCandidate?.consequenceSlots || []).forEach((slot) => {
-            newCons[slot] = "DANO AUTOMATICO";
+        selection.consequenceSlots.forEach((slot) => {
+            newCons[slot] = AUTO_CONSEQUENCE_TEXT;
         });
         setConsequenceTexts(newCons);
     };
@@ -336,19 +244,19 @@ export function DamageResolutionModal({
                         {defender.name}
                     </div>
                     <div className="dmg-track-label">
-                        DANO {track === "PHYSICAL" ? "FÃSICO" : "MENTAL"}
+                        DANO {track === "PHYSICAL" ? "FÍSICO" : "MENTAL"}
                     </div>
                 </div>
 
                 {isNPC && (
                     <p className="dmg-hint-npc">
-                        Personagem NPC: aloque estresse e/ou consequÃªncias atÃ© o dano restante chegar a zero,
-                        ou use <strong>CÃ¡lculo automÃ¡tico</strong>.
+                        Personagem NPC: aloque estresse e/ou consequências até o dano restante chegar a zero,
+                        ou use <strong>Cálculo automático</strong>.
                     </p>
                 )}
                 {!isNPC && (
                     <p className="dmg-hint-pc">
-                        Personagem de jogador: vocÃª pode resolver aqui ou usar <strong>NÃ£o fazer nada</strong> para o
+                        Personagem de jogador: você pode resolver aqui ou usar <strong>Não fazer nada</strong> para o
                         jogador marcar na ficha.
                     </p>
                 )}
@@ -370,10 +278,10 @@ export function DamageResolutionModal({
 
                 {/* Stress Tracks */}
                 <div className="dmg-section">
-                    <div className="dmg-section-title">ESTRESSE FÃSICO</div>
+                    <div className="dmg-section-title">ESTRESSE FÍSICO</div>
                     <div className="dmg-stress-row">
                         {defender.stress.physical.length === 0 && (
-                            <div className="dmg-empty">â€”</div>
+                            <div className="dmg-empty">—</div>
                         )}
                         {defender.stress.physical.map((isMarked, idx) => {
                             const raw = defender.stressValues?.physical?.[idx];
@@ -386,7 +294,7 @@ export function DamageResolutionModal({
                                     className={`dmg-stress-box${isMarked ? " occupied" : ""}${isNew ? " new-mark" : ""}`}
                                     disabled={isMarked}
                                     onClick={() => togglePhysical(idx)}
-                                    title={isMarked ? "JÃ¡ marcada" : `Absorve ${value}`}
+                                    title={isMarked ? "Já marcada" : `Absorve ${value}`}
                                 >
                                     {value}
                                 </button>
@@ -399,7 +307,7 @@ export function DamageResolutionModal({
                     <div className="dmg-section-title">ESTRESSE MENTAL</div>
                     <div className="dmg-stress-row">
                         {defender.stress.mental.length === 0 && (
-                            <div className="dmg-empty">â€”</div>
+                            <div className="dmg-empty">—</div>
                         )}
                         {defender.stress.mental.map((isMarked, idx) => {
                             const raw = defender.stressValues?.mental?.[idx];
@@ -412,7 +320,7 @@ export function DamageResolutionModal({
                                     className={`dmg-stress-box${isMarked ? " occupied" : ""}${isNew ? " new-mark" : ""}`}
                                     disabled={isMarked}
                                     onClick={() => toggleMental(idx)}
-                                    title={isMarked ? "JÃ¡ marcada" : `Absorve ${value}`}
+                                    title={isMarked ? "Já marcada" : `Absorve ${value}`}
                                 >
                                     {value}
                                 </button>
@@ -423,16 +331,16 @@ export function DamageResolutionModal({
 
                 {/* Consequences */}
                 <div className="dmg-section">
-                    <div className="dmg-section-title">CONSEQUÃŠNCIAS</div>
+                    <div className="dmg-section-title">CONSEQUÊNCIAS</div>
                     <div className="dmg-consequences">
                         {orderedSlots.length === 0 && (
-                            <div className="dmg-empty">â€” Sem slots de consequÃªncia â€”</div>
+                            <div className="dmg-empty">— Sem slots de consequência —</div>
                         )}
                         {orderedSlots.map(slot => {
                             const existing = defender.consequences ? defender.consequences[slot] : undefined;
                             const existingText = existing?.text?.trim() || "";
                             const isOccupied = existingText.length > 0;
-                            const capacity = getSlotCapacity(slot);
+                            const capacity = getConsequenceSlotCapacity(slot);
                             const current = consequenceTexts[slot] || "";
                             const isNew = current.trim().length > 0;
 
@@ -453,10 +361,10 @@ export function DamageResolutionModal({
                                                 className={`dmg-cons-trigger-btn ${current ? 'has-content' : ''}`}
                                                 onClick={() => setEditingConsequenceSlot(slot)}
                                             >
-                                                {current || "Definir consequÃªncia..."}
+                                                {current || "Definir consequência..."}
                                             </button>
                                             {current && (
-                                                <button className="dmg-cons-clear" onClick={() => setConsequenceText(slot, "")}>âœ•</button>
+                                                <button className="dmg-cons-clear" onClick={() => setConsequenceText(slot, "")}>×</button>
                                             )}
                                         </div>
                                     )}
@@ -483,16 +391,16 @@ export function DamageResolutionModal({
                     <button
                         className={`dmg-btn confirm ${isLethal ? 'lethal' : ''}`}
                         onClick={handleConfirmClick}
-                        title={isLethal ? "Confirmar DERROTA do personagem" : "Aplicar marcaÃ§Ãµes na ficha"}
+                        title={isLethal ? "Confirmar DERROTA do personagem" : "Aplicar marcações na ficha"}
                     >
                         {isLethal ? "CONFIRMAR DERROTA" : "CONFIRMAR"}
                     </button>
                     <button
                         className="dmg-btn auto"
                         onClick={handleAutoFill}
-                        title="Distribuir dano automaticamente (vocÃª poderÃ¡ revisar antes de confirmar)"
+                        title="Distribuir dano automaticamente (você poderá revisar antes de confirmar)"
                     >
-                        <RefreshCw size={14} /> CÃLCULO AUTOMÃTICO
+                        <RefreshCw size={14} /> CÁLCULO AUTOMÁTICO
                     </button>
                     {!isNPC && (
                         <button
@@ -500,7 +408,7 @@ export function DamageResolutionModal({
                             onClick={onSkip}
                             title="Deixar o jogador resolver"
                         >
-                            NÃƒO FAZER NADA
+                            NÃO FAZER NADA
                         </button>
                     )}
                 </div>

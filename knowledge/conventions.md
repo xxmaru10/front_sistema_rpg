@@ -5,7 +5,7 @@ tags: [convenções, código, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-18 (story-44 compliance audit and knowledge sync)
+last_updated: 2026-04-19 (story-45 follow-up: damage distribution wording and architecture compliance)
 status: ativo
 ---
 
