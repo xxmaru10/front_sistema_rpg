@@ -1,21 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Character } from "@/types/domain";
+import { calculateAutomaticDamageSelection, getConsequenceSlotCapacity } from "@/lib/gameLogic";
 import { Shield, Swords, Skull, AlertTriangle, RefreshCw } from "lucide-react";
 import { ConsequenceModal } from "./ConsequenceModal";
-import { calculateAbsorption } from "@/lib/gameLogic";
-
-const CONSEQUENCE_CAPACITIES: Record<string, number> = {
-    mild: 2,
-    mild2: 2,
-    moderate: 4,
-    severe: 6,
-    extreme: 8,
-};
 
 const SLOT_ORDER = ["mild", "mild2", "moderate", "severe", "extreme"];
+const AUTO_CONSEQUENCE_TEXT = "DANO AUTOMÁTICO";
 
 const SLOT_LABEL: Record<string, string> = {
     mild: "Leve",
@@ -25,19 +18,14 @@ const SLOT_LABEL: Record<string, string> = {
     extreme: "Extrema",
 };
 
-function getSlotCapacity(slot: string): number {
-    if (CONSEQUENCE_CAPACITIES[slot] !== undefined) return CONSEQUENCE_CAPACITIES[slot];
-    const lower = slot.toLowerCase();
-    if (lower.includes("mild") || lower.includes("leve")) return 2;
-    if (lower.includes("moderate") || lower.includes("moderada")) return 4;
-    if (lower.includes("severe") || lower.includes("severa")) return 6;
-    if (lower.includes("extreme") || lower.includes("extrema")) return 8;
-    return 2;
-}
-
 function getSlotLabel(slot: string): string {
     if (SLOT_LABEL[slot]) return SLOT_LABEL[slot];
     return slot.charAt(0).toUpperCase() + slot.slice(1);
+}
+
+function getStressBoxValue(values: number[] | undefined, index: number): number {
+    const raw = values?.[index];
+    return raw !== undefined ? Math.max(1, Math.trunc(raw)) : index + 1;
 }
 
 export interface DamageResolutionApplied {
@@ -91,16 +79,20 @@ export function DamageResolutionModal({
     const orderedSlots = useMemo(() => {
         if (!defender) return [] as string[];
         // Garante que os slots padrão sempre aparecem, mesmo se consequences estiver vazio
-        const defaultKeys = new Set(["mild", "moderate", "severe"]);
-        const existingKeys = Object.keys(defender.consequences || {});
-        existingKeys.forEach(k => defaultKeys.add(k));
-        return Array.from(defaultKeys).sort((a, b) => {
+        const removedDefaults = new Set(defender.removedDefaultSlots || []);
+        const defaultKeys = ["mild", "moderate", "severe"].filter((slot) => !removedDefaults.has(slot));
+        const allKeys = new Set<string>([
+            ...defaultKeys,
+            ...(defender.extraConsequenceSlots || []),
+            ...Object.keys(defender.consequences || {}),
+        ]);
+        return Array.from(allKeys).sort((a, b) => {
             const ia = SLOT_ORDER.indexOf(a);
             const ib = SLOT_ORDER.indexOf(b);
             if (ia !== -1 && ib !== -1) return ia - ib;
             if (ia !== -1) return -1;
             if (ib !== -1) return 1;
-            return getSlotCapacity(a) - getSlotCapacity(b);
+            return getConsequenceSlotCapacity(a) - getConsequenceSlotCapacity(b);
         });
     }, [defender]);
 
@@ -112,20 +104,18 @@ export function DamageResolutionModal({
 
         const physVals = defender.stressValues?.physical;
         markedPhysical.forEach(idx => {
-            const raw = physVals?.[idx];
-            absorbed += raw !== undefined ? Math.max(1, Math.trunc(raw)) : 1;
+            absorbed += getStressBoxValue(physVals, idx);
         });
 
         const mentVals = defender.stressValues?.mental;
         markedMental.forEach(idx => {
-            const raw = mentVals?.[idx];
-            absorbed += raw !== undefined ? Math.max(1, Math.trunc(raw)) : 1;
+            absorbed += getStressBoxValue(mentVals, idx);
         });
 
         orderedSlots.forEach(slot => {
             const text = consequenceTexts[slot];
             if (text && text.trim().length > 0) {
-                absorbed += getSlotCapacity(slot);
+                absorbed += getConsequenceSlotCapacity(slot);
             }
         });
 
@@ -144,7 +134,6 @@ export function DamageResolutionModal({
 
     const overAbsorbed = remainingDamage < 0;
     const isLethal = remainingDamage > 0 && !hasAvailableSlots;
-    const canConfirm = true; // O mestre pode confirmar qualquer configuração
 
     if (!mounted || !isOpen || !defender) return null;
 
@@ -187,21 +176,21 @@ export function DamageResolutionModal({
 
     const handleAutoFill = () => {
         if (!defender) return;
-        const result = calculateAbsorption(defender, damage, track);
-        
-        // Convert array indices to Set
+
+        const selection = calculateAutomaticDamageSelection(defender, damage, track);
+        const markedStress = new Set<number>(selection.stressToMarkIndices);
         if (track === "PHYSICAL") {
-            setMarkedPhysical(new Set(result.stressToMarkIndices));
+            setMarkedPhysical(markedStress);
             setMarkedMental(new Set());
         } else {
-            setMarkedMental(new Set(result.stressToMarkIndices));
+            setMarkedMental(markedStress);
             setMarkedPhysical(new Set());
         }
-        
+
         const newCons: Record<string, string> = {};
-        if (result.consequenceSlot) {
-            newCons[result.consequenceSlot] = "DANO AUTOMÁTICO";
-        }
+        selection.consequenceSlots.forEach((slot) => {
+            newCons[slot] = AUTO_CONSEQUENCE_TEXT;
+        });
         setConsequenceTexts(newCons);
     };
 
@@ -351,7 +340,7 @@ export function DamageResolutionModal({
                             const existing = defender.consequences ? defender.consequences[slot] : undefined;
                             const existingText = existing?.text?.trim() || "";
                             const isOccupied = existingText.length > 0;
-                            const capacity = getSlotCapacity(slot);
+                            const capacity = getConsequenceSlotCapacity(slot);
                             const current = consequenceTexts[slot] || "";
                             const isNew = current.trim().length > 0;
 
@@ -375,7 +364,7 @@ export function DamageResolutionModal({
                                                 {current || "Definir consequência..."}
                                             </button>
                                             {current && (
-                                                <button className="dmg-cons-clear" onClick={() => setConsequenceText(slot, "")}>✕</button>
+                                                <button className="dmg-cons-clear" onClick={() => setConsequenceText(slot, "")}>×</button>
                                             )}
                                         </div>
                                     )}
@@ -649,3 +638,4 @@ export function DamageResolutionModal({
         document.body
     );
 }
+

@@ -259,15 +259,27 @@ export function useSessionDerivations({
         return null;
     }, [state.isReaction, state.targetId, events]);
 
+    const roleVisibleEvents = useMemo(() => {
+        if (userRole === "GM") return events;
+        return events.filter((e) => {
+            if (e.type !== "ROLL_RESOLVED") return true;
+            const payload = e.payload as any;
+            const hiddenByOverride = state.rollVisibilityOverrides?.[e.id]?.hiddenForPlayers;
+            const hiddenByPayload = !!payload.hiddenForPlayers;
+            const hiddenFinal = hiddenByOverride ?? hiddenByPayload;
+            return !hiddenFinal;
+        });
+    }, [events, userRole, state.rollVisibilityOverrides]);
+
     const filteredEvents = useMemo(() => {
-        if (logFilter === "ALL") return events;
-        return events.filter(e => {
+        if (logFilter === "ALL") return roleVisibleEvents;
+        return roleVisibleEvents.filter(e => {
             if (logFilter === "ROLLS") return e.type === "ROLL_RESOLVED";
             if (logFilter === "ASPECTS") return e.type.includes("INVOKE");
             if (logFilter === "CHARS") return e.type.includes("CHARACTER") || e.type.includes("FP") || e.type.includes("STRESS");
             return true;
         });
-    }, [events, logFilter]);
+    }, [roleVisibleEvents, logFilter]);
 
     const eventSessionMap = useMemo(() => {
         const sorted = [...events].sort((a, b) => {

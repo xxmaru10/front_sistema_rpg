@@ -10,11 +10,19 @@ interface CombatLogProps {
     isRefreshing?: boolean;
     onRefresh?: () => void;
     compact?: boolean;
+    userRole?: 'GM' | 'PLAYER';
+    rollVisibilityOverrides?: Record<string, { hiddenForPlayers: boolean }>;
+    sessionId?: string;
+    actorUserId?: string;
 }
 
-import { RotateCw } from "lucide-react";
+import { RotateCw, Eye, EyeOff } from "lucide-react";
+import { globalEventStore } from "@/lib/eventStore";
+import { v4 as uuidv4 } from "uuid";
 
-export function CombatLog({ events, characters, sessionNumber, eventSessionMap, isRefreshing, onRefresh, compact = false }: CombatLogProps) {
+export function CombatLog({ events, characters, sessionNumber, eventSessionMap, isRefreshing, onRefresh, compact = false, userRole, rollVisibilityOverrides, sessionId, actorUserId }: CombatLogProps) {
+    const normalizedActorUserId = actorUserId?.trim().toLowerCase() || "";
+
     const currentSessionEvents = sessionNumber === undefined
         ? events
         : events.filter(e => (eventSessionMap?.[e.id] ?? sessionNumber ?? 1) === sessionNumber);
@@ -154,8 +162,35 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
             ["ROLL_RESOLVED", "FP_SPENT", "FP_GAINED", "CHARACTER_CREATED", "STRESS_MARKED", "COMBAT_OUTCOME"].includes(e.type) ||
             e.type.includes("ASPECT_CREATED")
         )
+        .filter(e => {
+            if (e.type === "ROLL_RESOLVED") {
+                const isHidden = rollVisibilityOverrides?.[e.id] ? rollVisibilityOverrides[e.id].hiddenForPlayers : !!(e.payload as any).hiddenForPlayers;
+                if (userRole === "PLAYER" && isHidden) return false;
+            }
+            return true;
+        })
         .slice()
         .reverse();
+
+    const toggleHideRoll = (eventId: string, currentHidden: boolean, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (userRole !== "GM" || !sessionId || !normalizedActorUserId) return;
+        globalEventStore.append({
+            id: uuidv4(),
+            sessionId,
+            seq: 0,
+            type: "ROLL_VISIBILITY_UPDATED",
+            actorUserId: normalizedActorUserId,
+            createdAt: new Date().toISOString(),
+            visibility: "PUBLIC",
+            payload: {
+                rollEventId: eventId,
+                hiddenForPlayers: !currentHidden
+            }
+        });
+    };
+
+    const isRollHidden = (eventId: string, origHidden: boolean) => rollVisibilityOverrides?.[eventId] ? rollVisibilityOverrides[eventId].hiddenForPlayers : !!origHidden;
 
     return (
         <div className={`combat-log-container solid ornate-border ${compact ? "compact-mode" : ""}`}>
@@ -245,7 +280,23 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                             {(() => {
                                 const rollMeta = getCompactRollMeta(event);
                                 if (!rollMeta) return <span className="compact-total muted"></span>;
-                                return <span className={`compact-total ${rollMeta.tone}`}>{rollMeta.totalLabel}</span>;
+                                return (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <span className={`compact-total ${rollMeta.tone}`}>{rollMeta.totalLabel}</span>
+                                        {userRole === "GM" && event.type === "ROLL_RESOLVED" && (
+                                            <button
+                                                onClick={(e) => toggleHideRoll(event.id, isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers), e)}
+                                                style={{
+                                                    background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0,
+                                                    color: isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers) ? "#ff6666" : "rgba(255,255,255,0.4)"
+                                                }}
+                                                title={isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers) ? "Rolagem oculta dos jogadores. Clique para exibir." : "Rolagem pública. Clique para ocultar."}
+                                            >
+                                                {isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers) ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
                             })()}
                         </div>
                     ) : (
@@ -258,8 +309,9 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                             <div className="entry-content">
                                 {event.type === "ROLL_RESOLVED" && (
                                     <div className="roll-data">
-                                        <div className="roll-header">
-                                            {event.payload.challengeDescription ? (
+                                        <div className="roll-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                {event.payload.challengeDescription ? (
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', color: '#c5a059' }}>
                                                     <span className="actor" style={{ fontWeight: 'bold' }}>
                                                         {characters[event.payload.characterId]?.name.toUpperCase() || "JOGADOR"}
@@ -302,6 +354,19 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
                                                         </span>
                                                     )}
                                                 </>
+                                            )}
+                                            </div>
+                                            {userRole === "GM" && (
+                                                <button
+                                                    onClick={(e) => toggleHideRoll(event.id, isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers), e)}
+                                                    style={{
+                                                        background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0, marginLeft: "8px",
+                                                        color: isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers) ? "#ff6666" : "rgba(255,255,255,0.4)"
+                                                    }}
+                                                    title={isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers) ? "Rolagem oculta dos jogadores. Clique para exibir." : "Rolagem pública. Clique para ocultar."}
+                                                >
+                                                    {isRollHidden(event.id, !!(event.payload as any).hiddenForPlayers) ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
                                             )}
                                         </div>
                                         <div className="roll-math" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>

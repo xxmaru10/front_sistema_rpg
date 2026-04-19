@@ -39,6 +39,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Layout Perícias Cortadas | concluído | `/stories/story-06-corrigir-layout-pericias-cortadas.md` |
 | Sincronia de Notas de Sessão | concluído | `/stories/story-07-estabilizar-sincronia-notas.md` |
 | Seletor Multi-Dado (Caixa) | concluído | `/stories/story-44-seletor-multi-dado-com-clear-e-notacao-viva.md` |
+| Ocultar Rolagem do Mestre | concluído | `/stories/story-45-olho-ocultar-rolagem-do-mestre.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`

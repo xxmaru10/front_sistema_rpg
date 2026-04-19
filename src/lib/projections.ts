@@ -27,6 +27,7 @@ export const initialState: SessionState = {
     sessionNumber: 1,
     stickyNotes: [],
     themeLocked: false,
+    rollVisibilityOverrides: {},
 
     soundSettings: {
 
@@ -113,6 +114,15 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 seats: state.seats.some(s => s.userId === payload.userId)
                     ? state.seats.map(s => s.userId === payload.userId ? { ...s, state: payload.state } : s)
                     : [...state.seats, { userId: payload.userId, state: payload.state, role: "PLAYER" }]
+            };
+
+        case "ROLL_VISIBILITY_UPDATED":
+            return {
+                ...state,
+                rollVisibilityOverrides: {
+                    ...(state.rollVisibilityOverrides || {}),
+                    [payload.rollEventId]: { hiddenForPlayers: payload.hiddenForPlayers }
+                }
             };
 
         case "CHARACTER_CREATED": {

@@ -45,7 +45,8 @@ export function createRollEvent(
     challengeDescription?: string,
     targetCharacterIds?: string[],
     damageType?: "PHYSICAL" | "MENTAL",
-    diceBreakdown?: DiceBreakdownEntry[]
+    diceBreakdown?: DiceBreakdownEntry[],
+    hiddenForPlayers?: boolean
 ): ActionEvent {
     let normalizedDice = dice;
     let diceSum = dice.reduce((a, b) => a + b, 0);
@@ -58,6 +59,26 @@ export function createRollEvent(
 
     const total = diceSum + modifier;
 
+    const payload: RollPayload = {
+        characterId,
+        dice: normalizedDice,
+        diceSum,
+        diceBreakdown,
+        modifier,
+        manualBonus,
+        skill,
+        item,
+        total,
+        actionType,
+        targetCharacterId,
+        targetCharacterIds,
+        damageType,
+        note,
+        targetDiff,
+        challengeDescription,
+        ...(hiddenForPlayers ? { hiddenForPlayers: true } : {})
+    };
+
     return {
         id: uuidv4(),
         sessionId,
@@ -65,25 +86,8 @@ export function createRollEvent(
         type: "ROLL_RESOLVED",
         actorUserId,
         actorCharacterId: characterId,
-        visibility: "PUBLIC",
+        visibility: hiddenForPlayers ? "GM_ONLY" : "PUBLIC",
         createdAt: new Date().toISOString(),
-        payload: {
-            characterId,
-            dice: normalizedDice,
-            diceSum,
-            diceBreakdown,
-            modifier,
-            manualBonus,
-            skill,
-            item,
-            total,
-            actionType,
-            targetCharacterId,
-            targetCharacterIds,
-            damageType,
-            note,
-            targetDiff,
-            challengeDescription
-        } as RollPayload
+        payload
     } as ActionEvent;
 }

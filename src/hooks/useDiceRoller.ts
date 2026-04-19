@@ -57,7 +57,7 @@ export function useDiceRoller({
     const [lastReactionState, setLastReactionState] = useState(false);
 
     const pendingCharIdRef = useRef<string>("");
-    const finishRollRef = useRef<(charId: string, finalDice: number[], breakdown?: DiceBreakdownEntry[]) => void>(() => {});
+    const finishRollRef = useRef<(charId: string, finalDice: number[], breakdown?: DiceBreakdownEntry[], hiddenForPlayers?: boolean) => void>(() => {});
     const [isRolling, setIsRolling] = useState(false);
     const [diceResults, setDiceResults] = useState<number[]>([0, 0, 0, 0]);
     const [diceRotations, setDiceRotations] = useState<{ x: number, y: number }[]>([
@@ -136,7 +136,7 @@ export function useDiceRoller({
         return ladder[val] || "N/A";
     };
 
-    const finishRoll = useCallback(async (charId: string, finalDice: number[], breakdown?: DiceBreakdownEntry[]) => {
+    const finishRoll = useCallback(async (charId: string, finalDice: number[], breakdown?: DiceBreakdownEntry[], hiddenForPlayers?: boolean) => {
         const fullNote = selectedSkill ? `[${selectedSkill}]`.toUpperCase() : "";
 
         const selectedItemData = selectedItemId ? allItems.find(i => i.id === selectedItemId) : undefined;
@@ -146,6 +146,8 @@ export function useDiceRoller({
         const effectiveSkills = activeChar?.skills || DEFAULT_SKILLS;
         const skillRank = selectedSkill ? (effectiveSkills[selectedSkill] || 0) : 0;
         const finalModifier = skillRank + manualBonus + itemBonus;
+
+        const effectiveHiddenForPlayers = isGM && hiddenForPlayers === true;
 
         const event = createRollEvent(
             sessionId,
@@ -163,7 +165,8 @@ export function useDiceRoller({
             challengeDescription,
             targetIds.length > 0 ? targetIds : undefined,
             damageType,
-            breakdown
+            breakdown,
+            effectiveHiddenForPlayers ? true : undefined
         );
 
         setDiceResults(finalDice);
@@ -326,7 +329,8 @@ export function useDiceRoller({
             onSettled: (results, breakdown) => {
                 // Use ref to avoid stale closure — finishRoll may have been
                 // recreated with updated lastAttackTotal after handleRoll was called.
-                finishRollRef.current(charId, results, breakdown);
+                const hidden = diceSimulationStore.getHiddenForPlayers();
+                finishRollRef.current(charId, results, breakdown, hidden);
             }
         });
 

@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-10 (story-36/follow-up-tamanho-item-global)
+last_updated: 2026-04-19 (story-45 roll visibility override contract)
 status: ativo
 ---
 
@@ -131,9 +131,19 @@ export type WorldEntity = {
   imageUrl?: string;
   fieldVisibility?: Record<string, boolean>;
 };
+
+export type RollPayload = {
+  characterId: string;
+  dice: number[];
+  diceSum: number;
+  modifier: number;
+  total: number;
+  actionType?: "ATTACK" | "DEFEND" | "OVERCOME" | "CREATE_ADVANTAGE";
+  hiddenForPlayers?: boolean; // presente apenas quando a rolagem nasce oculta
+};
 ```
 
-## Eventos de Domínio Relevantes (Story 32)
+## Eventos de Domínio Relevantes (Story 32 e Story 45)
 
 ```typescript
 type StressTrackExpanded = EventEnvelope<"STRESS_TRACK_EXPANDED", {
@@ -193,6 +203,13 @@ type CharacterInventoryUpdated = EventEnvelope<"CHARACTER_INVENTORY_UPDATED", {
     capacity?: number;
     contents?: any[];
   };
+}>;
+
+type RollResolved = EventEnvelope<"ROLL_RESOLVED", RollPayload>;
+
+type RollVisibilityUpdated = EventEnvelope<"ROLL_VISIBILITY_UPDATED", {
+  rollEventId: string;
+  hiddenForPlayers: boolean;
 }>;
 ```
 

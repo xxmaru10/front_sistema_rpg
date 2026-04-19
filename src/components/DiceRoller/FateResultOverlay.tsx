@@ -4,10 +4,10 @@
  */
 
 import React from "react";
-import { Play, Pencil, Trash2, X, AlertCircle } from "lucide-react";
+import { Play, Pencil, Trash2, X, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { DiceBreakdownEntry, DicePoolEntry, DieType } from "@/types/domain";
 import { useState, useMemo, useEffect } from "react";
-import type { DiceResultOverlayMode } from "@/lib/diceSimulationStore";
+import { type DiceResultOverlayMode, diceSimulationStore } from "@/lib/diceSimulationStore";
 
 interface FateResultOverlayProps {
     phase: "idle" | "held" | "thrown" | "snapping" | "done";
@@ -29,6 +29,7 @@ interface FateResultOverlayProps {
         mode: DiceResultOverlayMode;
         targetDifficulty?: number;
     };
+    userRole?: "GM" | "PLAYER";
 }
 
 function fmtSigned(n: number): string {
@@ -65,8 +66,17 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
     onManualExpressionRoll,
     calculationBreakdown,
     resultOverlay,
+    userRole,
 }) => {
     const [isEditing, setIsEditing] = useState(false);
+    const [hidden, setHidden] = useState(diceSimulationStore.getHiddenForPlayers());
+
+    const toggleHidden = (e: React.MouseEvent | React.TouchEvent) => {
+        blockClick(e as any);
+        const next = !hidden;
+        setHidden(next);
+        diceSimulationStore.setHiddenForPlayers(next);
+    };
     const [limitToast, setLimitToast] = useState(false);
     const [isManualInputOpen, setIsManualInputOpen] = useState(false);
     const [manualExpression, setManualExpression] = useState("");
@@ -262,6 +272,31 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         >
                             <Play size={16} fill="currentColor" style={{ marginLeft: "1px" }} />
                         </button>
+                        {userRole === "GM" && (
+                            <button
+                                onMouseDown={blockPointerDown}
+                                onTouchStart={blockPointerDown}
+                                onClick={toggleHidden}
+                                style={{
+                                    background: hidden ? `${accentColor}22` : "rgba(0,0,0,0.45)",
+                                    border: `1px solid ${hidden ? accentColor : accentColor + "33"}`,
+                                    borderRadius: "8px",
+                                    color: hidden ? "#ff6666" : accentColor,
+                                    width: "36px",
+                                    height: "36px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    transition: "all 0.3s cubic-bezier(0.19, 1, 0.22, 1)",
+                                    boxShadow: `0 2px 8px rgba(0,0,0,0.4)`,
+                                    padding: "8px"
+                                }}
+                                title={hidden ? "Rolagem oculta para jogadores" : "Rolagem pública"}
+                            >
+                                {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        )}
                         <button
                             onMouseDown={blockPointerDown}
                             onTouchStart={blockPointerDown}

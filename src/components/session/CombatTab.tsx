@@ -432,6 +432,10 @@ export function CombatTab({
                                     isRefreshing={isRefreshing}
                                     onRefresh={onRefresh}
                                     compact={true}
+                                    userRole={userRole}
+                                    rollVisibilityOverrides={state.rollVisibilityOverrides}
+                                    sessionId={sessionId}
+                                    actorUserId={actorUserId}
                                 />
                             </div>
                         )}
