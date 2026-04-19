@@ -7,7 +7,7 @@ export type DiceResultOverlayMode = "combat" | "challenge";
 
 import { DiceBreakdownEntry, DicePoolEntry } from "@/types/domain";
 
-type DiceSettledCallback = (results: number[], breakdown?: DiceBreakdownEntry[]) => void;
+type DiceSettledCallback = (results: number[], breakdown?: DiceBreakdownEntry[], hiddenForPlayers?: boolean) => void;
 type DicePreviewCallback = (results: number[]) => void;
 
 interface DiceSimulationParams {
@@ -40,6 +40,17 @@ class DiceSimulationStore {
     subscribe(listener: () => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
+    }
+
+    private hiddenForPlayers: boolean = false;
+
+    getHiddenForPlayers() {
+        return this.hiddenForPlayers;
+    }
+
+    setHiddenForPlayers(hidden: boolean) {
+        this.hiddenForPlayers = hidden;
+        this.notify();
     }
 
     private notify() {

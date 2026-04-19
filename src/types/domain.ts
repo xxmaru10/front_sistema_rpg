@@ -281,6 +281,7 @@ export type SessionState = {
     name?: string;
     stickyNotes?: StickyNote[];
     themeLocked?: boolean;
+    rollVisibilityOverrides?: Record<string, { hiddenForPlayers: boolean }>;
 };
 
 export type Stroke = {
@@ -407,6 +408,7 @@ export type RollPayload = {
   note?: string;
   targetDiff?: number;
   challengeDescription?: string;
+  hiddenForPlayers?: boolean;
 };
 
 export type WorldEntityType = 
@@ -454,6 +456,7 @@ export type ActionEvent =
   | EventEnvelope<"TURN_REVOKED", { userId: string }>
   | EventEnvelope<"SEAT_STATE_CHANGED", { userId: string; state: SeatState }>
   | EventEnvelope<"ROLL_RESOLVED", RollPayload>
+  | EventEnvelope<"ROLL_VISIBILITY_UPDATED", { rollEventId: string; hiddenForPlayers: boolean }>
   | EventEnvelope<"CHARACTER_CREATED", Character>
   | EventEnvelope<"FP_SPENT", { characterId: string; amount: number; reason: string }>
   | EventEnvelope<"FP_GAINED", { characterId: string; amount: number; reason: string }>

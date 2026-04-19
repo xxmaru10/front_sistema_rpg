@@ -102,6 +102,11 @@ export default function SessionPage() {
     }, []);
 
     useEffect(() => {
+        // Story 45: reset do toggle de rolagem oculta ao trocar de sessão.
+        diceSimulationStore.setHiddenForPlayers(false);
+    }, [sessionId]);
+
+    useEffect(() => {
         const media = window.matchMedia("(max-width: 768px)");
         const syncMedia = () => setIsMobileNav(media.matches);
         syncMedia();

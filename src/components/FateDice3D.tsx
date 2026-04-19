@@ -37,7 +37,7 @@ export default function FateDice3D({
     accentColor = "#C5A059",
     onSettled,
     onPreResult,
-    userRole: _userRole,
+    userRole,
     activeTab: _activeTab,
     calculationBreakdown,
     resultOverlay,
@@ -141,6 +141,7 @@ export default function FateDice3D({
                     onPoolChange={handlePoolChange}
                     calculationBreakdown={calculationBreakdown}
                     resultOverlay={resultOverlay}
+                    userRole={userRole}
                 />
             </div>
 

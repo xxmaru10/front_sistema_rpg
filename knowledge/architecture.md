@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-18 (story-44 exploration style-success visual rule)
+last_updated: 2026-04-19 (story-45 hidden roll visibility and reveal overrides)
 status: ativo
 ---
 
@@ -101,6 +101,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Tema Individual por Jogador com Bloqueio do Mestre (Story 43) | O seletor de tema ficou disponivel para PLAYER em modo local (sem evento PUBLIC), com persistencia por sessao+usuario em `localStorage` (`cronos_local_theme_{sessionId}_{userId}`) e override CSS dedicado (`#theme-player-override`). O mestre controla `SESSION_THEME_LOCK_UPDATED`; quando bloqueado, jogadores veem botao desabilitado com lock/tooltip e o override local e removido temporariamente sem apagar preferencia. | 2026-04-18 |
 | Seletor Multi-Dado com Breakdown Deterministico (Story 44) | O fluxo de rolagem 3D foi alinhado com Event Sourcing: `diceBreakdown` agora percorre fim-a-fim (`useFateDiceSimulation` -> `diceSimulationStore` -> `page.tsx` -> `useDiceRoller` -> `createRollEvent`), mantendo `dice` legado sincronizado por flatten do breakdown. `d100` passa a consolidar par de d10 em valor unico (1..100), o fallback com pool vazio gera `4dF` consistentemente e a overlay final exibe resultados por tipo para evitar perda de semantica em pools heterogeneos. | 2026-04-18 |
 | Story 44 - Guardas de Interacao no Overlay 3D | A camara passou a ter janela curta de armamento de input e hold minimo para lancamento, reduzindo auto-roll acidental por click-through entre menu e canvas. A UI do overlay tambem bloqueia propagacao nos botoes de acao/edicao/clear para manter o estado idle estavel durante selecao de pool. | 2026-04-18 |
+| Story 45 - Rolagem Oculta do Mestre por Evento | `ROLL_RESOLVED` passou a aceitar `payload.hiddenForPlayers` (apenas quando verdadeiro) com `visibility: "GM_ONLY"` para rolagens ocultas. O estado final de visibilidade e resolvido por `payload.hiddenForPlayers` + overrides em `ROLL_VISIBILITY_UPDATED` (`rollVisibilityOverrides[rollEventId]`). O toggle do log emite `ROLL_VISIBILITY_UPDATED` como `PUBLIC`, com `actorUserId` normalizado, e a filtragem para PLAYER ocorre na camada de renderizacao (CombatLog/LogTab), preservando Event Sourcing e replay. | 2026-04-19 |
 
 | ConsolidaÃ§Ã£o Feature-based (Session Notes) | MigraÃ§Ã£o completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentaÃ§Ã£o do useSessionNotes), componentes de abas e estilos em um Ãºnico domÃ­nio isolado. SubstituiÃ§Ã£o de `confirm()` nativo por `useDeleteConfirm` (UX de exclusÃ£o segura nÃ£o-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -190,6 +191,13 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Expressao manual inline (`+`) sem 3D**: o seletor do overlay ganhou entrada textual para rolagens como `2d6+d20+4`, resolvidas de forma instantanea (sem simulacao 3D) e emitidas no mesmo pipeline de eventos, com fallback visual do log ajustado para exibir valores numericos quando nao houver `diceBreakdown`.
 - **Paridade de entropia e foco de input no modo manual**: a expressao manual passou a consumir o mesmo buffer prefetchado de `random.org` (com fallback local apenas quando necessario), e o painel removeu `preventDefault` no campo para preservar foco/digitacao sem click-through para o canvas.
 - **Exploracao com margem >=3**: no modo de desafio (`challenge`), quando `total - dificuldade >= 3`, o resultado agora sobe para `SUCESSO COM ESTILO` e a acentuacao visual muda para azul (overlay e log compacto), em vez de verde de sucesso padrao.
+
+## Registro de Decisoes (Story 45)
+- **Ocultacao por rolagem (nao global)**: a regra foi definida por evento (`ROLL_RESOLVED`) com `hiddenForPlayers` opcional e sem impacto no restante da timeline.
+- **Override idempotente por evento**: `ROLL_VISIBILITY_UPDATED` atualiza `rollVisibilityOverrides` por `rollEventId`; o ultimo evento aplicado na ordem de replay vence.
+- **Seguranca por defesa em profundidade**: `useDiceRoller` ignora o flag quando o ator nao e GM, mesmo que o estado local tente propagar ocultacao.
+- **Filtro de exibicao por papel**: PLAYER nao renderiza rolagens com `hiddenFinal === true` em listas de log; GM continua vendo e podendo alternar.
+- **Escopo visual deliberado**: a ocultacao permanece no cliente (nao no transporte), consistente com o modelo atual de Event Sourcing e privacidade de mesa de confianca.
 
 ## PadrÃµes Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) tÃªm sua prÃ³pria subpasta com hooks e estilos.
