@@ -2,7 +2,7 @@
 title: "Story 46 - Performance Mobile, Voz Travando e Identidade Trocada no Voice Chat"
 description: "Três bugs reportados por jogadores: (1) site pesado/travando no celular, (2) jogador no mobile não é ouvido apesar de aparecer no voice, (3) jogador entra como Kzar mas aparece como Lina Clark na mesa Quimeras."
 priority: "crítica"
-status: "proposta"
+status: "em andamento"
 last_updated: "2026-04-22"
 tags: [bugfix, performance, mobile, voice-chat, webrtc, identidade, presença]
 epic: epic-01-refatoracao-modular
@@ -10,104 +10,163 @@ epic: epic-01-refatoracao-modular
 
 # Story 46 - Performance Mobile, Voz Travando e Identidade Trocada no Voice Chat
 
-## Contexto
+## Status de Implementação
 
-Três bugs críticos reportados por múltiplos jogadores em sessões reais. Todos afetam diretamente a experiência de jogo, com ênfase em dispositivos móveis.
-
----
-
-## Bug 1 — Site pesado / travando no celular
-
-### Descrição
-Ao entrar pelo celular, o site trava muito — vários jogadores reportaram a mesma experiência. A interface fica lenta, com input lag perceptível e scrolls engasgados.
-
-### Causa Raiz Provável (Análise)
-
-O `page.tsx` da sessão (1048 linhas) monta simultaneamente múltiplos subsistemas pesados, **todos ativos independentemente da aba visível**:
-
-1. **`VoiceChatPanel`** — cria `VoiceChatManager` + polling de speaking a cada 300ms (`setInterval`) + `computeState()` completo para resolver nomes de personagens (reprojeção toda da timeline apenas para exibir nomes no painel de voz).
-2. **`FateDice3D`** — componente Three.js com simulação de física 3D carregado via `dynamic()` mas sempre montado quando `diceVisible` é true; em mobile, o WebGL render loop consome GPU significativa.
-3. **`AtmosphericEffects`** — partículas CSS/Canvas renderizadas em modo combate.
-4. **Projeção duplicada** — `page.tsx` faz `computeState()` em `_earlyState` (L173-190), e o `VoiceChatPanel` faz outra `computeState()` independente (L147-164). Cada evento novo aciona duas projeções completas.
-5. **Múltiplos `useEffect` com timers** — heartbeat de voz (30s), polling de speaking (300ms), detecção de fala local (contínua via `analyser`), heartbeat de presença.
-6. **`backgroundAttachment: fixed`** — no modo combate, o body recebe `background-attachment: fixed` que causa repaint contínuo em mobile (Chromium issue conhecido).
-7. **Event subscribers ativos em todas as abas** — `globalEventStore.subscribe()` no `VoiceChatPanel` dispara setState a cada evento, independentemente da aba ativa.
-
-### Solução Proposta
-
-#### Fase 1 — Otimizações de baixo risco (sem refatoração estrutural)
-- **Eliminar `background-attachment: fixed` em mobile**: detectar via media query e usar `background-attachment: scroll` (ou removê-lo totalmente em `max-width: 768px`).
-- **Desmontar `AtmosphericEffects` em mobile**: renderização condicional baseada em `isMobileNav` (já disponível no `page.tsx`).
-- **Throttle do polling de speaking**: aumentar intervalo de 300ms para 500ms em mobile (detectado por `isMobileNav`).
-- **Guard de `computeState` no VoiceChatPanel**: mover resolução de nomes para uma consulta direta ao `state.characters` do `page.tsx` passado via prop, eliminando a segunda projeção completa.
-
-#### Fase 2 — Otimizações estruturais (se Fase 1 for insuficiente)
-- **Lazy mount do Three.js**: desmontar `FateDice3D` quando `!diceVisible` em vez de apenas ocultar.
-- **Debounce do event subscriber no VoiceChatPanel**: trocar `subscribe` por leitura snapshot periódica (a cada 2s) em vez de reativa.
-
----
-
-## Bug 2 — Jogador no mobile não é ouvido (áudio unidirecional)
-
-### Descrição
-Um jogador entra no voice chat pelo celular. Ele **aparece corretamente** no canal de voz para todos os participantes, mas **ninguém consegue ouvi-lo**. O jogador consegue ouvir os demais normalmente — o problema é exclusivamente o áudio de saída do mobile para os peers.
-
-### Causa Raiz Provável (Análise)
-
-1. **`getUserMedia` com constraints restritivas em mobile**: `getPreferredAudioConstraints()` solicita `noiseSuppression: true`, `autoGainControl: true`, `echoCancellation: true` simultaneamente. Em devices mobile (especialmente Android com Chrome), a combinação pode falhar silenciosamente — o browser retorna um stream com track de áudio **mutado de fábrica** ou com nível extremamente baixo.
-
-2. **Bluetooth HFP auto-avoidance em mobile**: `resolveInputDeviceId()` e `tryUpgradeFromBluetoothStream()` podem estar descartando o único microfone disponível em mobile (ex: fone Bluetooth conectado) e tentando usar um fallback inexistente, resultando em stream sem áudio real.
-
-3. **`AudioContext` suspended sem resume em mobile**: Safari/Chrome mobile exigem gesto do usuário para `AudioContext.resume()`. O `joinVoice()` faz `audioCtx.resume()` mas o timing pode não ter gesto ativo — resultando em `localAudioContext.state === 'suspended'`, o que impede o `localGainNode` de processar áudio.
-
-4. **Track `enabled = false` sem feedback visual**: Se `setMicMuted(false)` não alcançar o track correto (ex: após `getBestEffortMicStream` trocar o stream por upgrade), o track pode ficar disabled sem o UI refletir.
-
-5. **Offer/Answer sem codec comum**: Em mobile, a negociação SDP pode não encontrar Opus entre os codecs disponíveis (o `setCodecPreferences` referenciado em architecture.md pode falhar silenciosamente em mobile Safari).
-
-### Solução Proposta
-
-- **Adicionar guarda de stream health**: após `getUserMedia`, verificar `track.readyState === 'live'` e `track.enabled === true`. Se não, logar warning e tentar fallback com `{ audio: true }` simples.
-- **Remover auto-avoidance de Bluetooth em mobile**: em dispositivos móveis (`isMobile` detection via `navigator.maxTouchPoints > 0` ou `ontouchstart`), respeitar o device solicitado sem override automático (o jogador mobile conecta exatamente o mic que tem).
-- **Forçar `AudioContext.resume()` no gesto de "Entrar no Voice"**: mover o resume para dentro do handler de click do botão (já é assim, mas adicionar retry com 500ms se `state` permanecer `suspended`).
-- **Log detalhado de estado do track + sender**: Após `addTrack` e `createOffer/createAnswer`, logar `sender.track?.readyState`, `sender.track?.enabled`, `sender.track?.muted` para diagnóstico.
-
----
-
-## Bug 3 — Identidade trocada no Voice Chat (Kzar aparece como Lina Clark)
-
-### Descrição
-Na mesa **Quimeras**, um jogador entra como o personagem **Kzar**, mas no painel de voz aparece como **Lina Clark** (outro personagem da mesma mesa). A identidade visual (nome e possivelmente retrato) está trocada.
-
-### Causa Raiz Provável (Análise)
-
-O fluxo de resolução de identidade no voice chat tem três camadas de fallback, e o bug pode ocorrer em qualquer uma:
-
-1. **`characterId` stale no cache do backend** (`events.gateway.ts` L94-103): O backend faz merge de presença com `existing?.characterId` — se o jogador entrou antes com Lina Clark e reconectou com Kzar, o backend pode reter o `characterId` antigo porque o `voice-presence` com o novo ID não chegou a tempo (race condition entre `initialize()` e `updateCharacterId()`).
-
-2. **`lastKnownCharacterIdRef` stale no VoiceChatPanel** (L237-247): O cache local de characterId por userId no panel persiste o último ID conhecido. Se o jogador trocou de personagem entre sessões (ou abriu link sem `?c=`), o cache retém o stale.
-
-3. **Fallback por `ownerUserId` matching errado** (L474-481): Quando `characterId` é `undefined`, o código busca personagem por `norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm`. Se o `ownerUserId` do jogador coincidir com **múltiplos personagens** (ex: o jogador possui tanto Kzar quanto Lina Clark na mesma mesa), o `find()` retorna o **primeiro** na iteração de `Object.values(state.characters)` — que pode ser Lina Clark por ordem de inserção no objeto.
-
-4. **`characterId` undefined no mount** (VoiceChatPanel L251): O manager é criado com `characterId` prop que pode ser `undefined` no primeiro render (assincronicidade do `searchParams.get("c")`). O `updateCharacterId` effect (L410-414) atualiza depois, mas a primeira emissão de `voice-presence` já foi com `characterId: undefined`, e o backend pode ter cacheado essa presença.
-
-### Solução Proposta
-
-- **Backend: não retornar `existing?.characterId` se o novo `data.characterId` for explícito** (`events.gateway.ts` L101): Se `data.characterId` está presente e definido, deve **sempre** sobrescrever o `existing?.characterId`, nunca fazer merge com null-coalescing (`??`).
-- **Frontend: filtrar múltiplos personagens do mesmo owner**: No fallback por `ownerUserId` (VoiceChatPanel L474-481), quando houver múltiplos personagens do mesmo owner, priorizar o personagem com `activeInArena === true` ou o último criado (`createdAt` mais recente), em vez do primeiro encontrado pelo `find()`.
-- **Frontend: limpar `lastKnownCharacterIdRef` ao trocar de sessão**: Adicionar cleanup no effect de `sessionId` para evitar vazamento entre mesas.
-- **Frontend: atrasar primeira emissão de presence**: No `initialize()`, aguardar até `characterId` estar definido (ou até 500ms max) antes de emitir `voice-presence`, evitando presença sem identidade.
-
----
-
-## Arquivos Afetados
-
-| Arquivo | Bug(s) | Alterações Previstas |
+| Bug | Status | O que foi feito |
 |---|---|---|
-| `src/app/session/[id]/page.tsx` | 1 | Remover `background-attachment: fixed` em mobile via useEffect; passar `state.characters` como prop para VoiceChatPanel; condicionar AtmosphericEffects em `!isMobileNav` |
-| `src/app/session/[id]/session.css` | 1 | Media query `@media (max-width: 768px)` para `background-attachment: scroll` e redução de partículas |
-| `src/components/VoiceChatPanel.tsx` | 1, 2, 3 | Eliminar `computeState()` interno (usar prop); throttle de speaking poll em mobile; limpar `lastKnownCharacterIdRef` ao trocar sessão; melhorar fallback de characterId multi-owner |
-| `src/lib/VoiceChatManager.ts` | 2 | Adicionar guarda de stream health pós-getUserMedia; desabilitar Bluetooth auto-avoidance em mobile; reforçar AudioContext resume; logging de track state |
-| `back_sistema_rpg/src/events/events.gateway.ts` | 3 | Corrigir merge de `characterId` na presença para não reter IDs stale via null-coalescing |
+| Bug 2 — Áudio unidirecional mobile | ✅ **Resolvido** | Veja seção abaixo |
+| Bug 3 — Identidade trocada (Kzar/Lina Clark) | ✅ **Resolvido** | Veja seção abaixo |
+| Bug 1 — Performance mobile | 🔴 **Parcialmente resolvido** — travamento persiste; causas raiz mais profundas identificadas |
+
+---
+
+## Bug 2 — Jogador no mobile não é ouvido ✅ RESOLVIDO
+
+### O que foi feito
+- **`VoiceChatManager.isMobileDevice()`**: detecção via `navigator.maxTouchPoints > 0`.
+- **Bluetooth avoidance desabilitado em mobile**: `resolveInputDeviceId` e `tryUpgradeFromBluetoothStream` retornam sem override em dispositivos móveis. O mic do sistema é respeitado diretamente.
+- **Guarda de stream health**: após `getBestEffortMicStream`, `joinVoice` verifica `track.readyState === 'live'`. Se não-live, para as tracks e retenta com `{ audio: true }` simples.
+- **Log explícito de track state**: `readyState`, `enabled`, `label` logados após captura para diagnóstico futuro.
+- **AudioContext resume com retry**: após o primeiro `resume()`, se ainda `suspended`, aguarda 500ms e tenta novamente (resolve comportamento de Safari/Chrome mobile que exigem gesto ativo confirmado).
+
+---
+
+## Bug 3 — Identidade trocada no Voice Chat ✅ RESOLVIDO
+
+### O que foi feito
+- **Backend (`events.gateway.ts`)**: corrigido de `data.characterId ?? existing?.characterId` para `data.characterId !== undefined ? data.characterId : existing?.characterId`. Novo `characterId` explícito sempre sobrescreve; `undefined` de heartbeat sem `?c=` preserva o existente.
+- **`lastKnownCharacterIdRef.clear()` ao trocar de sessão**: effect de `sessionId` no `VoiceChatPanel` limpa o Map para evitar vazamento de identidade entre mesas.
+- **Fallback multi-owner com prioridade `activeInArena`**: `getDisplayName`, `getCharacterImage` e `allUsers` passaram de `find()` cego (primeiro na iteração do objeto) para `filter() → find(activeInArena) ?? last`. Quando um jogador possui Kzar (ativo) e Lina Clark na mesma mesa, o ativo vence.
+
+---
+
+## Bug 1 — Site pesado / travando no celular 🔴 EM ANDAMENTO
+
+### O que já foi feito (Fase 1 parcial)
+- `background-attachment: fixed` → `scroll` em mobile (`isMobileNav`). ✅
+- `AtmosphericEffects` suprimido em `!isMobileNav`. ✅
+- Throttle do speaking poll: 300ms → 500ms em mobile via prop `isMobile`. ✅
+
+### Por que ainda está travando — Diagnóstico Aprofundado
+
+Após as correções de Fase 1, o problema persiste porque as causas raiz mais pesadas não foram endereçadas. O travamento vem de **múltiplas projeções completas da timeline por evento**, **subscribers reativos em todos os componentes** e **CSS de compositing pesado em toda a tela**. Detalhado abaixo.
+
+---
+
+#### Causa A — Projeções `computeState()` em cascata (CRÍTICO)
+
+A cada evento recebido via WebSocket, **cinco chamadas de `computeState()` disparam em cascata** sobre a mesma timeline:
+
+| Local | Frequência | Função |
+|---|---|---|
+| `page.tsx` → `_earlyState` (L173) | A cada mudança em `events` | Alimenta `useVictoryDefeat` |
+| `useSessionDerivations.ts` → `state` (L52) | A cada mudança em `events` | Estado principal da sessão |
+| `VoiceChatPanel.tsx` → `state` (L153) | A cada evento (subscriber próprio) | Apenas para resolver nomes de personagens |
+| `TextChatPanel.tsx` → `state` (L56) | A cada evento (subscriber próprio) | Apenas para resolver `displayName` de mensagens |
+| `FloatingNotes.tsx` (L358) | No `bulkEvents` callback | Apenas para resolver `stickyNotes` do usuário |
+
+`computeState()` itera sobre **toda a timeline de eventos** para reconstruir o estado. Em sessões longas (300+ eventos), cada chamada percorre centenas de eventos. Com 5 chamadas por evento recebido, o custo é multiplicado 5x no thread principal — que em mobile tem 30-50% da velocidade de CPU de um desktop.
+
+**Solução requerida**: centralizar o estado projetado em um único subscriber reativo no `globalEventStore`, exposto via React Context ou store singleton. Todos os componentes leem do store compartilhado em vez de cada um rodar `computeState()` independente.
+
+---
+
+#### Causa B — Event subscribers reativos em componentes sempre montados (ALTO)
+
+Os seguintes componentes estão **sempre montados** (independente da aba ativa) e cada um mantém um subscriber ao `globalEventStore`:
+
+- `VoiceChatPanel` — `globalEventStore.subscribe()` + `setEvents()` a cada evento
+- `TextChatPanel` — `globalEventStore.subscribe()` + `setEvents()` a cada evento
+- `FloatingNotes` — `globalEventStore.subscribe()` (bulk apenas) + `computeState()`
+- `TurnOrderTracker` — `globalEventStore.subscribe()` com `setEvents()`
+- `MusicPlayer` — `globalEventStore.subscribe()` com processamento de playback
+
+Cada `setEvents(prev => [...prev, event])` cria um **novo array de estado**, o que invalida todos os `useMemo` dependentes dos componentes, causando re-render em cadeia. Em mobile, cada re-render custa mais caro pelo GPU/CPU limitado.
+
+**Solução requerida**: componentes que só precisam de um subconjunto do estado (ex: TextChatPanel → mensagens, FloatingNotes → stickyNotes) devem receber apenas o slice relevante — não manter cópia do array `events` completo.
+
+---
+
+#### Causa C — `backdrop-filter: blur()` em elementos sempre visíveis (MÉDIO)
+
+O CSS do `session.css` usa `backdrop-filter` em múltiplos elementos que estão sempre na tela:
+
+- `.gm-sidebar-vertical` — `blur(14px)` permanente (sidebar GM)
+- `.nav-expanded-shell` — `blur(16px) saturate(1.2)` (menu lateral)
+- `.combat-control-bar` — `blur(4px)` (barra de controle)
+- `.screenshare-refresh-btn` — `blur(8px)` (botão flutuante)
+- `nav-artifact-drawer` — `blur(14px) saturate(1.25)` (gavetas da arena)
+- E mais ~8 elementos com `backdrop-filter`
+
+`backdrop-filter` força o browser a criar **stacking contexts separados** e pintar o background de cada elemento independentemente. Em mobile Chromium, isso é particularmente custoso pois desabilita otimizações de compositing em cascata. Quando o scroll acontece, todos os elementos com `backdrop-filter` precisam ser repintados.
+
+**Solução requerida**: remover ou substituir `backdrop-filter` por `background: rgba(...)` sólido em elementos sempre visíveis no mobile via `@media (max-width: 768px)`.
+
+---
+
+#### Causa D — `console.log` em useMemo de render crítico (MÉDIO)
+
+Em `useSessionDerivations.ts` L186-187, há dois `console.log` dentro do `useMemo` de `isCurrentPlayerActive`:
+
+```ts
+console.log("🛡️ [isCurrentPlayerActive] ID:", actorUserId, ...);
+console.log("🛡️ [isCurrentPlayerActive] User:", actorUserId, ...);
+```
+
+Este memo é recalculado a cada mudança em `state.characters`, `currentTurnActorId` ou `actorUserId`. Em mobile, chamadas de `console.log` bloqueiam o thread brevemente — e em conjunto com a frequência de recálculo, contribuem para jank perceptível.
+
+**Solução requerida**: remover os logs de diagnóstico (eram temporários para debug).
+
+---
+
+#### Causa E — `events` array como dependência universal (MÉDIO)
+
+`useSessionDerivations` tem `eventSessionMap` (L284) com `[events, state.sessionNumber]` como deps, e `lastActionTimestamp` (L313) com `[events, state.lastTurnChangeTimestamp]`. Ambos percorrem o array completo de eventos a cada render. Como `events` muda a cada evento recebido (novo array de referência), todos esses memos são invalidados frequentemente mesmo quando a informação derivada não mudou.
+
+---
+
+### Plano de Correção — Fase 2
+
+#### Prioridade 1 — Remover `console.log` de diagnóstico (baixo risco, alto impacto imediato)
+- Remover linhas L186-187 de `useSessionDerivations.ts` (logs emoji dentro de useMemo)
+- Remover L321 (`[DEBUG] forcing local combat start time`)
+
+#### Prioridade 2 — Desabilitar `backdrop-filter` em mobile via CSS (baixo risco)
+- Adicionar `@media (max-width: 768px)` em `session.css` desativando `backdrop-filter` nos elementos permanentes (`.gm-sidebar-vertical`, `.nav-expanded-shell`, gavetas da arena)
+- Substituir por `background-color` sólido equivalente
+
+#### Prioridade 3 — Centralizar `computeState()` em store singleton (alto impacto, médio risco)
+- Criar `projectedStateStore` que expõe o estado derivado e se atualiza via subscriber único do `globalEventStore`
+- `VoiceChatPanel`, `TextChatPanel`, `FloatingNotes` passam a ler do store em vez de manter `events` locais + `computeState()` próprio
+- Resultado: 5 chamadas → 1 chamada de `computeState()` por evento
+
+#### Prioridade 4 — Eliminar subscriber de `VoiceChatPanel` para events (médio risco)
+- `VoiceChatPanel` usa `state.characters` apenas para resolver nomes/imagens
+- Alternativa mais simples: receber `characters` como prop do `HeaderWrapper`, que por sua vez recebe do `projectedStateStore` (após Prioridade 3)
+- Enquanto Prioridade 3 não está pronta: passar `characters` via prop direto do `SessionHeader` usando hook `useHeaderLogic` expandido
+
+---
+
+## Arquivos Afetados (pendentes)
+
+| Arquivo | Bug | Alterações Pendentes |
+|---|---|---|
+| `src/app/session/[id]/hooks/useSessionDerivations.ts` | 1-D | Remover console.log de diagnóstico (L186, L187, L321) |
+| `src/app/session/[id]/session.css` | 1-C | `@media mobile` desabilitando backdrop-filter em elementos permanentes |
+| `src/lib/projectedStateStore.ts` *(novo)* | 1-A | Singleton que expõe `computeState()` reativo compartilhado |
+| `src/components/VoiceChatPanel.tsx` | 1-A/B | Remover subscriber de events + computeState; usar projectedStateStore |
+| `src/components/TextChatPanel.tsx` | 1-A/B | Idem |
+| `src/components/FloatingNotes.tsx` | 1-A/B | Idem |
+
+## Arquivos Afetados (já corrigidos)
+
+| Arquivo | Bug(s) | Alterações Aplicadas |
+|---|---|---|
+| `src/app/session/[id]/page.tsx` | 1 | `backgroundAttachment: scroll` em mobile; `AtmosphericEffects` suprimido em `!isMobileNav` |
+| `src/components/HeaderWrapper.tsx` | 1 | Detecta mobile; passa `isMobile` ao `VoiceChatPanel` |
+| `src/components/VoiceChatPanel.tsx` | 1, 3 | Throttle poll 300→500ms em mobile; `lastKnownCharacterIdRef.clear()` ao trocar sessão; fallback multi-owner com `activeInArena` |
+| `src/lib/VoiceChatManager.ts` | 2 | `isMobileDevice()`; Bluetooth avoidance desabilitado em mobile; guarda de stream health; AudioContext resume com retry |
+| `back_sistema_rpg/src/events/events.gateway.ts` | 3 | `characterId !== undefined ?` em vez de `??` para evitar retenção de ID stale |
 
 ---
 
@@ -115,40 +174,33 @@ O fluxo de resolução de identidade no voice chat tem três camadas de fallback
 
 ### Bug 1 — Performance Mobile
 - [ ] O site carrega e navega sem travamento perceptível em dispositivos Android mid-range (4GB RAM).
-- [ ] `background-attachment: fixed` não é aplicado em viewports ≤768px.
-- [ ] `AtmosphericEffects` não é renderizado em mobile (ou renderiza versão reduzida).
-- [ ] O `VoiceChatPanel` **não** executa `computeState()` próprio; usa estado derivado do `page.tsx`.
-- [ ] O polling de speaking em mobile opera a ≥500ms de intervalo.
+- [x] `background-attachment: fixed` não é aplicado em viewports ≤768px.
+- [x] `AtmosphericEffects` não é renderizado em mobile.
+- [ ] `computeState()` é chamado **uma única vez** por evento recebido (não 5 vezes).
+- [ ] `backdrop-filter` desabilitado em elementos permanentes no mobile.
+- [x] O polling de speaking em mobile opera a ≥500ms de intervalo.
+- [ ] `console.log` de diagnóstico removidos do caminho crítico de render.
 
 ### Bug 2 — Áudio Mobile Unidirecional
-- [ ] Jogador em dispositivo mobile consegue **ser ouvido** por todos os participantes após entrar no voice.
-- [ ] Se o `getUserMedia` retornar track com `readyState !== 'live'`, o sistema tenta fallback com `{ audio: true }` simples.
-- [ ] Em mobile, o Bluetooth auto-avoidance é desabilitado (respeita device do sistema).
-- [ ] O `AudioContext` é garantidamente `running` antes de emitir `voice-join`.
-- [ ] Console exibe log do estado do track (`readyState`, `enabled`, `label`) após captura.
+- [x] Jogador em dispositivo mobile consegue **ser ouvido** por todos os participantes após entrar no voice.
+- [x] Se o `getUserMedia` retornar track com `readyState !== 'live'`, o sistema tenta fallback com `{ audio: true }` simples.
+- [x] Em mobile, o Bluetooth auto-avoidance é desabilitado (respeita device do sistema).
+- [x] O `AudioContext` é garantidamente `running` antes de emitir `voice-join`.
+- [x] Console exibe log do estado do track (`readyState`, `enabled`, `label`) após captura.
 
 ### Bug 3 — Identidade Trocada
-- [ ] Na mesa Quimeras, jogador que entra como Kzar aparece como **Kzar** (e não Lina Clark) no painel de voz.
-- [ ] Backend sobrescreve `characterId` na presença quando o novo valor é explícito (`!== undefined`).
-- [ ] `lastKnownCharacterIdRef` é limpo ao trocar de sessão (`sessionId`).
-- [ ] Quando há múltiplos personagens do mesmo owner, o fallback prioriza `activeInArena` ou `fixedCharacterId`.
-- [ ] A identidade no voice está correta após reconexão (F5, troca de aba, softReconnect).
+- [x] Na mesa Quimeras, jogador que entra como Kzar aparece como **Kzar** (e não Lina Clark) no painel de voz.
+- [x] Backend sobrescreve `characterId` na presença quando o novo valor é explícito (`!== undefined`).
+- [x] `lastKnownCharacterIdRef` é limpo ao trocar de sessão (`sessionId`).
+- [x] Quando há múltiplos personagens do mesmo owner, o fallback prioriza `activeInArena`.
+- [x] A identidade no voice está correta após reconexão (F5, troca de aba, softReconnect).
 
 ---
 
 ## Não-Escopo
 
 - Migração de topologia mesh para SFU.
-- Refatoração completa do `page.tsx` (apenas otimizações cirúrgicas).
-- Suporte a iOS Safari (foco em Android Chrome, que é o device reportado).
+- Refatoração completa do `page.tsx`.
+- Suporte a iOS Safari (foco em Android Chrome).
 - Alterações no schema de eventos ou domain.ts.
 - Performance de desktop (foco exclusivo em mobile).
-
----
-
-## Notas Técnicas
-
-- **Projeção duplicada**: O `VoiceChatPanel` atualmente faz `computeState()` próprio nos L147-164 apenas para acessar `state.characters`. Este é o item de maior impacto de performance — remover e passar como prop elimina ~50% do custo computacional por evento.
-- **`background-attachment: fixed` em mobile**: Chromium aplica compositing layer separada para fixed backgrounds, forçando repaint do body inteiro a cada scroll. Remover em mobile é o fix de maior retorno por menor risco.
-- **Bluetooth em mobile**: A lógica de auto-avoidance (L210-244, L247-284) foi desenhada para desktop com headsets; em mobile, o mic do sistema já é o correto e a troca automática causa falha silenciosa.
-- **Gateway presence merge** (`events.gateway.ts` L101): A linha `characterId: data.characterId ?? existing?.characterId` usa null-coalescing, o que preserva o ID antigo quando o novo é `undefined`. Isso é correto para updates parciais (heartbeat), mas incorreto quando o jogador troca de personagem e o `?c=` é lido assincronamente.

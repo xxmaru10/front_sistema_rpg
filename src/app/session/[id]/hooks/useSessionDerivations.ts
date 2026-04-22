@@ -183,8 +183,6 @@ export function useSessionDerivations({
             }
         }
 
-        console.log("🛡️ [isCurrentPlayerActive] ID:", actorUserId, "Active:", result, "Turn:", currentTurnActorId, "ActingFor:", fixedCharacterId);
-        console.log("🛡️ [isCurrentPlayerActive] User:", actorUserId, "Active:", result, "TurnIdxActor:", currentTurnActorId, "Reaction:", state.isReaction);
         return result;
     }, [currentTurnActorId, state.characters, actorUserId, fixedCharacterId, state.isReaction, state.targetId, userRole]);
 
@@ -318,7 +316,6 @@ export function useSessionDerivations({
                 const eventTime = new Date(mostRecentEvent.createdAt).getTime();
                 if (eventTime > localStart) return mostRecentEvent.createdAt;
             }
-            console.log("[DEBUG] forcing local combat start time");
             return new Date(combatStartTimeRef.current).toISOString();
         }
         if (state.lastTurnChangeTimestamp) return state.lastTurnChangeTimestamp;

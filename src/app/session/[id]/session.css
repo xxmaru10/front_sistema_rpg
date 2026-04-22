@@ -2367,3 +2367,48 @@ body {
         filter: blur(10px);
     }
 }
+
+/* ===== PERFORMANCE MOBILE — Story 46 =====
+   backdrop-filter força stacking contexts separados e repaint por scroll no Chromium mobile.
+   Em ≤768px substituímos por background sólido equivalente para eliminar esse custo.
+   Elementos cobertos: sidebar GM, barra de combate, menu lateral, gavetas de arena,
+   barra de rolagem integrada e tooltip do nav.
+   Efeito visual: o "glass" some em mobile; funcionalidade intacta.
+*/
+@media (max-width: 768px) {
+    .gm-sidebar-vertical {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(8, 8, 16, 0.92);
+    }
+
+    .combat-control-bar {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(10, 10, 10, 0.88);
+    }
+
+    .nav-expanded-shell {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(8, 8, 8, 0.95);
+    }
+
+    .nav-artifact::after {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(5, 5, 5, 0.96);
+    }
+
+    .combat-avatar-drawer-handle {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(20, 20, 20, 0.95);
+    }
+
+    .combat-dice-integrated {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(0, 0, 0, 0.82);
+    }
+}
