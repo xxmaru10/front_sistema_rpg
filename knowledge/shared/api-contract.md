@@ -5,7 +5,7 @@ tags: [api, contrato, tipos, rotas, shared]
 repo: shared
 related:
   - /knowledge/api/endpoints.md
-last_updated: 2026-04-19 (story-45 roll visibility override contract)
+last_updated: 2026-04-22 (story-47 world character faction link + notes pagination/sorting UI contract alignment)
 status: ativo
 ---
 
@@ -127,6 +127,7 @@ export type WorldEntity = {
   name: string;
   type: "PERSONAGEM" | "FACAO" | "FAMILIA" | "BESTIARIO" | "LOCALIZACAO" | "RELIGIAO" | "MAPA" | "RACA" | "OUTROS";
   description?: string;
+  factionId?: string;
   religionId?: string;
   imageUrl?: string;
   fieldVisibility?: Record<string, boolean>;

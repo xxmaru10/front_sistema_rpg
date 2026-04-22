@@ -437,6 +437,7 @@ export type WorldEntity = {
     description: string;
     createdAt: string;
     familyId?: string;
+    factionId?: string;
     raceId?: string;
     originId?: string;
     religionId?: string;

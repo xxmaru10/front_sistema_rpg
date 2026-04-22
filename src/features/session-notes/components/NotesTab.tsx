@@ -1,4 +1,4 @@
-import { AlertTriangle, Bold, Check, ChevronDown, ChevronUp, Clock, GripVertical, Italic, List, Pencil, Plus, RefreshCw, Send, Trash2, X } from "lucide-react";
+﻿import { AlertTriangle, Bold, Check, ChevronDown, ChevronUp, Clock, GripVertical, Italic, List, Pencil, Plus, RefreshCw, Send, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MentionEditor } from "@/components/MentionEditor";
 import { renderMentions } from "@/lib/mentionUtils";
@@ -107,7 +107,10 @@ export function NotesTab({
     const normalizedUserId = userId.trim().toLowerCase();
     const isAuthor = (authorId?: string) => (authorId || "").trim().toLowerCase() === normalizedUserId;
     const playerChars = useMemo(
-        () => Object.values((state?.characters) || {}).filter((char: any) => !char.isNPC && char.source !== "bestiary") as any[],
+        () =>
+            (Object.values((state?.characters) || {})
+                .filter((char: any) => !char.isNPC && char.source !== "bestiary")
+                .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" })) as any[]),
         [state?.characters]
     );
 
@@ -136,6 +139,17 @@ export function NotesTab({
         if (notesSubTab !== "Privado" || selectedPrivateFolderId === "all") return deduped;
         return deduped.filter(note => (note.folderId || "") === selectedPrivateFolderId);
     }, [filteredNotes, notesSubTab, selectedPrivateFolderId]);
+
+    const orderedVisibleNotes = visibleNotes;
+
+    const allSessionNotes = useMemo(() => {
+        const deduped = dedupeById(notes.filter((note: any) => !note.isPrivate || isAuthor(note.authorId)));
+        return (
+            sessionFilter === null
+                ? deduped
+                : deduped.filter((note: any) => (note.sessionNumber || 1) === sessionFilter)
+        );
+    }, [notes, sessionFilter, normalizedUserId]);
 
     const currentFolder = selectedPrivateFolderId === "all" ? null : folderMap.get(selectedPrivateFolderId);
 
@@ -199,7 +213,7 @@ export function NotesTab({
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
-                    TÓPICOS PRIVADOS
+                    TÃ“PICOS PRIVADOS
                 </span>
                 <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)" }}>
                     {privateNoteFolders.length}/10
@@ -304,7 +318,7 @@ export function NotesTab({
                     title={privateNoteFolders.length >= 10 ? "Limite de 10 submenus atingido" : "Criar submenu"}
                 >
                     <Plus size={12} />
-                    NOVO TÓPICO
+                    NOVO TÃ“PICO
                 </button>
             </div>
 
@@ -419,7 +433,7 @@ export function NotesTab({
             {isOffline && (
                 <div className="connection-warning-bar animate-slide-down">
                     <AlertTriangle size={14} />
-                    <span>CONEXÃO INSTÁVEL - TENTANDO RECONECTAR...</span>
+                    <span>CONEXÃƒO INSTÃVEL - TENTANDO RECONECTAR...</span>
                     <RefreshCw size={12} className="animate-spin" />
                 </div>
             )}
@@ -429,35 +443,42 @@ export function NotesTab({
             </div>
 
             {notesSubTab === "Sessão" && (() => {
-                const sessionNotes = dedupeById(notes.filter((note: any) => !note.isPrivate || isAuthor(note.authorId)));
-                const grouped: Record<number, any[]> = {};
-                sessionNotes.forEach((note: any) => {
+                const allSessionBase = dedupeById(notes.filter((note: any) => !note.isPrivate || isAuthor(note.authorId)));
+                const groupedAll: Record<number, any[]> = {};
+                allSessionBase.forEach((note: any) => {
                     const sessionNumber = note.sessionNumber || 1;
-                    if (!grouped[sessionNumber]) grouped[sessionNumber] = [];
-                    grouped[sessionNumber].push(note);
+                    if (!groupedAll[sessionNumber]) groupedAll[sessionNumber] = [];
+                    groupedAll[sessionNumber].push(note);
                 });
-                const allSessionNumbers = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-                const visibleSessionNumbers = sessionFilter === null ? allSessionNumbers : allSessionNumbers.filter(sessionNumber => sessionNumber === sessionFilter);
+                const allSessionNumbers = Object.keys(groupedAll).map(Number).sort((a, b) => a - b);
+
+                const groupedVisible: Record<number, any[]> = {};
+                allSessionNotes.forEach((note: any) => {
+                    const sessionNumber = note.sessionNumber || 1;
+                    if (!groupedVisible[sessionNumber]) groupedVisible[sessionNumber] = [];
+                    groupedVisible[sessionNumber].push(note);
+                });
+                const visibleSessionNumbers = Object.keys(groupedVisible).map(Number).sort((a, b) => a - b);
 
                 return (
                     <>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(197,160,89,0.1)", background: "rgba(0,0,0,0.2)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(197,160,89,0.1)", background: "rgba(0,0,0,0.2)", flexWrap: "wrap" }}>
                             <span style={{ fontFamily: "var(--font-header)", fontSize: "0.6rem", letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>
-                                SESSÃO:
+                                SESSÃƒO:
                             </span>
                             <select
                                 value={sessionFilter === null ? "all" : String(sessionFilter)}
                                 onChange={e => setSessionFilter(e.target.value === "all" ? null : Number(e.target.value))}
                                 className="author-filter"
                             >
-                                <option value="all">TODAS AS SESSÕES</option>
+                                <option value="all">TODAS AS SESSÃ•ES</option>
                                 {allSessionNumbers.map(sessionNumber => (
-                                    <option key={sessionNumber} value={String(sessionNumber)}>SESSÃO {sessionNumber}</option>
+                                    <option key={sessionNumber} value={String(sessionNumber)}>SESSÃƒO {sessionNumber}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="notes-scroll scrollbar-arcane" style={{ padding: "10px 5px" }}>
-                            {visibleSessionNumbers.length === 0 && (
+                            {allSessionNotes.length === 0 && (
                                 <div className="empty-notes">NENHUMA NOTA ENCONTRADA.</div>
                             )}
                             {visibleSessionNumbers.map(sessionNumber => (
@@ -465,11 +486,11 @@ export function NotesTab({
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "18px 0 12px", padding: "0 4px" }}>
                                         <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, var(--accent-color))" }} />
                                         <span style={{ fontFamily: "var(--font-header)", fontSize: "0.65rem", letterSpacing: "0.25em", color: "var(--accent-color)", padding: "4px 14px", border: "1px solid var(--accent-color)", background: "rgba(0,0,0,0.5)", whiteSpace: "nowrap" }}>
-                                            SESSÃO {sessionNumber}
+                                            SESSÃƒO {sessionNumber}
                                         </span>
                                         <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, var(--accent-color))" }} />
                                     </div>
-                                    {grouped[sessionNumber].map((note: any) => {
+                                    {groupedVisible[sessionNumber].map((note: any) => {
                                         const isFailed = failedEventIds.has(note.id);
                                         const isPending = note.seq === 0 && !isFailed;
 
@@ -506,7 +527,7 @@ export function NotesTab({
             {notesSubTab === "Jogadores" && (
                 <div className="notes-scroll scrollbar-arcane" style={{ padding: "10px 5px" }}>
                     {playerChars.length === 0 ? (
-                        <div className="empty-notes">NENHUM JOGADOR ENCONTRADO NA SESSÃO.</div>
+                        <div className="empty-notes">NENHUM JOGADOR ENCONTRADO NA SESSÃƒO.</div>
                     ) : (
                         <>
                             {renderPlayerSubmenus()}
@@ -526,7 +547,7 @@ export function NotesTab({
                 <>
                     <div className="notes-header">
                         <h3 className="notes-title">
-                            DIÁRIO DE CAMPANHA {notesSubTab === "Privado" && "(PRIVADO)"}
+                            DIÃRIO DE CAMPANHA {notesSubTab === "Privado" && "(PRIVADO)"}
                             {notesSubTab === "Privado" && currentFolder && (
                                 <span style={{ marginLeft: "10px", fontSize: "0.58rem", letterSpacing: "0.18em", color: currentFolder.color || "var(--accent-color)" }}>
                                     {currentFolder.name.toUpperCase()}
@@ -548,11 +569,11 @@ export function NotesTab({
                                 </select>
                             )}
 
-                            {visibleNotes.length > 0 && (
+                            {orderedVisibleNotes.length > 0 && (
                                 <button
                                     className="clear-all-btn"
                                     onClick={() => handleClearNotesLocally(notesSubTab as 'Geral' | 'Privado')}
-                                    title="Apagar notas da minha visualização"
+                                    title="Apagar notas da minha visualizaÃ§Ã£o"
                                 >
                                     LIMPAR PARA MIM
                                 </button>
@@ -574,16 +595,16 @@ export function NotesTab({
                     {notesSubTab === "Privado" && renderPrivateFolders()}
 
                     <div className="notes-scroll scrollbar-arcane" ref={scrollRef}>
-                        {visibleNotes.length === 0 && (
+                        {orderedVisibleNotes.length === 0 && (
                             <div className="empty-notes">
                                 {notesSubTab === "Geral"
                                     ? "NENHUMA NOTA ENCONTRADA."
                                     : selectedPrivateFolderId === "all"
-                                        ? "VOCÊ AINDA NÃO TEM ANOTAÇÕES PRIVADAS."
-                                        : "ESTE SUBMENU AINDA NÃO TEM ANOTAÇÕES."}
+                                        ? "VOCÃŠ AINDA NÃƒO TEM ANOTAÃ‡Ã•ES PRIVADAS."
+                                        : "ESTE SUBMENU AINDA NÃƒO TEM ANOTAÃ‡Ã•ES."}
                             </div>
                         )}
-                        {visibleNotes.map((note) => {
+                        {orderedVisibleNotes.map((note) => {
                             const isMyNote = isAuthor(note.authorId);
                             const isGM = userRole === "GM";
                             const canEdit = isMyNote || (isGM && !note.isPrivate);
@@ -647,7 +668,7 @@ export function NotesTab({
                         )}
                         <div className="editor-toolbar">
                             <button onClick={() => handleFormat("bold")} className="tool-btn" title="Negrito"><Bold size={14} /></button>
-                            <button onClick={() => handleFormat("italic")} className="tool-btn" title="Itálico"><Italic size={14} /></button>
+                            <button onClick={() => handleFormat("italic")} className="tool-btn" title="ItÃ¡lico"><Italic size={14} /></button>
                             <button onClick={() => handleFormat("insertUnorderedList")} className="tool-btn" title="Marcadores"><List size={14} /></button>
                         </div>
                         <div className="editor-input-wrapper">
@@ -673,7 +694,7 @@ export function NotesTab({
                                 onClick={handleSend}
                                 className={`send-btn ${editingNoteId ? "save-mode" : ""}`}
                                 disabled={!editorContent.trim() || isOffline}
-                                title={editingNoteId ? "Salvar Alterações" : "Enviar Nota"}
+                                title={editingNoteId ? "Salvar AlteraÃ§Ãµes" : "Enviar Nota"}
                             >
                                 {editingNoteId ? <Check size={16} /> : <Send size={16} />}
                             </button>
@@ -684,3 +705,5 @@ export function NotesTab({
         </div>
     );
 }
+
+

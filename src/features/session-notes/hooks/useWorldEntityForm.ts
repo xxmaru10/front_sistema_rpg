@@ -35,6 +35,7 @@ export function useWorldEntityForm() {
     const [tagInput, setTagInput] = useState("");
     const [newEntityDescription, setNewEntityDescription] = useState("");
     const [newEntityFamily, setNewEntityFamily] = useState("");
+    const [newEntityFaction, setNewEntityFaction] = useState("");
     const [newEntityRace, setNewEntityRace] = useState("");
     const [newEntityOrigin, setNewEntityOrigin] = useState("");
     const [newEntityCurrentLoc, setNewEntityCurrentLoc] = useState("");
@@ -57,6 +58,7 @@ export function useWorldEntityForm() {
         setTagInput("");
         setNewEntityDescription("");
         setNewEntityFamily("");
+        setNewEntityFaction("");
         setNewEntityRace("");
         setNewEntityOrigin("");
         setNewEntityProfession("");
@@ -102,6 +104,7 @@ export function useWorldEntityForm() {
         tagInput, setTagInput,
         newEntityDescription, setNewEntityDescription,
         newEntityFamily, setNewEntityFamily,
+        newEntityFaction, setNewEntityFaction,
         newEntityRace, setNewEntityRace,
         newEntityOrigin, setNewEntityOrigin,
         newEntityCurrentLoc, setNewEntityCurrentLoc,

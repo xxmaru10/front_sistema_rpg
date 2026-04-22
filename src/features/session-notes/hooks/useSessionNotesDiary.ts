@@ -80,10 +80,12 @@ export function useSessionNotesDiary({
     // --- Derived ---
     const authors = useMemo(() => {
         const visibleNotes = notes.filter(n => !n.isPrivate || isAuthor(n.authorId));
-        return Array.from(new Set(visibleNotes.map(n => n.authorId))).map(id => {
-            const note = visibleNotes.find(n => n.authorId === id);
-            return { id, name: note?.authorName || id };
-        });
+        return Array.from(new Set(visibleNotes.map(n => n.authorId)))
+            .map(id => {
+                const note = visibleNotes.find(n => n.authorId === id);
+                return { id, name: note?.authorName || id };
+            })
+            .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" }));
     }, [notes, userId]);
 
     const filteredNotesByTab = useMemo(() => {

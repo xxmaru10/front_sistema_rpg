@@ -51,7 +51,9 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         const localBestiary = Object.values(state.characters).filter(c => c.source === "bestiary");
         const localIds = new Set(localBestiary.map(c => c.id));
         const globalNotDuplicated = globalBestiaryChars.filter(c => !localIds.has(c.id));
-        return [...localBestiary, ...globalNotDuplicated];
+        return [...localBestiary, ...globalNotDuplicated].sort((a, b) =>
+            (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" })
+        );
     }, [state.characters, globalBestiaryChars]);
 
     // --- Sub-hooks ---
@@ -170,7 +172,9 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
 
         const getUsedIds = (type: string, field: string) => {
             const ids = Array.from(new Set(all.filter(e => e.type === type && (e as any)[field]).map((e: any) => (e as any)[field])));
-            return ids.map(id => ({ id, name: state.worldEntities?.[id]?.name || id }));
+            return ids
+                .map(id => ({ id, name: state.worldEntities?.[id]?.name || id }))
+                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
         };
         const getUsedTextValues = (type: string, field: string) => {
             const values = Array.from(new Set(all.filter(e => e.type === type && (e as any)[field]).map((e: any) => (e as any)[field] as string))).sort();
@@ -196,6 +200,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
                 { field: "raceId", label: "RAÇA", options: getUsedIds("PERSONAGEM", "raceId") },
                 { field: "profession", label: "PROFISSÃO", options: getUsedTextValues("PERSONAGEM", "profession") },
                 { field: "familyId", label: "FAMÍLIA", options: getUsedIds("PERSONAGEM", "familyId") },
+                { field: "factionId", label: "FACÇÃO", options: getUsedIds("PERSONAGEM", "factionId") },
                 { field: "originId", label: "ORIGEM", options: getUsedIds("PERSONAGEM", "originId") },
                 { field: "religionId", label: "RELIGIÃO", options: getUsedIds("PERSONAGEM", "religionId") },
                 { field: "currentLocationId", label: "LOCAL ATUAL", options: getUsedIds("PERSONAGEM", "currentLocationId") },

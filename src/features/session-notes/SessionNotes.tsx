@@ -147,6 +147,7 @@ export function SessionNotes({
         tagInput, setTagInput,
         newEntityDescription, setNewEntityDescription,
         newEntityFamily, setNewEntityFamily,
+        newEntityFaction, setNewEntityFaction,
         newEntityRace, setNewEntityRace,
         newEntityOrigin, setNewEntityOrigin,
         newEntityCurrentLoc, setNewEntityCurrentLoc,
@@ -206,6 +207,7 @@ export function SessionNotes({
         authors,
         bestiaryList,
         familiesList,
+        factionsList,
         racesList,
         religionsList,
         locationsList,
@@ -847,6 +849,9 @@ export function SessionNotes({
                     newEntityFamily={newEntityFamily}
                     setNewEntityFamily={setNewEntityFamily}
                     familiesList={familiesList}
+                    newEntityFaction={newEntityFaction}
+                    setNewEntityFaction={setNewEntityFaction}
+                    factionsList={factionsList}
                     newEntityRace={newEntityRace}
                     setNewEntityRace={setNewEntityRace}
                     racesList={racesList}

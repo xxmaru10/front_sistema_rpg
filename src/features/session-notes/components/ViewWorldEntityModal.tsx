@@ -245,6 +245,17 @@ export function ViewWorldEntityModal({
                                 )}
                             </div>
                             <div className="rel-item" style={{ position: 'relative' }}>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>FACÇÃO</label>
+                                <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
+                                    {isFieldVisible('faction') ? (viewingEntity.factionId ? state.worldEntities?.[viewingEntity.factionId]?.name.toUpperCase() : "NENHUMA") : "????"}
+                                </span>
+                                {isGM && (
+                                    <button onClick={() => toggleVisibility('faction')} className="visibility-toggle-btn field-toggle" title={fieldVisibility['faction'] ? "Mostrar Facção" : "Ocultar Facção"}>
+                                        {fieldVisibility['faction'] ? <EyeOff size={12} /> : <Eye size={12} />}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="rel-item" style={{ position: 'relative' }}>
                                 <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RAÇA</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('race') ? (viewingEntity.raceId ? state.worldEntities?.[viewingEntity.raceId]?.name.toUpperCase() : "NENHUMA") : "????"}
