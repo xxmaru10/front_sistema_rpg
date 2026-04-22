@@ -2453,17 +2453,15 @@ body {
     }
 
     /* Disable box-shadow glow on avatar cards — GPU layer cost */
-    .combat-avatar-card,
-    .arena-char-card {
-        box-shadow: none !important;
+    .combat-avatar-card:not(:hover):not(.pinned),
+    .arena-char-card:not(:hover):not(.pinned) {
+        box-shadow: none;
     }
 
-    /* Disable CSS animations that run continuously on mobile */
-    @media (prefers-reduced-motion: no-preference) {
-        .pulse-dot,
-        .speaking-indicator,
-        .voice-speaking-ring {
-            animation-duration: 2s;
-        }
+    /* Slow down continuous animations — reduces repaint frequency */
+    .pulse-dot,
+    .speaking-indicator,
+    .voice-speaking-ring {
+        animation-duration: 2s;
     }
 }

@@ -3,7 +3,7 @@ title: "Story 46 - Performance Mobile, Voz Travando e Identidade Trocada no Voic
 description: "Três bugs reportados por jogadores: (1) site pesado/travando no celular, (2) jogador no mobile não é ouvido apesar de aparecer no voice, (3) jogador entra como Kzar mas aparece como Lina Clark na mesa Quimeras."
 priority: "crítica"
 status: "em andamento"
-last_updated: "2026-04-22 (Fase 2 parcial + Feature GM Preview Fade)"
+last_updated: "2026-04-22 (Fase 2 completa — Prioridade 3 projectedStateStore)"
 tags: [bugfix, performance, mobile, voice-chat, webrtc, identidade, presença]
 epic: epic-01-refatoracao-modular
 ---

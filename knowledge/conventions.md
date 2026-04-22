@@ -5,7 +5,7 @@ tags: [convenÃ§Ãµes, cÃ³digo, nomenclatura, estilo]
 repo: frontend
 related:
   - /knowledge/architecture.md
-last_updated: 2026-04-19 (story-45 follow-up: damage distribution wording and architecture compliance)
+last_updated: 2026-04-22 (story-46 compliance check: @media nesting invÃ¡lido corrigido, !important removido de box-shadow)
 status: ativo
 ---
 
@@ -48,7 +48,7 @@ Siga o padrÃ£o Conventional Commits:
 - **Estado de UI stuck**: Toda aÃ§Ã£o de carregamento/estado bloqueado (ex: `isRolling`) deve ter um safety timeout para auto-destravamento.
 
 ## UI Patterns
-- **Luxury Portal Selection**: Para menus suspensos complexos (dropdowns), utilizar Portais (React Portal) fugindo do contexto de empilhamento local para garantir que menus flutuem acima de chats/logs sem recortes. O estilo deve seguir o padrão vitoriano: fundo sólido (obsidiana #0a0a0a para legibilidade), bordas douradas e animações de fade/slide.
-- **Dropdown Viewport-aware**: Em telas de entrada/selecao, dropdowns devem calcular espaco do viewport e abrir para cima quando necessario, com `max-height` adaptativo e scroll touch habilitado para evitar listas inalcançáveis no mobile.
-- **Background Image Processing (isImageProcessing)**: Todo upload de imagem que envolva compressão no cliente (Canvas API) deve implementar um estado de processamento (`isImageProcessing`). Esse estado deve desabilitar o botão de submissão e exibir feedback visual (ex: "PROCESSANDO...") para evitar que o usuário salve o formulário antes que a string Base64 final esteja pronta.
-- **Drawer Handle Externo**: Em trilhos laterais com avatares compactos, o controle de abrir/fechar deve ficar fora do bloco principal de conteúdo sempre que possível. O interior da gaveta deve priorizar apenas os elementos navegáveis (ex: retratos), evitando deslocamento lateral e poluição visual do rail.
+- **Luxury Portal Selection**: Para menus suspensos complexos (dropdowns), utilizar Portais (React Portal) fugindo do contexto de empilhamento local para garantir que menus flutuem acima de chats/logs sem recortes. O estilo deve seguir o padrï¿½o vitoriano: fundo sï¿½lido (obsidiana #0a0a0a para legibilidade), bordas douradas e animaï¿½ï¿½es de fade/slide.
+- **Dropdown Viewport-aware**: Em telas de entrada/selecao, dropdowns devem calcular espaco do viewport e abrir para cima quando necessario, com `max-height` adaptativo e scroll touch habilitado para evitar listas inalcanï¿½ï¿½veis no mobile.
+- **Background Image Processing (isImageProcessing)**: Todo upload de imagem que envolva compressï¿½o no cliente (Canvas API) deve implementar um estado de processamento (`isImageProcessing`). Esse estado deve desabilitar o botï¿½o de submissï¿½o e exibir feedback visual (ex: "PROCESSANDO...") para evitar que o usuï¿½rio salve o formulï¿½rio antes que a string Base64 final esteja pronta.
+- **Drawer Handle Externo**: Em trilhos laterais com avatares compactos, o controle de abrir/fechar deve ficar fora do bloco principal de conteï¿½do sempre que possï¿½vel. O interior da gaveta deve priorizar apenas os elementos navegï¿½veis (ex: retratos), evitando deslocamento lateral e poluiï¿½ï¿½o visual do rail.

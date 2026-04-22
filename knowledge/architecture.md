@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-22 (story-46 performance mobile + voz unidirecional + identidade trocada no voice chat)
+last_updated: 2026-04-22 (story-46 fase-2: GM preview pause, micro-otimizações mobile CSS)
 status: ativo
 ---
 
@@ -210,7 +210,13 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **AudioContext resume com retry em mobile**: `joinVoice` checa `audioCtx.state` após o primeiro `resume()` e, se ainda suspended, aguarda 500ms e tenta novamente (Safari/Chrome mobile exigem gesto ativo).
 - **characterId stale no backend corrigido**: `events.gateway.ts` passou de `data.characterId ?? existing?.characterId` para `data.characterId !== undefined ? data.characterId : existing?.characterId`. Quando o jogador troca de personagem, o novo `characterId` explícito sempre vence; `undefined` (heartbeat parcial) mantém o existente.
 - **lastKnownCharacterIdRef limpo ao trocar de sessão**: cleanup do Map na troca de `sessionId` evita que characterId de uma mesa vaze para outra.
-- **Fallback multi-owner com prioridade activeInArena**: quando um userId tem múltiplos personagens na mesa, `getDisplayName`, `getCharacterImage` e `allUsers` passaram de `find()` cego (primeiro na iteração) para `filter() → find(activeInArena) ?? last`, prevenindo que Lina Clark substitua Kzar por ordem de inserção no objeto.
+- **Fallback multi-owner com prioridade activeInArena**: quando um userId tem múltiplos personagens na mesa, `getDisplayName`, `getCharacterImage` e `allUsers` passaram de `find()` cego (primeira iteração) para `filter() → find(activeInArena) ?? last`, prevenindo que Lina Clark substitua Kzar por ordem de inserção no objeto.
+- **GM Preview Pause durante transmissão**: após 4s de `videoStream` ativo no lado GM (`broadcasting === true`), o `<video>` local é pausado via `videoEl.pause()` — interrompendo decodificação de frames e liberando CPU/GPU real. Jogadores não são afetados (recebem via WebRTC peer). Um hint "Transmitindo · clique para ver" restaura com `play()`. O estado `gmPreviewFaded` é resetado quando `videoStream` torna-se `null`.
+- **content-visibility descartado no sidebar GM**: `content-visibility: auto` foi considerado mas não adotado por risco de layout shift em componentes que medem o próprio tamanho; custo vs. risco não justificado.
+- **backdrop-filter removido em mobile via @media**: elementos sempre visíveis (`.gm-sidebar-vertical`, `.nav-expanded-shell`, `.combat-control-bar`, `.nav-artifact::after`, `.combat-avatar-drawer-handle`, `.combat-dice-integrated`) recebem `backdrop-filter: none` em `≤768px` — substitui por background sólido equivalente, elimina stacking contexts separados e repaint por scroll.
+- **touch-action: pan-y em barras de controle mobile**: elimina o delay de 300ms de tap nas áreas de controle da sessão sem interferir em gestos horizontais específicos (inexistentes nessas áreas).
+- **box-shadow removido em cards não-interativos mobile**: `.combat-avatar-card` e `.arena-char-card` perdem `box-shadow` apenas no estado de repouso (`:not(:hover):not(.pinned)`) para reduzir layers de compositing em listas longas; hover e pin mantêm feedback visual.
+- **@media aninhado proibido**: verificação de conformidade identificou que `@media` aninhado dentro de outro `@media` é CSS inválido (ignorado silenciosamente). Regras de animação foram movidas para seletores diretos dentro do bloco pai.
 
 ## Padrões Adotados
 - **Feature-based folders**: Componentes complexos (ex: `CombatCard`) têm sua própria subpasta com hooks e estilos.

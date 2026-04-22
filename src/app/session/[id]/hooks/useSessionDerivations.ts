@@ -14,8 +14,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { computeState } from "@/lib/projections";
-import { globalEventStore } from "@/lib/eventStore";
+import { useProjectedState } from "@/lib/projectedStateStore";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 import { Character, ActionEvent } from "@/types/domain";
 
@@ -49,32 +48,8 @@ export function useSessionDerivations({
     combatStartTimeRef,
 }: UseSessionDerivationsParams) {
 
-    const state = useMemo(() => {
-        const sorted = [...events].sort((a, b) => {
-            const seqA = a.seq || 0;
-            const seqB = b.seq || 0;
-
-            // 1. Se ambos têm seq, usa seq (prioritário)
-            if (seqA > 0 && seqB > 0) {
-                if (seqA !== seqB) return seqA - seqB;
-            }
-            // 2. Se apenas um tem seq, o confirmado vem primeiro se as datas forem próximas
-            // Mas para evitar saltos visuais, se um é seq=0 (otimista), ele tende a vir depois.
-            if (seqA > 0 && seqB === 0) return -1;
-            if (seqA === 0 && seqB > 0) return 1;
-
-            // 3. Fallback para data
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        });
-        const snapshot = globalEventStore.getSnapshotState();
-        const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
-        const projectionEvents =
-            snapshot && snapshotUpToSeq >= 0
-                ? sorted.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
-                : sorted;
-
-        return computeState(projectionEvents, snapshot ?? undefined);
-    }, [events]);
+    // Estado projetado compartilhado — substitui computeState local (Prioridade 3 da Story 46).
+    const state = useProjectedState();
 
     // ─── DERIVED CHARACTER LISTS ──────────────────────────────────────────────
 

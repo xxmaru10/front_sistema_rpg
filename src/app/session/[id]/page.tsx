@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
-import { computeState } from "@/lib/projections";
+import { useProjectedState } from "@/lib/projectedStateStore";
 import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw, Eye, VenetianMask } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
@@ -169,26 +169,8 @@ export default function SessionPage() {
         useSessionEvents(sessionId as string, actorUserId);
 
     // ─── EARLY PROJECTION (feeds useVictoryDefeat before full derivations) ────
-    // Keeps the event-sourcing contract intact: state is always projected from sorted events.
-
-    const _earlyState = useMemo(() => {
-        const sorted = [...events].sort((a, b) => {
-            const seqA = a.seq || 0;
-            const seqB = b.seq || 0;
-            if (seqA !== 0 && seqB !== 0 && seqA !== seqB) return seqA - seqB;
-            if (seqA === 0 && seqB !== 0) return 1;
-            if (seqA !== 0 && seqB === 0) return -1;
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        });
-        const snapshot = globalEventStore.getSnapshotState();
-        const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
-        const projectionEvents =
-            snapshot && snapshotUpToSeq >= 0
-                ? sorted.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
-                : sorted;
-
-        return computeState(projectionEvents, snapshot ?? undefined);
-    }, [events]);
+    // Story 46 Prioridade 3: lê do projectedStateStore em vez de recomputar localmente.
+    const _earlyState = useProjectedState();
 
     const _activePlayers = useMemo(() =>
         Object.values(_earlyState.characters).filter((c: any) => !c.isNPC),

@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageSquare, Send } from "lucide-react";
 import { getSocket } from "@/lib/socketClient";
-import { globalEventStore } from "@/lib/eventStore";
-import { computeState } from "@/lib/projections";
-import { ActionEvent } from "@/types/domain";
+import { useProjectedState } from "@/lib/projectedStateStore";
 import { v4 as uuidv4 } from "uuid";
 
 interface TextChatMessage {
@@ -30,7 +28,6 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
     const [unreadCount, setUnreadCount] = useState(0);
     const panelRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [events, setEvents] = useState<ActionEvent[]>([]);
     const messagesRef = useRef<TextChatMessage[]>([]);
     const isOpenRef = useRef(false);
     const normalizeUserId = useCallback((value: string) => value.trim().toLowerCase(), []);
@@ -40,20 +37,8 @@ export function TextChatPanel({ sessionId, userId, userRole }: TextChatPanelProp
         messagesRef.current = messages;
     }, [messages]);
 
-    useEffect(() => {
-        setEvents(globalEventStore.getEvents());
-        const unsubscribe = globalEventStore.subscribe(
-            (event) => {
-                if (event.sessionId === sessionId) {
-                    setEvents(prev => [...prev, event]);
-                }
-            },
-            (bulkEvents) => setEvents(bulkEvents)
-        );
-        return () => unsubscribe();
-    }, [sessionId]);
-
-    const state = useMemo(() => computeState(events), [events]);
+    // Story 46 Prioridade 3: lê estado projetado do singleton.
+    const state = useProjectedState();
     const getDisplayName = useCallback((uid: string, msg?: TextChatMessage) => {
         if (msg?.authorRole === "GM") return "MESTRE";
         if (msg?.authorLabel?.trim()) return msg.authorLabel.trim().toUpperCase();
