@@ -2309,6 +2309,19 @@ body {
 
 .bestiary-modal {
     min-width: 400px;
+    padding-top: 82px;
+}
+
+.bestiary-modal .scope-toggle-container {
+    position: absolute;
+    top: 18px;
+    left: 24px;
+    right: 76px;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    justify-content: flex-start;
+    z-index: 4;
 }
 
 .scope-toggle-container {

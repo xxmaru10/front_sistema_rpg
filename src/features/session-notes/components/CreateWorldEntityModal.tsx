@@ -35,6 +35,9 @@ interface CreateWorldEntityModalProps {
     newEntityFamily: string;
     setNewEntityFamily: (id: string) => void;
     familiesList: any[];
+    newEntityFaction: string;
+    setNewEntityFaction: (id: string) => void;
+    factionsList: any[];
     newEntityRace: string;
     setNewEntityRace: (id: string) => void;
     racesList: any[];
@@ -89,6 +92,9 @@ export function CreateWorldEntityModal({
     newEntityFamily,
     setNewEntityFamily,
     familiesList,
+    newEntityFaction,
+    setNewEntityFaction,
+    factionsList,
     newEntityRace,
     setNewEntityRace,
     racesList,
@@ -431,6 +437,13 @@ export function CreateWorldEntityModal({
                                             <select value={newEntityFamily} onChange={e => setNewEntityFamily(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
                                                 <option value="">NENHUMA</option>
                                                 {familiesList.map(f => <option key={f.id} value={f.id}>{f.name.toUpperCase()}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="input-group flex-1">
+                                            <label>FACÇÃO</label>
+                                            <select value={newEntityFaction} onChange={e => setNewEntityFaction(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
+                                                <option value="">NENHUMA</option>
+                                                {factionsList.map(f => <option key={f.id} value={f.id}>{f.name.toUpperCase()}</option>)}
                                             </select>
                                         </div>
                                         <div className="input-group flex-1">

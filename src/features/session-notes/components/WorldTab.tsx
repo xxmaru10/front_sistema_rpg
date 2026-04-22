@@ -317,6 +317,10 @@ export function WorldTab({
                                                                     {entity.raceId && isVisible('race') && (
                                                                         <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{state.worldEntities?.[entity.raceId as string]?.name.toUpperCase()}</span>
                                                                     )}
+                                                                    {entity.factionId && isVisible('faction') && <span style={{ fontSize: '0.6rem', color: '#666' }}>·</span>}
+                                                                    {entity.factionId && isVisible('faction') && (
+                                                                        <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{state.worldEntities?.[entity.factionId as string]?.name.toUpperCase()}</span>
+                                                                    )}
                                                                     {entity.profession && <span style={{ fontSize: '0.6rem', color: '#666' }}>·</span>}
                                                                     {entity.profession && (
                                                                         <span style={{ fontSize: '0.62rem', color: '#aaa' }}>{(entity.profession as string).toUpperCase()}</span>

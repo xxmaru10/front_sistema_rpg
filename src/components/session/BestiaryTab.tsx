@@ -149,13 +149,13 @@ export function BestiaryTab({
                 <div className="modal-overlay" onClick={() => setViewingBestiaryCharId(null)}>
                     <div className="modal-content bestiary-modal" onClick={e => e.stopPropagation()}>
                         <button className="modal-close" onClick={() => setViewingBestiaryCharId(null)}>✕</button>
-                        <CharacterCard
-                            character={findBestiaryChar(viewingBestiaryCharId)!}
-                            sessionId={sessionId}
-                            actorUserId={actorUserId}
-                            isGM={userRole === "GM"}
-                            hideInventory={true}
-                        />
+	                        <CharacterCard
+	                            character={findBestiaryChar(viewingBestiaryCharId)!}
+	                            sessionId={sessionId}
+	                            actorUserId={actorUserId}
+	                            isGM={userRole === "GM"}
+	                            hideInventory={false}
+	                        />
                         {userRole === "GM" && (
                             <div className="scope-toggle-container">
                                 <button

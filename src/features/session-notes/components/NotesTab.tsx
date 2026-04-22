@@ -63,6 +63,20 @@ function dedupeById<T extends { id: string }>(list: T[]): T[] {
     return Array.from(merged.values());
 }
 
+type NotesSortMode = "RECENT" | "AZ";
+type NotesPageSize = 10 | 20 | 50;
+
+function stripHtml(content: string): string {
+    return (content || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function sortNotes(list: any[], mode: NotesSortMode): any[] {
+    if (mode !== "AZ") return list;
+    return [...list].sort((a, b) =>
+        stripHtml(a?.content || "").localeCompare(stripHtml(b?.content || ""), "pt-BR", { sensitivity: "base" })
+    );
+}
+
 export function NotesTab({
     notes,
     filteredNotes,
@@ -107,12 +121,18 @@ export function NotesTab({
     const normalizedUserId = userId.trim().toLowerCase();
     const isAuthor = (authorId?: string) => (authorId || "").trim().toLowerCase() === normalizedUserId;
     const playerChars = useMemo(
-        () => Object.values((state?.characters) || {}).filter((char: any) => !char.isNPC && char.source !== "bestiary") as any[],
+        () =>
+            (Object.values((state?.characters) || {})
+                .filter((char: any) => !char.isNPC && char.source !== "bestiary")
+                .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" })) as any[]),
         [state?.characters]
     );
 
     const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
     const [sessionFilter, setSessionFilter] = useState<number | null>(null);
+    const [notesSortMode, setNotesSortMode] = useState<NotesSortMode>("RECENT");
+    const [notesPerPage, setNotesPerPage] = useState<NotesPageSize>(10);
+    const [notesPage, setNotesPage] = useState(0);
     const [folderDraft, setFolderDraft] = useState<{ mode: "closed" | "create" | "edit"; id: string | null; name: string; color: string }>({
         mode: "closed",
         id: null,
@@ -137,6 +157,38 @@ export function NotesTab({
         return deduped.filter(note => (note.folderId || "") === selectedPrivateFolderId);
     }, [filteredNotes, notesSubTab, selectedPrivateFolderId]);
 
+    const orderedVisibleNotes = useMemo(
+        () => sortNotes(visibleNotes, notesSortMode),
+        [visibleNotes, notesSortMode]
+    );
+
+    const allSessionNotes = useMemo(() => {
+        const deduped = dedupeById(notes.filter((note: any) => !note.isPrivate || isAuthor(note.authorId)));
+        const bySession =
+            sessionFilter === null
+                ? deduped
+                : deduped.filter((note: any) => (note.sessionNumber || 1) === sessionFilter);
+        return sortNotes(bySession, notesSortMode);
+    }, [notes, notesSortMode, sessionFilter, normalizedUserId]);
+
+    const activeNotesCount = useMemo(() => {
+        if (notesSubTab === "Sessão") return allSessionNotes.length;
+        if (notesSubTab === "Jogadores") return 0;
+        return orderedVisibleNotes.length;
+    }, [notesSubTab, allSessionNotes.length, orderedVisibleNotes.length]);
+
+    const totalPages = Math.max(1, Math.ceil(activeNotesCount / notesPerPage));
+
+    const paginatedVisibleNotes = useMemo(() => {
+        const start = notesPage * notesPerPage;
+        return orderedVisibleNotes.slice(start, start + notesPerPage);
+    }, [orderedVisibleNotes, notesPage, notesPerPage]);
+
+    const paginatedSessionNotes = useMemo(() => {
+        const start = notesPage * notesPerPage;
+        return allSessionNotes.slice(start, start + notesPerPage);
+    }, [allSessionNotes, notesPage, notesPerPage]);
+
     const currentFolder = selectedPrivateFolderId === "all" ? null : folderMap.get(selectedPrivateFolderId);
 
     useEffect(() => {
@@ -150,6 +202,17 @@ export function NotesTab({
             setSelectedPlayerNotesView("all");
         }
     }, [notesSubTab, selectedPlayerNotesView, playerChars, setSelectedPlayerNotesView]);
+
+    useEffect(() => {
+        setNotesPage(0);
+    }, [notesSubTab, notesPerPage, notesSortMode, selectedPrivateFolderId, selectedPlayerNotesView, sessionFilter, filterAuthor]);
+
+    useEffect(() => {
+        const maxPage = Math.max(0, totalPages - 1);
+        if (notesPage > maxPage) {
+            setNotesPage(maxPage);
+        }
+    }, [notesPage, totalPages]);
 
     const startCreateFolder = () => {
         if (privateNoteFolders.length >= 10) return;
@@ -350,6 +413,71 @@ export function NotesTab({
         </div>
     );
 
+    const renderOrderingAndPagination = () => (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                flexWrap: "wrap",
+                padding: "8px 10px",
+                border: "1px solid rgba(197,160,89,0.12)",
+                background: "rgba(0,0,0,0.18)",
+                borderRadius: "8px",
+            }}
+        >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.62rem", letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}>ORDENAR</span>
+                <select
+                    value={notesSortMode}
+                    onChange={(e) => setNotesSortMode(e.target.value as NotesSortMode)}
+                    className="author-filter"
+                    style={{ minWidth: "120px" }}
+                >
+                    <option value="RECENT">RECENTE</option>
+                    <option value="AZ">A-Z</option>
+                </select>
+
+                <span style={{ fontSize: "0.62rem", letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}>POR PÁGINA</span>
+                <select
+                    value={String(notesPerPage)}
+                    onChange={(e) => setNotesPerPage(Number(e.target.value) as NotesPageSize)}
+                    className="author-filter"
+                    style={{ minWidth: "90px" }}
+                >
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                    type="button"
+                    className="clear-all-btn"
+                    disabled={notesPage <= 0}
+                    onClick={() => setNotesPage((prev) => Math.max(0, prev - 1))}
+                    style={{ opacity: notesPage <= 0 ? 0.5 : 1, cursor: notesPage <= 0 ? "not-allowed" : "pointer" }}
+                >
+                    ANTERIOR
+                </button>
+                <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.55)", minWidth: "95px", textAlign: "center" }}>
+                    {totalPages === 0 ? "0/0" : `${notesPage + 1}/${totalPages}`}
+                </span>
+                <button
+                    type="button"
+                    className="clear-all-btn"
+                    disabled={notesPage >= totalPages - 1}
+                    onClick={() => setNotesPage((prev) => Math.min(totalPages - 1, prev + 1))}
+                    style={{ opacity: notesPage >= totalPages - 1 ? 0.5 : 1, cursor: notesPage >= totalPages - 1 ? "not-allowed" : "pointer" }}
+                >
+                    PRÓXIMO
+                </button>
+            </div>
+        </div>
+    );
+
     const renderPlayerSubmenus = () => (
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", padding: "8px 10px", border: "1px solid rgba(197,160,89,0.12)", background: "rgba(0,0,0,0.18)", borderRadius: "8px" }}>
             <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>
@@ -429,19 +557,26 @@ export function NotesTab({
             </div>
 
             {notesSubTab === "Sessão" && (() => {
-                const sessionNotes = dedupeById(notes.filter((note: any) => !note.isPrivate || isAuthor(note.authorId)));
-                const grouped: Record<number, any[]> = {};
-                sessionNotes.forEach((note: any) => {
+                const allSessionBase = dedupeById(notes.filter((note: any) => !note.isPrivate || isAuthor(note.authorId)));
+                const groupedAll: Record<number, any[]> = {};
+                allSessionBase.forEach((note: any) => {
                     const sessionNumber = note.sessionNumber || 1;
-                    if (!grouped[sessionNumber]) grouped[sessionNumber] = [];
-                    grouped[sessionNumber].push(note);
+                    if (!groupedAll[sessionNumber]) groupedAll[sessionNumber] = [];
+                    groupedAll[sessionNumber].push(note);
                 });
-                const allSessionNumbers = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-                const visibleSessionNumbers = sessionFilter === null ? allSessionNumbers : allSessionNumbers.filter(sessionNumber => sessionNumber === sessionFilter);
+                const allSessionNumbers = Object.keys(groupedAll).map(Number).sort((a, b) => a - b);
+
+                const groupedPaginated: Record<number, any[]> = {};
+                paginatedSessionNotes.forEach((note: any) => {
+                    const sessionNumber = note.sessionNumber || 1;
+                    if (!groupedPaginated[sessionNumber]) groupedPaginated[sessionNumber] = [];
+                    groupedPaginated[sessionNumber].push(note);
+                });
+                const visibleSessionNumbers = Object.keys(groupedPaginated).map(Number).sort((a, b) => a - b);
 
                 return (
                     <>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(197,160,89,0.1)", background: "rgba(0,0,0,0.2)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(197,160,89,0.1)", background: "rgba(0,0,0,0.2)", flexWrap: "wrap" }}>
                             <span style={{ fontFamily: "var(--font-header)", fontSize: "0.6rem", letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>
                                 SESSÃO:
                             </span>
@@ -456,8 +591,11 @@ export function NotesTab({
                                 ))}
                             </select>
                         </div>
+                        <div style={{ margin: "10px 5px 0 5px" }}>
+                            {renderOrderingAndPagination()}
+                        </div>
                         <div className="notes-scroll scrollbar-arcane" style={{ padding: "10px 5px" }}>
-                            {visibleSessionNumbers.length === 0 && (
+                            {paginatedSessionNotes.length === 0 && (
                                 <div className="empty-notes">NENHUMA NOTA ENCONTRADA.</div>
                             )}
                             {visibleSessionNumbers.map(sessionNumber => (
@@ -469,7 +607,7 @@ export function NotesTab({
                                         </span>
                                         <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, var(--accent-color))" }} />
                                     </div>
-                                    {grouped[sessionNumber].map((note: any) => {
+                                    {groupedPaginated[sessionNumber].map((note: any) => {
                                         const isFailed = failedEventIds.has(note.id);
                                         const isPending = note.seq === 0 && !isFailed;
 
@@ -548,7 +686,7 @@ export function NotesTab({
                                 </select>
                             )}
 
-                            {visibleNotes.length > 0 && (
+                            {orderedVisibleNotes.length > 0 && (
                                 <button
                                     className="clear-all-btn"
                                     onClick={() => handleClearNotesLocally(notesSubTab as 'Geral' | 'Privado')}
@@ -572,9 +710,12 @@ export function NotesTab({
                     </div>
 
                     {notesSubTab === "Privado" && renderPrivateFolders()}
+                    <div style={{ marginBottom: "10px" }}>
+                        {renderOrderingAndPagination()}
+                    </div>
 
                     <div className="notes-scroll scrollbar-arcane" ref={scrollRef}>
-                        {visibleNotes.length === 0 && (
+                        {orderedVisibleNotes.length === 0 && (
                             <div className="empty-notes">
                                 {notesSubTab === "Geral"
                                     ? "NENHUMA NOTA ENCONTRADA."
@@ -583,7 +724,7 @@ export function NotesTab({
                                         : "ESTE SUBMENU AINDA NÃO TEM ANOTAÇÕES."}
                             </div>
                         )}
-                        {visibleNotes.map((note) => {
+                        {paginatedVisibleNotes.map((note) => {
                             const isMyNote = isAuthor(note.authorId);
                             const isGM = userRole === "GM";
                             const canEdit = isMyNote || (isGM && !note.isPrivate);

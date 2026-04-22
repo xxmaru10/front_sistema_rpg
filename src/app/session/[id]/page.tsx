@@ -372,17 +372,19 @@ export default function SessionPage() {
         if (showBg) {
             document.body.style.backgroundImage =
                 `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
-            document.body.style.backgroundSize = "cover";
+            document.body.style.backgroundSize = "cover, contain";
             document.body.style.backgroundPosition = "center";
             // background-attachment: fixed causa repaint contínuo no Chromium mobile — usar scroll em mobile
             document.body.style.backgroundAttachment = isMobileNav ? "scroll" : "fixed";
             document.body.style.backgroundRepeat = "no-repeat";
+            document.body.style.backgroundColor = "#000";
         } else {
             document.body.style.backgroundImage = "";
             document.body.style.backgroundSize = "";
             document.body.style.backgroundPosition = "";
             document.body.style.backgroundAttachment = "";
             document.body.style.backgroundRepeat = "";
+            document.body.style.backgroundColor = "";
         }
     }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive]);
 

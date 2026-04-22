@@ -29,13 +29,13 @@ export function useWorldEntities({
     const {
         showAddWorldEntity, setShowAddWorldEntity,
         newEntityName, newEntityType, newEntityColor, newEntityTags,
-        newEntityDescription, newEntityFamily, newEntityRace, newEntityOrigin,
+        newEntityDescription, newEntityFamily, newEntityFaction, newEntityRace, newEntityOrigin,
         newEntityCurrentLoc, newEntityReligion, newEntityLocationType, newEntityLinkedLocation,
         newEntityImageUrl, newEntityProfession,
         viewingEntityId, importBestiaryId,
         editingWorldEntityId, setEditingWorldEntityId,
         setNewEntityName, setNewEntityType, setNewEntityColor, setNewEntityTags,
-        setTagInput, setNewEntityDescription, setNewEntityFamily, setNewEntityRace,
+        setTagInput, setNewEntityDescription, setNewEntityFamily, setNewEntityFaction, setNewEntityRace,
         setNewEntityOrigin, setNewEntityCurrentLoc, setNewEntityReligion,
         setNewEntityLocationType, setNewEntityLinkedLocation, setLocSearch,
         setNewEntityImageUrl, setNewEntityProfession, setViewingEntityId,
@@ -43,12 +43,16 @@ export function useWorldEntities({
         handleCancelWorldEntityEdit,
     } = form;
 
+    const byNameAsc = (a: WorldEntity, b: WorldEntity) =>
+        (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" });
+
     // --- Derived lists ---
-    const worldEntitiesList = Object.values(state.worldEntities || {});
-    const familiesList = worldEntitiesList.filter(e => e.type === "FAMILIA");
-    const racesList = worldEntitiesList.filter(e => e.type === "RACA");
-    const religionsList = worldEntitiesList.filter(e => e.type === "RELIGIAO");
-    const locationsList = worldEntitiesList.filter(e => e.type === "LOCALIZACAO");
+    const worldEntitiesList = Object.values(state.worldEntities || {}) as WorldEntity[];
+    const familiesList = worldEntitiesList.filter(e => e.type === "FAMILIA").slice().sort(byNameAsc);
+    const factionsList = worldEntitiesList.filter(e => e.type === "FACAO").slice().sort(byNameAsc);
+    const racesList = worldEntitiesList.filter(e => e.type === "RACA").slice().sort(byNameAsc);
+    const religionsList = worldEntitiesList.filter(e => e.type === "RELIGIAO").slice().sort(byNameAsc);
+    const locationsList = worldEntitiesList.filter(e => e.type === "LOCALIZACAO").slice().sort(byNameAsc);
     const viewingEntity = viewingEntityId ? state.worldEntities?.[viewingEntityId] : null;
 
     const worldEntitiesForCurrentTab = useMemo(() => {
@@ -131,6 +135,7 @@ export function useWorldEntities({
             description: newEntityDescription,
             createdAt: new Date().toISOString(),
             familyId: newEntityType === "PERSONAGEM" ? (newEntityFamily || undefined) : undefined,
+            factionId: newEntityType === "PERSONAGEM" ? (newEntityFaction || undefined) : undefined,
             raceId: newEntityType === "PERSONAGEM" ? (newEntityRace || undefined) : undefined,
             religionId: newEntityType === "PERSONAGEM" ? (newEntityReligion || undefined) : undefined,
             originId: ["PERSONAGEM", "BESTIARIO"].includes(newEntityType) ? (newEntityOrigin || undefined) : undefined,
@@ -141,7 +146,7 @@ export function useWorldEntities({
             imageUrl: newEntityImageUrl || undefined,
             fieldVisibility: !editingWorldEntityId ? {
                 name: false, type: false, description: false, tags: false,
-                image: false, color: false, family: false, race: false,
+                image: false, color: false, family: false, faction: false, race: false,
                 origin: false, religion: false, currentLocation: false,
                 location: false, location_info: false
             } : undefined
@@ -158,6 +163,7 @@ export function useWorldEntities({
                 if (JSON.stringify(newEntityTags) !== JSON.stringify(currentEntity.tags)) patch.tags = newEntityTags;
                 if (newEntityDescription !== currentEntity.description) patch.description = newEntityDescription;
                 if (newEntityFamily !== currentEntity.familyId) patch.familyId = newEntityFamily || undefined;
+                if (newEntityFaction !== currentEntity.factionId) patch.factionId = newEntityFaction || undefined;
                 if (newEntityRace !== currentEntity.raceId) patch.raceId = newEntityRace || undefined;
                 if (newEntityReligion !== currentEntity.religionId) patch.religionId = newEntityReligion || undefined;
                 if (newEntityOrigin !== currentEntity.originId) patch.originId = newEntityOrigin || undefined;
@@ -206,6 +212,7 @@ export function useWorldEntities({
         setNewEntityTags(entity.tags || []);
         setNewEntityDescription(entity.description || "");
         setNewEntityFamily(entity.familyId || "");
+        setNewEntityFaction(entity.factionId || "");
         setNewEntityRace(entity.raceId || "");
         setNewEntityOrigin(entity.originId || "");
         setNewEntityProfession(entity.profession || "");
@@ -289,7 +296,7 @@ export function useWorldEntities({
     const handleToggleAllVisibility = (entityId: string, hideAll: boolean) => {
         const entity = state.worldEntities?.[entityId];
         if (!entity) return;
-        const fields = ['name', 'type', 'description', 'tags', 'image', 'color', 'family', 'race', 'religion', 'origin', 'currentLocation', 'location', 'location_info'];
+        const fields = ['name', 'type', 'description', 'tags', 'image', 'color', 'family', 'faction', 'race', 'religion', 'origin', 'currentLocation', 'location', 'location_info'];
         const fieldVisibility: Record<string, boolean> = {};
         fields.forEach(f => (fieldVisibility[f] = hideAll));
         const descriptionBlocks = (entity.descriptionBlocks || []).map((b: any) => ({ ...b, hidden: hideAll }));
@@ -408,7 +415,7 @@ export function useWorldEntities({
         // Spread all form state + handlers from sub-hook
         ...form,
         // Derived
-        familiesList, racesList, religionsList, locationsList,
+        familiesList, factionsList, racesList, religionsList, locationsList,
         worldEntitiesForCurrentTab, uniqueTags, viewingEntity,
         // Handlers
         handleCreateWorldEntity,
