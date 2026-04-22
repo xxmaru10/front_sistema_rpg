@@ -86,6 +86,7 @@ export default function SessionPage() {
     const [isMobileNav, setIsMobileNav] = useState(false);
     const [suppressHoverOpen, setSuppressHoverOpen] = useState(false);
     const [isNavPortalReady, setIsNavPortalReady] = useState(false);
+    const [gmPreviewFaded, setGmPreviewFaded] = useState(false);
 
     const handleMentionNavigate = (request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
@@ -288,6 +289,23 @@ export default function SessionPage() {
         transmissionVolume,
         setTransmissionVolume,
     });
+
+    // GM preview pause: after 4s of broadcasting, pause the local <video> element to stop
+    // frame decoding — real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
+    // Clicking the hint or video resumes the element.
+    useEffect(() => {
+        const isBroadcasting = userRole === "GM" && !!videoStream && (screenShareManagerRef.current?.broadcasting ?? false);
+        if (!isBroadcasting) {
+            setGmPreviewFaded(false);
+            return;
+        }
+        setGmPreviewFaded(false);
+        const timer = setTimeout(() => {
+            setGmPreviewFaded(true);
+            screenVideoRef.current?.pause();
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, [videoStream, userRole]);
 
     // ─── COMBAT AUTOMATION ────────────────────────────────────────────────────
 
@@ -648,7 +666,7 @@ export default function SessionPage() {
             {videoStream && (
                 <video
                     autoPlay playsInline muted
-                    className="screenshare-video"
+                    className={`screenshare-video${gmPreviewFaded ? " screenshare-video--gm-faded" : ""}`}
                     ref={(el) => {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
@@ -663,7 +681,24 @@ export default function SessionPage() {
                         background: spectatorMode ? "#000" : "transparent",
                         display: activeTab === "combat" ? undefined : "none",
                     }}
+                    onClick={() => {
+                        if (gmPreviewFaded) {
+                            setGmPreviewFaded(false);
+                            screenVideoRef.current?.play().catch(() => {});
+                        }
+                    }}
+                    title={gmPreviewFaded ? "Clique para ver a transmissão" : undefined}
                 />
+            )}
+
+            {/* GM preview paused hint */}
+            {videoStream && activeTab === "combat" && gmPreviewFaded && (
+                <div className="screenshare-gm-faded-hint" onClick={() => {
+                    setGmPreviewFaded(false);
+                    screenVideoRef.current?.play().catch(() => {});
+                }}>
+                    Transmitindo · clique para ver
+                </div>
             )}
 
             {/* Badge "Sem sinal" — exibido quando stream está ativa mas vídeo não avança. */}

@@ -3,7 +3,7 @@ title: "Story 46 - Performance Mobile, Voz Travando e Identidade Trocada no Voic
 description: "Três bugs reportados por jogadores: (1) site pesado/travando no celular, (2) jogador no mobile não é ouvido apesar de aparecer no voice, (3) jogador entra como Kzar mas aparece como Lina Clark na mesa Quimeras."
 priority: "crítica"
 status: "em andamento"
-last_updated: "2026-04-22"
+last_updated: "2026-04-22 (Fase 2 parcial + Feature GM Preview Fade)"
 tags: [bugfix, performance, mobile, voice-chat, webrtc, identidade, presença]
 epic: epic-01-refatoracao-modular
 ---
@@ -127,13 +127,13 @@ Este memo é recalculado a cada mudança em `state.characters`, `currentTurnActo
 
 ### Plano de Correção — Fase 2
 
-#### Prioridade 1 — Remover `console.log` de diagnóstico (baixo risco, alto impacto imediato)
-- Remover linhas L186-187 de `useSessionDerivations.ts` (logs emoji dentro de useMemo)
-- Remover L321 (`[DEBUG] forcing local combat start time`)
+#### Prioridade 1 — Remover `console.log` de diagnóstico ✅ FEITO
+- ~~Remover linhas L186-187 de `useSessionDerivations.ts` (logs emoji dentro de useMemo)~~
+- ~~Remover L321 (`[DEBUG] forcing local combat start time`)~~
 
-#### Prioridade 2 — Desabilitar `backdrop-filter` em mobile via CSS (baixo risco)
-- Adicionar `@media (max-width: 768px)` em `session.css` desativando `backdrop-filter` nos elementos permanentes (`.gm-sidebar-vertical`, `.nav-expanded-shell`, gavetas da arena)
-- Substituir por `background-color` sólido equivalente
+#### Prioridade 2 — Desabilitar `backdrop-filter` em mobile via CSS ✅ FEITO
+- ~~Adicionar `@media (max-width: 768px)` em `session.css` desativando `backdrop-filter` nos elementos permanentes~~
+- Complemento adicionado: `touch-action: pan-y`, `content-visibility: auto` no sidebar, `box-shadow: none` em avatar cards, redução de duração de animações contínuas
 
 #### Prioridade 3 — Centralizar `computeState()` em store singleton (alto impacto, médio risco)
 - Criar `projectedStateStore` que expõe o estado derivado e se atualiza via subscriber único do `globalEventStore`
@@ -151,8 +151,6 @@ Este memo é recalculado a cada mudança em `state.characters`, `currentTurnActo
 
 | Arquivo | Bug | Alterações Pendentes |
 |---|---|---|
-| `src/app/session/[id]/hooks/useSessionDerivations.ts` | 1-D | Remover console.log de diagnóstico (L186, L187, L321) |
-| `src/app/session/[id]/session.css` | 1-C | `@media mobile` desabilitando backdrop-filter em elementos permanentes |
 | `src/lib/projectedStateStore.ts` *(novo)* | 1-A | Singleton que expõe `computeState()` reativo compartilhado |
 | `src/components/VoiceChatPanel.tsx` | 1-A/B | Remover subscriber de events + computeState; usar projectedStateStore |
 | `src/components/TextChatPanel.tsx` | 1-A/B | Idem |
@@ -162,7 +160,9 @@ Este memo é recalculado a cada mudança em `state.characters`, `currentTurnActo
 
 | Arquivo | Bug(s) | Alterações Aplicadas |
 |---|---|---|
-| `src/app/session/[id]/page.tsx` | 1 | `backgroundAttachment: scroll` em mobile; `AtmosphericEffects` suprimido em `!isMobileNav` |
+| `src/app/session/[id]/page.tsx` | 1, feature | `backgroundAttachment: scroll` em mobile; `AtmosphericEffects` suprimido em `!isMobileNav`; GM preview fade (4s após início de transmissão) |
+| `src/app/session/[id]/session.css` | 1-C, feature | `@media mobile`: desabilitar backdrop-filter, `touch-action: pan-y`, `content-visibility`, `box-shadow: none` em cards, fade de preview do GM |
+| `src/app/session/[id]/hooks/useSessionDerivations.ts` | 1-D | Removidos 3 `console.log` de diagnóstico dentro de useMemos |
 | `src/components/HeaderWrapper.tsx` | 1 | Detecta mobile; passa `isMobile` ao `VoiceChatPanel` |
 | `src/components/VoiceChatPanel.tsx` | 1, 3 | Throttle poll 300→500ms em mobile; `lastKnownCharacterIdRef.clear()` ao trocar sessão; fallback multi-owner com `activeInArena` |
 | `src/lib/VoiceChatManager.ts` | 2 | `isMobileDevice()`; Bluetooth avoidance desabilitado em mobile; guarda de stream health; AudioContext resume com retry |
@@ -177,9 +177,9 @@ Este memo é recalculado a cada mudança em `state.characters`, `currentTurnActo
 - [x] `background-attachment: fixed` não é aplicado em viewports ≤768px.
 - [x] `AtmosphericEffects` não é renderizado em mobile.
 - [ ] `computeState()` é chamado **uma única vez** por evento recebido (não 5 vezes).
-- [ ] `backdrop-filter` desabilitado em elementos permanentes no mobile.
+- [x] `backdrop-filter` desabilitado em elementos permanentes no mobile.
 - [x] O polling de speaking em mobile opera a ≥500ms de intervalo.
-- [ ] `console.log` de diagnóstico removidos do caminho crítico de render.
+- [x] `console.log` de diagnóstico removidos do caminho crítico de render.
 
 ### Bug 2 — Áudio Mobile Unidirecional
 - [x] Jogador em dispositivo mobile consegue **ser ouvido** por todos os participantes após entrar no voice.
@@ -194,6 +194,47 @@ Este memo é recalculado a cada mudança em `state.characters`, `currentTurnActo
 - [x] `lastKnownCharacterIdRef` é limpo ao trocar de sessão (`sessionId`).
 - [x] Quando há múltiplos personagens do mesmo owner, o fallback prioriza `activeInArena`.
 - [x] A identidade no voice está correta após reconexão (F5, troca de aba, softReconnect).
+
+---
+
+---
+
+## Feature — GM Preview Fade durante Transmissão de Tela ✅ IMPLEMENTADO
+
+### Motivação
+Quando o GM compartilha a tela, o `<video>` na página do GM exibe o próprio stream local (muted, para evitar feedback). Esse elemento continua sendo pintado pelo browser mesmo que o GM não precise olhar para ele — custo de GPU desnecessário enquanto o GM gerencia a mesa.
+
+Jogadores não são afetados: eles recebem o stream via WebRTC (`RTCPeerConnection`), não via o `<video>` da página do GM.
+
+### Comportamento implementado
+- **4 segundos** após o início da transmissão, o `<video>` do GM é **pausado** (`videoEl.pause()`) — para decodificação de frames e libera CPU/GPU real — e recebe `opacity: 0.08` via CSS.
+- Um hint discreto aparece no topo: **"Transmitindo · clique para ver"**.
+- Clicar no hint ou no próprio vídeo chama `videoEl.play()` e restaura a opacidade.
+- Quando a transmissão encerra (`videoStream` passa a `null`), o estado é resetado automaticamente.
+- `content-visibility: auto` **não foi aplicado** no sidebar (risco de layout shift).
+
+### Arquivos modificados
+- **`page.tsx`**: estado `gmPreviewFaded` + `useEffect` com `setTimeout(4000)` + classe condicional `.screenshare-video--gm-faded` + hint JSX.
+- **`session.css`**: `.screenshare-video--gm-faded { opacity: 0.08; pointer-events: auto; cursor: pointer; }` + `.screenshare-gm-faded-hint`.
+
+### O que NÃO muda
+- Stream WebRTC para os jogadores: intacto, independente da opacity do `<video>` local.
+- Qualidade/resolução da transmissão: não afetada.
+- Comportamento em desktop (sem `videoStream`): não afetado.
+
+---
+
+## Micro-otimizações Mobile — Fase 2 Complemento ✅ IMPLEMENTADO
+
+Adicionadas ao `@media (max-width: 768px)` em `session.css`:
+
+| Otimização | Elemento | Impacto |
+|---|---|---|
+| `touch-action: pan-y` | Barras e sidebars | Elimina 300ms de delay antes do scroll em áreas interativas |
+| ~~`content-visibility: auto`~~ | ~~`.gm-sidebar-vertical`~~ | **Removido** — risco de layout shift |
+| `box-shadow: none` | `.combat-avatar-card`, `.arena-char-card` | Remove layer de compositing em cards repetidos na arena |
+| Duração de animação reduzida | `.pulse-dot`, `.speaking-indicator`, `.voice-speaking-ring` | Reduz frequência de repaints de animações contínuas |
+| `transition: opacity 1.5s ease` no screenshare | `.screenshare-video` | Remove `transition: all` em mobile (mantém só opacity) |
 
 ---
 

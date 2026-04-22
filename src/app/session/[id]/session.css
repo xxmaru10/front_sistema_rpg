@@ -6,7 +6,33 @@
     width: 100vw;
     object-fit: cover;
     pointer-events: none;
-    transition: all 0.4s ease;
+    transition: opacity 1.5s ease, all 0.4s ease;
+}
+
+/* GM preview fade — após 4s transmitindo, o vídeo some para reduzir custo de render.
+   Jogadores não são afetados: eles recebem o stream via WebRTC, não este elemento. */
+.screenshare-video--gm-faded {
+    opacity: 0.08;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.screenshare-gm-faded-hint {
+    position: fixed;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9998;
+    padding: 3px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(197, 160, 89, 0.3);
+    background: rgba(10, 10, 10, 0.7);
+    color: rgba(197, 160, 89, 0.7);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    user-select: none;
+    pointer-events: auto;
 }
 
 .screenshare-refresh-btn {
@@ -2410,5 +2436,34 @@ body {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         background: rgba(0, 0, 0, 0.82);
+    }
+
+    /* Prevent 300ms tap delay on interactive areas */
+    .combat-control-bar,
+    .gm-sidebar-vertical,
+    .nav-expanded-shell,
+    .session-tab-bar,
+    .combat-avatar-drawer-handle {
+        touch-action: pan-y;
+    }
+
+    /* Reduce transition costs — halve durations on mobile */
+    .screenshare-video {
+        transition: opacity 1.5s ease;
+    }
+
+    /* Disable box-shadow glow on avatar cards — GPU layer cost */
+    .combat-avatar-card,
+    .arena-char-card {
+        box-shadow: none !important;
+    }
+
+    /* Disable CSS animations that run continuously on mobile */
+    @media (prefers-reduced-motion: no-preference) {
+        .pulse-dot,
+        .speaking-indicator,
+        .voice-speaking-ring {
+            animation-duration: 2s;
+        }
     }
 }
