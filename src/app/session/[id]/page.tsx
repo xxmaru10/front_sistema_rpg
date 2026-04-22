@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file: src/app/session/[id]/page.tsx
  * @summary: Main entry point for the session page. Orchestrates the RPG session UI,
  * including combat, bestiary, logs, and game state management.
@@ -55,7 +55,7 @@ export default function SessionPage() {
     const userRole = (searchParams.get("r") as "GM" | "PLAYER") || "PLAYER";
     const fixedCharacterId = searchParams.get("c") || undefined;
 
-    // ─── UI STATE ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€ UI STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const {
         challengeMode, setChallengeMode,
         activeTab, setActiveTab,
@@ -103,7 +103,7 @@ export default function SessionPage() {
     }, []);
 
     useEffect(() => {
-        // Story 45: reset do toggle de rolagem oculta ao trocar de sessão.
+        // Story 45: reset do toggle de rolagem oculta ao trocar de sessÃ£o.
         diceSimulationStore.setHiddenForPlayers(false);
     }, [sessionId]);
 
@@ -163,13 +163,13 @@ export default function SessionPage() {
         return unsub;
     }, []);
 
-    // ─── EVENTS ───────────────────────────────────────────────────────────────
+    // â”€â”€â”€ EVENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const { events, isLoading, isRefreshing, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
         useSessionEvents(sessionId as string, actorUserId);
 
-    // ─── EARLY PROJECTION (feeds useVictoryDefeat before full derivations) ────
-    // Story 46 Prioridade 3: lê do projectedStateStore em vez de recomputar localmente.
+    // â”€â”€â”€ EARLY PROJECTION (feeds useVictoryDefeat before full derivations) â”€â”€â”€â”€
+    // Story 46 Prioridade 3: lÃª do projectedStateStore em vez de recomputar localmente.
     const _earlyState = useProjectedState();
 
     const _activePlayers = useMemo(() =>
@@ -189,7 +189,7 @@ export default function SessionPage() {
         [_earlyState.characters]
     );
 
-    // ─── VICTORY / DEFEAT ─────────────────────────────────────────────────────
+    // â”€â”€â”€ VICTORY / DEFEAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const {
         showVictory, showDefeat, showCombat,
@@ -213,7 +213,7 @@ export default function SessionPage() {
         return _earlyState.turnOrder[index < _earlyState.turnOrder.length ? index : 0];
     }, [_earlyState.turnOrder, _earlyState.currentTurnIndex, _earlyState.isReaction, _earlyState.targetId]);
 
-    // ─── FULL DERIVATIONS ─────────────────────────────────────────────────────
+    // â”€â”€â”€ FULL DERIVATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const {
         state,
@@ -257,7 +257,7 @@ export default function SessionPage() {
         }
     }, [isCurrentPlayerActive, userRole, showDiceRoller, setShowDiceRoller]);
 
-    // ─── SCREEN SHARE / AUDIO LIFECYCLE ──────────────────────────────────────
+    // â”€â”€â”€ SCREEN SHARE / AUDIO LIFECYCLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Must come before useSessionActions so screenShareManagerRef is available.
 
     const { screenVideoRef, screenShareManagerRef, videoNoSignal } = useSessionScreenControl({
@@ -273,7 +273,7 @@ export default function SessionPage() {
     });
 
     // GM preview pause: after 4s of broadcasting, pause the local <video> element to stop
-    // frame decoding — real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
+    // frame decoding â€” real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
     // Clicking the hint or video resumes the element.
     useEffect(() => {
         const isBroadcasting = userRole === "GM" && !!videoStream && (screenShareManagerRef.current?.broadcasting ?? false);
@@ -289,7 +289,7 @@ export default function SessionPage() {
         return () => clearTimeout(timer);
     }, [videoStream, userRole]);
 
-    // ─── COMBAT AUTOMATION ────────────────────────────────────────────────────
+    // â”€â”€â”€ COMBAT AUTOMATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const {
         activeConsequence,
@@ -304,7 +304,7 @@ export default function SessionPage() {
         isSessionEventsLoading: isLoading,
     });
 
-    // ─── SESSION ACTIONS ──────────────────────────────────────────────────────
+    // â”€â”€â”€ SESSION ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const {
         handleChallengeUpdate, handleHeaderUpdate,
@@ -317,7 +317,7 @@ export default function SessionPage() {
         setSpectatorMode, screenShareManagerRef,
     });
 
-    // ─── SHARED GM CALLBACKS ──────────────────────────────────────────────────
+    // â”€â”€â”€ SHARED GM CALLBACKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const handleToggleChallengeMode = () => {
         const newState = !challengeMode;
         lastToggleTimeRef.current = Date.now();
@@ -357,7 +357,7 @@ export default function SessionPage() {
         }
     }, [state.battlemap?.isActive, isTheaterMode]);
 
-    // ─── REMAINING EFFECTS ────────────────────────────────────────────────────
+    // â”€â”€â”€ REMAINING EFFECTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
     // Controla o background do body no modo combate com header image.
@@ -372,12 +372,14 @@ export default function SessionPage() {
         if (showBg) {
             document.body.style.backgroundImage =
                 `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
-            document.body.style.backgroundSize = "cover, contain";
-            document.body.style.backgroundPosition = "center";
-            // background-attachment: fixed causa repaint contínuo no Chromium mobile — usar scroll em mobile
+            document.body.style.backgroundSize = "cover, cover";
+            document.body.style.backgroundPosition = "center center, center center";
+            // background-attachment: fixed causa repaint contÃ­nuo no Chromium mobile â€” usar scroll em mobile
             document.body.style.backgroundAttachment = isMobileNav ? "scroll" : "fixed";
-            document.body.style.backgroundRepeat = "no-repeat";
+            document.body.style.backgroundRepeat = "no-repeat, no-repeat";
             document.body.style.backgroundColor = "#000";
+            // Alguns temas animam o `body` (ex.: starry-drift); na Arena isso faz o banner andar sem parar.
+            document.body.style.animation = "none";
         } else {
             document.body.style.backgroundImage = "";
             document.body.style.backgroundSize = "";
@@ -385,12 +387,13 @@ export default function SessionPage() {
             document.body.style.backgroundAttachment = "";
             document.body.style.backgroundRepeat = "";
             document.body.style.backgroundColor = "";
+            document.body.style.animation = "";
         }
-    }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive]);
+    }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive, isMobileNav]);
 
-    // ─── Gerencia Google Fonts + theme-preset-css via efeito ───────────────────
-    // Antes era um IIFE no JSX: executava a cada render → re-fazia download do .woff2
-    // Agora só executa quando state.themePreset muda de fato.
+    // â”€â”€â”€ Gerencia Google Fonts + theme-preset-css via efeito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Antes era um IIFE no JSX: executava a cada render â†’ re-fazia download do .woff2
+    // Agora sÃ³ executa quando state.themePreset muda de fato.
     useEffect(() => {
         const activeTheme = getThemePreset(state.themePreset);
 
@@ -419,9 +422,9 @@ export default function SessionPage() {
         }
     }, [state.themePreset]);
 
-    // ─── Gerencia o override de cor personalizada via efeito ───────────────────
+    // â”€â”€â”€ Gerencia o override de cor personalizada via efeito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Antes era um IIFE no JSX com dangerouslySetInnerHTML: re-montava a cada render
-    // Agora só executa quando state.themeColor muda.
+    // Agora sÃ³ executa quando state.themeColor muda.
     useEffect(() => {
         const hex = state.themeColor;
         let styleEl = document.getElementById("theme-custom-color-override") as HTMLStyleElement | null;
@@ -491,7 +494,7 @@ export default function SessionPage() {
         }
     }, [currentTurnActorId, characterList]);
 
-    // ─── LOADING SCREEN ───────────────────────────────────────────────────────
+    // â”€â”€â”€ LOADING SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     if (isLoading) {
         return (
@@ -517,7 +520,7 @@ export default function SessionPage() {
         );
     }
 
-    // ─── RENDER ───────────────────────────────────────────────────────────────
+    // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const tacticalNav = (
         <nav
@@ -645,7 +648,7 @@ export default function SessionPage() {
     return (
         <div className={`session-view-wrapper${spectatorMode && videoStream ? " spectator-mode-active" : ""}`}>
             {isNavPortalReady ? createPortal(tacticalNav, document.body) : null}
-            {/* Screen share video — mantido montado enquanto stream ativa; oculto via CSS
+            {/* Screen share video â€” mantido montado enquanto stream ativa; oculto via CSS
                 em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
                 <video
@@ -655,7 +658,7 @@ export default function SessionPage() {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
                             el.srcObject = videoStream;
-                            // play() é gerenciado exclusivamente pelo hook (com muted fallback)
+                            // play() Ã© gerenciado exclusivamente pelo hook (com muted fallback)
                         }
                     }}
                     style={{
@@ -671,7 +674,7 @@ export default function SessionPage() {
                             screenVideoRef.current?.play().catch(() => {});
                         }
                     }}
-                    title={gmPreviewFaded ? "Clique para ver a transmissão" : undefined}
+                    title={gmPreviewFaded ? "Clique para ver a transmissÃ£o" : undefined}
                 />
             )}
 
@@ -681,15 +684,15 @@ export default function SessionPage() {
                     setGmPreviewFaded(false);
                     screenVideoRef.current?.play().catch(() => {});
                 }}>
-                    Transmitindo · clique para ver
+                    Transmitindo Â· clique para ver
                 </div>
             )}
 
-            {/* Badge "Sem sinal" — exibido quando stream está ativa mas vídeo não avança. */}
+            {/* Badge "Sem sinal" â€” exibido quando stream estÃ¡ ativa mas vÃ­deo nÃ£o avanÃ§a. */}
             {videoStream && activeTab === "combat" && videoNoSignal && (
                 <div className="screenshare-nosignal">
-                    <span className="screenshare-nosignal-icon">📡</span>
-                    <span>Sem sinal — tente reconectar no botão <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
+                    <span className="screenshare-nosignal-icon">ðŸ“¡</span>
+                    <span>Sem sinal â€” tente reconectar no botÃ£o <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
                 </div>
             )}
 
@@ -744,7 +747,7 @@ export default function SessionPage() {
             />
 
             <SessionHeader
-                title={state.name || `Sessão: ${state.sessionNumber}`}
+                title={state.name || `SessÃ£o: ${state.sessionNumber}`}
                 imageUrl={headerImageUrl}
                 onUpdate={handleHeaderUpdate}
                 isGM={userRole === "GM"}
@@ -753,7 +756,7 @@ export default function SessionPage() {
                     activeTab === "combat" ? "ARENA" :
                     activeTab === "log" ? "LOGS" :
                     activeTab === "notes" ? "NOTAS" :
-                    activeTab === "vi" ? "VI" : "BESTIÁRIO"
+                    activeTab === "vi" ? "VI" : "BESTIÃRIO"
                 }
                 onSummonAlly={() => { setSummonMode("HERO"); setShowSummonModal(true); }}
                 onSummonThreat={() => { setSummonMode("THREAT"); setShowSummonModal(true); }}
@@ -819,7 +822,7 @@ export default function SessionPage() {
                         }}
                     />
                 )}
-                {showVictory && <div className="victory-announcement">VITÓRIA</div>}
+                {showVictory && <div className="victory-announcement">VITÃ“RIA</div>}
                 {showDefeat && <div className="defeat-announcement">DERROTA</div>}
                 {showCombat && <div className="combat-announcement">COMBATE</div>}
             </SessionHeader>
@@ -1061,6 +1064,7 @@ export default function SessionPage() {
         </div>
     );
 }
+
 
 
 

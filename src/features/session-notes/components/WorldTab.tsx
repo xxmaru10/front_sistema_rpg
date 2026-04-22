@@ -1,8 +1,18 @@
 import { User, MapPin, Map as MapIcon, Shield, Home, Skull, Dna, Plus, Trash2, MessageSquare, EyeOff, Eye, Layers, Edit2, Church, Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { renderMentions } from "@/lib/mentionUtils";
 import { WorldTabStyles } from "../styles/WorldTab.styles";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
+
+type ListSortMode = "AZ" | "ZA";
+type ListPageSize = 10 | 20 | 50;
+
+function sortByName<T extends { name?: string }>(list: T[], mode: ListSortMode): T[] {
+    const sorted = [...list].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" })
+    );
+    return mode === "ZA" ? sorted.reverse() : sorted;
+}
 
 interface WorldTabProps {
     subTabMundo: string;
@@ -76,6 +86,29 @@ export function WorldTab({
     setNewEntityType
 }: WorldTabProps) {
     const { requestDelete, isPending } = useDeleteConfirm();
+    const [sortMode, setSortMode] = useState<ListSortMode>("AZ");
+    const [itemsPerPage, setItemsPerPage] = useState<ListPageSize>(10);
+    const [page, setPage] = useState(0);
+
+    const orderedEntities = useMemo(
+        () => sortByName(worldEntitiesForCurrentTab, sortMode),
+        [worldEntitiesForCurrentTab, sortMode]
+    );
+
+    const totalPages = Math.max(1, Math.ceil(orderedEntities.length / itemsPerPage));
+    const paginatedEntities = useMemo(() => {
+        const start = page * itemsPerPage;
+        return orderedEntities.slice(start, start + itemsPerPage);
+    }, [orderedEntities, page, itemsPerPage]);
+
+    useEffect(() => {
+        setPage(0);
+    }, [subTabMundo, worldSearch, bestiarySearch, bestiarySessionOnly, sortMode, itemsPerPage]);
+
+    useEffect(() => {
+        const maxPage = Math.max(0, totalPages - 1);
+        if (page > maxPage) setPage(maxPage);
+    }, [page, totalPages]);
 
     return (
         <>
@@ -83,6 +116,50 @@ export function WorldTab({
         <div className="tab-content-combined">
             <div className="navigator-controls">
                 <span className="navigator-label">MUNDO: {subTabMundo.toUpperCase()}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.6rem", letterSpacing: "0.12em", color: "rgba(255,255,255,0.5)" }}>ORDENAR</span>
+                    <select
+                        className="author-filter"
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value as ListSortMode)}
+                        style={{ minWidth: "92px" }}
+                    >
+                        <option value="AZ">A-Z</option>
+                        <option value="ZA">Z-A</option>
+                    </select>
+                    <span style={{ fontSize: "0.6rem", letterSpacing: "0.12em", color: "rgba(255,255,255,0.5)" }}>POR PÁGINA</span>
+                    <select
+                        className="author-filter"
+                        value={String(itemsPerPage)}
+                        onChange={(e) => setItemsPerPage(Number(e.target.value) as ListPageSize)}
+                        style={{ minWidth: "82px" }}
+                    >
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                    <button
+                        type="button"
+                        className="clear-all-btn"
+                        disabled={page <= 0}
+                        onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                        style={{ opacity: page <= 0 ? 0.45 : 1, cursor: page <= 0 ? "not-allowed" : "pointer" }}
+                    >
+                        ANT
+                    </button>
+                    <span style={{ minWidth: "54px", textAlign: "center", fontSize: "0.65rem", color: "rgba(255,255,255,0.6)" }}>
+                        {page + 1}/{totalPages}
+                    </span>
+                    <button
+                        type="button"
+                        className="clear-all-btn"
+                        disabled={page >= totalPages - 1}
+                        onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
+                        style={{ opacity: page >= totalPages - 1 ? 0.45 : 1, cursor: page >= totalPages - 1 ? "not-allowed" : "pointer" }}
+                    >
+                        PRÓX
+                    </button>
+                </div>
 
                 {userRole === "GM" && (
                     <button
@@ -114,10 +191,10 @@ export function WorldTab({
 
             <div className="sub-content-area scrollbar-arcane">
                 <div className="world-entities-list-container">
-                        {worldEntitiesForCurrentTab.length > 0 ? (
+                        {orderedEntities.length > 0 ? (
                             <div className="section-block">
                                 <div className={subTabMundo === "Mapas" ? "entities-grid" : "world-entities-list"}>
-                                    {worldEntitiesForCurrentTab.map(entity => {
+                                    {paginatedEntities.map(entity => {
                                         const isGM = userRole === "GM";
                                         const fieldVisibility = entity.fieldVisibility || {};
                                         const isVisible = (field: string) => isGM || !fieldVisibility[field];
