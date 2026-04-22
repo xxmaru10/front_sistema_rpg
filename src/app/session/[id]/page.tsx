@@ -374,7 +374,8 @@ export default function SessionPage() {
                 `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
             document.body.style.backgroundSize = "cover";
             document.body.style.backgroundPosition = "center";
-            document.body.style.backgroundAttachment = "fixed";
+            // background-attachment: fixed causa repaint contínuo no Chromium mobile — usar scroll em mobile
+            document.body.style.backgroundAttachment = isMobileNav ? "scroll" : "fixed";
             document.body.style.backgroundRepeat = "no-repeat";
         } else {
             document.body.style.backgroundImage = "";
@@ -702,7 +703,7 @@ export default function SessionPage() {
 
 
 
-            {activeTab === "combat" && (
+            {activeTab === "combat" && !isMobileNav && (
                 <AtmosphericEffects type={state.atmosphericEffect || "none"} />
             )}
 
