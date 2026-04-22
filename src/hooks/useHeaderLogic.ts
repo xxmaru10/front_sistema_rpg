@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { ReadonlyURLSearchParams } from "next/navigation";
 import { globalEventStore } from "@/lib/eventStore";
 import { battlemapToolStore, Tool } from "@/lib/battlemapToolStore";
+import { projectedStateStore } from "@/lib/projectedStateStore";
 import { getThemePreset } from "@/lib/themePresets";
-import { computeState } from "@/lib/projections";
 import { v4 as uuidv4 } from "uuid";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -19,7 +19,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 }
 
 function rgbStringToComponents(rgbStr: string): { r: number; g: number; b: number } {
-    const parts = rgbStr.split(",").map((s) => parseInt(s.trim()));
+    const parts = rgbStr.split(",").map((s) => parseInt(s.trim(), 10));
     return { r: parts[0], g: parts[1], b: parts[2] };
 }
 
@@ -65,7 +65,6 @@ export function useHeaderLogic(
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
     const [themeLocked, setThemeLocked] = useState(false);
 
-    // ── URL param persistence ──────────────────────────────────────────────
     useEffect(() => {
         const urlRole = searchParams.get("r") as "GM" | "PLAYER";
         const urlUser = searchParams.get("u");
@@ -91,7 +90,6 @@ export function useHeaderLogic(
             localStorage.setItem("characterId", urlCharId);
             setCharacterId(urlCharId);
         } else {
-            // GM não tem personagem — nunca restaurar charId do localStorage para GM
             const currentRole = localStorage.getItem("userRole");
             if (currentRole !== "GM") {
                 const stored = localStorage.getItem("characterId");
@@ -100,139 +98,71 @@ export function useHeaderLogic(
         }
     }, [searchParams]);
 
-    // ── Auto-detect characterId quando ausente (apenas match único) ────────
     useEffect(() => {
-        if (characterId) return;                     // já temos — não sobrescrever
-        if (!userId) return;                          // userId ainda não resolvido
-        if (!sessionId) return;                       // sem sessão
+        if (characterId) return;
+        if (!userId) return;
+        if (!sessionId) return;
+
         const storedRole = localStorage.getItem("userRole");
-        if (storedRole === "GM") return;              // GM não tem personagem
+        if (storedRole === "GM") return;
 
         const snapshot = globalEventStore.getSnapshotState();
         if (!snapshot?.characters) return;
 
         const norm = (s: string) => (s || "").trim().toLowerCase().normalize("NFC");
         const uidNorm = norm(userId);
-
-        const matches = Object.values(snapshot.characters).filter(c =>
+        const matches = Object.values(snapshot.characters).filter((c) =>
             norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
         );
 
         if (matches.length === 1) {
-            // Match único: seguro para auto-associar
             const detectedId = matches[0].id;
             setCharacterId(detectedId);
             localStorage.setItem("characterId", detectedId);
             console.info(`[useHeaderLogic] Auto-detect characterId: ${matches[0].name} (${detectedId})`);
         }
-        // 0 ou 2+ matches: não fazer nada — depender de ?c= explícito
     }, [userId, characterId, sessionId]);
 
-    // ── Event store subscriptions ──────────────────────────────────────────
     useEffect(() => {
         if (!sessionId) return;
 
-        const snapshot = globalEventStore.getSnapshotState();
-        if (snapshot) {
-            if (snapshot.sessionNumber !== undefined) {
-                setSessionNumber(snapshot.sessionNumber);
+        const applyFromProjection = () => {
+            const projected = projectedStateStore.getState();
+
+            if (projected.sessionNumber !== undefined) {
+                setSessionNumber(projected.sessionNumber);
             }
-            if (snapshot.battlemap?.isActive !== undefined) {
-                setBattlemapActive(snapshot.battlemap.isActive);
+            if (projected.battlemap?.isActive !== undefined) {
+                setBattlemapActive(projected.battlemap.isActive);
             }
-            if (snapshot.themePreset) {
-                setThemePreset(snapshot.themePreset);
-                const { r, g, b } = rgbStringToComponents(
-                    getThemePreset(snapshot.themePreset).accentRgb
-                );
-                setCustomColorR(r);
-                setCustomColorG(g);
-                setCustomColorB(b);
+            if (projected.themeLocked !== undefined) {
+                setThemeLocked(projected.themeLocked);
             }
-            if (snapshot.themeColor) {
-                setThemeColor(snapshot.themeColor);
-                const parsed = hexToRgb(snapshot.themeColor);
+
+            const presetId = projected.themePreset || "medieval";
+            setThemePreset(presetId);
+
+            const resolvedThemeColor = projected.themeColor || null;
+            setThemeColor(resolvedThemeColor);
+
+            if (resolvedThemeColor) {
+                const parsed = hexToRgb(resolvedThemeColor);
                 if (parsed) {
                     setCustomColorR(parsed.r);
                     setCustomColorG(parsed.g);
                     setCustomColorB(parsed.b);
+                    return;
                 }
             }
-            if (snapshot.themeLocked !== undefined) {
-                setThemeLocked(snapshot.themeLocked);
-            }
-        }
 
-        const unsubscribeStore = globalEventStore.subscribe(
-            (event) => {
-                if (event.sessionId !== sessionId) return;
+            const { r, g, b } = rgbStringToComponents(getThemePreset(presetId).accentRgb);
+            setCustomColorR(r);
+            setCustomColorG(g);
+            setCustomColorB(b);
+        };
 
-                if (event.type === "SESSION_NUMBER_UPDATED") {
-                    setSessionNumber((event.payload as any).number);
-                } else if (event.type === "BATTLEMAP_UPDATED") {
-                    if (event.payload.isActive !== undefined) {
-                        setBattlemapActive(event.payload.isActive);
-                    }
-                } else if (event.type === "SESSION_THEME_PRESET_UPDATED") {
-                    const presetId = event.payload.preset;
-                    setThemePreset(presetId);
-                    // Derive RGB from the preset's accentRgb string (e.g. "244, 180, 60")
-                    const { r, g, b } = rgbStringToComponents(
-                        getThemePreset(presetId).accentRgb
-                    );
-                    setCustomColorR(r);
-                    setCustomColorG(g);
-                    setCustomColorB(b);
-                } else if (event.type === "SESSION_THEME_UPDATED") {
-                    const hex = event.payload.color;
-                    setThemeColor(hex || null);
-                    if (hex) {
-                        // Derive RGB from hex color chosen via color picker
-                        const parsed = hexToRgb(hex);
-                        if (parsed) {
-                            setCustomColorR(parsed.r);
-                            setCustomColorG(parsed.g);
-                            setCustomColorB(parsed.b);
-                        }
-                    } else {
-                        // Color was reset — re-derive from current preset
-                        const { r, g, b } = rgbStringToComponents(
-                            getThemePreset(themePreset).accentRgb
-                        );
-                        setCustomColorR(r);
-                        setCustomColorG(g);
-                        setCustomColorB(b);
-                    }
-                } else if (event.type === "SESSION_THEME_LOCK_UPDATED") {
-                    setThemeLocked(event.payload.locked);
-                }
-            },
-            (bulkEvents) => {
-                // Always derive from projection (snapshot + bulk events),
-                // so header stays in sync even when backend returns delta-only without SESSION_NUMBER_UPDATED in bulk.
-                const snapshot = globalEventStore.getSnapshotState();
-                const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
-                const projectionEvents =
-                    snapshot && snapshotUpToSeq >= 0
-                        ? bulkEvents.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
-                        : bulkEvents;
-                const projected = computeState(
-                    projectionEvents,
-                    snapshot ?? undefined
-                );
-
-                if (projected.sessionNumber !== undefined) {
-                    setSessionNumber(projected.sessionNumber);
-                }
-                if (projected.battlemap?.isActive !== undefined) {
-                    setBattlemapActive(projected.battlemap.isActive);
-                }
-                if (projected.themeLocked !== undefined) {
-                    setThemeLocked(projected.themeLocked);
-                }
-            }
-        );
-
+        applyFromProjection();
+        const unsubscribeStore = projectedStateStore.subscribe(applyFromProjection);
         const unsubscribeToolStore = battlemapToolStore.subscribe(() => {
             setShowToolbar(battlemapToolStore.showToolbar);
             setActiveTool(battlemapToolStore.activeTool);
@@ -245,17 +175,11 @@ export function useHeaderLogic(
             unsubscribeToolStore();
         };
     }, [sessionId]);
-    // ── Note: themePreset is intentionally excluded from the dep array above.
-    // The reset-to-preset branch of SESSION_THEME_UPDATED reads themePreset
-    // via closure. Re-subscribing on every preset change would cause double
-    // subscriptions; the value is always current at the moment the event fires
-    // because React state updates are synchronous within a single render cycle
-    // when triggered by the same subscriber call.
 
-    // ── Actions ───────────────────────────────────────────────────────────
     const changeSessionNumber = (delta: number) => {
         const newNumber = Math.max(1, sessionNumber + delta);
         if (newNumber === sessionNumber) return;
+
         const normalizedUserId = userId.trim().toLowerCase();
         if (!normalizedUserId) return;
 

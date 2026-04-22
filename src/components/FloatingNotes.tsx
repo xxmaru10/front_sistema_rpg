@@ -5,8 +5,7 @@ import { createPortal } from "react-dom";
 import { usePathname, useParams, useSearchParams } from "next/navigation";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
 import { StickyNote } from "@/types/domain";
-import { globalEventStore } from "@/lib/eventStore";
-import { computeState } from "@/lib/projections";
+import { projectedStateStore } from "@/lib/projectedStateStore";
 
 const NOTE_COLORS = [
     { value: '#fef08a', label: 'Amarelo' },
@@ -346,22 +345,15 @@ export function FloatingNotes() {
         // Initialize store with context
         floatingNotesStore.init(sessionId, userId);
 
-        // Subscribe to global event store to get projected notes
-        const unsubStore = globalEventStore.subscribe(() => {}, (bulkEvents) => {
-            // Re-project state from events to find current user's sticky notes
-            const snapshot = globalEventStore.getSnapshotState();
-            const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
-            const projectionEvents =
-                snapshot && snapshotUpToSeq >= 0
-                    ? bulkEvents.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
-                    : bulkEvents;
-            const state = computeState(projectionEvents, snapshot ?? undefined);
+        // Story 46 Prioridade 3: lê do projectedStateStore (recomputa 1x por evento, não 1x por subscriber).
+        const applyFromProjection = () => {
+            const state = projectedStateStore.getState();
             const userNotes = (state.stickyNotes || []).filter(n => n.ownerId === userId);
-            
-            // Only update if they actually changed (or just set them, React will handle diff)
             floatingNotesStore.setNotes(userNotes);
             setNotes([...userNotes]);
-        });
+        };
+        applyFromProjection();
+        const unsubStore = projectedStateStore.subscribe(applyFromProjection);
 
         // Also subscribe to the floatingNotesStore for local optimistic updates
         const unsubLocal = floatingNotesStore.subscribe(() => {

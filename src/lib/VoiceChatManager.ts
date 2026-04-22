@@ -117,6 +117,11 @@ export class VoiceChatManager {
         return (id || '').trim().toLowerCase().normalize('NFC');
     }
 
+    private isMobileDevice(): boolean {
+        if (typeof navigator === 'undefined') return false;
+        return navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+    }
+
     private touchVoiceSeen(userId: string) {
         this.lastVoiceSeenAt.set(this.normUserId(userId), Date.now());
     }
@@ -213,6 +218,8 @@ export class VoiceChatManager {
     }
 
     private async resolveInputDeviceId(deviceId?: string, respectRequested: boolean = false): Promise<string | undefined> {
+        // Em mobile, o mic do sistema já é o correto — não substituir automaticamente
+        if (this.isMobileDevice()) return deviceId;
         if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
             return deviceId;
         }
@@ -248,7 +255,8 @@ export class VoiceChatManager {
         stream: MediaStream,
         respectRequested: boolean = false
     ): Promise<MediaStream> {
-        if (respectRequested) return stream;
+        // Em mobile, não tentar trocar o mic — o device do sistema já é o correto
+        if (respectRequested || this.isMobileDevice()) return stream;
         const track = stream.getAudioTracks()[0];
         const currentLabel = track?.label || "";
         if (!track || !this.isBluetoothDeviceLabel(currentLabel)) return stream;
@@ -547,11 +555,26 @@ export class VoiceChatManager {
             return true;
         }
         try {
-            this.localStream = await this.getBestEffortMicStream(deviceId);
+            let stream = await this.getBestEffortMicStream(deviceId);
+
+            // Guarda de stream health: track morto/desabilitado → fallback simples
+            const track = stream.getAudioTracks()[0];
+            console.log(`[VoiceChat] Track capturada — readyState: ${track?.readyState}, enabled: ${track?.enabled}, label: "${track?.label}"`);
+            if (!track || track.readyState !== 'live') {
+                console.warn('[VoiceChat] Track não-live após getUserMedia — tentando fallback simples');
+                stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+            this.localStream = stream;
 
             const audioCtx = this.getLocalAudioContext();
             if (audioCtx.state === 'suspended') {
                 await audioCtx.resume().catch(console.warn);
+                // Retry com 500ms se ainda suspended (comportamento mobile)
+                if (audioCtx.state === 'suspended') {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await audioCtx.resume().catch(console.warn);
+                }
             }
 
             this._isConnected = true;

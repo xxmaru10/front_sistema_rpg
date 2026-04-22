@@ -60,6 +60,15 @@ export function HeaderWrapper() {
 
     const [showSoundPanel, setShowSoundPanel] = useState(false);
     const [hasScreenShare, setHasScreenShare] = useState(false);
+    const [isMobileHeader, setIsMobileHeader] = useState(false);
+
+    useEffect(() => {
+        const media = window.matchMedia("(max-width: 768px)");
+        const sync = () => setIsMobileHeader(media.matches);
+        sync();
+        media.addEventListener("change", sync);
+        return () => media.removeEventListener("change", sync);
+    }, []);
 
     useEffect(() => {
         const unsub = screenShareStore.subscribe(() => {
@@ -295,6 +304,7 @@ export function HeaderWrapper() {
                                 sessionId={sessionId}
                                 userId={userId}
                                 characterId={characterId}
+                                isMobile={isMobileHeader}
                             />
                         </>
                     )}

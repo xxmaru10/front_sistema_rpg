@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
-import { computeState } from "@/lib/projections";
+import { useProjectedState } from "@/lib/projectedStateStore";
 import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw, Eye, VenetianMask } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
@@ -86,6 +86,7 @@ export default function SessionPage() {
     const [isMobileNav, setIsMobileNav] = useState(false);
     const [suppressHoverOpen, setSuppressHoverOpen] = useState(false);
     const [isNavPortalReady, setIsNavPortalReady] = useState(false);
+    const [gmPreviewFaded, setGmPreviewFaded] = useState(false);
 
     const handleMentionNavigate = (request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
@@ -168,26 +169,8 @@ export default function SessionPage() {
         useSessionEvents(sessionId as string, actorUserId);
 
     // ─── EARLY PROJECTION (feeds useVictoryDefeat before full derivations) ────
-    // Keeps the event-sourcing contract intact: state is always projected from sorted events.
-
-    const _earlyState = useMemo(() => {
-        const sorted = [...events].sort((a, b) => {
-            const seqA = a.seq || 0;
-            const seqB = b.seq || 0;
-            if (seqA !== 0 && seqB !== 0 && seqA !== seqB) return seqA - seqB;
-            if (seqA === 0 && seqB !== 0) return 1;
-            if (seqA !== 0 && seqB === 0) return -1;
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        });
-        const snapshot = globalEventStore.getSnapshotState();
-        const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
-        const projectionEvents =
-            snapshot && snapshotUpToSeq >= 0
-                ? sorted.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
-                : sorted;
-
-        return computeState(projectionEvents, snapshot ?? undefined);
-    }, [events]);
+    // Story 46 Prioridade 3: lê do projectedStateStore em vez de recomputar localmente.
+    const _earlyState = useProjectedState();
 
     const _activePlayers = useMemo(() =>
         Object.values(_earlyState.characters).filter((c: any) => !c.isNPC),
@@ -289,6 +272,23 @@ export default function SessionPage() {
         setTransmissionVolume,
     });
 
+    // GM preview pause: after 4s of broadcasting, pause the local <video> element to stop
+    // frame decoding — real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
+    // Clicking the hint or video resumes the element.
+    useEffect(() => {
+        const isBroadcasting = userRole === "GM" && !!videoStream && (screenShareManagerRef.current?.broadcasting ?? false);
+        if (!isBroadcasting) {
+            setGmPreviewFaded(false);
+            return;
+        }
+        setGmPreviewFaded(false);
+        const timer = setTimeout(() => {
+            setGmPreviewFaded(true);
+            screenVideoRef.current?.pause();
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, [videoStream, userRole]);
+
     // ─── COMBAT AUTOMATION ────────────────────────────────────────────────────
 
     const {
@@ -374,7 +374,8 @@ export default function SessionPage() {
                 `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
             document.body.style.backgroundSize = "cover";
             document.body.style.backgroundPosition = "center";
-            document.body.style.backgroundAttachment = "fixed";
+            // background-attachment: fixed causa repaint contínuo no Chromium mobile — usar scroll em mobile
+            document.body.style.backgroundAttachment = isMobileNav ? "scroll" : "fixed";
             document.body.style.backgroundRepeat = "no-repeat";
         } else {
             document.body.style.backgroundImage = "";
@@ -647,7 +648,7 @@ export default function SessionPage() {
             {videoStream && (
                 <video
                     autoPlay playsInline muted
-                    className="screenshare-video"
+                    className={`screenshare-video${gmPreviewFaded ? " screenshare-video--gm-faded" : ""}`}
                     ref={(el) => {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
@@ -662,7 +663,24 @@ export default function SessionPage() {
                         background: spectatorMode ? "#000" : "transparent",
                         display: activeTab === "combat" ? undefined : "none",
                     }}
+                    onClick={() => {
+                        if (gmPreviewFaded) {
+                            setGmPreviewFaded(false);
+                            screenVideoRef.current?.play().catch(() => {});
+                        }
+                    }}
+                    title={gmPreviewFaded ? "Clique para ver a transmissão" : undefined}
                 />
+            )}
+
+            {/* GM preview paused hint */}
+            {videoStream && activeTab === "combat" && gmPreviewFaded && (
+                <div className="screenshare-gm-faded-hint" onClick={() => {
+                    setGmPreviewFaded(false);
+                    screenVideoRef.current?.play().catch(() => {});
+                }}>
+                    Transmitindo · clique para ver
+                </div>
             )}
 
             {/* Badge "Sem sinal" — exibido quando stream está ativa mas vídeo não avança. */}
@@ -702,7 +720,7 @@ export default function SessionPage() {
 
 
 
-            {activeTab === "combat" && (
+            {activeTab === "combat" && !isMobileNav && (
                 <AtmosphericEffects type={state.atmosphericEffect || "none"} />
             )}
 

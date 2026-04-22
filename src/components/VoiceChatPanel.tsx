@@ -2,18 +2,17 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { VoiceChatManager, VoicePeer, SessionParticipant } from "@/lib/VoiceChatManager";
-import { globalEventStore } from "@/lib/eventStore";
-import { computeState } from "@/lib/projections";
-import { ActionEvent } from "@/types/domain";
+import { useProjectedState } from "@/lib/projectedStateStore";
 import { Mic, MicOff, RefreshCw } from "lucide-react";
 
 interface VoiceChatPanelProps {
     sessionId: string;
     userId: string;
     characterId?: string;
+    isMobile?: boolean;
 }
 
-export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPanelProps) {
+export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = false }: VoiceChatPanelProps) {
     const isBluetoothLabel = useCallback((label: string) => {
         const v = (label || "").toLowerCase();
         return v.includes("bluetooth") || v.includes("hands-free") || v.includes("hands free") || v.includes("hfp") || v.includes("airpods");
@@ -47,8 +46,6 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
     // Persiste o último characterId conhecido por userId para evitar flicker
     // quando a presença chega com update parcial (sem characterId)
     const lastKnownCharacterIdRef = useRef<Map<string, string>>(new Map());
-
-    const [events, setEvents] = useState<ActionEvent[]>([]);
 
     useEffect(() => {
         const savedInput = localStorage.getItem('voice_input_device');
@@ -120,48 +117,14 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         });
     }, [sessionId, userId, characterId]);
 
+    // Bug 3: limpar cache de characterId ao trocar de sessão para evitar vazamento entre mesas
     useEffect(() => {
-        setEvents(globalEventStore.getEvents());
-        const unsubscribe = globalEventStore.subscribe(
-            (event) => {
-                if (event.sessionId === sessionId) {
-                    setEvents(prev => {
-                        const idx = prev.findIndex(e => e.id === event.id);
-                        if (idx !== -1) {
-                            if (prev[idx].seq === 0 && (event.seq || 0) !== 0) {
-                                const next = [...prev];
-                                next[idx] = event;
-                                return next;
-                            }
-                            return prev;
-                        }
-                        return [...prev, event];
-                    });
-                }
-            },
-            (bulkEvents) => setEvents(bulkEvents)
-        );
-        return () => unsubscribe();
+        lastKnownCharacterIdRef.current.clear();
     }, [sessionId]);
 
-    const state = useMemo(() => {
-        const sorted = [...events].sort((a, b) => {
-            const seqA = a.seq || 0;
-            const seqB = b.seq || 0;
-            if (seqA !== 0 && seqB !== 0 && seqA !== seqB) return seqA - seqB;
-            if (seqA === 0 && seqB !== 0) return 1;
-            if (seqA !== 0 && seqB === 0) return -1;
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        });
-        const snapshot = globalEventStore.getSnapshotState();
-        const snapshotUpToSeq = globalEventStore.getSnapshotUpToSeq();
-        const projectionEvents =
-            snapshot && snapshotUpToSeq >= 0
-                ? sorted.filter((event) => (event.seq || 0) === 0 || (event.seq || 0) > snapshotUpToSeq)
-                : sorted;
-
-        return computeState(projectionEvents, snapshot ?? undefined);
-    }, [events]);
+    // Story 46 Prioridade 3: lê estado projetado do singleton (antes mantinha cópia local
+    // de events[] + computeState próprio — um de 5 culpados do travamento mobile).
+    const state = useProjectedState();
 
     const getDisplayName = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
@@ -179,12 +142,13 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (byId) return byId.name;
         }
 
-        // 2. Fallback por display name (uid) ou ownerUserId (normalização Unicode)
+        // 2. Fallback por ownerUserId/nome — prioriza activeInArena para evitar troca de identidade
         const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
         const uidNorm = norm(uid);
-        const matchedChar = allChars.find(c =>
+        const candidates = allChars.filter(c =>
             norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
         );
+        const matchedChar = candidates.find(c => (c as any).activeInArena) ?? candidates[candidates.length - 1];
 
         return matchedChar ? matchedChar.name : uid;
     }, [state.characters]);
@@ -205,12 +169,13 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             if (byId) return null; // personagem encontrado mas sem imagem — não tentar fallback por nome
         }
 
-        // 2. Fallback robusto por ownerUserId ou nome (normalização Unicode para acentos)
+        // 2. Fallback robusto por ownerUserId/nome — prioriza activeInArena para evitar troca de identidade
         const norm = (s: string) => (s || "").trim().toLowerCase().normalize('NFC');
         const uidNorm = norm(uid);
-        const matchedChar = allChars.find(c =>
+        const candidates = allChars.filter(c =>
             norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
         );
+        const matchedChar = candidates.find(c => (c as any).activeInArena) ?? candidates[candidates.length - 1];
 
         return matchedChar?.imageUrl || null;
     }, [state.characters, userId]);
@@ -270,9 +235,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         };
     }, [sessionId, userId, refreshKey]);
 
-    // Poll speaking state para feedback visual
+    // Poll speaking state para feedback visual — intervalo maior em mobile para reduzir carga
     useEffect(() => {
         if (isConnected) {
+            const pollInterval = isMobile ? 500 : 300;
             speakingPollRef.current = setInterval(() => {
                 const mgr = managerRef.current;
                 if (mgr) {
@@ -295,7 +261,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
                         return changed ? next : prev;
                     });
                 }
-            }, 300);
+            }, pollInterval);
         } else {
             if (speakingPollRef.current) {
                 clearInterval(speakingPollRef.current);
@@ -306,7 +272,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
         return () => {
             if (speakingPollRef.current) clearInterval(speakingPollRef.current);
         };
-    }, [isConnected]);
+    }, [isConnected, isMobile]);
 
     // Fechar painel ao clicar fora
     useEffect(() => {
@@ -474,10 +440,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId }: VoiceChatPane
             let resolvedCharId = isMe ? characterId : p.characterId;
             if (!resolvedCharId) {
                 const uidNorm = norm(p.userId);
-                const matched = Object.values(state.characters).find(c =>
-                    norm(c.ownerUserId) === uidNorm ||
-                    norm(c.name) === uidNorm
+                const allCharsForUser = Object.values(state.characters).filter(c =>
+                    norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
                 );
+                // Bug 3: multi-owner — priorizar activeInArena, depois mais recente por id (fallback)
+                const matched = allCharsForUser.find(c => (c as any).activeInArena)
+                    ?? allCharsForUser[allCharsForUser.length - 1];
                 if (matched) resolvedCharId = matched.id;
             }
 

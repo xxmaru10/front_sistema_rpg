@@ -6,7 +6,33 @@
     width: 100vw;
     object-fit: cover;
     pointer-events: none;
-    transition: all 0.4s ease;
+    transition: opacity 1.5s ease, all 0.4s ease;
+}
+
+/* GM preview fade — após 4s transmitindo, o vídeo some para reduzir custo de render.
+   Jogadores não são afetados: eles recebem o stream via WebRTC, não este elemento. */
+.screenshare-video--gm-faded {
+    opacity: 0.08;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.screenshare-gm-faded-hint {
+    position: fixed;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9998;
+    padding: 3px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(197, 160, 89, 0.3);
+    background: rgba(10, 10, 10, 0.7);
+    color: rgba(197, 160, 89, 0.7);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    user-select: none;
+    pointer-events: auto;
 }
 
 .screenshare-refresh-btn {
@@ -2365,5 +2391,77 @@ body {
         opacity: 0;
         transform: translate(-50%, -50%) scale(1.5);
         filter: blur(10px);
+    }
+}
+
+/* ===== PERFORMANCE MOBILE — Story 46 =====
+   backdrop-filter força stacking contexts separados e repaint por scroll no Chromium mobile.
+   Em ≤768px substituímos por background sólido equivalente para eliminar esse custo.
+   Elementos cobertos: sidebar GM, barra de combate, menu lateral, gavetas de arena,
+   barra de rolagem integrada e tooltip do nav.
+   Efeito visual: o "glass" some em mobile; funcionalidade intacta.
+*/
+@media (max-width: 768px) {
+    .gm-sidebar-vertical {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(8, 8, 16, 0.92);
+    }
+
+    .combat-control-bar {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(10, 10, 10, 0.88);
+    }
+
+    .nav-expanded-shell {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(8, 8, 8, 0.95);
+    }
+
+    .nav-artifact::after {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(5, 5, 5, 0.96);
+    }
+
+    .combat-avatar-drawer-handle {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(20, 20, 20, 0.95);
+    }
+
+    .combat-dice-integrated {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(0, 0, 0, 0.82);
+    }
+
+    /* Prevent 300ms tap delay on interactive areas */
+    .combat-control-bar,
+    .gm-sidebar-vertical,
+    .nav-expanded-shell,
+    .session-tab-bar,
+    .combat-avatar-drawer-handle {
+        touch-action: pan-y;
+    }
+
+    /* Reduce transition costs — halve durations on mobile */
+    .screenshare-video {
+        transition: opacity 1.5s ease;
+    }
+
+    /* Disable box-shadow glow on avatar cards — GPU layer cost */
+    .combat-avatar-card:not(:hover):not(.pinned),
+    .arena-char-card:not(:hover):not(.pinned) {
+        box-shadow: none;
+    }
+
+    /* Slow down continuous animations — reduces repaint frequency */
+    .pulse-dot,
+    .speaking-indicator,
+    .voice-speaking-ring {
+        animation-duration: 2s;
     }
 }
