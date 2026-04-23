@@ -123,6 +123,35 @@ export default function SessionPage() {
         if (isMobileNav) setIsNavExpanded(false);
     }, [activeTab, isMobileNav]);
 
+    useEffect(() => {
+        const body = document.body;
+        const coarsePointerMedia = window.matchMedia("(hover: none), (pointer: coarse)");
+        const mobileViewportMedia = window.matchMedia("(max-width: 1024px)");
+
+        const syncThemeAnimationKillSwitch = () => {
+            const isTouchOrMobile = coarsePointerMedia.matches || mobileViewportMedia.matches;
+            const isOutsideArena = activeTab !== "combat";
+            const shouldDisableThemeAnimation = isTouchOrMobile || isOutsideArena;
+
+            if (shouldDisableThemeAnimation) {
+                body.dataset.disableThemeAnimation = "true";
+                return;
+            }
+
+            delete body.dataset.disableThemeAnimation;
+        };
+
+        syncThemeAnimationKillSwitch();
+        coarsePointerMedia.addEventListener("change", syncThemeAnimationKillSwitch);
+        mobileViewportMedia.addEventListener("change", syncThemeAnimationKillSwitch);
+
+        return () => {
+            coarsePointerMedia.removeEventListener("change", syncThemeAnimationKillSwitch);
+            mobileViewportMedia.removeEventListener("change", syncThemeAnimationKillSwitch);
+            delete body.dataset.disableThemeAnimation;
+        };
+    }, [activeTab]);
+
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
 
     const closeNavDrawer = () => {

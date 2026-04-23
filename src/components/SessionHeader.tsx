@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { AtmosphericEffectType } from "./AtmosphericEffects";
 import {
@@ -89,17 +89,45 @@ export function SessionHeader({
     const [showLibrary, setShowLibrary] = useState(false);
     const [showBgMenu, setShowBgMenu] = useState(false);
     const [showEffectsMenu, setShowEffectsMenu] = useState(false);
+    const [isMobilePerfMode, setIsMobilePerfMode] = useState(false);
+
+    useEffect(() => {
+        const viewportMedia = window.matchMedia("(max-width: 1024px)");
+        const coarsePointerMedia = window.matchMedia("(hover: none), (pointer: coarse)");
+        const syncMedia = () => setIsMobilePerfMode(viewportMedia.matches || coarsePointerMedia.matches);
+
+        syncMedia();
+        viewportMedia.addEventListener("change", syncMedia);
+        coarsePointerMedia.addEventListener("change", syncMedia);
+
+        return () => {
+            viewportMedia.removeEventListener("change", syncMedia);
+            coarsePointerMedia.removeEventListener("change", syncMedia);
+        };
+    }, []);
 
     if (!imageUrl && !isGM && !videoStream && !children) return null;
 
     const isArena = tabName === "ARENA";
     const hasCoverBanner = Boolean(imageUrl && !isArena);
-    const shellBorder = isArena ? "none" : "1px solid rgba(var(--accent-rgb), 0.3)";
-    const shellShadow = isArena ? "none" : "0 0 8px rgba(var(--accent-rgb), 0.16)";
-    const headerHeight = isArena ? "300px" : hasCoverBanner ? "240px" : "180px";
+    const isMobilePerfOutsideArena = isMobilePerfMode && !isArena;
+    const renderImageBanner = hasCoverBanner && !isMobilePerfOutsideArena;
+    const shellBorder = isArena
+        ? "none"
+        : isMobilePerfOutsideArena
+            ? "1px solid rgba(var(--accent-rgb), 0.14)"
+            : "1px solid rgba(var(--accent-rgb), 0.3)";
+    const shellShadow = isArena ? "none" : isMobilePerfOutsideArena ? "none" : "0 0 8px rgba(var(--accent-rgb), 0.16)";
+    const headerHeight = isArena
+        ? "300px"
+        : isMobilePerfOutsideArena
+            ? (hasCoverBanner ? "160px" : "136px")
+            : hasCoverBanner
+                ? "240px"
+                : "180px";
 
     return (
-        <div className="header-container" style={{
+        <div className={`header-container${isMobilePerfOutsideArena ? " mobile-perf-outside-arena" : ""}`} style={{
             position: 'relative',
             marginTop: '70px',
             width: '100%',
@@ -112,16 +140,18 @@ export function SessionHeader({
             borderRight: shellBorder,
             boxSizing: 'border-box',
             boxShadow: shellShadow,
-            transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
+            transition: isMobilePerfOutsideArena ? 'none' : 'border-color 0.3s ease, box-shadow 0.3s ease',
             background: 'transparent'
         }}>
             {hasCoverBanner ? (
                 <div style={{
                     position: 'absolute',
                     inset: 0,
-                    backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(8,8,8,0.92) 100%), url(${imageUrl})`,
-                    backgroundSize: 'cover, cover',
-                    backgroundPosition: 'center, center',
+                    backgroundImage: renderImageBanner
+                        ? `linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(8,8,8,0.92) 100%), url(${imageUrl})`
+                        : 'linear-gradient(180deg, rgba(var(--accent-rgb), 0.12) 0%, rgba(10, 10, 10, 0.92) 58%, rgba(8, 8, 8, 0.98) 100%)',
+                    backgroundSize: renderImageBanner ? 'cover, cover' : 'cover',
+                    backgroundPosition: renderImageBanner ? 'center, center' : 'center',
                 }} />
             ) : !isArena ? (
                 <div style={{
@@ -144,6 +174,10 @@ export function SessionHeader({
                         height: auto !important;
                         min-height: 200px;
                         padding-bottom: 60px;
+                    }
+                    .header-container.mobile-perf-outside-arena {
+                        min-height: 150px;
+                        padding-bottom: 44px;
                     }
                     .gm-actions-top {
                         position: relative !important;

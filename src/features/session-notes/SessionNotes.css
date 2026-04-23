@@ -716,6 +716,13 @@
     position: relative;
 }
 
+@supports (content-visibility: auto) {
+    .note-entry {
+        content-visibility: auto;
+        contain-intrinsic-size: 156px;
+    }
+}
+
 .note-entry:hover {
     background: rgba(var(--accent-rgb), 0.03);
     border-color: rgba(var(--accent-rgb), 0.1);
@@ -2656,4 +2663,48 @@
     transform: scale(1.1);
 }
 
+@media (max-width: 1024px), (hover: none), (pointer: coarse) {
+    .notes-tabs-main {
+        background: #0f0f0f;
+        border-bottom-color: rgba(var(--accent-rgb), 0.14);
+    }
+
+    .main-tab-trigger {
+        transition: background-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+    }
+
+    .main-tab-group:hover .main-tab-trigger {
+        color: var(--text-secondary);
+        background: transparent;
+        opacity: 0.82;
+    }
+
+    .main-tab-group.active .main-tab-trigger {
+        color: var(--accent-color);
+        background: rgba(var(--accent-rgb), 0.08);
+        opacity: 1;
+    }
+
+    .note-entry {
+        transition: background-color 0.16s ease, border-color 0.16s ease;
+    }
+
+    .note-entry:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .filter-toggle-btn,
+    .filter-toggle-btn:hover {
+        transform: none;
+        box-shadow: none;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    }
+
+    .world-filters-dropdown {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+    }
+}
 
