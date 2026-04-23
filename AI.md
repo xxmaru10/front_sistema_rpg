@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-23 (story-58 aplicada: notas/ficha/header/tema fora da arena)
+last_updated: 2026-04-23 (story-59 em-revisao: isolamento de churn em voz/presenca + shell de audio)
 ---
 
 # Cronos Vtt — Frontend
@@ -47,6 +47,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Shell Visual Ficha/Notas (GPU idle 20% fora da arena) | em-revisão | `/stories/story-56-performance-shell-visual-ficha-notas.md` |
 | Nitidez de Texto na Transmissão (contentHint experimento) | em-revisão | `/stories/story-57-nitidez-texto-transmissao-content-hint.md` |
 | Performance Fora da Arena por Aba (Notas, Ficha, Header) | em-revisão | `/stories/story-58-performance-abas-ficha-notas-header.md` |
+| Re-renders em Cascata no Main Thread (MusicPlayer + DOM) | em-revisÃ£o | `/stories/story-59-rerender-cascata-musicplayer-main-thread.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`

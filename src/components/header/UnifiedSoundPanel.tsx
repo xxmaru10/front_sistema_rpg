@@ -1,8 +1,10 @@
 "use client";
 
+import { memo, useEffect, useRef } from "react";
 import { MusicPlayer } from "@/components/MusicPlayer";
 import { AtmosphericPlayer } from "@/components/AtmosphericPlayer";
 import { TransmissionPlayer } from "@/components/TransmissionPlayer";
+import { logStory59 } from "@/lib/story59Debug";
 
 interface UnifiedSoundPanelProps {
     sessionId: string;
@@ -11,12 +13,27 @@ interface UnifiedSoundPanelProps {
     isOpen: boolean;
 }
 
-export function UnifiedSoundPanel({
+function UnifiedSoundPanelComponent({
     sessionId,
     userId,
     userRole,
     isOpen,
 }: UnifiedSoundPanelProps) {
+    const renderCountRef = useRef(0);
+    renderCountRef.current += 1;
+
+    useEffect(() => {
+        logStory59("UnifiedSoundPanel", "mount", { sessionId, userId, userRole });
+        return () => logStory59("UnifiedSoundPanel", "unmount", { sessionId, userId, userRole });
+    }, [sessionId, userId, userRole]);
+
+    useEffect(() => {
+        logStory59("UnifiedSoundPanel", "render", {
+            count: renderCountRef.current,
+            isOpen,
+        });
+    });
+
     return (
         <div className={`unified-sound-panel ${isOpen ? "show" : ""}`}>
             <TransmissionPlayer
@@ -183,3 +200,15 @@ export function UnifiedSoundPanel({
         </div>
     );
 }
+
+function areUnifiedSoundPanelPropsEqual(prev: UnifiedSoundPanelProps, next: UnifiedSoundPanelProps): boolean {
+    return (
+        prev.sessionId === next.sessionId &&
+        prev.userId === next.userId &&
+        prev.userRole === next.userRole &&
+        prev.isOpen === next.isOpen
+    );
+}
+
+export const UnifiedSoundPanel = memo(UnifiedSoundPanelComponent, areUnifiedSoundPanelPropsEqual);
+UnifiedSoundPanel.displayName = "UnifiedSoundPanel";

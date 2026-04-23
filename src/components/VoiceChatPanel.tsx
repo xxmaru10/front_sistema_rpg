@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from "react";
 import { VoiceChatManager, VoicePeer, SessionParticipant } from "@/lib/VoiceChatManager";
-import { useProjectedState } from "@/lib/projectedStateStore";
+import { useProjectedCharacters } from "@/lib/projectedStateStore";
 import { Mic, MicOff, RefreshCw } from "lucide-react";
+import { logStory59 } from "@/lib/story59Debug";
 
 interface VoiceChatPanelProps {
     sessionId: string;
@@ -51,7 +52,38 @@ function VoiceActivityConsumer({ managerRef, managerEpoch, peerId, isMe, childre
     return <>{children(activity)}</>;
 }
 
-export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = false }: VoiceChatPanelProps) {
+function areVoicePeersEqual(prev: VoicePeer[], next: VoicePeer[]): boolean {
+    if (prev.length !== next.length) return false;
+    const sortedPrev = [...prev].sort((a, b) => a.peerId.localeCompare(b.peerId));
+    const sortedNext = [...next].sort((a, b) => a.peerId.localeCompare(b.peerId));
+    for (let i = 0; i < sortedPrev.length; i += 1) {
+        const a = sortedPrev[i];
+        const b = sortedNext[i];
+        if (a.peerId !== b.peerId) return false;
+        if (a.stream !== b.stream) return false;
+        if (a.muted !== b.muted) return false;
+        if (Math.abs(a.volume - b.volume) > 0.001) return false;
+        if (a.inVoice !== b.inVoice) return false;
+    }
+    return true;
+}
+
+function areSessionParticipantsEqual(prev: SessionParticipant[], next: SessionParticipant[]): boolean {
+    if (prev.length !== next.length) return false;
+    const norm = (s: string) => (s || "").trim().toLowerCase().normalize("NFC");
+    const sortedPrev = [...prev].sort((a, b) => norm(a.userId).localeCompare(norm(b.userId)));
+    const sortedNext = [...next].sort((a, b) => norm(a.userId).localeCompare(norm(b.userId)));
+    for (let i = 0; i < sortedPrev.length; i += 1) {
+        const a = sortedPrev[i];
+        const b = sortedNext[i];
+        if (norm(a.userId) !== norm(b.userId)) return false;
+        if (a.inVoice !== b.inVoice) return false;
+        if ((a.characterId || "") !== (b.characterId || "")) return false;
+    }
+    return true;
+}
+
+function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = false }: VoiceChatPanelProps) {
     const isBluetoothLabel = useCallback((label: string) => {
         const v = (label || "").toLowerCase();
         return v.includes("bluetooth") || v.includes("hands-free") || v.includes("hands free") || v.includes("hfp") || v.includes("airpods");
@@ -79,9 +111,27 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const wasConnectedBeforeRefresh = useRef(false);
+    const renderCountRef = useRef(0);
     // Persiste o último characterId conhecido por userId para evitar flicker
     // quando a presença chega com update parcial (sem characterId)
     const lastKnownCharacterIdRef = useRef<Map<string, string>>(new Map());
+
+    renderCountRef.current += 1;
+
+    useEffect(() => {
+        logStory59("VoiceChatPanel", "mount", { sessionId, userId, isMobile });
+        return () => logStory59("VoiceChatPanel", "unmount", { sessionId, userId, isMobile });
+    }, [sessionId, userId, isMobile]);
+
+    useEffect(() => {
+        logStory59("VoiceChatPanel", "render", {
+            count: renderCountRef.current,
+            isConnected,
+            peers: peers.length,
+            participants: participants.length,
+            isOpen,
+        });
+    });
 
     const localVoice = useSyncExternalStore(
         useCallback((onStoreChange) => {
@@ -178,7 +228,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
 
     // Story 46 Prioridade 3: lê estado projetado do singleton (antes mantinha cópia local
     // de events[] + computeState próprio — um de 5 culpados do travamento mobile).
-    const state = useProjectedState();
+    const projectedCharacters = useProjectedCharacters();
 
     const getDisplayName = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
@@ -188,7 +238,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             return uid;
         }
 
-        const allChars = Object.values(state.characters);
+        const allChars = Object.values(projectedCharacters);
 
         // 1. Prioridade absoluta por charId
         if (charId) {
@@ -205,7 +255,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         const matchedChar = candidates.find(c => (c as any).activeInArena) ?? candidates[candidates.length - 1];
 
         return matchedChar ? matchedChar.name : uid;
-    }, [state.characters]);
+    }, [projectedCharacters]);
 
     const getCharacterImage = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
@@ -214,7 +264,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             return null;
         }
 
-        const allChars = Object.values(state.characters);
+        const allChars = Object.values(projectedCharacters);
 
         // 1. Prioridade por charId
         if (charId) {
@@ -232,7 +282,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         const matchedChar = candidates.find(c => (c as any).activeInArena) ?? candidates[candidates.length - 1];
 
         return matchedChar?.imageUrl || null;
-    }, [state.characters, userId]);
+    }, [projectedCharacters, userId]);
 
     // Inicializar manager
     useEffect(() => {
@@ -242,7 +292,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                     sessionId,
                     userId,
                     (updatedPeers) => {
-                        setPeers([...updatedPeers]);
+                        setPeers((prev) => (areVoicePeersEqual(prev, updatedPeers) ? prev : [...updatedPeers]));
                     },
                     (updatedParticipants) => {
                         // Log inline (não colapsável) para diagnóstico de characterId
@@ -269,7 +319,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                             return p;
                         });
 
-                        setParticipants(withKnownIds);
+                        setParticipants((prev) => (areSessionParticipantsEqual(prev, withKnownIds) ? prev : withKnownIds));
                     },
                     characterId
                 );
@@ -453,7 +503,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             let resolvedCharId = isMe ? characterId : p.characterId;
             if (!resolvedCharId) {
                 const uidNorm = norm(p.userId);
-                const allCharsForUser = Object.values(state.characters).filter(c =>
+                const allCharsForUser = Object.values(projectedCharacters).filter(c =>
                     norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
                 );
                 // Bug 3: multi-owner — priorizar activeInArena, depois mais recente por id (fallback)
@@ -498,7 +548,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             if (b.isMe) return 1;
             return 0;
         });
-    }, [participants, peers, userId, characterId, isConnected, micVolume, micMuted, state.characters]);
+    }, [participants, peers, userId, characterId, isConnected, micVolume, micMuted, projectedCharacters]);
 
     const voiceCount = allUsers.filter(u => u.inVoice).length;
 
@@ -1210,5 +1260,17 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         </>
     );
 }
+
+function areVoiceChatPanelPropsEqual(prev: VoiceChatPanelProps, next: VoiceChatPanelProps): boolean {
+    return (
+        prev.sessionId === next.sessionId &&
+        prev.userId === next.userId &&
+        prev.characterId === next.characterId &&
+        prev.isMobile === next.isMobile
+    );
+}
+
+export const VoiceChatPanel = React.memo(VoiceChatPanelComponent, areVoiceChatPanelPropsEqual);
+VoiceChatPanel.displayName = "VoiceChatPanel";
 
 

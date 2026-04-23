@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissao + story-58 performance por aba fora da arena)
+last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissao + story-58 performance por aba fora da arena + story-59 churn no main thread do header)
 status: ativo
 ---
 
@@ -249,6 +249,13 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Lista de personagens otimizada por agrupamento memoizado**: `CharactersTab` passou a memoizar listas de PCs/NPCs e lookup de personagem em modal, evitando `filter/find` repetidos a cada render.
 - **NPCs em resumo no modo player**: a grade de NPCs no modo player voltou para `CharacterSummary` (com abertura de `CharacterCard` no modal), preservando acesso ao detalhe sob demanda com menor custo em idle.
 - **Alivio do shell visual de ficha/header/tema**: `CharacterCard.css` reduziu sombras e insets base, `SessionHeader` consolidou camadas do banner e reduziu altura/efeito fora da arena, e o preset espacial desacelerou `starry-drift` (60s -> 180s) com opt-out explicito via `data-disable-theme-animation`.
+
+## Registro de Decisoes (Story 59)
+- **Assinatura seletiva de projecao no Voice Chat**: `VoiceChatPanel` passou a consumir apenas `characters` via `useProjectedCharacters`, evitando rerender a cada evento irrelevante da sessao.
+- **Dedupe de estado de voz/presenca**: `VoiceChatManager` agora compara snapshots antes de propagar `onPeerUpdate`/`onPresenceUpdate`, reduzindo cascata de `setState` no shell persistente do header.
+- **`voice-join` sem heartbeat em idle**: o heartbeat periodico de voz deixou de rebroadcastar `voice-join`; em idle ele reanuncia apenas `voice-presence`, mantendo descoberta sem renegociacao recorrente.
+- **Logs de diagnostico sob flag**: logs de render/mount da Story 59 foram adicionados em `HeaderWrapper`, `UnifiedSoundPanel`, `MusicPlayer` e `VoiceChatPanel` com gate por `localStorage.debugStory59 = "1"`.
+- **Subtrees pesadas do header memoizadas**: `VoiceChatPanel`, `UnifiedSoundPanel` e `MusicPlayer` receberam `React.memo` com comparacao explicita de props para isolar re-renders vindos do `HeaderWrapper`.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.

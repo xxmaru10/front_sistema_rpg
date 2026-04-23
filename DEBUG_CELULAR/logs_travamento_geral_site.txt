@@ -1,0 +1,186 @@
+863-90902b9db18b8dca.js:1 [SocketClient] WS_URL: https://api.cronosvtt.com
+993-1884ad2b93167c8c.js:1 [Supabase] Cliente inicializado com sucesso.
+993-1884ad2b93167c8c.js:1 [Supabase] Target URL: https://tqckkjqxyshreugsvroy.supabase.co
+863-90902b9db18b8dca.js:1 [EventStore] Inicializando sessão: 3d6b11d4 (forçado: false)
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+layout-1fdb04bea1e6f960.js:1 [VoiceChatPanel] Mount Props Sync Check: Object
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+page-202b180e8055f121.js:1 [WebRTC - mestre] Sending signal: peer-join
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Track capturada — readyState: live, enabled: true, label: "Padrão - Microfone (Realtek(R) Audio)"
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-join → broadcast
+www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://cronosvtt.com').
+n.sendMessage @ www-widgetapi.js:210
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+863-90902b9db18b8dca.js:1 [EventStore] WebSocket connected, joining session: 3d6b11d4
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_NATIVE_READY
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-offer from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Handling offer from: azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Received audio track from: azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-answer → azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for azrael koor: connecting
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → azrael koor
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+www.youtube.com/generate_204?1TXLQg:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for azrael koor: connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Successfully connected to azrael koor
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+863-90902b9db18b8dca.js:1 [EventStore] Snapshot encontrado: seq 5882
+863-90902b9db18b8dca.js:1 [EventStore] 0 eventos carregados via NestJS.
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] I am answerer → waiting offer from: elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+page-202b180e8055f121.js:1 [WebRTC - mestre] Signal received: peer-join from: azrael koor
+page-202b180e8055f121.js:1 [WebRTC - mestre] Buffering peer: azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"},{"uid":"Leon Cromwell (Chloe Aubert)","charId":"cf1c4c13-519c-4853-bbf5-8e98a44e53b6"},{"uid":"Mestre","charId":"MISSING"}]
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-join → elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"},{"uid":"Leon Cromwell (Chloe Aubert)","charId":"cf1c4c13-519c-4853-bbf5-8e98a44e53b6"},{"uid":"Mestre","charId":"MISSING"},{"uid":"Azrael koor","charId":"2993213c-37e4-47ba-9a32-540115507c5b"}]
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from azrael koor ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-offer from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Handling offer from: elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Received audio track from: elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-answer → elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for elara malisorn - el-varnis: connecting
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] I am offerer → creating offer for: salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-offer → salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for elara malisorn - el-varnis: connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Successfully connected to elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-answer from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Received audio track from: salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for salomão castaigne / ben ya hu: connecting
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for salomão castaigne / ben ya hu: connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Successfully connected to salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for azrael koor: disconnected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Reconnecting to azrael koor (disconnected) attempt 1/3
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-join → azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-offer from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Handling offer from: azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Received audio track from: azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-answer → azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for azrael koor: connecting
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for azrael koor: connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Successfully connected to azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] I am answerer → waiting offer from: leon cromwell (chloe aubert)
+page-202b180e8055f121.js:1 [WebRTC - mestre] Signal received: peer-join from: salomão castaigne / ben ya hu
+page-202b180e8055f121.js:1 [WebRTC - mestre] Buffering peer: salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-join → leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-offer from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Handling offer from: leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Received audio track from: leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-answer → leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for leon cromwell (chloe aubert): connecting
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-ice-candidate → leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-ice-candidate from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Connection state for leon cromwell (chloe aubert): connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Successfully connected to leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-join → broadcast
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from elara malisorn - el-varnis ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from azrael koor ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from salomão castaigne / ben ya hu ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from leon cromwell (chloe aubert) ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-join → broadcast
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from elara malisorn - el-varnis ignored — already connected
+page-202b180e8055f121.js:1 [ScreenShare] Visibility visible, checking connection...
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from azrael koor ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from salomão castaigne / ben ya hu ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from leon cromwell (chloe aubert) ignored — already connected
+page-202b180e8055f121.js:1 [ScreenShare] Visibility visible, checking connection...
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-join → broadcast
+www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-leave from: Azrael koor
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"},{"uid":"Leon Cromwell (Chloe Aubert)","charId":"cf1c4c13-519c-4853-bbf5-8e98a44e53b6"},{"uid":"Mestre","charId":"MISSING"}]
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] voice-join from elara malisorn - el-varnis ignored — already connected
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Sending signal: voice-leave → broadcast
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"},{"uid":"Leon Cromwell (Chloe Aubert)","charId":"cf1c4c13-519c-4853-bbf5-8e98a44e53b6"}]
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-leave from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"}]
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Salomão Castaigne / Ben Ya Hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"}]
+page-202b180e8055f121.js:1 [WebRTC - mestre] Signal received: peer-join from: leon cromwell (chloe aubert)
+page-202b180e8055f121.js:1 [WebRTC - mestre] Buffering peer: leon cromwell (chloe aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"},{"uid":"Leon Cromwell (Chloe Aubert)","charId":"cf1c4c13-519c-4853-bbf5-8e98a44e53b6"}]
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-join from: Elara Malisorn - El-Varnis
+page-202b180e8055f121.js:1 [WebRTC - mestre] Signal received: peer-join from: salomão castaigne / ben ya hu
+page-202b180e8055f121.js:1 [WebRTC - mestre] Buffering peer: salomão castaigne / ben ya hu
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"},{"uid":"Leon Cromwell (Chloe Aubert)","charId":"cf1c4c13-519c-4853-bbf5-8e98a44e53b6"}]
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-leave from: Leon Cromwell (Chloe Aubert)
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: [{"uid":"Elara Malisorn - El-Varnis","charId":"74850e8d-d367-417a-9b15-e082963525c6"}]
+page-202b180e8055f121.js:1 [WebRTC - mestre] Signal received: peer-join from: elara malisorn - el-varnis
+page-202b180e8055f121.js:1 [WebRTC - mestre] Buffering peer: elara malisorn - el-varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat - Mestre] Signal received: voice-leave from: Elara Malisorn - El-Varnis
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: []
+page-202b180e8055f121.js:1 [ScreenShare] Visibility visible, checking connection...
+layout-1fdb04bea1e6f960.js:1 [MusicPlayer] YT_MOUNT — url: https://m.youtube.com/watch?v=mSeIh9rmEUs&list=RDmSeIh9rmEUs&start_radio=1&pp=ygUVcm95IG9yYmlzb24gaW4gZHJlYW1zoAcB playing: false unlocked: false
+  POST https://www.youtube.com/youtubei/v1/log_event?alt=json net::ERR_BLOCKED_BY_CLIENT
+send @ unknown
+send @ unknown
+send @ unknown
+kj @ m=root,base:227
+_.mj @ m=root,base:231
+cn @ m=root,base:298
+sendAndWrite @ m=root,base:429
+sendAndWrite @ m=root,base:462
+G @ base.js:1286
+(anonymous) @ base.js:1287
+Promise.then
+g.nm @ base.js:1287
+wp @ base.js:1390
+t8 @ base.js:1382
+(anonymous) @ base.js:1380
+g.cy @ base.js:588
+z7 @ base.js:1380
+l @ base.js:1383
+(anonymous) @ base.js:1384
+(anonymous) @ base.js:957
+page-202b180e8055f121.js:1 [WebRTC - mestre] Signal received: peer-join from: lina clark / bellatrix
+page-202b180e8055f121.js:1 [WebRTC - mestre] Buffering peer: lina clark / bellatrix
+layout-1fdb04bea1e6f960.js:1 [VoiceChat] Presence Update: []

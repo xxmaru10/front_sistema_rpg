@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { memo, useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { logStory59 } from "@/lib/story59Debug";
 
 const isYouTubeUrl = (url: string) =>
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
@@ -74,7 +75,7 @@ function logYt(
     console.debug("[MusicPlayer/YT]", { op, reason, ...(resolvedData || {}) });
 }
 
-export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
+function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: MusicPlayerProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const ytPlayerRef = useRef<any>(null);
     const ytContainerIdRef = useRef(`yt-audio-${Math.random().toString(36).slice(2)}`);
@@ -92,6 +93,9 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     const sawLiveMusicEventRef = useRef(false);
     const lastMusicEventTsRef = useRef(0);
     const lastMusicSeqRef = useRef(0);
+    const renderCountRef = useRef(0);
+
+    renderCountRef.current += 1;
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -118,6 +122,33 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
     // e desmuta automaticamente após onReady — evita bloqueio de autoplay do browser
     const [ytAutoplayUnlocked, setYtAutoplayUnlocked] = useState(false);
     const [, setYtNeedsManualUnlock] = useState(false);
+
+    useEffect(() => {
+        logStory59("MusicPlayer", "mount", {
+            sessionId: sessionId || "none",
+            userId: userId || "none",
+            userRole: userRole || "none",
+            unifiedMode: !!unifiedMode,
+        });
+        return () => {
+            logStory59("MusicPlayer", "unmount", {
+                sessionId: sessionId || "none",
+                userId: userId || "none",
+                userRole: userRole || "none",
+                unifiedMode: !!unifiedMode,
+            });
+        };
+    }, [sessionId, userId, userRole, unifiedMode]);
+
+    useEffect(() => {
+        logStory59("MusicPlayer", "render", {
+            count: renderCountRef.current,
+            currentTrack,
+            isPlaying,
+            isYouTube: isPlayableYouTubeUrl(currentTrack),
+            unifiedMode: !!unifiedMode,
+        });
+    });
 
     const isYouTubePlayerAttached = useCallback(() => {
         const player = ytPlayerRef.current;
@@ -1370,4 +1401,16 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         </div>
     );
 }
+
+function areMusicPlayerPropsEqual(prev: MusicPlayerProps, next: MusicPlayerProps): boolean {
+    return (
+        prev.sessionId === next.sessionId &&
+        prev.userId === next.userId &&
+        prev.userRole === next.userRole &&
+        prev.unifiedMode === next.unifiedMode
+    );
+}
+
+export const MusicPlayer = memo(MusicPlayerComponent, areMusicPlayerPropsEqual);
+MusicPlayer.displayName = "MusicPlayer";
 

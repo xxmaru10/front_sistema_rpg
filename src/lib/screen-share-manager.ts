@@ -815,14 +815,21 @@ export class ScreenShareManager {
             && existingPc.connectionState !== 'closed'
             && existingPc.connectionState !== 'disconnected';
         if (!isHealthy) {
-            console.log(`[WebRTC - ${this.userId}] checkAndReconnect: no active connection, sending peer-join`);
+            this.logPeerEvent({
+                peerId: 'broadcaster',
+                attemptId: this.getAttemptId('broadcaster', existingPc),
+                stage: 'reconnect-scheduled',
+                data: { origin: 'visibility-check' },
+            });
             await this.reconnect();
         }
     }
 
     public async reconnect() {
         if (this.isBroadcaster) return;
-        console.log(`[WebRTC - ${this.userId}] Manual reconnect requested`);
+        if (this.shouldLogPeerEvent()) {
+            console.debug(`[WebRTC - ${this.userId}] Manual reconnect requested`);
+        }
         const existingPc = this.peerConnections.get('broadcaster');
         if (existingPc) {
             existingPc.close();
