@@ -2,7 +2,7 @@
 title: "Story 61 — Diagnostico de setState do MusicPlayer e iframe YouTube desacoplado do shell"
 description: "Apos stories 59 (sem mais YT_MOUNT churn) e 60 (filtro de CharacterCard ocultos + startTransition + memo) confirmadas no source atual, o trace `Trace-20260423T194121.json` ainda mostra o iframe do YouTube como o maior contribuinte de main thread (583ms em 45s) e um `requestIdleCallback` de 683ms vindo do widget API. O MusicPlayer fica sempre montado dentro de UnifiedSoundPanel/HeaderWrapper e o painel apenas alterna CSS (`isOpen`), mantendo o iframe vivo mesmo fechado. Esta story tem duas fases: (1) instrumentar o MusicPlayer para provar/refutar fan-out de setState a partir de callbacks YT; (2) com base nos dados, decidir entre auditar fan-out de estado ou portar o container do iframe para fora da subarvore do HeaderWrapper. NAO pode quebrar continuidade de audio: PLAYER tambem precisa do MusicPlayer montado para receber `MUSIC_PLAYBACK_CHANGED` via Event Store."
 priority: "alta"
-status: "planejada"
+status: "concluida"
 last_updated: "2026-04-23"
 related: ["story-55-musicplayer-receiver-youtube-idempotencia", "story-59-rerender-cascata-musicplayer-main-thread", "story-60-dom-compacto-mobile-e-inp-sub-200ms"]
 tags: [performance, react, mobile, main-thread, componente]
@@ -255,13 +255,19 @@ Rejeitada porque PLAYER tambem precisa receber `MUSIC_PLAYBACK_CHANGED` para sin
 
 ## Resultados Fase 1
 
-> Preencher apos coleta no celular.
+Coleta realizada em 2026-04-23. Log: `DEBUG_CELULAR/crownvtt-lclw061iw-...-17769869` (PLAYER: Ayton Manson).
 
-- Renders em 30s idle (painel fechado): _N_
-- yt-onStateChange em 30s idle: _N_
-- Tipos de evento recebidos em 30s idle: _lista_
-- Cenario escolhido: _A ou B_
-- Justificativa: _texto curto_
+- **Renders em idle (painel fechado):** 0 — do render 6 (linha 171, apos yt-onReady) ate o render 7 (linha 2328, quando GM trocou musica), zero renders. H2 descartada.
+- **yt-onStateChange em idle:** 0 — nenhum callback YT durante o periodo de idle.
+- **event-received em idle:** 0 — nenhum evento do EventStore chegou ao MusicPlayer enquanto idle.
+- **Eventos que geraram renders:** apenas `MUSIC_PLAYBACK_CHANGED` (seq 6998 e 6999, gerados pelo GM) e o proprio estado YT PLAYING (state=1 → setYtAutoplayUnlocked). H3 descartada.
+- **Custo real identificado:** `requestIdleCallback` de 487ms e `setTimeout` de 168ms, ambos em `m=root,base` (YouTube base.js interno). 28+ `non-passive event listener` warnings do iframe. Tudo externo ao nosso codigo. H1 confirmada.
+- **Cenario escolhido:** B (custo intrínseco do iframe YouTube)
+- **Justificativa:** B1 (Portal) nao reduz custo de requestIdleCallback/setTimeout — esses sao handlers internos do YouTube rodando no main thread independente da posicao do container DOM. Custo e fixo da IFrame API e aceito como trade-off da feature de musica.
+
+### Decisao final
+
+Fase 2 nao sera implementada. O custo restante e intrínseco ao YouTube IFrame API e nao tem correcao dentro do nosso codigo. O objetivo de INP <200ms no celular foi atingido (129ms nos traces). Story encerrada.
 
 ---
 

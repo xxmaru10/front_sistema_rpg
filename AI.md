@@ -49,7 +49,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Performance Fora da Arena por Aba (Notas, Ficha, Header) | em-revisão | `/stories/story-58-performance-abas-ficha-notas-header.md` |
 | Re-renders em Cascata no Main Thread (MusicPlayer + DOM) | em-revisÃ£o | `/stories/story-59-rerender-cascata-musicplayer-main-thread.md` |
 | DOM Compacto Mobile e INP Sub-200ms | em-revisao | `/stories/story-60-dom-compacto-mobile-e-inp-sub-200ms.md` |
-| MusicPlayer setState fan-out + iframe YT desacoplado | planejada | `/stories/story-61-musicplayer-yt-setstate-fanout-e-iframe-desacoplado.md` |
+| MusicPlayer setState fan-out + iframe YT desacoplado | concluida | `/stories/story-61-musicplayer-yt-setstate-fanout-e-iframe-desacoplado.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`
