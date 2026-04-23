@@ -37,6 +37,7 @@ export function useSessionScreenControl({
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
     const lastHandledReconnectVersionRef = useRef(0);
     const lastHandledTry1080VersionRef = useRef(0);
+    const lastHandledPeerRetryVersionRef = useRef(0);
     const lastVisibilityReconnectAtRef = useRef(0);
     const videoStreamRef = useRef<MediaStream | null>(videoStream);
     const [videoNoSignal, setVideoNoSignal] = useState(false);
@@ -57,7 +58,12 @@ export function useSessionScreenControl({
                     (stream) => {
                         setVideoStream(stream);
                         screenShareStore.setHasStream(!!stream);
-                    }
+                    },
+                    {
+                        onPeerHardStopped: (peerId) => {
+                            screenShareStore.setPeerHardStopped(peerId);
+                        },
+                    },
                 );
                 manager.initialize();
                 screenShareManagerRef.current = manager;
@@ -71,6 +77,7 @@ export function useSessionScreenControl({
                 setTimeout(() => mgr.disconnect(), 200);
             }
             screenShareStore.setHasStream(false);
+            screenShareStore.clearPeerHardStopped();
         };
     }, [sessionId, actorUserId, setVideoStream]);
 
@@ -114,6 +121,12 @@ export function useSessionScreenControl({
             if (screenShareStore.retry1080Version > lastHandledTry1080VersionRef.current) {
                 lastHandledTry1080VersionRef.current = screenShareStore.retry1080Version;
                 screenShareManagerRef.current?.tryRestore1080p();
+            }
+            if (screenShareStore.retryPeerVersion > lastHandledPeerRetryVersionRef.current) {
+                lastHandledPeerRetryVersionRef.current = screenShareStore.retryPeerVersion;
+                if (screenShareStore.retryPeerId) {
+                    screenShareManagerRef.current?.retryPeer(screenShareStore.retryPeerId);
+                }
             }
         });
         return unsubscribe;
@@ -268,7 +281,6 @@ export function useSessionScreenControl({
                 if (el && el.muted && !el.paused) {
                     el.muted = false;
                     setVideoMuted(false);
-                    console.log("[ScreenShare] Unmuted on visibility change");
                 }
             }
         };

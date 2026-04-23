@@ -14,8 +14,36 @@ export interface WebRTCSignal {
 }
 
 type ScreenShareTier = '1080p' | '720p';
+type ScreenSharePeerRole = 'broadcaster' | 'receiver';
+type ScreenSharePeerStage =
+    | 'createPeerConnection'
+    | 'offer-created'
+    | 'offer-sent'
+    | 'offer-received'
+    | 'remote-description-set'
+    | 'answer-created'
+    | 'answer-sent'
+    | 'answer-received'
+    | 'ice-connection-state-change'
+    | 'connection-state-change'
+    | 'safety-timeout'
+    | 'reconnect-scheduled'
+    | 'peer-join-ignored-by-breaker'
+    | 'peer-hard-stopped'
+    | 'track-received';
+
+interface ScreenSharePeerFailureState {
+    failures: number;
+    blockedUntil: number;
+    hardStopped: boolean;
+}
+
+export interface ScreenShareManagerConfig {
+    onPeerHardStopped?: (peerId: string) => void;
+}
 
 const SCREENSHARE_TIER_STORAGE_KEY = 'screenshare_tier';
+const DEBUG_SCREEN_SHARE_STORAGE_KEY = 'debugScreenShare';
 const QUALITY_MONITOR_INTERVAL_MS = 4000;
 const QUALITY_PRESSURE_STREAK_TARGET = 2;
 
@@ -38,7 +66,14 @@ export class ScreenShareManager {
     private cpuPressureStreak: number = 0;
     private fpsPressureStreak: number = 0;
     private droppedPressureStreak: number = 0;
+    private attemptCounters: Map<string, number> = new Map();
+    private pcAttemptIds: WeakMap<RTCPeerConnection, number> = new WeakMap();
+    private peerFailureState: Map<string, ScreenSharePeerFailureState> = new Map();
+    private onPeerHardStopped?: (peerId: string) => void;
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+    private static readonly BREAKER_COOLDOWN_MS = 30_000;
+    private static readonly BREAKER_SOFT_THRESHOLD = 3;
+    private static readonly BREAKER_HARD_THRESHOLD = 5;
     private isHealthyConnectionState(state: RTCPeerConnectionState): boolean {
         return state === 'new' || state === 'connecting' || state === 'connected';
     }
@@ -60,14 +95,158 @@ export class ScreenShareManager {
     constructor(
         sessionId: string,
         userId: string,
-        onStreamReceived: (stream: MediaStream | null) => void
+        onStreamReceived: (stream: MediaStream | null) => void,
+        config?: ScreenShareManagerConfig,
     ) {
         this.sessionId = sessionId;
         this.userId = userId.trim().toLowerCase();
         this.onStreamReceived = onStreamReceived;
+        this.onPeerHardStopped = config?.onPeerHardStopped;
         this.qualityTier = this.readStoredTier();
         this.hasDowngraded = this.qualityTier === '720p';
         screenShareStore.setQualityTier(this.qualityTier, this.hasDowngraded);
+    }
+
+    private getRole(): ScreenSharePeerRole {
+        return this.isBroadcaster ? 'broadcaster' : 'receiver';
+    }
+
+    private shouldLogPeerEvent(): boolean {
+        if (process.env.NODE_ENV === 'development') return true;
+        if (typeof window === 'undefined') return false;
+        try {
+            return window.localStorage?.getItem(DEBUG_SCREEN_SHARE_STORAGE_KEY) === '1';
+        } catch {
+            return false;
+        }
+    }
+
+    private logPeerEvent(params: {
+        peerId: string;
+        attemptId: number;
+        stage: ScreenSharePeerStage;
+        role?: ScreenSharePeerRole;
+        data?: Record<string, unknown> | (() => Record<string, unknown>);
+    }) {
+        if (!this.shouldLogPeerEvent()) return;
+
+        const base = {
+            peerId: params.peerId,
+            attemptId: params.attemptId,
+            role: params.role ?? this.getRole(),
+            stage: params.stage,
+        };
+        const data = typeof params.data === 'function' ? params.data() : params.data;
+        if (data) {
+            console.debug('[SS-TELEMETRY]', { ...base, ...data });
+            return;
+        }
+        console.debug('[SS-TELEMETRY]', base);
+    }
+
+    private nextAttemptId(peerId: string): number {
+        const nextAttempt = (this.attemptCounters.get(peerId) ?? 0) + 1;
+        this.attemptCounters.set(peerId, nextAttempt);
+        return nextAttempt;
+    }
+
+    private getAttemptId(peerId: string, pc?: RTCPeerConnection | null): number {
+        if (pc) {
+            const fromPc = this.pcAttemptIds.get(pc);
+            if (typeof fromPc === 'number') return fromPc;
+        }
+        return this.attemptCounters.get(peerId) ?? 0;
+    }
+
+    private getOrCreatePeerFailureState(peerId: string): ScreenSharePeerFailureState {
+        const existing = this.peerFailureState.get(peerId);
+        if (existing) return existing;
+        const initial: ScreenSharePeerFailureState = { failures: 0, blockedUntil: 0, hardStopped: false };
+        this.peerFailureState.set(peerId, initial);
+        return initial;
+    }
+
+    private isPeerBlocked(peerId: string): boolean {
+        const failure = this.getOrCreatePeerFailureState(peerId);
+        return failure.hardStopped || Date.now() < failure.blockedUntil;
+    }
+
+    private recordPeerFailure(peerId: string, origin: 'safety-timeout' | 'state-change-failed', attemptId: number): void {
+        if (!this.isBroadcaster) return;
+
+        const current = this.getOrCreatePeerFailureState(peerId);
+        const failures = current.failures + 1;
+        let blockedUntil = 0;
+        let hardStopped = current.hardStopped;
+
+        if (failures >= ScreenShareManager.BREAKER_HARD_THRESHOLD) {
+            hardStopped = true;
+        } else if (failures >= ScreenShareManager.BREAKER_SOFT_THRESHOLD) {
+            blockedUntil = Date.now() + ScreenShareManager.BREAKER_COOLDOWN_MS;
+        }
+
+        this.peerFailureState.set(peerId, { failures, blockedUntil, hardStopped });
+
+        if (hardStopped && !current.hardStopped) {
+            this.logPeerEvent({
+                peerId,
+                attemptId,
+                stage: 'peer-hard-stopped',
+                data: { origin, failures },
+            });
+            this.onPeerHardStopped?.(peerId);
+            return;
+        }
+
+    }
+
+    private clearPeerFailure(peerId: string): void {
+        this.peerFailureState.set(peerId, { failures: 0, blockedUntil: 0, hardStopped: false });
+    }
+
+    private scheduleReconnect(peerId: string, origin: 'safety-timeout' | 'state-change-failed', attemptId: number) {
+        if (this.isBroadcaster && !this.localStream) return;
+
+        const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
+        const attempts = this.reconnectAttempts.get(reconnectKey) || 0;
+        if (attempts >= ScreenShareManager.MAX_RECONNECT_ATTEMPTS) {
+            console.warn(`[WebRTC] Max reconnect attempts reached for ${reconnectKey}`);
+            return;
+        }
+
+        if (this.isBroadcaster && this.isPeerBlocked(peerId)) {
+            this.logPeerEvent({
+                peerId,
+                attemptId,
+                stage: 'peer-join-ignored-by-breaker',
+                data: { origin },
+            });
+            return;
+        }
+
+        const nextAttempt = attempts + 1;
+        const delayMs = origin === 'state-change-failed' ? 3000 * nextAttempt : 0;
+        this.reconnectAttempts.set(reconnectKey, nextAttempt);
+        this.logPeerEvent({
+            peerId,
+            attemptId,
+            stage: 'reconnect-scheduled',
+            data: { origin, delayMs, attempt: nextAttempt },
+        });
+
+        const reconnectAction = () => {
+            if (this.isBroadcaster && this.localStream) {
+                void this.createPeerConnection(peerId);
+            } else if (!this.isBroadcaster) {
+                void this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+            }
+        };
+
+        if (delayMs <= 0) {
+            reconnectAction();
+            return;
+        }
+        setTimeout(reconnectAction, delayMs);
     }
 
     // ─── Initialize ────────────────────────────────────────────
@@ -135,6 +314,10 @@ export class ScreenShareManager {
     public async startSharing(): Promise<MediaStream | null> {
         console.log(`[WebRTC - ${this.userId}] Starting screen share...`);
         try {
+            this.peerFailureState.clear();
+            this.attemptCounters.clear();
+            this.pcAttemptIds = new WeakMap();
+            screenShareStore.clearPeerHardStopped();
             this.qualityTier = this.readStoredTier();
             this.hasDowngraded = this.qualityTier === '720p';
             const is720p = this.qualityTier === '720p';
@@ -197,6 +380,7 @@ export class ScreenShareManager {
     }
 
     public stopSharing() {
+        screenShareStore.clearPeerHardStopped();
         if (this.heartbeatInterval) {
             clearInterval(this.heartbeatInterval);
             this.heartbeatInterval = null;
@@ -268,6 +452,15 @@ export class ScreenShareManager {
             if (!peerId || peerId === this.userId) return;
 
             if (this.isBroadcaster) {
+                if (this.isPeerBlocked(peerId)) {
+                    this.logPeerEvent({
+                        peerId,
+                        attemptId: this.getAttemptId(peerId),
+                        stage: 'peer-join-ignored-by-breaker',
+                        data: { origin: 'peer-join' },
+                    });
+                    return;
+                }
                 const existingPc = this.peerConnections.get(peerId);
                 if (existingPc && this.isHealthyConnectionState(existingPc.connectionState)) {
                     console.log(`[WebRTC - ${this.userId}] Peer ${peerId} already has healthy connection (${existingPc.connectionState}), skipping recreate`);
@@ -283,6 +476,11 @@ export class ScreenShareManager {
         }
 
         if (type === 'offer' && !this.isBroadcaster && signal.offer) {
+            this.logPeerEvent({
+                peerId: 'broadcaster',
+                attemptId: this.getAttemptId('broadcaster'),
+                stage: 'offer-received',
+            });
             const existing = this.peerConnections.get('broadcaster');
             if (
                 existing &&
@@ -297,6 +495,14 @@ export class ScreenShareManager {
         }
 
         if (type === 'answer' && this.isBroadcaster && signal.answer) {
+            const answerPeerId = (signal.peerId || from || '').trim().toLowerCase();
+            if (answerPeerId) {
+                this.logPeerEvent({
+                    peerId: answerPeerId,
+                    attemptId: this.getAttemptId(answerPeerId),
+                    stage: 'answer-received',
+                });
+            }
             setTimeout(() => this.handleAnswer(signal), 0);
             return;
         }
@@ -320,36 +526,55 @@ export class ScreenShareManager {
 
     // ─── Peer connection ───────────────────────────────────────
 
-    private async createPeerConnection(peerId: string) {
+    private async createPeerConnection(rawPeerId: string) {
+        const peerId = rawPeerId.trim().toLowerCase();
+        const attemptId = this.nextAttemptId(peerId);
         console.log(`[WebRTC - ${this.userId}] Creating peer connection for:`, peerId);
         const existingPc = this.peerConnections.get(peerId);
+        this.logPeerEvent({
+            peerId,
+            attemptId,
+            stage: 'createPeerConnection',
+            data: existingPc ? { prevExistingState: existingPc.connectionState } : undefined,
+        });
         if (existingPc && this.isHealthyConnectionState(existingPc.connectionState)) {
             return existingPc;
         }
         if (existingPc) {
             existingPc.close();
+            this.peerConnections.delete(peerId);
         }
 
         const pc = new RTCPeerConnection(this.rtcConfig);
+        this.pcAttemptIds.set(pc, attemptId);
         this.peerConnections.set(peerId, pc);
+        let previousConnectionState: RTCPeerConnectionState = pc.connectionState;
+        let stateFailureRecorded = false;
+        let reconnectScheduled = false;
+        const loggedTrackKinds = new Set<string>();
 
         // Safety timeout: close stuck connections after 15s
         const safetyTimeout = setTimeout(() => {
             if (this.peerConnections.get(peerId) !== pc) return;
             if (pc.connectionState === 'new' || pc.connectionState === 'connecting') {
+                this.logPeerEvent({
+                    peerId,
+                    attemptId,
+                    stage: 'safety-timeout',
+                    data: () => ({
+                        lastConnectionState: pc.connectionState,
+                        lastIceConnectionState: pc.iceConnectionState,
+                        lastSignalingState: pc.signalingState,
+                    }),
+                });
                 console.warn(`[WebRTC] Safety timeout: closing stuck connection for ${peerId}`);
                 pc.close();
                 this.peerConnections.delete(peerId);
-                const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
-                const attempts = this.reconnectAttempts.get(reconnectKey) || 0;
-                if (attempts < ScreenShareManager.MAX_RECONNECT_ATTEMPTS) {
-                    this.reconnectAttempts.set(reconnectKey, attempts + 1);
-                    if (this.isBroadcaster && this.localStream) {
-                        this.createPeerConnection(peerId);
-                    } else if (!this.isBroadcaster) {
-                        this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
-                    }
+                reconnectScheduled = true;
+                if (this.isBroadcaster) {
+                    this.recordPeerFailure(peerId, 'safety-timeout', attemptId);
                 }
+                this.scheduleReconnect(peerId, 'safety-timeout', attemptId);
             }
         }, 15000);
 
@@ -365,30 +590,46 @@ export class ScreenShareManager {
             }
         };
 
+        pc.oniceconnectionstatechange = () => {
+            this.logPeerEvent({
+                peerId,
+                attemptId,
+                stage: 'ice-connection-state-change',
+                data: () => ({ iceConnectionState: pc.iceConnectionState }),
+            });
+        };
+
         pc.onconnectionstatechange = () => {
             console.log(`[WebRTC] Connection state for ${peerId}:`, pc.connectionState);
+            this.logPeerEvent({
+                peerId,
+                attemptId,
+                stage: 'connection-state-change',
+                data: () => ({ connectionState: pc.connectionState }),
+            });
+            const fromState = previousConnectionState;
+            previousConnectionState = pc.connectionState;
             if (pc.connectionState !== 'new' && pc.connectionState !== 'connecting') {
                 clearTimeout(safetyTimeout);
             }
             if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-                const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
-                const attempts = this.reconnectAttempts.get(reconnectKey) || 0;
-                if (attempts < ScreenShareManager.MAX_RECONNECT_ATTEMPTS) {
-                    this.reconnectAttempts.set(reconnectKey, attempts + 1);
-                    console.log(`[WebRTC] Reconnecting ${reconnectKey} (attempt ${attempts + 1}/${ScreenShareManager.MAX_RECONNECT_ATTEMPTS})`);
-                    setTimeout(() => {
-                        if (this.isBroadcaster && this.localStream) {
-                            this.createPeerConnection(peerId);
-                        } else if (!this.isBroadcaster) {
-                            this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
-                        }
-                    }, 3000 * (attempts + 1));
-                } else {
-                    console.warn(`[WebRTC] Max reconnect attempts reached for ${reconnectKey}`);
+                if (this.isBroadcaster && !stateFailureRecorded && (fromState === 'connecting' || fromState === 'connected')) {
+                    this.recordPeerFailure(peerId, 'state-change-failed', attemptId);
+                    stateFailureRecorded = true;
+                }
+
+                if (!reconnectScheduled) {
+                    reconnectScheduled = true;
+                    this.scheduleReconnect(peerId, 'state-change-failed', attemptId);
                 }
             } else if (pc.connectionState === 'connected') {
+                reconnectScheduled = false;
+                stateFailureRecorded = false;
                 const reconnectKey = this.isBroadcaster ? peerId : 'broadcaster';
                 this.reconnectAttempts.delete(reconnectKey);
+                if (this.isBroadcaster) {
+                    this.clearPeerFailure(peerId);
+                }
             }
         };
 
@@ -440,8 +681,10 @@ export class ScreenShareManager {
 
             try {
                 const offer = await pc.createOffer();
+                this.logPeerEvent({ peerId, attemptId, stage: 'offer-created' });
                 await pc.setLocalDescription(offer);
                 await this.sendSignal({ type: 'offer', from: this.userId, to: peerId, peerId, offer });
+                this.logPeerEvent({ peerId, attemptId, stage: 'offer-sent' });
             } catch (error) {
                 console.error("Error creating offer:", error);
             }
@@ -449,6 +692,15 @@ export class ScreenShareManager {
             // Receiver side — accumulate tracks as they arrive
             // ontrack fires once per track (video first, then audio)
             pc.ontrack = (event) => {
+                if (!loggedTrackKinds.has(event.track.kind)) {
+                    loggedTrackKinds.add(event.track.kind);
+                    this.logPeerEvent({
+                        peerId,
+                        attemptId,
+                        stage: 'track-received',
+                        data: { kind: event.track.kind },
+                    });
+                }
                 console.log(`[WebRTC - ${this.userId}] Received ${event.track.kind} track`);
 
                 if (event.streams?.[0]) {
@@ -471,21 +723,25 @@ export class ScreenShareManager {
     private async handleOffer(signal: WebRTCSignal) {
         if (!signal.offer) return;
         console.log(`[WebRTC - ${this.userId}] Handling offer from broadcaster`);
+        const peerId = 'broadcaster';
 
         // Reset received tracks for fresh connection
         this._receivedTracks.clear();
 
-        const pc = await this.createPeerConnection('broadcaster');
+        const pc = await this.createPeerConnection(peerId);
+        const attemptId = this.getAttemptId(peerId, pc);
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal.offer));
+            this.logPeerEvent({ peerId, attemptId, stage: 'remote-description-set' });
 
-            const queued = this.pendingCandidates.get('broadcaster');
+            const queued = this.pendingCandidates.get(peerId);
             if (queued) {
                 queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
-                this.pendingCandidates.delete('broadcaster');
+                this.pendingCandidates.delete(peerId);
             }
 
             const answer = await pc.createAnswer();
+            this.logPeerEvent({ peerId, attemptId, stage: 'answer-created' });
             await pc.setLocalDescription(answer);
             await this.sendSignal({
                 type: 'answer',
@@ -494,6 +750,7 @@ export class ScreenShareManager {
                 peerId: this.userId,
                 answer,
             });
+            this.logPeerEvent({ peerId, attemptId, stage: 'answer-sent' });
         } catch (error) {
             console.error("Error handling offer:", error);
         }
@@ -501,17 +758,19 @@ export class ScreenShareManager {
 
     private async handleAnswer(signal: WebRTCSignal) {
         if (!signal.answer) return;
-        const sourceId = signal.peerId || signal.from;
+        const sourceId = (signal.peerId || signal.from || '').trim().toLowerCase();
         if (!sourceId) return;
         console.log(`[WebRTC - ${this.userId}] Handling answer from:`, sourceId);
         const pc = this.peerConnections.get(sourceId);
         if (pc) {
+            const attemptId = this.getAttemptId(sourceId, pc);
             if (pc.signalingState !== 'have-local-offer') {
                 console.warn(`[WebRTC - ${this.userId}] Ignoring stale answer from ${sourceId} (state: ${pc.signalingState})`);
                 return;
             }
             try {
                 await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
+                this.logPeerEvent({ peerId: sourceId, attemptId, stage: 'remote-description-set' });
                 const queued = this.pendingCandidates.get(sourceId);
                 if (queued) {
                     queued.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
@@ -531,6 +790,9 @@ export class ScreenShareManager {
         this.peerConnections.clear();
         this.pendingCandidates.clear();
         this.reconnectAttempts.clear();
+        this.peerFailureState.clear();
+        this.attemptCounters.clear();
+        this.pcAttemptIds = new WeakMap();
         this._receivedTracks.clear();
     }
 
@@ -561,6 +823,31 @@ export class ScreenShareManager {
         this.reconnectAttempts.delete('broadcaster');
         this._receivedTracks.clear();
         await this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+    }
+
+    public retryPeer(peerId: string): void {
+        const normalizedPeerId = (peerId || '').trim().toLowerCase();
+        if (!normalizedPeerId) return;
+
+        this.clearPeerFailure(normalizedPeerId);
+        this.reconnectAttempts.delete(normalizedPeerId);
+        this.attemptCounters.delete(normalizedPeerId);
+
+        const existingPc = this.peerConnections.get(normalizedPeerId);
+        if (existingPc) {
+            existingPc.close();
+            this.peerConnections.delete(normalizedPeerId);
+        }
+        this.pendingCandidates.delete(normalizedPeerId);
+
+        if (this.isBroadcaster && this.localStream) {
+            void this.createPeerConnection(normalizedPeerId);
+            return;
+        }
+
+        if (!this.isBroadcaster) {
+            void this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+        }
     }
 
     public async tryRestore1080p() {

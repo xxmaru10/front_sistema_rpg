@@ -20,6 +20,7 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
     const [isMounted, setIsMounted] = useState(false);
     const [qualityTier, setQualityTier] = useState<'1080p' | '720p'>(screenShareStore.qualityTier);
     const [downgradeActive, setDowngradeActive] = useState(screenShareStore.downgradeActive);
+    const [peerHardStoppedId, setPeerHardStoppedId] = useState<string | null>(screenShareStore.peerHardStoppedId);
 
     useEffect(() => {
         const stored = localStorage.getItem('transmissionVolume');
@@ -32,6 +33,7 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
         const unsubscribe = screenShareStore.subscribe(() => {
             setQualityTier(screenShareStore.qualityTier);
             setDowngradeActive(screenShareStore.downgradeActive);
+            setPeerHardStoppedId(screenShareStore.peerHardStoppedId);
         });
         return unsubscribe;
     }, []);
@@ -151,6 +153,18 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
                             )}
                         </div>
                     )}
+                    {isActive && peerHardStoppedId && userRole === "GM" && (
+                        <div className="quality-downgrade-badge">
+                            <span>Conexão com {peerHardStoppedId} falhou repetidamente.</span>
+                            <button
+                                type="button"
+                                onClick={() => screenShareStore.triggerRetryPeer(peerHardStoppedId)}
+                                className="quality-retry-btn"
+                            >
+                                Tentar novamente
+                            </button>
+                        </div>
+                    )}
                     {volumeControls}
                 </div>
             )}
@@ -174,6 +188,18 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
                                     Tentar 1080p
                                 </button>
                             )}
+                        </div>
+                    )}
+                    {isActive && peerHardStoppedId && userRole === "GM" && (
+                        <div className="quality-downgrade-badge quality-downgrade-badge--unified">
+                            <span>Conexão com {peerHardStoppedId} falhou repetidamente.</span>
+                            <button
+                                type="button"
+                                onClick={() => screenShareStore.triggerRetryPeer(peerHardStoppedId)}
+                                className="quality-retry-btn"
+                            >
+                                Tentar novamente
+                            </button>
                         </div>
                     )}
                     {volumeControls}
