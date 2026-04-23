@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissao)
+last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissao + story-58 performance por aba fora da arena)
 status: ativo
 ---
 
@@ -242,6 +242,13 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Experimento isolado de nitidez via contentHint**: a track de video capturada em `getDisplayMedia` passou a receber `contentHint = 'text'` antes do envio WebRTC.
 - **Sem reversao da estrategia de CPU da story 54**: `degradationPreference` permanece `balanced` e nao houve mudanca em `scaleResolutionDownBy`, bitrate, framerate maxima de politica, thresholds de auto-downgrade ou topologia de conexao.
 - **CTA de 1080p para leitura**: o botao `Tentar 1080p` ganhou copy/tooltip explicito para leitura de texto em ficha/notas.
+
+## Registro de Decisoes (Story 58)
+- **Autoscroll do diario condicionado no hook de notas**: `useSessionNotesDiary` deixou de escrever `scrollTop` em todo render e passou a sincronizar o scroll apenas quando muda a lista visivel (ultima nota/sub-aba/filtro), reduzindo reflow continuo em idle.
+- **Editor de notas sem blur persistente**: `.notes-editor-area` removeu `backdrop-filter` para eliminar custo fixo de compositing na aba de Notas.
+- **Lista de personagens otimizada por agrupamento memoizado**: `CharactersTab` passou a memoizar listas de PCs/NPCs e lookup de personagem em modal, evitando `filter/find` repetidos a cada render.
+- **NPCs em resumo no modo player**: a grade de NPCs no modo player voltou para `CharacterSummary` (com abertura de `CharacterCard` no modal), preservando acesso ao detalhe sob demanda com menor custo em idle.
+- **Alivio do shell visual de ficha/header/tema**: `CharacterCard.css` reduziu sombras e insets base, `SessionHeader` consolidou camadas do banner e reduziu altura/efeito fora da arena, e o preset espacial desacelerou `starry-drift` (60s -> 180s) com opt-out explicito via `data-disable-theme-animation`.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.

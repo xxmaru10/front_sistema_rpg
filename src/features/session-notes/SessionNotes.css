@@ -813,7 +813,8 @@
     border-top: 1px solid rgba(var(--accent-rgb), 0.25);
     background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(15,15,15,0.95));
     padding: 20px;
-    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     position: relative;
 }
 

@@ -1,10 +1,10 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissão)
+last_updated: 2026-04-23 (story-58 aplicada: notas/ficha/header/tema fora da arena)
 ---
 
-# Cronos Vtt — Frontend 
+# Cronos Vtt — Frontend
 
 > Sistema de Virtual Tabletop (VTT) focado em gerenciamento de sessões de RPG de mesa, inspirado em sistemas de rolagens narrativas, zonas, aspectos de cena, estresse e consequências (Fate Core/Accel). Utiliza uma arquitetura de Event Sourcing para manter a sincronia entre jogadores e mestre.
 
@@ -46,6 +46,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | MusicPlayer Receiver YouTube (loop Playing/Buffering) | pronto | `/stories/story-55-musicplayer-receiver-youtube-idempotencia.md` |
 | Shell Visual Ficha/Notas (GPU idle 20% fora da arena) | em-revisão | `/stories/story-56-performance-shell-visual-ficha-notas.md` |
 | Nitidez de Texto na Transmissão (contentHint experimento) | em-revisão | `/stories/story-57-nitidez-texto-transmissao-content-hint.md` |
+| Performance Fora da Arena por Aba (Notas, Ficha, Header) | em-revisão | `/stories/story-58-performance-abas-ficha-notas-header.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`

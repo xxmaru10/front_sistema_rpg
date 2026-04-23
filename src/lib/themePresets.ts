@@ -799,14 +799,14 @@ export function generateThemeCSS(theme: ThemePreset): string {
             /* Story 56: avoid continuous background animation on reduced-motion setups.
                This effect is visual-only and should never force extra render work. */
             @media (prefers-reduced-motion: no-preference) {
-                body {
-                    animation: starry-drift 60s linear infinite;
+                body:not([data-disable-theme-animation="true"]) {
+                    animation: starry-drift 180s linear infinite;
                 }
             }
 
             @media (prefers-reduced-motion: reduce) {
                 body {
-                    animation: none;
+                    animation: none !important;
                 }
             }
 

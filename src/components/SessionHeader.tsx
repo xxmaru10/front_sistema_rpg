@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { AtmosphericEffectType } from "./AtmosphericEffects";
 import {
@@ -89,20 +89,21 @@ export function SessionHeader({
     const [showLibrary, setShowLibrary] = useState(false);
     const [showBgMenu, setShowBgMenu] = useState(false);
     const [showEffectsMenu, setShowEffectsMenu] = useState(false);
-    const videoRef = useRef<HTMLVideoElement>(null);
 
     if (!imageUrl && !isGM && !videoStream && !children) return null;
 
     const isArena = tabName === "ARENA";
-    const shellBorder = isArena ? "none" : "1px solid rgba(var(--accent-rgb), 0.38)";
-    const shellShadow = isArena ? "none" : "0 0 12px rgba(var(--accent-rgb), 0.24)";
+    const hasCoverBanner = Boolean(imageUrl && !isArena);
+    const shellBorder = isArena ? "none" : "1px solid rgba(var(--accent-rgb), 0.3)";
+    const shellShadow = isArena ? "none" : "0 0 8px rgba(var(--accent-rgb), 0.16)";
+    const headerHeight = isArena ? "300px" : hasCoverBanner ? "240px" : "180px";
 
     return (
         <div className="header-container" style={{
             position: 'relative',
             marginTop: '70px',
             width: '100%',
-            height: '300px',
+            height: headerHeight,
             zIndex: 101,
             overflow: 'visible',
             borderTop: shellBorder,
@@ -114,22 +115,14 @@ export function SessionHeader({
             transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
             background: 'transparent'
         }}>
-            {imageUrl && !isArena ? (
-                <>
-                    <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        backgroundImage: `url(${imageUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                    }} />
-                    <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(8,8,8,1) 100%)',
-                        opacity: 0.8
-                    }} />
-                </>
+            {hasCoverBanner ? (
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(8,8,8,0.92) 100%), url(${imageUrl})`,
+                    backgroundSize: 'cover, cover',
+                    backgroundPosition: 'center, center',
+                }} />
             ) : !isArena ? (
                 <div style={{
                     position: 'absolute',

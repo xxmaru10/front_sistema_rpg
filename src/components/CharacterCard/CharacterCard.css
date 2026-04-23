@@ -3,12 +3,12 @@
     border: 1px solid var(--border-color);
     padding: 1px;
     transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-    min-width: 820px;
+    min-width: 760px;
     width: 98% !important;
     max-width: 2500px !important;
     margin: 0 auto;
     position: relative;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
     overflow: visible;
 }
 
@@ -37,7 +37,7 @@
     width: 100%;
     box-sizing: border-box;
     background: #0a0a0a;
-    box-shadow: inset 0 0 50px rgba(0, 0, 0, 1), inset 0 0 20px rgba(var(--accent-rgb), 0.05);
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.55), inset 0 0 10px rgba(var(--accent-rgb), 0.03);
     position: relative;
 }
 
@@ -49,7 +49,7 @@
 
 .char-artifact:hover {
     border-color: var(--accent-color);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 30px var(--accent-glow);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.72), 0 0 14px var(--accent-glow);
 }
 
 .top-layout-grid {
