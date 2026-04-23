@@ -9,9 +9,9 @@ page-b4fd0afa03f808ad.js:1 [WebRTC Diagnosis] Brave detected. Disable Shields if
 863-90902b9db18b8dca.js:1 [EventStore] Snapshot encontrado: seq 6992
 863-90902b9db18b8dca.js:1 [EventStore] 0 eventos carregados via NestJS.
 www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://crownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app').
-n.sendMessage @ www-widgetapi.js:210
+(anonymous) @ www-widgetapi.js:210
 Eb @ www-widgetapi.js:206
-n.Z @ www-widgetapi.js:205
+(anonymous) @ www-widgetapi.js:205
 setInterval
 Ab @ www-widgetapi.js:207
 X @ www-widgetapi.js:197
@@ -92,9 +92,9 @@ uT @ 4bd1b696-616a20cb9ee7da8c.js:1
 u_ @ 4bd1b696-616a20cb9ee7da8c.js:1
 (anonymous) @ 4bd1b696-616a20cb9ee7da8c.js:1
 www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://crownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app').
-n.sendMessage @ www-widgetapi.js:210
+(anonymous) @ www-widgetapi.js:210
 Eb @ www-widgetapi.js:206
-n.Z @ www-widgetapi.js:205
+(anonymous) @ www-widgetapi.js:205
 setInterval
 Ab @ www-widgetapi.js:207
 X @ www-widgetapi.js:197
@@ -174,18 +174,48 @@ uO @ 4bd1b696-616a20cb9ee7da8c.js:1
 uT @ 4bd1b696-616a20cb9ee7da8c.js:1
 u_ @ 4bd1b696-616a20cb9ee7da8c.js:1
 (anonymous) @ 4bd1b696-616a20cb9ee7da8c.js:1
-m=root,base:898 [Violation] 'setTimeout' handler took 275ms
+m=root,base:898 [Violation] 'setTimeout' handler took 251ms
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_READY
 20[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
-m=root,base:900 [Violation] 'setTimeout' handler took 97ms
-[Violation] 'requestIdleCallback' handler took 109ms
-www.youtube.com/generate_204?YXDfjg:1  GET https://www.youtube.com/generate_204?YXDfjg net::ERR_BLOCKED_BY_CLIENT
+m=root,base:900 [Violation] 'setTimeout' handler took 132ms
+[Violation] 'requestIdleCallback' handler took 173ms
+www.youtube.com/generate_204?d94OBw:1  GET https://www.youtube.com/generate_204?d94OBw net::ERR_BLOCKED_BY_CLIENT
 Image
-eval @ VM135:1
-Gd @ VM154:1
-Jc @ VM171:1
+eval @ VM121:1
+Gd @ VM134:1
+Jc @ VM144:1
 eval @ NelOh2hvoZo:1
 Gk @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
 J5 @ NelOh2hvoZo:1
 e @ NelOh2hvoZo:1
 eval @ NelOh2hvoZo:1
@@ -290,14 +320,15 @@ await in Moa
 I5 @ m=root,base:945
 (anonymous) @ m=root,base:875
 setTimeout
-apply @ VM6:8462
+apply @ VM6:7730
 D5 @ m=root,base:875
 Opa @ m=root,base:873
-(anonymous) @ NelOh2hvoZo?autoplay=0&origin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&widgetid=1&forigin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app%2Fsession%2F3d6b11d4%3Fu%3DMestre%26r%3DGM&aoriginsup=1&vf=6:11
-VM6:4978  POST https://www.youtube.com/youtubei/v1/log_event?alt=json net::ERR_BLOCKED_BY_CLIENT
-send @ VM6:4978
-send @ VM6:6730
-send @ VM6:7575
+(anonymous) @ NelOh2hvoZo?autoplay=0&origin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&widgetid=1&forigin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app%2Fsession%2F3d6b11d4%3Fu%3DLeon%2520Cromwell%2520(Chloe%2520Aubert)%26r%3DPLAYER%26c%3Dcf1c4c13-519c-4853-bbf5-8e98a44e53b6&aoriginsup=1&vf=6:11
+[Violation] 'requestIdleCallback' handler took 683ms
+VM6:2209  POST https://www.youtube.com/youtubei/v1/log_event?alt=json net::ERR_BLOCKED_BY_CLIENT
+send @ VM6:2209
+send @ VM6:4543
+send @ VM6:6075
 nj @ m=root,base:230
 _.pj @ m=root,base:234
 fn @ m=root,base:301
@@ -316,7 +347,7 @@ l @ base.js:1383
 (anonymous) @ base.js:1385
 (anonymous) @ base.js:957
 setTimeout
-apply @ VM6:8462
+apply @ VM6:7730
 g.rj @ base.js:990
 ii @ base.js:1409
 Ey @ base.js:1385
@@ -352,14 +383,14 @@ t2 @ m=root,base:755
 loadNewVideoConfig @ m=root,base:899
 (anonymous) @ m=root,base:898
 setTimeout
-apply @ VM6:8462
+apply @ VM6:7730
 jna @ m=root,base:898
 kna @ m=root,base:763
 Opa @ m=root,base:873
-(anonymous) @ NelOh2hvoZo?autoplay=0&origin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&widgetid=1&forigin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app%2Fsession%2F3d6b11d4%3Fu%3DMestre%26r%3DGM&aoriginsup=1&vf=6:11
+(anonymous) @ NelOh2hvoZo?autoplay=0&origin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&widgetid=1&forigin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app%2Fsession%2F3d6b11d4%3Fu%3DLeon%2520Cromwell%2520(Chloe%2520Aubert)%26r%3DPLAYER%26c%3Dcf1c4c13-519c-4853-bbf5-8e98a44e53b6&aoriginsup=1&vf=6:11
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_UNLOCK_APPLIED — reason=first-user-gesture
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_STATE: -1
-m=root,base:762 [Violation] 'setTimeout' handler took 70ms
+m=root,base:762 [Violation] 'setTimeout' handler took 88ms
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_STATE: 3
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_STATE: -1
-VM6:4978  POST https://www.youtube.com/youtubei/v1/log_event?alt=json net::ERR_BLOCKED_BY_CLIENT
+VM6:2209  POST https://www.youtube.com/youtubei/v1/log_event?alt=json net::ERR_BLOCKED_BY_CLIENT

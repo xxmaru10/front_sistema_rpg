@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { logStory59 } from "@/lib/story59Debug";
+import { logStory61 } from "@/lib/story61Debug";
 
 const isYouTubeUrl = (url: string) =>
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
@@ -96,6 +97,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
     const renderCountRef = useRef(0);
 
     renderCountRef.current += 1;
+    logStory61("MusicPlayer", "render", { count: renderCountRef.current });
 
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [activePlaylist, setActivePlaylist] = useState<string>("");
@@ -464,6 +466,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                     events: {
                         onReady: () => {
                             console.log("[MusicPlayer] YT_NATIVE_READY");
+                            logStory61("MusicPlayer", "yt-onReady");
                             ytReadyRef.current = true;
                             try {
                                 const targetVol = Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100);
@@ -488,6 +491,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                         },
                         onStateChange: (ev: any) => {
                             console.log("[MusicPlayer] YT_NATIVE_STATE:", ev?.data);
+                            logStory61("MusicPlayer", "yt-onStateChange", { state: ev?.data });
                             if (ev?.data === YT.PlayerState.PLAYING) {
                                 ytPlayedRef.current = true;
                                 try {
@@ -501,6 +505,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                         },
                         onError: (e: any) => {
                             console.warn("[MusicPlayer] YT_ERROR:", e);
+                            logStory61("MusicPlayer", "yt-onError", { error: e?.data });
                         }
                     }
                 });
@@ -542,6 +547,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
     useEffect(() => {
         snapshotInitRef.current = false;
         const unsubscribe = globalEventStore.subscribe((event: any) => {
+            logStory61("MusicPlayer", "event-received", { type: event.type, seq: event.seq });
             if (event.type === "SFX_TRIGGERED") {
                 const sfxUrl = getSupabaseUrl(event.payload.url);
                 if (sfxUrl) {
