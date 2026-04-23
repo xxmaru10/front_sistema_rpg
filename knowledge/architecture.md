@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissao + story-58 performance por aba fora da arena + story-59 churn no main thread do header)
+last_updated: 2026-04-23 (story-60 DOM compacto player + startTransition na troca de abas + memoizacao de tabs pesadas)
 status: ativo
 ---
 
@@ -256,6 +256,12 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **`voice-join` sem heartbeat em idle**: o heartbeat periodico de voz deixou de rebroadcastar `voice-join`; em idle ele reanuncia apenas `voice-presence`, mantendo descoberta sem renegociacao recorrente.
 - **Logs de diagnostico sob flag**: logs de render/mount da Story 59 foram adicionados em `HeaderWrapper`, `UnifiedSoundPanel`, `MusicPlayer` e `VoiceChatPanel` com gate por `localStorage.debugStory59 = "1"`.
 - **Subtrees pesadas do header memoizadas**: `VoiceChatPanel`, `UnifiedSoundPanel` e `MusicPlayer` receberam `React.memo` com comparacao explicita de props para isolar re-renders vindos do `HeaderWrapper`.
+
+## Registro de Decisoes (Story 60)
+- **DOM compacto no modo PLAYER**: `CharactersTab` deixou de montar `CharacterCard` para todos os PCs e agora monta apenas a ficha vinculada ao jogador (`fixedCharacterId`, com fallback por `ownerUserId`), eliminando cards ocultos sem funcao.
+- **Troca de abas como transicao concorrente**: navegacao lateral e navegacao por mencao passaram a usar `startTransition` antes de alterar `activeTab`, reduzindo blocos sincronos longos no main thread durante mount de abas pesadas.
+- **Memoizacao de componentes de alto custo**: `CharacterCard`, `CharacterSummary`, `SessionNotes` e `CombatTab` passaram para `React.memo`; callbacks principais em `page.tsx` e `CharactersTab` foram estabilizados para aumentar reaproveitamento de render.
+- **Kill-switch de animacao de tema mantido para mobile**: a Story 60 reaproveita o gate existente por `data-disable-theme-animation` (ativado em touch/mobile e fora da arena), sem introduzir nova camada de animacao no fluxo mobile.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.

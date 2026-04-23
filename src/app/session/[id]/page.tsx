@@ -7,7 +7,7 @@
 
 import "./session.css";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
@@ -46,6 +46,7 @@ import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 
 const FateDice3D = dynamic(() => import("@/components/FateDice3D"), { ssr: false });
+type SessionTab = "characters" | "log" | "combat" | "bestiary" | "notes" | "vi";
 
 export default function SessionPage() {
     const { id: sessionId } = useParams();
@@ -88,11 +89,13 @@ export default function SessionPage() {
     const [isNavPortalReady, setIsNavPortalReady] = useState(false);
     const [gmPreviewFaded, setGmPreviewFaded] = useState(false);
 
-    const handleMentionNavigate = (request: MentionNavigationRequest) => {
+    const handleMentionNavigate = useCallback((request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
         setViewingBestiaryCharId(null);
-        setActiveTab("notes");
-    };
+        startTransition(() => {
+            setActiveTab("notes");
+        });
+    }, [setActiveTab, setViewingBestiaryCharId]);
 
     useEffect(() => {
         const unsub = diceSimulationStore.subscribe(() => {
@@ -154,10 +157,10 @@ export default function SessionPage() {
 
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
 
-    const closeNavDrawer = () => {
+    const closeNavDrawer = useCallback(() => {
         setIsNavExpanded(false);
         setSuppressHoverOpen(true);
-    };
+    }, []);
 
     const openNavOnHover = () => {
         if (!isMobileNav && !suppressHoverOpen) {
@@ -177,13 +180,15 @@ export default function SessionPage() {
         setSuppressHoverOpen(false);
     };
 
-    const switchTabFromNav = (tab: "characters" | "combat" | "notes" | "bestiary" | "log" | "vi") => {
+    const switchTabFromNav = useCallback((tab: SessionTab) => {
         if (tab === "characters" || tab === "combat" || tab === "bestiary" || tab === "log") {
             setViewingBestiaryCharId(null);
         }
-        setActiveTab(tab);
-        setIsNavExpanded(false);
-    };
+        startTransition(() => {
+            setActiveTab(tab);
+        });
+        closeNavDrawer();
+    }, [closeNavDrawer, setActiveTab, setViewingBestiaryCharId]);
 
     useEffect(() => {
         const unsub = battlemapToolStore.subscribe(() => {
@@ -379,6 +384,31 @@ export default function SessionPage() {
             }, 500);
         }
     };
+    const handleOpenActiveCharacterCreator = useCallback(() => {
+        setCreatorSource("active");
+        setShowCreator(true);
+    }, [setCreatorSource, setShowCreator]);
+    const handleOpenBestiaryCharacterCreator = useCallback(() => {
+        setCreatorSource("bestiary");
+        setShowCreator(true);
+    }, [setCreatorSource, setShowCreator]);
+    const handleOpenSummonAlly = useCallback(() => {
+        setSummonMode("HERO");
+        setShowSummonModal(true);
+    }, [setShowSummonModal, setSummonMode]);
+    const handleOpenSummonThreat = useCallback(() => {
+        setSummonMode("THREAT");
+        setShowSummonModal(true);
+    }, [setShowSummonModal, setSummonMode]);
+    const handleOpenTurnOrder = useCallback(() => {
+        setShowTurnOrderModal(true);
+    }, [setShowTurnOrderModal]);
+    const handleToggleDiceRollerVisibility = useCallback(() => {
+        setShowDiceRoller(prev => !prev);
+    }, [setShowDiceRoller]);
+    const handleMentionNavigationConsumed = useCallback(() => {
+        setPendingMentionNavigation(null);
+    }, []);
 
     useEffect(() => {
         if (!state.battlemap?.isActive && isTheaterMode) {
@@ -787,10 +817,10 @@ export default function SessionPage() {
                     activeTab === "notes" ? "NOTAS" :
                     activeTab === "vi" ? "VI" : "BESTIÃRIO"
                 }
-                onSummonAlly={() => { setSummonMode("HERO"); setShowSummonModal(true); }}
-                onSummonThreat={() => { setSummonMode("THREAT"); setShowSummonModal(true); }}
+                onSummonAlly={handleOpenSummonAlly}
+                onSummonThreat={handleOpenSummonThreat}
                 onToggleChallenge={handleToggleChallengeMode}
-                onOpenTurnOrder={() => setShowTurnOrderModal(true)}
+                onOpenTurnOrder={handleOpenTurnOrder}
                 challengeActive={challengeMode}
                 inCombat={!challengeMode}
                 soundSettings={state.soundSettings}
@@ -801,7 +831,7 @@ export default function SessionPage() {
                 onStopScreenShare={handleStopScreenShare}
                 connectionStatus={connectionStatus}
                 showDiceRoller={showDiceRoller}
-                onToggleDiceRoller={() => setShowDiceRoller(!showDiceRoller)}
+                onToggleDiceRoller={handleToggleDiceRollerVisibility}
             >
                 {activeTab === "combat" && !challengeMode && (
                     <TurnOrderTracker
@@ -885,10 +915,10 @@ export default function SessionPage() {
                                             userRole={userRole}
                                             state={state}
                                             globalBestiaryChars={globalBestiaryChars}
-                                            onRegisterThreat={() => { setCreatorSource("bestiary"); setShowCreator(true); }}
+                                            onRegisterThreat={handleOpenBestiaryCharacterCreator}
                                             onRefresh={refresh}
                                             pendingMentionNavigation={pendingMentionNavigation}
-                                            onMentionNavigationConsumed={() => setPendingMentionNavigation(null)}
+                                            onMentionNavigationConsumed={handleMentionNavigationConsumed}
                                         />
                                     </div>
                                 )}
@@ -912,7 +942,7 @@ export default function SessionPage() {
                                         actorUserId={actorUserId}
                                         fixedCharacterId={fixedCharacterId}
                                         mentionEntities={mentionEntities}
-                                        onNewCharacter={() => { setCreatorSource("active"); setShowCreator(true); }}
+                                        onNewCharacter={handleOpenActiveCharacterCreator}
                                         bestiaryList={bestiaryList}
                                         stateCharacters={state.characters}
                                         sessionState={state}
@@ -947,10 +977,10 @@ export default function SessionPage() {
                                         handleChallengeUpdate={handleChallengeUpdate}
                                         characterList={characterList}
                                         onRefresh={refresh}
-                                        onSummonAlly={() => { setSummonMode("HERO"); setShowSummonModal(true); }}
-                                        onSummonThreat={() => { setSummonMode("THREAT"); setShowSummonModal(true); }}
+                                        onSummonAlly={handleOpenSummonAlly}
+                                        onSummonThreat={handleOpenSummonThreat}
                                         onToggleChallenge={handleToggleChallengeMode}
-                                        onOpenTurnOrder={() => setShowTurnOrderModal(true)}
+                                        onOpenTurnOrder={handleOpenTurnOrder}
                                     />
                                 )}
 
@@ -980,7 +1010,7 @@ export default function SessionPage() {
                                         userRole={userRole}
                                         sessionId={sessionId as string}
                                         actorUserId={actorUserId}
-                                        onRegisterThreat={() => { setCreatorSource("bestiary"); setShowCreator(true); }}
+                                        onRegisterThreat={handleOpenBestiaryCharacterCreator}
                                         findBestiaryChar={findBestiaryChar}
                                         stateCharacters={state.characters}
                                         setGlobalBestiaryChars={setGlobalBestiaryChars}

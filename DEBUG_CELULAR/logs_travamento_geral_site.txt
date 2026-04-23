@@ -1,23 +1,365 @@
 [SocketClient] WS_URL: https://api.cronosvtt.com
-993-902a6e98bfcd4575.js:1 [Supabase] Cliente inicializado com sucesso.
-993-902a6e98bfcd4575.js:1 [Supabase] Target URL: https://tqckkjqxyshreugsvroy.supabase.co
+993-61d3c34e37e716bc.js:1 [Supabase] Cliente inicializado com sucesso.
+993-61d3c34e37e716bc.js:1 [Supabase] Target URL: https://tqckkjqxyshreugsvroy.supabase.co
 page-06d40d186d82952f.js:1 [Home] Buscando sessões...
 page-06d40d186d82952f.js:1 [Home] Sessões encontradas: 5
 863-90902b9db18b8dca.js:1 [EventStore] Inicializando sessão: 3d6b11d4 (forçado: false)
-page-06c45cdc49e0cf5e.js:1 [WebRTC Diagnosis] Brave detected. Disable Shields if screen is black.
+page-b4fd0afa03f808ad.js:1 [WebRTC Diagnosis] Brave detected. Disable Shields if screen is black.
 863-90902b9db18b8dca.js:1 [EventStore] WebSocket connected, joining session: 3d6b11d4
 863-90902b9db18b8dca.js:1 [EventStore] Snapshot encontrado: seq 6992
 863-90902b9db18b8dca.js:1 [EventStore] 0 eventos carregados via NestJS.
-www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://crownvtt-a4lf8a2ve-daniels-projects-f6cc46bd.vercel.app').
+www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://crownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app').
 n.sendMessage @ www-widgetapi.js:210
-www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://crownvtt-a4lf8a2ve-daniels-projects-f6cc46bd.vercel.app').
+Eb @ www-widgetapi.js:206
+n.Z @ www-widgetapi.js:205
+setInterval
+Ab @ www-widgetapi.js:207
+X @ www-widgetapi.js:197
+(anonymous) @ layout-f7106219c25ac8ff.js:1
+Promise.then
+(anonymous) @ layout-f7106219c25ac8ff.js:1
+oT @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+uh @ 4bd1b696-616a20cb9ee7da8c.js:1
+(anonymous) @ 4bd1b696-616a20cb9ee7da8c.js:1
+up @ 4bd1b696-616a20cb9ee7da8c.js:1
+i9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+i8 @ 4bd1b696-616a20cb9ee7da8c.js:1
+uO @ 4bd1b696-616a20cb9ee7da8c.js:1
+uT @ 4bd1b696-616a20cb9ee7da8c.js:1
+u_ @ 4bd1b696-616a20cb9ee7da8c.js:1
+(anonymous) @ 4bd1b696-616a20cb9ee7da8c.js:1
+www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://crownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app').
 n.sendMessage @ www-widgetapi.js:210
+Eb @ www-widgetapi.js:206
+n.Z @ www-widgetapi.js:205
+setInterval
+Ab @ www-widgetapi.js:207
+X @ www-widgetapi.js:197
+(anonymous) @ layout-f7106219c25ac8ff.js:1
+Promise.then
+(anonymous) @ layout-f7106219c25ac8ff.js:1
+oT @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o5 @ 4bd1b696-616a20cb9ee7da8c.js:1
+o9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+uh @ 4bd1b696-616a20cb9ee7da8c.js:1
+(anonymous) @ 4bd1b696-616a20cb9ee7da8c.js:1
+up @ 4bd1b696-616a20cb9ee7da8c.js:1
+i9 @ 4bd1b696-616a20cb9ee7da8c.js:1
+i8 @ 4bd1b696-616a20cb9ee7da8c.js:1
+uO @ 4bd1b696-616a20cb9ee7da8c.js:1
+uT @ 4bd1b696-616a20cb9ee7da8c.js:1
+u_ @ 4bd1b696-616a20cb9ee7da8c.js:1
+(anonymous) @ 4bd1b696-616a20cb9ee7da8c.js:1
+m=root,base:898 [Violation] 'setTimeout' handler took 275ms
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_READY
-www.youtube.com/generate_204?iAVFBA:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
-www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+20[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+m=root,base:900 [Violation] 'setTimeout' handler took 97ms
+[Violation] 'requestIdleCallback' handler took 109ms
+www.youtube.com/generate_204?YXDfjg:1  GET https://www.youtube.com/generate_204?YXDfjg net::ERR_BLOCKED_BY_CLIENT
+Image
+eval @ VM135:1
+Gd @ VM154:1
+Jc @ VM171:1
+eval @ NelOh2hvoZo:1
+Gk @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+eval @ NelOh2hvoZo:1
+requestIdleCallback.timeout @ NelOh2hvoZo:1
+requestIdleCallback
+Lv @ NelOh2hvoZo:1
+J5 @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+E0 @ NelOh2hvoZo:1
+G @ NelOh2hvoZo:1
+C1.lRR_ @ NelOh2hvoZo:1
+e @ NelOh2hvoZo:1
+M_ @ NelOh2hvoZo:1
+F3 @ m=root,base:920
+foa @ m=root,base:788
+await in foa
+S3 @ m=root,base:921
+(anonymous) @ m=root,base:954
+kpa @ m=root,base:848
+c5 @ m=root,base:847
+a.ytAtRC @ m=root,base:850
+Moa @ m=root,base:818
+await in Moa
+I5 @ m=root,base:945
+(anonymous) @ m=root,base:875
+setTimeout
+apply @ VM6:8462
+D5 @ m=root,base:875
+Opa @ m=root,base:873
+(anonymous) @ NelOh2hvoZo?autoplay=0&origin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&widgetid=1&forigin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app%2Fsession%2F3d6b11d4%3Fu%3DMestre%26r%3DGM&aoriginsup=1&vf=6:11
+VM6:4978  POST https://www.youtube.com/youtubei/v1/log_event?alt=json net::ERR_BLOCKED_BY_CLIENT
+send @ VM6:4978
+send @ VM6:6730
+send @ VM6:7575
+nj @ m=root,base:230
+_.pj @ m=root,base:234
+fn @ m=root,base:301
+sendAndWrite @ m=root,base:432
+sendAndWrite @ m=root,base:465
+G @ base.js:1286
+(anonymous) @ base.js:1287
+Promise.then
+g.nm @ base.js:1287
+wp @ base.js:1390
+t8 @ base.js:1382
+(anonymous) @ base.js:1380
+g.cy @ base.js:588
+z7 @ base.js:1380
+l @ base.js:1383
+(anonymous) @ base.js:1385
+(anonymous) @ base.js:957
+setTimeout
+apply @ VM6:8462
+g.rj @ base.js:990
+ii @ base.js:1409
+Ey @ base.js:1385
+Yg @ base.js:1360
+DLb @ base.js:1358
+Xb @ base.js:1418
+g.aE @ base.js:1422
+tick @ base.js:4516
+E0 @ base.js:1499
+(anonymous) @ base.js:957
+g.KF @ base.js:1524
+(anonymous) @ base.js:1530
+(anonymous) @ base.js:957
+g.Qp @ base.js:1530
+kt @ base.js:5450
+(anonymous) @ base.js:5446
+Promise.then
+R0 @ base.js:5446
+(anonymous) @ base.js:5443
+(anonymous) @ base.js:957
+g.p.Wc @ base.js:4348
+Wc @ base.js:4777
+Wc @ base.js:4776
+R0 @ base.js:5594
+R0 @ base.js:5277
+vN @ base.js:5258
+vN @ base.js:4837
+iFo @ base.js:3962
+g.co @ base.js:5581
+create @ base.js:5587
+a.I @ m=root,base:754
+t2 @ m=root,base:755
+loadNewVideoConfig @ m=root,base:899
+(anonymous) @ m=root,base:898
+setTimeout
+apply @ VM6:8462
+jna @ m=root,base:898
+kna @ m=root,base:763
+Opa @ m=root,base:873
+(anonymous) @ NelOh2hvoZo?autoplay=0&origin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&widgetid=1&forigin=https%3A%2F%2Fcrownvtt-pzf4gpeyz-daniels-projects-f6cc46bd.vercel.app%2Fsession%2F3d6b11d4%3Fu%3DMestre%26r%3DGM&aoriginsup=1&vf=6:11
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_UNLOCK_APPLIED — reason=first-user-gesture
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_STATE: -1
+m=root,base:762 [Violation] 'setTimeout' handler took 70ms
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_STATE: 3
 layout-f7106219c25ac8ff.js:1 [MusicPlayer] YT_NATIVE_STATE: -1
-www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
-www.youtube.com/youtubei/v1/log_event?alt=json:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+VM6:4978  POST https://www.youtube.com/youtubei/v1/log_event?alt=json net::ERR_BLOCKED_BY_CLIENT

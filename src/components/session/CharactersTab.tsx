@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Character, SessionState } from "@/types/domain";
 import { CharacterCard } from "@/components/CharacterCard";
@@ -48,10 +48,32 @@ export function CharactersTab({
         () => displayedCharacters.filter(c => c.isNPC),
         [displayedCharacters]
     );
+    const normalizedActorUserId = useMemo(
+        () => actorUserId.trim().toLowerCase(),
+        [actorUserId]
+    );
+    const visiblePlayerCharacters = useMemo(() => {
+        if (userRole === "GM") return playerCharacters;
+
+        if (fixedCharacterId) {
+            const linkedCharacter = playerCharacters.find((char) => char.id === fixedCharacterId);
+            return linkedCharacter ? [linkedCharacter] : [];
+        }
+
+        if (!normalizedActorUserId) return [];
+
+        const ownedCharacter = playerCharacters.find(
+            (char) => (char.ownerUserId || "").trim().toLowerCase() === normalizedActorUserId
+        );
+        return ownedCharacter ? [ownedCharacter] : [];
+    }, [fixedCharacterId, normalizedActorUserId, playerCharacters, userRole]);
     const viewingCharacter = useMemo(
         () => (viewingCharacterId ? characterList.find(c => c.id === viewingCharacterId) ?? null : null),
         [characterList, viewingCharacterId]
     );
+    const handleViewCharacter = useCallback((characterId: string) => {
+        setViewingCharacterId(characterId);
+    }, []);
 
     return (
         <>
@@ -88,7 +110,7 @@ export function CharactersTab({
                                                     <CharacterSummary
                                                         key={char.id}
                                                         character={char}
-                                                        onClick={() => setViewingCharacterId(char.id)}
+                                                        onClick={handleViewCharacter}
                                                     />
                                                 ))}
                                             </div>
@@ -102,7 +124,7 @@ export function CharactersTab({
                                                     <CharacterSummary
                                                         key={char.id}
                                                         character={char}
-                                                        onClick={() => setViewingCharacterId(char.id)}
+                                                        onClick={handleViewCharacter}
                                                     />
                                                 ))}
                                             </div>
@@ -113,22 +135,28 @@ export function CharactersTab({
                                 <>
                                     {playerCharacters.length > 0 && (
                                         <div className="entity-group">
-                                            <div className="cards-grid">
-                                                {playerCharacters.map(char => (
-                                                    <CharacterCard
-                                                        key={char.id}
-                                                        character={char}
-                                                        sessionId={sessionId}
-                                                        actorUserId={actorUserId}
-                                                        isGM={false}
-                                                        isLinkedCharacter={fixedCharacterId === char.id}
-                                                        mentionEntities={mentionEntities}
-                                                        sessionState={sessionState}
-                                                        userRole={userRole}
-                                                        onMentionNavigate={onMentionNavigate}
-                                                    />
-                                                ))}
-                                            </div>
+                                            {visiblePlayerCharacters.length > 0 ? (
+                                                <div className="cards-grid">
+                                                    {visiblePlayerCharacters.map(char => (
+                                                        <CharacterCard
+                                                            key={char.id}
+                                                            character={char}
+                                                            sessionId={sessionId}
+                                                            actorUserId={actorUserId}
+                                                            isGM={false}
+                                                            isLinkedCharacter={fixedCharacterId === char.id}
+                                                            mentionEntities={mentionEntities}
+                                                            sessionState={sessionState}
+                                                            userRole={userRole}
+                                                            onMentionNavigate={onMentionNavigate}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="empty-state solid ornate-border">
+                                                    <p className="narrative-text">NENHUMA FICHA VINCULADA AO SEU USUÁRIO.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     {npcCharacters.length > 0 && (
@@ -139,7 +167,7 @@ export function CharactersTab({
                                                     <CharacterSummary
                                                         key={char.id}
                                                         character={char}
-                                                        onClick={() => setViewingCharacterId(char.id)}
+                                                        onClick={handleViewCharacter}
                                                     />
                                                 ))}
                                             </div>
