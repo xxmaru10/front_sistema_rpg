@@ -2,6 +2,9 @@
 class ScreenShareStore {
     hasStream: boolean = false;
     reconnectVersion: number = 0;
+    retry1080Version: number = 0;
+    qualityTier: '1080p' | '720p' = '1080p';
+    downgradeActive: boolean = false;
     private listeners: (() => void)[] = [];
 
     setHasStream(has: boolean) {
@@ -11,6 +14,17 @@ class ScreenShareStore {
 
     triggerReconnect() {
         this.reconnectVersion++;
+        this.notify();
+    }
+
+    triggerTry1080p() {
+        this.retry1080Version++;
+        this.notify();
+    }
+
+    setQualityTier(tier: '1080p' | '720p', downgradeActive: boolean) {
+        this.qualityTier = tier;
+        this.downgradeActive = downgradeActive;
         this.notify();
     }
 

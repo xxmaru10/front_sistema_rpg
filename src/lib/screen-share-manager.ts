@@ -1,4 +1,5 @@
 import { getSocket } from "./socketClient";
+import { screenShareStore } from "./screenShareStore";
 
 export type SignalType = 'peer-join' | 'offer' | 'answer' | 'ice-candidate' | 'stream-started' | 'stop-share';
 
@@ -11,6 +12,12 @@ export interface WebRTCSignal {
     answer?: RTCSessionDescriptionInit;
     candidate?: RTCIceCandidateInit;
 }
+
+type ScreenShareTier = '1080p' | '720p';
+
+const SCREENSHARE_TIER_STORAGE_KEY = 'screenshare_tier';
+const QUALITY_MONITOR_INTERVAL_MS = 4000;
+const QUALITY_PRESSURE_STREAK_TARGET = 2;
 
 export class ScreenShareManager {
     private sessionId: string;
@@ -25,6 +32,12 @@ export class ScreenShareManager {
     private reconnectAttempts: Map<string, number> = new Map();
     private _receivedTracks: Map<string, MediaStreamTrack> = new Map();
     private signalHandler: ((signal: WebRTCSignal) => void) | null = null;
+    private statsInterval: ReturnType<typeof setInterval> | null = null;
+    private qualityTier: ScreenShareTier = '1080p';
+    private hasDowngraded: boolean = false;
+    private cpuPressureStreak: number = 0;
+    private fpsPressureStreak: number = 0;
+    private droppedPressureStreak: number = 0;
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
     private isHealthyConnectionState(state: RTCPeerConnectionState): boolean {
         return state === 'new' || state === 'connecting' || state === 'connected';
@@ -52,6 +65,9 @@ export class ScreenShareManager {
         this.sessionId = sessionId;
         this.userId = userId.trim().toLowerCase();
         this.onStreamReceived = onStreamReceived;
+        this.qualityTier = this.readStoredTier();
+        this.hasDowngraded = this.qualityTier === '720p';
+        screenShareStore.setQualityTier(this.qualityTier, this.hasDowngraded);
     }
 
     // ─── Initialize ────────────────────────────────────────────
@@ -102,7 +118,9 @@ export class ScreenShareManager {
     // ─── Signal sending ────────────────────────────────────────
 
     private async sendSignal(signal: WebRTCSignal) {
-        console.log(`[WebRTC - ${this.userId}] Sending signal:`, signal.type);
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[WebRTC - ${this.userId}] Sending signal:`, signal.type);
+        }
         const socket = getSocket(this.userId);
 
         // Broadcast to session room — receiver filters by signal.to
@@ -117,11 +135,15 @@ export class ScreenShareManager {
     public async startSharing(): Promise<MediaStream | null> {
         console.log(`[WebRTC - ${this.userId}] Starting screen share...`);
         try {
+            this.qualityTier = this.readStoredTier();
+            this.hasDowngraded = this.qualityTier === '720p';
+            const is720p = this.qualityTier === '720p';
+
             this.localStream = await navigator.mediaDevices.getDisplayMedia({
                 video: {
-                    width: { ideal: 1920, max: 2560 },
-                    height: { ideal: 1080, max: 1440 },
-                    frameRate: { ideal: 30, max: 60 },
+                    width: { ideal: is720p ? 1280 : 1920, max: is720p ? 1280 : 1920 },
+                    height: { ideal: is720p ? 720 : 1080, max: is720p ? 720 : 1080 },
+                    frameRate: { ideal: is720p ? 24 : 30, max: is720p ? 24 : 30 },
                 },
                 // audio: true — NO mic processing constraints for system audio
                 // echoCancellation/noiseSuppression/autoGainControl are for microphones
@@ -137,15 +159,10 @@ export class ScreenShareManager {
                 console.log('[ScreenShare] Audio tracks captured:', audioTracks.length, audioTracks[0].label);
             }
 
-            // Optimize video for sharpness (text, maps) not motion
-            this.localStream.getVideoTracks().forEach(track => {
-                if ('contentHint' in track) {
-                    (track as any).contentHint = 'detail';
-                }
-            });
-
             this.isBroadcaster = true;
             this.onStreamReceived(this.localStream);
+            screenShareStore.setQualityTier(this.qualityTier, this.hasDowngraded);
+            this.resetQualityPressure();
 
             // Connect to peers that already sent peer-join
             if (this.bufferedPeerIds.size > 0) {
@@ -170,6 +187,7 @@ export class ScreenShareManager {
             }, 60000); // Aumentado para 60s
 
             this.localStream.getVideoTracks()[0].onended = () => this.stopSharing();
+            this.startQualityMonitoring();
 
             return this.localStream;
         } catch (error) {
@@ -183,6 +201,8 @@ export class ScreenShareManager {
             clearInterval(this.heartbeatInterval);
             this.heartbeatInterval = null;
         }
+        this.stopQualityMonitoring();
+        this.resetQualityPressure();
 
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
@@ -201,6 +221,8 @@ export class ScreenShareManager {
 
         this.bufferedPeerIds.clear();
         this.onStreamReceived(null);
+        this.hasDowngraded = this.qualityTier === '720p';
+        screenShareStore.setQualityTier(this.qualityTier, this.hasDowngraded);
         this.cleanupPeers();
     }
 
@@ -393,12 +415,12 @@ export class ScreenShareManager {
                         params.encodings[0].maxBitrate = adaptiveVideoBitrate;
                         params.encodings[0].priority = 'high';
                         params.encodings[0].networkPriority = 'high';
+                        params.encodings[0].maxFramerate = this.qualityTier === '720p' ? 24 : 30;
                         try {
                             if ('setDegradationPreference' in (sender as any)) {
-                                (sender as any).setDegradationPreference('maintain-resolution');
+                                (sender as any).setDegradationPreference('balanced');
                             }
                         } catch (e) { /* ignore */ }
-                        delete (params.encodings[0] as any).maxFramerate;
                         await sender.setParameters(params);
                     } else if (sender.track?.kind === 'audio') {
                         const params = sender.getParameters();
@@ -504,6 +526,7 @@ export class ScreenShareManager {
     // ─── Cleanup ───────────────────────────────────────────────
 
     private cleanupPeers() {
+        this.stopQualityMonitoring();
         this.peerConnections.forEach(pc => pc.close());
         this.peerConnections.clear();
         this.pendingCandidates.clear();
@@ -538,6 +561,177 @@ export class ScreenShareManager {
         this.reconnectAttempts.delete('broadcaster');
         this._receivedTracks.clear();
         await this.sendSignal({ type: 'peer-join', from: this.userId, peerId: this.userId });
+    }
+
+    public async tryRestore1080p() {
+        this.qualityTier = '1080p';
+        this.hasDowngraded = false;
+        this.resetQualityPressure();
+        this.clearStoredTier();
+        screenShareStore.setQualityTier('1080p', false);
+
+        if (!this.localStream || !this.isBroadcaster) {
+            return;
+        }
+
+        const videoTrack = this.localStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+
+        try {
+            await videoTrack.applyConstraints({
+                width: { ideal: 1920, max: 1920 },
+                height: { ideal: 1080, max: 1080 },
+                frameRate: { ideal: 30, max: 30 },
+            });
+            await this.updateVideoSenderParameters(30);
+            this.startQualityMonitoring();
+        } catch (error) {
+            console.warn('[ScreenShare] Failed to restore 1080p constraints:', error);
+        }
+    }
+
+    private readStoredTier(): ScreenShareTier {
+        if (typeof window === 'undefined') return '1080p';
+        return localStorage.getItem(SCREENSHARE_TIER_STORAGE_KEY) === '720p' ? '720p' : '1080p';
+    }
+
+    private storeTier(tier: ScreenShareTier) {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(SCREENSHARE_TIER_STORAGE_KEY, tier);
+    }
+
+    private clearStoredTier() {
+        if (typeof window === 'undefined') return;
+        localStorage.removeItem(SCREENSHARE_TIER_STORAGE_KEY);
+    }
+
+    private resetQualityPressure() {
+        this.cpuPressureStreak = 0;
+        this.fpsPressureStreak = 0;
+        this.droppedPressureStreak = 0;
+    }
+
+    private startQualityMonitoring() {
+        if (!this.isBroadcaster || !this.localStream || this.hasDowngraded) return;
+        this.stopQualityMonitoring();
+        this.statsInterval = setInterval(() => {
+            this.collectAndEvaluateQualityStats().catch(() => { });
+        }, QUALITY_MONITOR_INTERVAL_MS);
+    }
+
+    private stopQualityMonitoring() {
+        if (this.statsInterval) {
+            clearInterval(this.statsInterval);
+            this.statsInterval = null;
+        }
+    }
+
+    private async collectAndEvaluateQualityStats() {
+        if (!this.isBroadcaster || !this.localStream || this.hasDowngraded) return;
+
+        let cpuLimited = false;
+        let lowFps = false;
+        let highDroppedRatio = false;
+        let hasVideoStats = false;
+
+        const connectedPeers = Array.from(this.peerConnections.values()).filter(
+            (pc) => pc.connectionState === 'connected'
+        );
+
+        for (const pc of connectedPeers) {
+            const videoSender = pc.getSenders().find((sender) => sender.track?.kind === 'video');
+            if (!videoSender) continue;
+
+            const stats = await videoSender.getStats();
+            stats.forEach((report) => {
+                if (report.type !== 'outbound-rtp' || (report as any).kind !== 'video' || (report as any).isRemote) {
+                    return;
+                }
+                hasVideoStats = true;
+
+                const qualityReason = (report as any).qualityLimitationReason as string | undefined;
+                const fps = Number((report as any).framesPerSecond ?? 0);
+                const framesDropped = Number((report as any).framesDropped ?? 0);
+                const framesEncoded = Number((report as any).framesEncoded ?? 0);
+                const droppedRatio = framesEncoded > 0 ? framesDropped / framesEncoded : 0;
+
+                if (qualityReason === 'cpu') cpuLimited = true;
+                if (fps > 0 && fps < 18) lowFps = true;
+                if (framesEncoded > 0 && droppedRatio > 0.15) highDroppedRatio = true;
+            });
+        }
+
+        if (!hasVideoStats) return;
+
+        this.cpuPressureStreak = cpuLimited ? this.cpuPressureStreak + 1 : 0;
+        this.fpsPressureStreak = !cpuLimited && lowFps ? this.fpsPressureStreak + 1 : 0;
+        this.droppedPressureStreak = !cpuLimited && !lowFps && highDroppedRatio ? this.droppedPressureStreak + 1 : 0;
+
+        if (this.cpuPressureStreak >= QUALITY_PRESSURE_STREAK_TARGET) {
+            await this.downgradeTo720p('cpu');
+            return;
+        }
+        if (this.fpsPressureStreak >= QUALITY_PRESSURE_STREAK_TARGET) {
+            await this.downgradeTo720p('fps');
+            return;
+        }
+        if (this.droppedPressureStreak >= QUALITY_PRESSURE_STREAK_TARGET) {
+            await this.downgradeTo720p('drop-rate');
+        }
+    }
+
+    private async downgradeTo720p(reason: 'cpu' | 'fps' | 'drop-rate') {
+        if (this.hasDowngraded || !this.localStream) return;
+        const videoTrack = this.localStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+
+        try {
+            await videoTrack.applyConstraints({
+                width: { ideal: 1280, max: 1280 },
+                height: { ideal: 720, max: 720 },
+                frameRate: { ideal: 24, max: 24 },
+            });
+        } catch (error) {
+            console.warn('[ScreenShare] Failed to apply 720p downgrade constraints:', error);
+            return;
+        }
+
+        this.qualityTier = '720p';
+        this.hasDowngraded = true;
+        this.storeTier('720p');
+        this.resetQualityPressure();
+        await this.updateVideoSenderParameters(24);
+        this.stopQualityMonitoring();
+        screenShareStore.setQualityTier('720p', true);
+        console.warn(`[ScreenShare] Auto-downgrade activated (${reason}) -> 720p@24`);
+    }
+
+    private async updateVideoSenderParameters(maxFramerate: number) {
+        const tasks = Array.from(this.peerConnections.values()).map(async (pc) => {
+            const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
+            if (!sender) return;
+
+            try {
+                const params = sender.getParameters();
+                if (!params.encodings || params.encodings.length === 0) {
+                    params.encodings = [{}];
+                }
+                params.encodings[0].maxFramerate = maxFramerate;
+                params.encodings[0].priority = 'high';
+                params.encodings[0].networkPriority = 'high';
+                try {
+                    if ('setDegradationPreference' in (sender as any)) {
+                        (sender as any).setDegradationPreference('balanced');
+                    }
+                } catch (error) {
+                    // Ignore unsupported browsers
+                }
+                await sender.setParameters(params);
+            } catch (error) {
+                console.warn('[ScreenShare] Could not update video sender parameters:', error);
+            }
+        });
+        await Promise.all(tasks);
     }
 
     private getAdaptiveBitrate(): number {

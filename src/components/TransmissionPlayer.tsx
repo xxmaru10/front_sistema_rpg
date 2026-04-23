@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Monitor, Volume2, VolumeX } from "lucide-react";
 import { getSocket } from "@/lib/socketClient";
+import { screenShareStore } from "@/lib/screenShareStore";
 
 interface TransmissionPlayerProps {
     sessionId?: string;
@@ -11,18 +12,28 @@ interface TransmissionPlayerProps {
     unifiedMode?: boolean;
 }
 
-export function TransmissionPlayer({ sessionId, userId, unifiedMode }: TransmissionPlayerProps) {
+export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }: TransmissionPlayerProps) {
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isActive, setIsActive] = useState(false);
     const [showControls, setShowControls] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [qualityTier, setQualityTier] = useState<'1080p' | '720p'>(screenShareStore.qualityTier);
+    const [downgradeActive, setDowngradeActive] = useState(screenShareStore.downgradeActive);
 
     useEffect(() => {
         const stored = localStorage.getItem('transmissionVolume');
         const parsed = stored ? parseFloat(stored) : NaN;
         if (Number.isFinite(parsed)) setVolume(Math.min(1, Math.max(0, parsed)));
         setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = screenShareStore.subscribe(() => {
+            setQualityTier(screenShareStore.qualityTier);
+            setDowngradeActive(screenShareStore.downgradeActive);
+        });
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
@@ -126,6 +137,20 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
                             CANAL DE TRANSMISSÃO
                         </span>
                     </div>
+                    {isActive && downgradeActive && (
+                        <div className="quality-downgrade-badge">
+                            <span>Qualidade reduzida para 720p</span>
+                            {userRole === "GM" && (
+                                <button
+                                    type="button"
+                                    onClick={() => screenShareStore.triggerTry1080p()}
+                                    className="quality-retry-btn"
+                                >
+                                    Tentar 1080p
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {volumeControls}
                 </div>
             )}
@@ -135,7 +160,22 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
                     <div className="unified-ch-label" style={{ color: isActive ? 'var(--accent-color)' : '#666' }}>
                         <span>TRANSMISSÃO</span>
                         {isActive && <div className="pulse-mini" />}
+                        {isActive && qualityTier === '720p' && <span className="quality-chip">720p</span>}
                     </div>
+                    {isActive && downgradeActive && (
+                        <div className="quality-downgrade-badge quality-downgrade-badge--unified">
+                            <span>Qualidade reduzida para 720p</span>
+                            {userRole === "GM" && (
+                                <button
+                                    type="button"
+                                    onClick={() => screenShareStore.triggerTry1080p()}
+                                    className="quality-retry-btn"
+                                >
+                                    Tentar 1080p
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {volumeControls}
                 </div>
             )}
@@ -280,6 +320,48 @@ export function TransmissionPlayer({ sessionId, userId, unifiedMode }: Transmiss
                     border-radius: 50%;
                     animation: pulse-trans 2s infinite;
                     flex-shrink: 0;
+                }
+                .quality-chip {
+                    font-size: 0.55rem;
+                    letter-spacing: 0.08em;
+                    padding: 1px 4px;
+                    border-radius: 10px;
+                    border: 1px solid rgba(255, 173, 66, 0.45);
+                    color: #ffcb6b;
+                    background: rgba(255, 173, 66, 0.12);
+                }
+                .quality-downgrade-badge {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    font-size: 0.58rem;
+                    letter-spacing: 0.05em;
+                    color: #ffcb6b;
+                    border: 1px solid rgba(255, 173, 66, 0.35);
+                    background: rgba(255, 173, 66, 0.1);
+                    border-radius: 6px;
+                    padding: 6px;
+                }
+                .quality-downgrade-badge--unified {
+                    margin-bottom: 2px;
+                }
+                .quality-retry-btn {
+                    border: 1px solid rgba(255, 173, 66, 0.5);
+                    background: rgba(24, 24, 24, 0.9);
+                    color: #ffd489;
+                    font-size: 0.56rem;
+                    letter-spacing: 0.05em;
+                    border-radius: 4px;
+                    padding: 3px 6px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    white-space: nowrap;
+                }
+                .quality-retry-btn:hover {
+                    border-color: #ffd489;
+                    color: #fff0cc;
+                    background: rgba(48, 48, 48, 0.95);
                 }
             `}</style>
         </div>

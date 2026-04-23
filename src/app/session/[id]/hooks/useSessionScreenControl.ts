@@ -36,6 +36,7 @@ export function useSessionScreenControl({
     const screenVideoRef = useRef<HTMLVideoElement | null>(null);
     const screenShareManagerRef = useRef<ScreenShareManager | null>(null);
     const lastHandledReconnectVersionRef = useRef(0);
+    const lastHandledTry1080VersionRef = useRef(0);
     const lastVisibilityReconnectAtRef = useRef(0);
     const videoStreamRef = useRef<MediaStream | null>(videoStream);
     const [videoNoSignal, setVideoNoSignal] = useState(false);
@@ -109,6 +110,10 @@ export function useSessionScreenControl({
                 lastHandledReconnectVersionRef.current = screenShareStore.reconnectVersion;
                 console.log("[WebRTC] Reconnect triggered from Header.");
                 screenShareManagerRef.current?.reconnect();
+            }
+            if (screenShareStore.retry1080Version > lastHandledTry1080VersionRef.current) {
+                lastHandledTry1080VersionRef.current = screenShareStore.retry1080Version;
+                screenShareManagerRef.current?.tryRestore1080p();
             }
         });
         return unsubscribe;
@@ -244,7 +249,6 @@ export function useSessionScreenControl({
 
         const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
-                console.log("[ScreenShare] Visibility visible, checking connection...");
                 const now = Date.now();
                 if (now - lastVisibilityReconnectAtRef.current > 8000) {
                     lastVisibilityReconnectAtRef.current = now;

@@ -908,7 +908,6 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
             {isMounted && isPlayableYouTubeUrl(currentTrack) && (() => {
-                console.log('[MusicPlayer] YT_MOUNT — url:', currentTrack, 'playing:', isPlaying, 'unlocked:', ytAutoplayUnlocked);
                 return createPortal(
                     <div style={{
                         position: 'fixed',
@@ -1244,3 +1243,4 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         </div>
     );
 }
+

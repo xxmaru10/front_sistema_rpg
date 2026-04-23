@@ -35,6 +35,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 
 ## Épicos ativos
 | Refatoração de Componentes | em andamento | `/epics/epic-01-refatoracao-modular.md` |
+| Battlemap: Camadas, Formas, Edição de Fundo e Grade | planejado | `/epics/epic-03-battlemap-camadas-formas-edicao-fundo-grade.md` |
 | Sincronização Voz WebRTC | em andamento | `/stories/story-05.md` |
 | Layout Perícias Cortadas | concluído | `/stories/story-06-corrigir-layout-pericias-cortadas.md` |
 | Sincronia de Notas de Sessão | concluído | `/stories/story-07-estabilizar-sincronia-notas.md` |

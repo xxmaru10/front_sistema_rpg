@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-22 (story-46 fase-2 + story-47 notes pagination/sorting, faccao em personagem, inventario no bestiario e banner completo na arena)
+last_updated: 2026-04-23 (story-54 performance: tiers de transmissao, speaking store reativo e throttle de render idle)
 status: ativo
 ---
 
@@ -28,6 +28,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Event Sourcing | Permite replay de sessÃµes, auditoria e sincronia em tempo real sem conflitos de mutaÃ§Ã£o paralela. | 2026-02-15 |
 | ProjeÃ§Ãµes no Cliente | Reduz carga no backend e permite UI instantÃ¢nea atravÃ©s de otimismo local. | 2026-02-15 |
 | WebRTC nativo | Suporte a Ã¡udio e vÃ­deo sem latÃªncia sem depender de serviÃ§os externos caros. | 2026-03-01 |
+| Tier Adaptativo de TransmissÃ£o | Compartilhamento de tela inicia em 1080p@30 e faz downgrade sticky para 720p@24 sob pressÃ£o de CPU (stats WebRTC), com override manual para 1080p. | 2026-04-23 |
 | Sincronia de PresenÃ§a HÃ­brida | Uso combinado de WebRTC Signaling e Supabase Presence para limpar zombies e garantir lista de voz fiel. | 2026-03-31 |
 | Nuclear Refresh (WebRTC) | Re-instanciaÃ§Ã£o total do mÃ³dulo via React Keys para purga absoluta de estado e recuperaÃ§Ã£o de Ã¡udio stalled sem F5. Desde Story 41, o refresh padrÃ£o Ã© `softReconnect` (nÃ£o-destrutivo); Nuclear Refresh reservado como fallback quando o manager Ã© `null`. | 2026-03-31 |
 | InventÃ¡rio Flutuante Lateral | CorreÃ§Ã£o de visibilidade: movido para a esquerda (`left: -260px`) e habilitado `overflow: visible` no `.char-artifact` para evitar clipping. | 2026-03-31 |
