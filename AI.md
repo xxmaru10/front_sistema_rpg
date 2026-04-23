@@ -1,6 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
+last_updated: 2026-04-23 (story-55 musicplayer receiver youtube idempotencia)
 ---
 
 # Cronos Vtt — Frontend 
@@ -41,6 +42,8 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Sincronia de Notas de Sessão | concluído | `/stories/story-07-estabilizar-sincronia-notas.md` |
 | Seletor Multi-Dado (Caixa) | concluído | `/stories/story-44-seletor-multi-dado-com-clear-e-notacao-viva.md` |
 | Ocultar Rolagem do Mestre | concluído | `/stories/story-45-olho-ocultar-rolagem-do-mestre.md` |
+| Performance Geral (Transmissão, Voz, Render) | em-revisão | `/stories/story-54-performance-transmissao-voz-e-render-cpu-100.md` |
+| MusicPlayer Receiver YouTube (loop Playing/Buffering) | pronto | `/stories/story-55-musicplayer-receiver-youtube-idempotencia.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`

@@ -553,7 +553,9 @@ export class VoiceChatManager {
             // Ignore non-voice signals
             if (!signal.type?.startsWith('voice-')) return;
 
-            console.log(`[VoiceChat - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[VoiceChat - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
+            }
             this.handleSignal(signal);
         };
 

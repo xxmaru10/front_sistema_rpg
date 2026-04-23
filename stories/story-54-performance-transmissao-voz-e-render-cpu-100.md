@@ -4,6 +4,7 @@ description: "Site atinge 100 por cento de uso de CPU e trava em celulares e not
 priority: "critica"
 status: "em-revisao"
 last_updated: "2026-04-23"
+related: ["story-55-musicplayer-receiver-youtube-idempotencia"]
 tags: [performance, webrtc, screenshare, voice-chat, three-js, cpu, bugfix]
 epic: epic-01-refatoracao-modular
 ---
@@ -27,9 +28,10 @@ Evidencia central: `logs_travamento_geral_site.txt` mostra uma sessao de 5 parti
 - Poll do `VoiceChatPanel` a 300ms (desktop) / 500ms (mobile) chamando `setPeers` com comparacao fraca (threshold 0.05 em `audioLevel`), forcando re-render continuo do painel.
 
 ### Amplificadores
-- `console.log` em caminhos quentes: `VoiceChatManager.sendSignal`, `screen-share-manager.sendSignal`, e a IIFE `YT_MOUNT` em `MusicPlayer.tsx` (loga em todo render).
+- `console.log` em caminhos quentes: `VoiceChatManager.sendSignal`, `screen-share-manager.sendSignal`.
 - Handler de `visibilitychange` em `useSessionScreenControl` loga em todo foco de aba (debounce so protege o reconnect, nao o log).
 - `FateDice3D` via `useFateDiceSimulation` mantem rAF 60fps mesmo em `phase === 'idle'` enquanto `isVisible` estiver ativo e nao ha guard para `document.hidden`.
+- Os logs `YT_NATIVE_STATE` (`MusicPlayer.tsx:316`) podem aparecer em alta frequencia em cenarios de bug do receiver (loop `PLAYING <-> BUFFERING`). **Isso nao e um log ruidoso por natureza** — e uma consequencia de bug de idempotencia no sync do YouTube, tratado separadamente em **story 55**. Nao silenciar este log aqui.
 
 ### Hipotese de build stale (a validar)
 O log mostra URL `m.youtube.com/...&list=...&pp=...` intacta, mas o `normalizeYouTubeUrl` em `MusicPlayer.tsx:23` deveria ter canonizado para `https://www.youtube.com/watch?v=ID`. O build local atual (`.next`) tem hashes diferentes de `layout-1fdb04bea1e6f960.js` que aparece no log. Isso prova "log != build local atual", mas nao fecha "producao atrasada" - isso depende de verificacao do hash servido em `cronosvtt.com`.
@@ -76,8 +78,9 @@ Alvos: `src/lib/VoiceChatManager.ts`, `src/components/VoiceChatPanel.tsx`.
 Alvos:
 - `src/lib/VoiceChatManager.ts:541` (`sendSignal`): remover ou reduzir a log condicional (ex. so em `NODE_ENV === 'development'`).
 - `src/lib/screen-share-manager.ts:105` (`sendSignal`): idem.
-- `src/components/MusicPlayer.tsx:911` (`YT_MOUNT`): remover o `console.log` da IIFE de render.
 - `src/app/session/[id]/hooks/useSessionScreenControl.ts:247`: remover o log de `visibilitychange` (manter so o comportamento).
+
+> **Nao mexer em logs do `MusicPlayer`.** Os logs `YT_NATIVE_READY` (`MusicPlayer.tsx:298`), `YT_NATIVE_STATE` (`MusicPlayer.tsx:316`) e `YT_UNLOCK_APPLIED` (`MusicPlayer.tsx:713`) sao baixa frequencia em operacao normal e sao o sinal mais barato para diagnosticar o bug tratado na story 55. A instrumentacao nova que a story 55 adiciona ja vem gated por flag (`localStorage.debugMusicPlayer === '1'`). Esta story nao toca em nada de `MusicPlayer`.
 
 ### Passo 5 - Guard no FateDice3D
 Alvo: `src/hooks/useFateDiceSimulation.ts`.
@@ -178,7 +181,7 @@ Pre-requisito: Fase A concluida **e** ao menos uma reproducao do caso gravada (d
 8. Escopo e limites:
    - Breaker e **por sessao de share**: encerrar a transmissao e reabrir limpa `peerFailureState`.
    - Breaker vive **apenas no broadcaster**; receiver continua respondendo a `peer-join` e `stream-started` como antes.
-   - Breaker **nao se aplica ao `VoiceChatManager`** (fora de escopo desta story).
+   - Breaker **nao se aplica ao `VoiceChatManager` nesta fase**, mesmo com o Registro de Campo de 2026-04-23 (segunda coleta) mostrando que a voz exibe a Modalidade 2 (`connected` -> `disconnected` -> `Safety timeout` -> recriacao, ate `Max reconnect attempts reached`) para os mesmos peers e simultaneamente ao screen share. Motivo: nao espelhar breaker antes da telemetria da Fase A atribuir causa. Se a Fase A confirmar que o churn de voz tem a mesma raiz do screen share, abrir **Fase C (breaker espelhado em `VoiceChatManager`)** como extensao desta story - nao nova story.
 
 #### O que NAO fazer neste passo
 
@@ -299,10 +302,15 @@ Foco em redução de ruido + nao-regressao:
 - Validar no console: eventos prefixados `[SS-TELEMETRY]` com campos `peerId`, `attemptId`, `role`, `stage`.
 - Remover a flag (`localStorage.removeItem('debugScreenShare')`). Fazer reload. Console deve ficar silencioso para telemetria do screen share em producao.
 
-**Sub-teste 6b - Captura do `lastConnectionState` do peer problema:**
-- Com telemetria ligada, reproduzir (ou aguardar) a situacao em que um peer nao completa a negociacao inicial.
-- No log do `safety-timeout`, registrar `lastConnectionState`, `lastIceConnectionState` e `lastSignalingState`.
-- Documentar no final desta story (ou em `story-54-medicoes.md`) o estado observado. Esse e o insumo para decidir se `isHealthyConnectionState` ou outro ponto precisa de follow-up dedicado.
+**Sub-teste 6b - Captura do `lastConnectionState` do peer problema (duas modalidades):**
+- Com telemetria ligada, reproduzir (ou aguardar) cada uma das duas modalidades observadas em campo:
+  - **Modalidade 1 (negociacao inicial falha):** peer nao completa offer/answer/ice; trava em `new` ou `connecting`. Observada na primeira coleta com `lina clark / bellatrix`.
+  - **Modalidade 2 (instabilidade pos-conexao):** peer completa negociacao (passa por `connected`) e depois cai para `disconnected` ou `failed`, disparando `scheduleReconnect` -> nova `createPeerConnection` -> novo `safety-timeout`. Observada na segunda coleta com `salomao castaigne / ben ya hu` e `elara malisorn - el-varnis`, **simultaneamente em `ScreenShareManager` e `VoiceChatManager`**.
+- No log do `safety-timeout`, registrar `lastConnectionState`, `lastIceConnectionState` e `lastSignalingState` **para cada modalidade separadamente**.
+- Documentar no final desta story (ou em `story-54-medicoes.md`) o estado observado por modalidade. Esse e o insumo para decidir:
+  - se `isHealthyConnectionState` precisa follow-up dedicado;
+  - se o breaker deve ter criterios distintos entre Modalidade 1 e 2 (ex: contador mais tolerante para pos-conexao, ja que ICE pode cair por motivos transientes de rede);
+  - se a Fase C (breaker espelhado em `VoiceChatManager`) e necessaria - ver item 8 da Fase B.
 
 **Sub-teste 6c - Breaker em peer com falha induzida:**
 - Simular peer com falha persistente: desativar rede de um cliente via DevTools > Network > Offline durante a negociacao, ou bloquear UDP por firewall local.
@@ -351,6 +359,7 @@ Decisao: [avancar | investigar antes de avancar]
 - Refatoracao geral de `VoiceChatManager` ou `screen-share-manager`.
 - Suporte dedicado a iOS Safari.
 - Reescrita do `FateDice3D` (apenas o guard de visibilidade/idle).
+- **Bug do loop `PLAYING <-> BUFFERING` no receiver do YouTube.** Coberto pela **story 55**. Mesmo com todos os passos desta story aplicados, aquele bug persistiria sem os guards de idempotencia propostos em 55. As duas stories sao independentes e podem ser aplicadas em paralelo.
 
 ## Criterios de Aceitacao
 
@@ -376,8 +385,8 @@ Decisao: [avancar | investigar antes de avancar]
 
 ### Passo 4 - Logs
 - [ ] `console.log` removido das funcoes `sendSignal` em `VoiceChatManager` e `screen-share-manager` em producao.
-- [ ] `YT_MOUNT` removido do render do `MusicPlayer`.
 - [ ] Log de `visibilitychange` removido de `useSessionScreenControl`.
+- [ ] `MusicPlayer.tsx` **nao** foi tocado (escopo da story 55).
 
 ### Passo 5 - Three.js
 - [ ] `requestAnimationFrame` do `FateDice3D` pausa quando `document.hidden === true`.

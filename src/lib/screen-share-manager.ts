@@ -276,7 +276,9 @@ export class ScreenShareManager {
             // Only handle screen share signals (not voice-)
             if (signal.type?.startsWith('voice-')) return;
 
-            console.log(`[WebRTC - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[WebRTC - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
+            }
             this.handleSignal(signal);
         };
 
@@ -1021,8 +1023,14 @@ export class ScreenShareManager {
         await Promise.all(tasks);
     }
 
+    private getConnectedPeerCount(): number {
+        let count = 0;
+        this.peerConnections.forEach(pc => { if (pc.connectionState === 'connected') count++; });
+        return count;
+    }
+
     private getAdaptiveBitrate(): number {
-        const peerCount = this.peerConnections.size;
+        const peerCount = this.getConnectedPeerCount();
         if (peerCount <= 2) return 1_800_000;
         if (peerCount <= 5) return 1_200_000;
         if (peerCount <= 8) return 900_000;
@@ -1030,7 +1038,7 @@ export class ScreenShareManager {
     }
 
     private getAdaptiveAudioBitrate(): number {
-        const peerCount = this.peerConnections.size;
+        const peerCount = this.getConnectedPeerCount();
         if (peerCount <= 2) return 128_000;
         if (peerCount <= 5) return 96_000;
         if (peerCount <= 8) return 80_000;

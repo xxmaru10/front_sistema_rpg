@@ -163,6 +163,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
 
     // Diagnóstico Etapa 1: Sanitização de IDs
     useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
         console.log('[VoiceChatPanel] Mount Props Sync Check:', {
             sessionId: JSON.stringify(sessionId),
             userId: JSON.stringify(userId),
@@ -245,9 +246,11 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                     },
                     (updatedParticipants) => {
                         // Log inline (não colapsável) para diagnóstico de characterId
-                        console.log('[VoiceChat] Presence Update:', JSON.stringify(
-                            updatedParticipants.map(u => ({ uid: u.userId, charId: u.characterId ?? 'MISSING' }))
-                        ));
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('[VoiceChat] Presence Update:', JSON.stringify(
+                                updatedParticipants.map(u => ({ uid: u.userId, charId: u.characterId ?? 'MISSING' }))
+                            ));
+                        }
 
                         // Persistir characterId válido no Map e restaurar quando vier undefined
                         // Evita flicker e cobre race condition do mount inicial sem ?c=
@@ -258,7 +261,9 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                             }
                             const known = lastKnownCharacterIdRef.current.get(p.userId);
                             if (known) {
-                                console.log(`[VoiceChat] Restoring charId from cache: ${p.userId} → ${known}`);
+                                if (process.env.NODE_ENV === 'development') {
+                                    console.log(`[VoiceChat] Restoring charId from cache: ${p.userId} → ${known}`);
+                                }
                                 return { ...p, characterId: known };
                             }
                             return p;
