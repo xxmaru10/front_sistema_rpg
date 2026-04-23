@@ -132,6 +132,10 @@ export class VoiceChatManager {
     get sessionParticipants() { return this._sessionParticipants; }
     get audioContextState() { return this.localSpeakingSnapshot.audioStatus; }
 
+    private shouldLogSignalTraffic(signalType: VoiceSignalType): boolean {
+        return process.env.NODE_ENV === 'development' && signalType !== 'voice-ice-candidate';
+    }
+
     public subscribeSpeakingState(listener: () => void): () => void {
         this.speakingListeners.add(listener);
         return () => {
@@ -553,7 +557,7 @@ export class VoiceChatManager {
             // Ignore non-voice signals
             if (!signal.type?.startsWith('voice-')) return;
 
-            if (process.env.NODE_ENV === 'development') {
+            if (this.shouldLogSignalTraffic(signal.type)) {
                 console.log(`[VoiceChat - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
             }
             this.handleSignal(signal);
@@ -583,7 +587,7 @@ export class VoiceChatManager {
 
     private async sendSignal(signal: VoiceSignal) {
         const socket = getSocket(this.userId);
-        if (process.env.NODE_ENV === 'development') {
+        if (this.shouldLogSignalTraffic(signal.type)) {
             console.log(`[VoiceChat - ${this.userId}] Sending signal:`, signal.type, '→', signal.to ?? 'broadcast');
         }
 

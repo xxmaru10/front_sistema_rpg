@@ -274,11 +274,28 @@ Dois sub-testes:
 - Reabrir transmissao. Verificar que ja abre em 720p (persistido em `localStorage`).
 
 #### Checkpoint 3 - apos Passo 3 (Voz)
-Foco em nao-regressao + ganho subjetivo:
-- Confirmar que avatares ainda pulsam quando alguem fala (speaking detection).
-- Confirmar que indicador de nivel de audio ainda anima.
-- Com voz ativa + musica + transmissao, CPU PC deve cair mais alguns pontos em relacao ao Checkpoint 1.
-- Tablet e celular devem ficar visivelmente mais fluidos (teste subjetivo de scroll e toques).
+
+Foco em **nao-regressao funcional + ganho subjetivo**. Nao ha gate duro de CPU ou FPS aqui — o ganho grande em encoder foi atacado no Checkpoint 1. O Passo 3 nao reduz encode; reduz re-render por tick de analisador.
+
+**Nao-regressao funcional (obrigatorio):**
+- Avatares pulsam quando alguem fala (speaking detection).
+- Indicador de nivel de audio anima.
+- Mute por peer, abrir/fechar o painel e alternar `VoiceChatPanel` continuam funcionando.
+
+**Verificacao de localizacao de render (React DevTools):**
+- Abrir DevTools > Components > **Highlight updates when components render**.
+- Com um peer **remoto** falando, o painel raiz **nao deve piscar inteiro** a cada tick do analisador. O esperado e que apenas a subarvore do peer falante (`VoiceActivityConsumer`) atualize.
+- Quando o **proprio usuario** fala, e esperado que o botao/header do painel raiz atualize. Isso **nao e regressao** — e o design da store: `localVoice` e subscrito no componente raiz em `VoiceChatPanel.tsx:86` e colore o `background` do botao em `VoiceChatPanel.tsx:530`. Checkpoint nao reprova por causa desse update local.
+- Updates esporadicos por presenca (join/leave/mute, heartbeat de `VoiceChatManager.ts:651`) sao normais.
+
+**Ganho observacional (evidencia complementar, nao gate):**
+- CPU do PC broadcaster no Task Manager: **continua sendo a expectativa** cair alguns pontos em relacao ao Checkpoint 1. Porem, em PC forte o delta pode nao aparecer com clareza — nesse caso a ausencia de regressao funcional e o ganho subjetivo no mobile substituem o numero.
+- Encoder (`webrtc-internals > outbound-rtp video`): **nao regredir** em relacao ao Checkpoint 1. Sem gate formal de FPS aqui — `>= 28` e gate do Checkpoint 1, nao do 3.
+
+**Mobile (subjetivo):**
+- Tablet e celular devem ficar visivelmente mais fluidos em scroll/toque **durante voz + transmissao**.
+- Android + Chrome: `chrome://inspect` no PC, ler `framesDecoded` / `framesDropped` do `inbound-rtp (video)`. Sem gate formal.
+- **Lembrete:** travamento forte em ficha/login no celular **nao reprova** este checkpoint — e render/hidratacao de UI, fora de escopo desta story (ver `Fora de Escopo` e item 2 da `Analise Tecnica`).
 
 #### Checkpoint 4 - apos Passo 4 (Logs)
 Foco em redução de ruido + nao-regressao:
@@ -589,6 +606,60 @@ c @ m=root,base:329
 [VoiceChat - Mestre] Signal received: voice-join from: Ayton Manson / McAlister
 [VoiceChat - Mestre] voice-join from ayton manson / mcalister ignored — already connected
 ```
+
+## Registro de Campo - 2026-04-23 (pos-deploy, coleta do receiver)
+
+### Ambiente
+- Receiver: jogadora em notebook (Windows / Chrome).
+- Build: `layout-23e6337338b13369.js` / `page-cbf3e4b7d151e928.js` / `863-90902b9db18b8dca.js` / `993-b756d6ce6eee1a51.js`.
+- Deploy: Vercel preview `crownvtt-ddewsuue5-daniels-projects-f6cc46bd.vercel.app`.
+- Stories 54 (Passos 1 a 5, exceto Passo 6) e 55 aplicadas.
+
+### Observacao subjetiva (reportada pela jogadora)
+- Notebook (caso original de travamento severo): **perceptivelmente melhor**.
+- PC do mestre (broadcaster): **perceptivelmente melhor**.
+- Celular: **pouca diferenca**. Consistente com item 2 de `Analise Tecnica` — render/hidratacao da UI de ficha/login nao foi atacada por esta story.
+
+### Log bruto (receiver, notebook)
+```text
+[SocketClient] WS_URL: https://api.cronosvtt.com
+[Supabase] Cliente inicializado com sucesso.
+[Home] Buscando sessoes...
+[Home] Sessoes encontradas: 5
+[EventStore] Inicializando sessao: 3d6b11d4 (forcado: false)
+[EventStore] WebSocket connected, joining session: 3d6b11d4
+[EventStore] Snapshot encontrado: seq 6983
+[EventStore] 0 eventos carregados via NestJS.
+www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow':
+  target origin 'https://www.youtube.com' does not match recipient origin 'vercel.app'.
+www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': (repeat)
+[MusicPlayer] YT_NATIVE_READY
+[MusicPlayer] YT_UNLOCK_APPLIED — reason=first-user-gesture
+[MusicPlayer] YT_NATIVE_STATE: -1
+[MusicPlayer] YT_NATIVE_STATE: 3
+[MusicPlayer] YT_NATIVE_STATE: -1
+[useDiceRoller] finishRoll eval
+```
+
+### Analise do log (cruzada com story 55)
+
+**Sinais de que as stories 54 e 55 estao operando:**
+- Console limpo: **sumiu** `Sending signal` (Passo 4 de 54), `Visibility visible, checking connection` (Passo 4 de 54) e `YT_MOUNT` repetido (era sintoma do bug de 55).
+- Bootstrap leve: `Snapshot encontrado: seq 6983` com `0 eventos carregados via NestJS` — projecao consolidada.
+- `YT_NATIVE_READY` aparece **uma unica vez**. Se houvesse re-mount do portal do iframe (hipotese historica de 55), apareceria mais de um `onReady`.
+- `YT_UNLOCK_APPLIED` aparece **uma unica vez** (`first-user-gesture`), nao em loop.
+- **Nao ha** mais o loop `1 <-> 3 <-> 1 <-> 3 ...` que era o sintoma primario da story 55. Os guards de `seekTo`, `playVideo` e `pauseVideo` em `MusicPlayer.tsx` estao segurando.
+
+**Sinal residual a investigar:**
+- Sequencia `YT_NATIVE_STATE: -1 -> 3 -> -1` (UNSTARTED -> BUFFERING -> UNSTARTED) nao convergiu para `1` (PLAYING). Nao e o loop antigo, mas tambem nao e estado saudavel. Diagnostico detalhado e hipoteses refinadas estao em story 55, secao `Gatilhos candidatos` e `Registro de Campo`. Nao tratar aqui.
+
+**Ruido conhecido, ignorar:**
+- `Failed to execute 'postMessage' on 'DOMWindow'` do `www-widgetapi.js` e ruido do proprio SDK do YouTube no handshake cross-origin — nao e causa raiz. Historicamente aparece antes de `YT_NATIVE_READY` independente do bug.
+
+### Decisao
+
+- **Stories 54 e 55**: permanecem com validacao em campo **parcial**. Checkpoints formais 1-6 seguem pendentes (ver se\u00e7\u00e3o `Validacao Executada`).
+- **Mobile/ficha-login**: abrir follow-up dedicado (fora do escopo desta story). Sugestao: nova story de "Performance de render UI no receiver mobile" focada em ficha e login, com profile de React DevTools + medidas de hidratacao.
 
 ## Referencias
 

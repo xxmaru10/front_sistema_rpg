@@ -160,10 +160,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         const playing = getYtStateCode("PLAYING");
         const buffering = getYtStateCode("BUFFERING");
         if (state === playing || state === buffering) {
-            logYt("playVideo", `${reason}-skipped`, { state });
+            logYt("playVideo", `${reason}-skipped`, () => ({ state }));
             return;
         }
-        logYt("playVideo", reason, { state });
+        logYt("playVideo", reason, () => ({ state }));
         player.playVideo();
     }, [getPlayerState, getYtStateCode]);
 
@@ -174,10 +174,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         const ended = getYtStateCode("ENDED");
         const unstarted = getYtStateCode("UNSTARTED");
         if (state === paused || state === ended || state === unstarted) {
-            logYt("pauseVideo", `${reason}-skipped`, { state });
+            logYt("pauseVideo", `${reason}-skipped`, () => ({ state }));
             return;
         }
-        logYt("pauseVideo", reason, { state });
+        logYt("pauseVideo", reason, () => ({ state }));
         player.pauseVideo();
     }, [getPlayerState, getYtStateCode]);
 
@@ -187,10 +187,10 @@ export function MusicPlayer({ sessionId, userId, userRole, unifiedMode }: MusicP
         const unstarted = getYtStateCode("UNSTARTED");
         const ended = getYtStateCode("ENDED");
         if (state === unstarted || state === ended) {
-            logYt("stopVideo", `${reason}-skipped`, { state });
+            logYt("stopVideo", `${reason}-skipped`, () => ({ state }));
             return;
         }
-        logYt("stopVideo", reason, { state });
+        logYt("stopVideo", reason, () => ({ state }));
         player.stopVideo();
     }, [getPlayerState, getYtStateCode]);
 

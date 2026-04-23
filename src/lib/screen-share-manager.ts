@@ -111,6 +111,10 @@ export class ScreenShareManager {
         return this.isBroadcaster ? 'broadcaster' : 'receiver';
     }
 
+    private shouldLogSignalTraffic(signalType: SignalType): boolean {
+        return process.env.NODE_ENV === 'development' && signalType !== 'ice-candidate';
+    }
+
     private shouldLogPeerEvent(): boolean {
         if (process.env.NODE_ENV === 'development') return true;
         if (typeof window === 'undefined') return false;
@@ -276,7 +280,7 @@ export class ScreenShareManager {
             // Only handle screen share signals (not voice-)
             if (signal.type?.startsWith('voice-')) return;
 
-            if (process.env.NODE_ENV === 'development') {
+            if (this.shouldLogSignalTraffic(signal.type)) {
                 console.log(`[WebRTC - ${this.userId}] Signal received:`, signal.type, 'from:', signal.from);
             }
             this.handleSignal(signal);
@@ -299,7 +303,7 @@ export class ScreenShareManager {
     // ─── Signal sending ────────────────────────────────────────
 
     private async sendSignal(signal: WebRTCSignal) {
-        if (process.env.NODE_ENV === 'development') {
+        if (this.shouldLogSignalTraffic(signal.type)) {
             console.log(`[WebRTC - ${this.userId}] Sending signal:`, signal.type);
         }
         const socket = getSocket(this.userId);

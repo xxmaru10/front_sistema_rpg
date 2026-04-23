@@ -73,16 +73,20 @@ Cada chamada de `seekTo(elapsed, true)` leva o YT a estado 3 (BUFFERING) antes d
 - `pauseVideo()` / `stopVideo()` em `MusicPlayer.tsx:433-434` (delta), `:560-561` (bulk) e `:625-626` (`handleTrackChange`, GM-only): chamados sem consultar `getPlayerState()`.
 - `playVideo()` em `MusicPlayer.tsx:312` (`onReady`) e `:707` (`forceYouTubeAudioUnlock`): chamados sem checar se o estado ja e `PLAYING` ou `BUFFERING`.
 
-### Gatilhos candidatos (a instrumentar no Passo 1)
+### Gatilhos candidatos (refinados em 2026-04-23 apos coleta pos-deploy)
 
-`broadcastUpdate` so dispara em acoes discretas do GM (`MusicPlayer.tsx:631`, `:637`, `:643`, `:657`, `:667`, `:889`), entao o receiver **nao deveria** receber seeks em loop. Hipoteses de por que o caminho de sync e re-executado:
+`broadcastUpdate` so dispara em acoes discretas do GM (`MusicPlayer.tsx:631`, `:637`, `:643`, `:657`, `:667`, `:889`), entao o receiver **nao deveria** receber seeks em loop. Apos o deploy das stories 54 e 55, o loop original `1 <-> 3 <-> 1 <-> 3` **sumiu** em campo (ver `Registro de Campo - 2026-04-23 (pos-deploy)` abaixo). Ficou um residual `-1 -> 3 -> -1` num receiver que nao convergiu para `1` (PLAYING). As hipoteses foram re-avaliadas contra o codigo atual e o log novo:
 
-1. `pendingSeekRef.current` e aplicado mais de uma vez (re-anexo do player apos unmount/remount do portal).
-2. `snapshotInitRef` protege o ramo bulk, mas o ramo delta pode re-entregar o mesmo evento se houver re-subscribe do `globalEventStore`.
-3. Re-render do componente re-executa a IIFE do portal em `MusicPlayer.tsx:910`, re-montando o iframe e disparando `onReady` de novo.
-4. `YT_UNLOCK_APPLIED` (`MusicPlayer.tsx:713`) reaplica `playVideo` depois do seek, levando o player para BUFFERING novamente.
+**Hipoteses reduzidas (nao dominantes no log pos-deploy):**
+- ~~Re-mount do portal do iframe~~ — log mostra apenas **um** `YT_NATIVE_READY`. Re-mount do portal em `MusicPlayer.tsx:910` geraria `onReady` duplicado e nao e o que se ve.
+- ~~Ramo bulk sobrescrevendo delta~~ — `snapshotInitRef` e o flag `sawLiveMusicEventRef` em `MusicPlayer.tsx:511` hoje distinguem snapshot de delta, reduzindo essa chance. Nao e impossivel, mas fica como ultima carta.
 
-Fase de instrumentacao (Passo 1) fecha essa hipotese antes de mudar comportamento.
+**Hipoteses abertas (a discriminar via flag `debugMusicPlayer`):**
+1. **`pauseVideo` / `stopVideo` vindo do `state-sync-effect` em `MusicPlayer.tsx:506`**, acionado por delta com `isPlaying === false` logo apos o `BUFFERING`. O guard do Passo 3 tem chance de marcar `pause-skipped`; se o log mostrar `pauseVideo` real com `reason: 'state-sync-effect'`, e esse o caminho.
+2. **Cenario benigno: o GM ainda nao apertou play no momento da captura.** Com `playing === false` no estado global, `-1 -> 3 -> -1` e o YT passando por BUFFERING no `cue` e voltando para UNSTARTED. Nao e bug — apenas nao fecha a aceitacao sem o log estruturado. A distincao em relacao a (1) e que aqui **nao** havera nenhum call site de play/pause ativo no log do `logYt`, so transicoes nativas de estado.
+3. **`YT_UNLOCK_APPLIED` em `MusicPlayer.tsx:713` reaplicando `playVideo` apos seek** — possivel, mas o guard do Passo 3 agora intercepta com `playVideo-skipped` se o estado ja e PLAYING/BUFFERING. Se o log mostrar `playVideo` real com `reason: 'unlock'` numa sequencia que reinicia `-1`, investigar este caminho.
+
+Passo 1 (instrumentacao) continua sendo o gate para discriminar entre (1), (2) e (3). **Nao mudar comportamento antes de ter o log estruturado.** Uma decisao precipitada aqui — por exemplo, engrossar o guard de `pauseVideo` — pode mascarar o caso benigno (2) e introduzir regressao.
 
 ## Plano de Execucao
 
@@ -216,6 +220,73 @@ Alvos: `MusicPlayer.tsx:401-428` (delta) e `:530-552` (bulk).
 - [ ] Cenario 6 — GM faz seek pequeno (< 2s): receiver **nao** aplica seek (log mostra `seekTo-skipped`).
 - [ ] Validar em `cronosvtt.com`, nao so em preview Vercel.
 - [ ] Receiver em celular: CPU subjetivamente mais estavel durante musica YT.
+
+## Registro de Campo - 2026-04-23 (pos-deploy)
+
+### Ambiente
+- Receiver: jogadora em notebook (Windows / Chrome).
+- Build: `layout-23e6337338b13369.js` / `page-cbf3e4b7d151e928.js`.
+- Deploy: Vercel preview `crownvtt-ddewsuue5-daniels-projects-f6cc46bd.vercel.app`.
+
+### Log bruto
+```text
+[SocketClient] WS_URL: https://api.cronosvtt.com
+[Supabase] Cliente inicializado com sucesso.
+[Home] Buscando sessoes...
+[Home] Sessoes encontradas: 5
+[EventStore] Inicializando sessao: 3d6b11d4 (forcado: false)
+[EventStore] WebSocket connected, joining session: 3d6b11d4
+[EventStore] Snapshot encontrado: seq 6983
+[EventStore] 0 eventos carregados via NestJS.
+www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow':
+  target origin 'https://www.youtube.com' does not match recipient origin 'vercel.app'
+www-widgetapi.js:210 Failed to execute 'postMessage' on 'DOMWindow': (repeat)
+[MusicPlayer] YT_NATIVE_READY
+[MusicPlayer] YT_UNLOCK_APPLIED — reason=first-user-gesture
+[MusicPlayer] YT_NATIVE_STATE: -1
+[MusicPlayer] YT_NATIVE_STATE: 3
+[MusicPlayer] YT_NATIVE_STATE: -1
+[useDiceRoller] finishRoll eval
+```
+
+### O que melhorou (bug primario resolvido)
+- **Loop `1 <-> 3 <-> 1 <-> 3 ...` desapareceu.** Era o sintoma primario desta story. Nao ha mais oscilacao perpetua PLAYING/BUFFERING.
+- **`YT_NATIVE_READY` aparece uma unica vez.** Elimina a hipotese historica de re-mount do portal como causa.
+- **`YT_UNLOCK_APPLIED` aparece uma unica vez** (`first-user-gesture`). Unlock nao esta sendo re-aplicado em cascata.
+
+### O que sobra (caso residual)
+- Transicao `YT_NATIVE_STATE: -1 -> 3 -> -1` (UNSTARTED -> BUFFERING -> UNSTARTED). Nao converge para `1` (PLAYING).
+- **Este log foi coletado sem a flag `debugMusicPlayer` ligada.** Sem os eventos `[MusicPlayer/YT]` do helper `logYt` (`MusicPlayer.tsx:62`), nao da para discriminar entre as hipoteses 1, 2 e 3 listadas em `Gatilhos candidatos`.
+
+### Proxima coleta obrigatoria (para fechar Cenario 1)
+
+Executar **exatamente** nesta ordem, pela jogadora receiver (ou qualquer outro receiver reproduzivel):
+
+1. Abrir a sessao no Chrome com DevTools aberto (Console).
+2. No Console, rodar:
+   ```js
+   localStorage.setItem('debugMusicPlayer', '1');
+   ```
+3. Recarregar a pagina (F5). A flag e lida no momento do `logYt` — recarga garante que o primeiro tick ja esteja instrumentado.
+4. Entrar na sessao. Aguardar o GM iniciar musica do YouTube (ou entrar numa sessao que ja tenha musica tocando, para validar bootstrap).
+5. Capturar **30 segundos** de console a partir do `YT_NATIVE_READY`. Copiar tudo, inclusive os eventos prefixados `[MusicPlayer/YT]`.
+6. Colar o trecho abaixo (em novo bloco `### Log capturado com debugMusicPlayer=1`).
+7. Anotar **qual `reason` dominou** o log residual:
+   - Se aparecer `pauseVideo` com `reason: 'state-sync-effect'` seguido de `-1` => hipotese 1 confirmada.
+   - Se aparecer `playVideo` com `reason: 'unlock'` num ciclo => hipotese 3 confirmada.
+   - Se **nao aparecer nenhuma chamada real de play/pause/seek** durante as transicoes -1 → 3 → -1, restando so eventos `-skipped` => hipotese 2 confirmada (cenario benigno: GM nao apertou play).
+
+### Decisao condicional pos-coleta
+
+- Se **hipotese 1**: reforcar o guard do `state-sync-effect` para ignorar delta com `isPlaying === false` quando o estado atual ja for `UNSTARTED` / `ENDED` (evitar `pauseVideo` inutil que transita por BUFFERING antes de UNSTARTED).
+- Se **hipotese 2**: este caso nao e bug. Atualizar Cenario 1 de `Validacao Executada` para exigir que o GM **esteja** tocando musica no momento da entrada do receiver. Marcar `[x]`.
+- Se **hipotese 3**: engrossar o guard em `MusicPlayer.tsx:713` para consultar `getPlayerState()` antes de `forceYouTubeAudioUnlock` chamar `playVideo`. Usar `playYouTubeWithGuard` (Passo 3 desta story) se ainda nao estiver sendo usado no caminho do unlock.
+
+**Nao alterar comportamento antes da coleta.** Toda decisao nesta secao e condicional ao log estruturado.
+
+### Ruido conhecido (ignorar)
+
+- `Failed to execute 'postMessage' on 'DOMWindow'` do `www-widgetapi.js` e ruido do SDK do YouTube no handshake cross-origin entre iframe e origem Vercel. Nao e causa raiz. Aparece historicamente mesmo em casos que terminam em PLAYING estavel.
 
 ## Relacao com Outras Stories
 
