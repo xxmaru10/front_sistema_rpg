@@ -796,8 +796,18 @@ export function generateThemeCSS(theme: ThemePreset): string {
                 to { background-position: -100px 50px; }
             }
 
-            body {
-                animation: starry-drift 60s linear infinite;
+            /* Story 56: avoid continuous background animation on reduced-motion setups.
+               This effect is visual-only and should never force extra render work. */
+            @media (prefers-reduced-motion: no-preference) {
+                body {
+                    animation: starry-drift 60s linear infinite;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                body {
+                    animation: none;
+                }
             }
 
             /* ─── Panels: Minimalist Dark Glass with Neon Sidebars ─── */

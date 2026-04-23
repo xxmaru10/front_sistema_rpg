@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-23 (story-55 musicplayer receiver youtube idempotencia de seek/play/pause)
+last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissao)
 status: ativo
 ---
 
@@ -232,6 +232,16 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Facao opcional em `WorldEntity` de personagem**: `factionId` foi adicionado como campo opcional com suporte completo em criacao, edicao, filtro, visualizacao e fallback para entidades legadas sem o campo.
 - **Bestiario com inventario ativo**: o modal de criatura voltou a exibir a aba de inventario no `CharacterCard`; o toggle `LOCAL/GERAL` foi reposicionado para o topo fixo do modal para evitar sobreposicao.
 - **Banner da Arena sem recorte obrigatorio**: na Arena, o seletor de banner nao aplica crop 16:5 e o background passou a priorizar imagem inteira (`contain`) em tela cheia.
+
+## Registro de Decisoes (Story 56)
+- **Shell desktop sem blur persistente**: elementos sempre visiveis fora da arena (`.gm-sidebar-vertical`, `.nav-expanded-shell`, tooltip de nav e botao de refresh de transmissao) passaram a usar fundo opaco e `backdrop-filter: none` para reduzir custo continuo de compositing/repaint.
+- **Glow do SessionHeader simplificado fora da arena**: o header removeu glow duplo com `inset` e bordas espessas, mantendo apenas borda fina e sombra unica para preservar hierarquia visual com menor custo de render.
+- **Tema espacial respeita reduced motion**: animacao continua de `starry-drift` agora roda apenas com `prefers-reduced-motion: no-preference`; em `reduce`, fica desativada.
+
+## Registro de Decisoes (Story 57)
+- **Experimento isolado de nitidez via contentHint**: a track de video capturada em `getDisplayMedia` passou a receber `contentHint = 'text'` antes do envio WebRTC.
+- **Sem reversao da estrategia de CPU da story 54**: `degradationPreference` permanece `balanced` e nao houve mudanca em `scaleResolutionDownBy`, bitrate, framerate maxima de politica, thresholds de auto-downgrade ou topologia de conexao.
+- **CTA de 1080p para leitura**: o botao `Tentar 1080p` ganhou copy/tooltip explicito para leitura de texto em ficha/notas.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.

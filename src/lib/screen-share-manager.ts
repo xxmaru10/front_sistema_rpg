@@ -340,6 +340,9 @@ export class ScreenShareManager {
                 audio: true,
             });
 
+            const capturedVideoTrack = this.localStream.getVideoTracks()[0];
+            if (capturedVideoTrack) capturedVideoTrack.contentHint = 'text';
+
             // Check if audio was captured
             const audioTracks = this.localStream.getAudioTracks();
             if (audioTracks.length === 0) {

@@ -2,8 +2,8 @@
 title: "Story 44 - Seletor Multi-Dado na Caixa de Rolagem com Clear e Notação Viva"
 description: "Permitir que o jogador, a partir do clique em 'Rolar', monte um pool heterogêneo de dados 3D (Fudge, d4, d6, d8, d10, d12, d20, d100) por meio de um ícone de lápis na caixa de dados, com botão Clear, notação viva (ex.: '2d6 + 4d8'), limite de 40 dados e registro consistente no log e no event store."
 priority: "alta"
-status: "pendente"
-last_updated: "2026-04-18"
+status: "concluída"
+last_updated: "2026-04-23"
 tags: [ui, componente, regras, 3d, eventsourcing, fluxo]
 epic: epic-01-refatoracao-modular
 ---

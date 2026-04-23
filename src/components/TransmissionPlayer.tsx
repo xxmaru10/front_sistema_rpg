@@ -147,8 +147,9 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
                                     type="button"
                                     onClick={() => screenShareStore.triggerTry1080p()}
                                     className="quality-retry-btn"
+                                    title="Melhor para leitura de texto em ficha e notas"
                                 >
-                                    Tentar 1080p
+                                    Tentar 1080p (texto)
                                 </button>
                             )}
                         </div>
@@ -184,8 +185,9 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
                                     type="button"
                                     onClick={() => screenShareStore.triggerTry1080p()}
                                     className="quality-retry-btn"
+                                    title="Melhor para leitura de texto em ficha e notas"
                                 >
-                                    Tentar 1080p
+                                    Tentar 1080p (texto)
                                 </button>
                             )}
                         </div>

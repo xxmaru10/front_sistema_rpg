@@ -94,6 +94,8 @@ export function SessionHeader({
     if (!imageUrl && !isGM && !videoStream && !children) return null;
 
     const isArena = tabName === "ARENA";
+    const shellBorder = isArena ? "none" : "1px solid rgba(var(--accent-rgb), 0.38)";
+    const shellShadow = isArena ? "none" : "0 0 12px rgba(var(--accent-rgb), 0.24)";
 
     return (
         <div className="header-container" style={{
@@ -103,13 +105,13 @@ export function SessionHeader({
             height: '300px',
             zIndex: 101,
             overflow: 'visible',
-            borderTop: isArena ? 'none' : '3px solid var(--accent-color)',
-            borderBottom: isArena ? 'none' : '3px solid var(--accent-color)',
-            borderLeft: isArena ? 'none' : '3px solid var(--accent-color)',
-            borderRight: isArena ? 'none' : '3px solid var(--accent-color)',
+            borderTop: shellBorder,
+            borderBottom: shellBorder,
+            borderLeft: shellBorder,
+            borderRight: shellBorder,
             boxSizing: 'border-box',
-            boxShadow: isArena ? 'none' : '0 0 20px rgba(var(--accent-rgb), 0.6), inset 0 0 20px rgba(var(--accent-rgb), 0.2)',
-            transition: 'all 0.5s ease-in-out',
+            boxShadow: shellShadow,
+            transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
             background: 'transparent'
         }}>
             {imageUrl && !isArena ? (
@@ -198,7 +200,7 @@ export function SessionHeader({
                                 background: 'rgba(0,0,0,0.6)',
                                 border: '1px solid var(--accent-color)',
                                 color: 'var(--accent-color)',
-                                backdropFilter: 'blur(4px)',
+                                backdropFilter: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -267,7 +269,7 @@ export function SessionHeader({
                                 background: 'rgba(0,0,0,0.6)',
                                 border: '1px solid rgba(var(--accent-rgb), 0.4)',
                                 color: 'var(--accent-color)',
-                                backdropFilter: 'blur(4px)',
+                                backdropFilter: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',

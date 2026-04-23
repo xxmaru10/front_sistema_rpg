@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-23 (story-55 musicplayer receiver youtube idempotencia)
+last_updated: 2026-04-23 (story-56 shell visual ficha/notas + story-57 nitidez transmissão)
 ---
 
 # Cronos Vtt — Frontend 
@@ -44,6 +44,8 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Ocultar Rolagem do Mestre | concluído | `/stories/story-45-olho-ocultar-rolagem-do-mestre.md` |
 | Performance Geral (Transmissão, Voz, Render) | em-revisão | `/stories/story-54-performance-transmissao-voz-e-render-cpu-100.md` |
 | MusicPlayer Receiver YouTube (loop Playing/Buffering) | pronto | `/stories/story-55-musicplayer-receiver-youtube-idempotencia.md` |
+| Shell Visual Ficha/Notas (GPU idle 20% fora da arena) | em-revisão | `/stories/story-56-performance-shell-visual-ficha-notas.md` |
+| Nitidez de Texto na Transmissão (contentHint experimento) | em-revisão | `/stories/story-57-nitidez-texto-transmissao-content-hint.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`
