@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Cinzel, Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import "@/components/CharacterCard/CharacterCard.css";
@@ -57,6 +58,14 @@ export default function RootLayout({
           </Suspense>
         </div>
 
+        {process.env.NODE_ENV === 'development' && (
+          <>
+            <Script src="https://cdn.jsdelivr.net/npm/eruda" strategy="afterInteractive" />
+            <Script id="eruda-init" strategy="afterInteractive">
+              {`eruda.init();`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
