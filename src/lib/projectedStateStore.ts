@@ -88,3 +88,15 @@ export function useProjectedState(): SessionState {
         projectedStateStore.getState,
     );
 }
+
+/**
+ * Hook React: retorna apenas `characters` da projeção.
+ * Evita re-render em componentes que só dependem de personagens.
+ */
+export function useProjectedCharacters(): SessionState["characters"] {
+    return useSyncExternalStore(
+        projectedStateStore.subscribe,
+        () => projectedStateStore.getState().characters,
+        () => projectedStateStore.getState().characters,
+    );
+}

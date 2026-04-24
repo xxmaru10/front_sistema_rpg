@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Character, SessionState } from "@/types/domain";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
@@ -30,7 +30,7 @@ interface CharacterCardProps {
 
 type CharacterCardTab = "lore" | "powers" | "inventory" | "notes";
 
-export function CharacterCard({
+function CharacterCardComponent({
     character,
     sessionId,
     actorUserId,
@@ -365,3 +365,6 @@ export function CharacterCard({
         </div>
     );
 }
+
+export const CharacterCard = memo(CharacterCardComponent);
+CharacterCard.displayName = "CharacterCard";

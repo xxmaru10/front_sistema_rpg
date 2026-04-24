@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-22 (story-46 fase-2 + story-47 notes pagination/sorting, faccao em personagem, inventario no bestiario e banner completo na arena)
+last_updated: 2026-04-24 (screen share rebalanceia bitrate/prioridade por peer e reage mais cedo a pressao de CPU para preservar voz em notebooks fracos)
 status: ativo
 ---
 
@@ -28,6 +28,10 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Event Sourcing | Permite replay de sessÃµes, auditoria e sincronia em tempo real sem conflitos de mutaÃ§Ã£o paralela. | 2026-02-15 |
 | ProjeÃ§Ãµes no Cliente | Reduz carga no backend e permite UI instantÃ¢nea atravÃ©s de otimismo local. | 2026-02-15 |
 | WebRTC nativo | Suporte a Ã¡udio e vÃ­deo sem latÃªncia sem depender de serviÃ§os externos caros. | 2026-03-01 |
+| Tier Adaptativo de TransmissÃ£o | Compartilhamento de tela inicia em 1080p@30 e faz downgrade sticky para 720p@24 sob pressÃ£o de CPU (stats WebRTC), com override manual para 1080p. | 2026-04-23 |
+| OrÃ§amento AssimÃ©trico entre TransmissÃ£o e Voz | Screen share passou a rebalancear bitrate por peer e usar prioridade mÃ©dia no vÃ­deo, preservando prioridade alta para Ã¡udio e reagindo ao primeiro sinal consistente de CPU-limited no `qualityLimitationReason`. | 2026-04-24 |
+| Telemetria + Circuit Breaker por Peer (Screen Share) | InstrumentaÃ§Ã£o com `attemptId` por conexÃ£o, logs estruturados sob flag (`localStorage.debugScreenShare`) e breaker por peer (cooldown/hard stop) para interromper ciclos infinitos de recriaÃ§Ã£o WebRTC no broadcaster. | 2026-04-23 |
+| IdempotÃªncia do Receiver YouTube (MusicPlayer) | Sincronia remota do player YouTube passou a usar guards de drift (epsilon 2s) para `seekTo`, guards de estado para `playVideo`/`pauseVideo` e logs gated por flag (`localStorage.debugMusicPlayer`) para eliminar loops PLAYING/BUFFERING em receivers. | 2026-04-23 |
 | Sincronia de PresenÃ§a HÃ­brida | Uso combinado de WebRTC Signaling e Supabase Presence para limpar zombies e garantir lista de voz fiel. | 2026-03-31 |
 | Nuclear Refresh (WebRTC) | Re-instanciaÃ§Ã£o total do mÃ³dulo via React Keys para purga absoluta de estado e recuperaÃ§Ã£o de Ã¡udio stalled sem F5. Desde Story 41, o refresh padrÃ£o Ã© `softReconnect` (nÃ£o-destrutivo); Nuclear Refresh reservado como fallback quando o manager Ã© `null`. | 2026-03-31 |
 | InventÃ¡rio Flutuante Lateral | CorreÃ§Ã£o de visibilidade: movido para a esquerda (`left: -260px`) e habilitado `overflow: visible` no `.char-artifact` para evitar clipping. | 2026-03-31 |
@@ -229,6 +233,36 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Facao opcional em `WorldEntity` de personagem**: `factionId` foi adicionado como campo opcional com suporte completo em criacao, edicao, filtro, visualizacao e fallback para entidades legadas sem o campo.
 - **Bestiario com inventario ativo**: o modal de criatura voltou a exibir a aba de inventario no `CharacterCard`; o toggle `LOCAL/GERAL` foi reposicionado para o topo fixo do modal para evitar sobreposicao.
 - **Banner da Arena sem recorte obrigatorio**: na Arena, o seletor de banner nao aplica crop 16:5 e o background passou a priorizar imagem inteira (`contain`) em tela cheia.
+
+## Registro de Decisoes (Story 56)
+- **Shell desktop sem blur persistente**: elementos sempre visiveis fora da arena (`.gm-sidebar-vertical`, `.nav-expanded-shell`, tooltip de nav e botao de refresh de transmissao) passaram a usar fundo opaco e `backdrop-filter: none` para reduzir custo continuo de compositing/repaint.
+- **Glow do SessionHeader simplificado fora da arena**: o header removeu glow duplo com `inset` e bordas espessas, mantendo apenas borda fina e sombra unica para preservar hierarquia visual com menor custo de render.
+- **Tema espacial respeita reduced motion**: animacao continua de `starry-drift` agora roda apenas com `prefers-reduced-motion: no-preference`; em `reduce`, fica desativada.
+
+## Registro de Decisoes (Story 57)
+- **Experimento isolado de nitidez via contentHint**: a track de video capturada em `getDisplayMedia` passou a receber `contentHint = 'text'` antes do envio WebRTC.
+- **Sem reversao da estrategia de CPU da story 54**: `degradationPreference` permanece `balanced` e nao houve mudanca em `scaleResolutionDownBy`, bitrate, framerate maxima de politica, thresholds de auto-downgrade ou topologia de conexao.
+- **CTA de 1080p para leitura**: o botao `Tentar 1080p` ganhou copy/tooltip explicito para leitura de texto em ficha/notas.
+
+## Registro de Decisoes (Story 58)
+- **Autoscroll do diario condicionado no hook de notas**: `useSessionNotesDiary` deixou de escrever `scrollTop` em todo render e passou a sincronizar o scroll apenas quando muda a lista visivel (ultima nota/sub-aba/filtro), reduzindo reflow continuo em idle.
+- **Editor de notas sem blur persistente**: `.notes-editor-area` removeu `backdrop-filter` para eliminar custo fixo de compositing na aba de Notas.
+- **Lista de personagens otimizada por agrupamento memoizado**: `CharactersTab` passou a memoizar listas de PCs/NPCs e lookup de personagem em modal, evitando `filter/find` repetidos a cada render.
+- **NPCs em resumo no modo player**: a grade de NPCs no modo player voltou para `CharacterSummary` (com abertura de `CharacterCard` no modal), preservando acesso ao detalhe sob demanda com menor custo em idle.
+- **Alivio do shell visual de ficha/header/tema**: `CharacterCard.css` reduziu sombras e insets base, `SessionHeader` consolidou camadas do banner e reduziu altura/efeito fora da arena, e o preset espacial desacelerou `starry-drift` (60s -> 180s) com opt-out explicito via `data-disable-theme-animation`.
+
+## Registro de Decisoes (Story 59)
+- **Assinatura seletiva de projecao no Voice Chat**: `VoiceChatPanel` passou a consumir apenas `characters` via `useProjectedCharacters`, evitando rerender a cada evento irrelevante da sessao.
+- **Dedupe de estado de voz/presenca**: `VoiceChatManager` agora compara snapshots antes de propagar `onPeerUpdate`/`onPresenceUpdate`, reduzindo cascata de `setState` no shell persistente do header.
+- **`voice-join` sem heartbeat em idle**: o heartbeat periodico de voz deixou de rebroadcastar `voice-join`; em idle ele reanuncia apenas `voice-presence`, mantendo descoberta sem renegociacao recorrente.
+- **Logs de diagnostico sob flag**: logs de render/mount da Story 59 foram adicionados em `HeaderWrapper`, `UnifiedSoundPanel`, `MusicPlayer` e `VoiceChatPanel` com gate por `localStorage.debugStory59 = "1"`.
+- **Subtrees pesadas do header memoizadas**: `VoiceChatPanel`, `UnifiedSoundPanel` e `MusicPlayer` receberam `React.memo` com comparacao explicita de props para isolar re-renders vindos do `HeaderWrapper`.
+
+## Registro de Decisoes (Story 60)
+- **DOM compacto no modo PLAYER**: `CharactersTab` deixou de montar `CharacterCard` para todos os PCs e agora monta apenas a ficha vinculada ao jogador (`fixedCharacterId`, com fallback por `ownerUserId`), eliminando cards ocultos sem funcao.
+- **Troca de abas como transicao concorrente**: navegacao lateral e navegacao por mencao passaram a usar `startTransition` antes de alterar `activeTab`, reduzindo blocos sincronos longos no main thread durante mount de abas pesadas.
+- **Memoizacao de componentes de alto custo**: `CharacterCard`, `CharacterSummary`, `SessionNotes` e `CombatTab` passaram para `React.memo`; callbacks principais em `page.tsx` e `CharactersTab` foram estabilizados para aumentar reaproveitamento de render.
+- **Kill-switch de animacao de tema mantido para mobile**: a Story 60 reaproveita o gate existente por `data-disable-theme-animation` (ativado em touch/mobile e fora da arena), sem introduzir nova camada de animacao no fluxo mobile.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.

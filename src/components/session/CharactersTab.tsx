@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Character, SessionState } from "@/types/domain";
 import { CharacterCard } from "@/components/CharacterCard";
@@ -40,6 +40,40 @@ export function CharactersTab({
     const [viewingCharacterId, setViewingCharacterId] = useState<string | null>(null);
     const [showBestiaryImport, setShowBestiaryImport] = useState(false);
     const [selectedBestiaryIds, setSelectedBestiaryIds] = useState<string[]>([]);
+    const playerCharacters = useMemo(
+        () => displayedCharacters.filter(c => !c.isNPC),
+        [displayedCharacters]
+    );
+    const npcCharacters = useMemo(
+        () => displayedCharacters.filter(c => c.isNPC),
+        [displayedCharacters]
+    );
+    const normalizedActorUserId = useMemo(
+        () => actorUserId.trim().toLowerCase(),
+        [actorUserId]
+    );
+    const visiblePlayerCharacters = useMemo(() => {
+        if (userRole === "GM") return playerCharacters;
+
+        if (fixedCharacterId) {
+            const linkedCharacter = playerCharacters.find((char) => char.id === fixedCharacterId);
+            return linkedCharacter ? [linkedCharacter] : [];
+        }
+
+        if (!normalizedActorUserId) return [];
+
+        const ownedCharacter = playerCharacters.find(
+            (char) => (char.ownerUserId || "").trim().toLowerCase() === normalizedActorUserId
+        );
+        return ownedCharacter ? [ownedCharacter] : [];
+    }, [fixedCharacterId, normalizedActorUserId, playerCharacters, userRole]);
+    const viewingCharacter = useMemo(
+        () => (viewingCharacterId ? characterList.find(c => c.id === viewingCharacterId) ?? null : null),
+        [characterList, viewingCharacterId]
+    );
+    const handleViewCharacter = useCallback((characterId: string) => {
+        setViewingCharacterId(characterId);
+    }, []);
 
     return (
         <>
@@ -68,29 +102,29 @@ export function CharactersTab({
                         <div className="entities-scroll">
                             {userRole === "GM" ? (
                                 <div className="gm-character-list">
-                                    {displayedCharacters.filter(c => !c.isNPC).length > 0 && (
+                                    {playerCharacters.length > 0 && (
                                         <div className="entity-group">
                                             <h3 className="group-title">PERSONAGENS JOGADORES</h3>
                                             <div className="cards-grid compact-grid">
-                                                {displayedCharacters.filter(c => !c.isNPC).map(char => (
+                                                {playerCharacters.map(char => (
                                                     <CharacterSummary
                                                         key={char.id}
                                                         character={char}
-                                                        onClick={() => setViewingCharacterId(char.id)}
+                                                        onClick={handleViewCharacter}
                                                     />
                                                 ))}
                                             </div>
                                         </div>
                                     )}
-                                    {displayedCharacters.filter(c => c.isNPC).length > 0 && (
+                                    {npcCharacters.length > 0 && (
                                         <div className="entity-group mt-8">
                                             <h3 className="group-title threats">NPCs / INIMIGOS</h3>
                                             <div className="cards-grid compact-grid">
-                                                {displayedCharacters.filter(c => c.isNPC).map(char => (
+                                                {npcCharacters.map(char => (
                                                     <CharacterSummary
                                                         key={char.id}
                                                         character={char}
-                                                        onClick={() => setViewingCharacterId(char.id)}
+                                                        onClick={handleViewCharacter}
                                                     />
                                                 ))}
                                             </div>
@@ -99,41 +133,41 @@ export function CharactersTab({
                                 </div>
                             ) : (
                                 <>
-                                    {displayedCharacters.filter(c => !c.isNPC).length > 0 && (
+                                    {playerCharacters.length > 0 && (
                                         <div className="entity-group">
-                                            <div className="cards-grid">
-                                                {displayedCharacters.filter(c => !c.isNPC).map(char => (
-                                                    <CharacterCard
-                                                        key={char.id}
-                                                        character={char}
-                                                        sessionId={sessionId}
-                                                        actorUserId={actorUserId}
-                                                        isGM={false}
-                                                        isLinkedCharacter={fixedCharacterId === char.id}
-                                                        mentionEntities={mentionEntities}
-                                                        sessionState={sessionState}
-                                                        userRole={userRole}
-                                                        onMentionNavigate={onMentionNavigate}
-                                                    />
-                                                ))}
-                                            </div>
+                                            {visiblePlayerCharacters.length > 0 ? (
+                                                <div className="cards-grid">
+                                                    {visiblePlayerCharacters.map(char => (
+                                                        <CharacterCard
+                                                            key={char.id}
+                                                            character={char}
+                                                            sessionId={sessionId}
+                                                            actorUserId={actorUserId}
+                                                            isGM={false}
+                                                            isLinkedCharacter={fixedCharacterId === char.id}
+                                                            mentionEntities={mentionEntities}
+                                                            sessionState={sessionState}
+                                                            userRole={userRole}
+                                                            onMentionNavigate={onMentionNavigate}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="empty-state solid ornate-border">
+                                                    <p className="narrative-text">NENHUMA FICHA VINCULADA AO SEU USUÁRIO.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
-                                    {displayedCharacters.filter(c => c.isNPC).length > 0 && (
+                                    {npcCharacters.length > 0 && (
                                         <div className="entity-group mt-12">
                                             <h3 className="group-title threats">NPCs / INIMIGOS</h3>
-                                            <div className="cards-grid">
-                                                {displayedCharacters.filter(c => c.isNPC).map(char => (
-                                                    <CharacterCard
+                                            <div className="cards-grid compact-grid">
+                                                {npcCharacters.map(char => (
+                                                    <CharacterSummary
                                                         key={char.id}
                                                         character={char}
-                                                        sessionId={sessionId}
-                                                        actorUserId={actorUserId}
-                                                        isGM={false}
-                                                        mentionEntities={mentionEntities}
-                                                        sessionState={sessionState}
-                                                        userRole={userRole}
-                                                        onMentionNavigate={onMentionNavigate}
+                                                        onClick={handleViewCharacter}
                                                     />
                                                 ))}
                                             </div>
@@ -162,13 +196,13 @@ export function CharactersTab({
                                 ✕
                             </button>
                             <div className="w-full h-full overflow-y-auto pr-1">
-                                {characterList.find(c => c.id === viewingCharacterId) && (
+                                {viewingCharacter && (
                                     <CharacterCard
-                                        character={characterList.find(c => c.id === viewingCharacterId)!}
+                                        character={viewingCharacter}
                                         sessionId={sessionId}
                                         actorUserId={actorUserId}
                                         isGM={userRole === "GM"}
-                                        isLinkedCharacter={fixedCharacterId === viewingCharacterId}
+                                        isLinkedCharacter={fixedCharacterId === viewingCharacter.id}
                                         mentionEntities={mentionEntities}
                                         sessionState={sessionState}
                                         userRole={userRole}

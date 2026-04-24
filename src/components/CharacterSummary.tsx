@@ -1,17 +1,18 @@
 "use client";
 
+import { memo } from "react";
 import { Character } from "@/types/domain";
 
 interface CharacterSummaryProps {
     character: Character;
-    onClick: () => void;
+    onClick: (characterId: string) => void;
 }
 
-export function CharacterSummary({ character, onClick }: CharacterSummaryProps) {
+function CharacterSummaryComponent({ character, onClick }: CharacterSummaryProps) {
     return (
         <div
             className="character-dummy-card"
-            onClick={onClick}
+            onClick={() => onClick(character.id)}
             title="Clique para ver detalhes"
         >
             <div className="dummy-portrait">
@@ -120,3 +121,6 @@ export function CharacterSummary({ character, onClick }: CharacterSummaryProps) 
         </div>
     );
 }
+
+export const CharacterSummary = memo(CharacterSummaryComponent);
+CharacterSummary.displayName = "CharacterSummary";

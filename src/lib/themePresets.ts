@@ -65,6 +65,16 @@ export function generateThemeCSS(theme: ThemePreset): string {
             transition: background-color 0.8s ease, color 0.5s ease;
         }
 
+        body[data-disable-theme-animation="true"]::after {
+            display: none !important;
+        }
+
+        body[data-disable-theme-animation="true"] .solid,
+        body[data-disable-theme-animation="true"] .solid::before,
+        body[data-disable-theme-animation="true"] .solid::after {
+            animation: none !important;
+        }
+
         .solid {
             background: ${theme.surfaceColor};
             background-image: ${theme.surfacePattern};
@@ -372,7 +382,7 @@ export function generateThemeCSS(theme: ThemePreset): string {
             }
 
             /* ─── Scanline Overlay ─── */
-            body::after {
+            body:not([data-disable-theme-animation="true"])::after {
                 content: "";
                 position: fixed;
                 inset: 0;
@@ -796,8 +806,18 @@ export function generateThemeCSS(theme: ThemePreset): string {
                 to { background-position: -100px 50px; }
             }
 
-            body {
-                animation: starry-drift 60s linear infinite;
+            /* Story 56: avoid continuous background animation on reduced-motion setups.
+               This effect is visual-only and should never force extra render work. */
+            @media (prefers-reduced-motion: no-preference) {
+                body:not([data-disable-theme-animation="true"]) {
+                    animation: starry-drift 180s linear infinite;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                body {
+                    animation: none !important;
+                }
             }
 
             /* ─── Panels: Minimalist Dark Glass with Neon Sidebars ─── */

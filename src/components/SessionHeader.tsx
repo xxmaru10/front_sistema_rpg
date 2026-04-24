@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { AtmosphericEffectType } from "./AtmosphericEffects";
 import {
@@ -89,45 +89,70 @@ export function SessionHeader({
     const [showLibrary, setShowLibrary] = useState(false);
     const [showBgMenu, setShowBgMenu] = useState(false);
     const [showEffectsMenu, setShowEffectsMenu] = useState(false);
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isMobilePerfMode, setIsMobilePerfMode] = useState(false);
+
+    useEffect(() => {
+        const viewportMedia = window.matchMedia("(max-width: 1024px)");
+        const coarsePointerMedia = window.matchMedia("(hover: none), (pointer: coarse)");
+        const syncMedia = () => setIsMobilePerfMode(viewportMedia.matches || coarsePointerMedia.matches);
+
+        syncMedia();
+        viewportMedia.addEventListener("change", syncMedia);
+        coarsePointerMedia.addEventListener("change", syncMedia);
+
+        return () => {
+            viewportMedia.removeEventListener("change", syncMedia);
+            coarsePointerMedia.removeEventListener("change", syncMedia);
+        };
+    }, []);
 
     if (!imageUrl && !isGM && !videoStream && !children) return null;
 
     const isArena = tabName === "ARENA";
+    const hasCoverBanner = Boolean(imageUrl && !isArena);
+    const isMobilePerfOutsideArena = isMobilePerfMode && !isArena;
+    const renderImageBanner = hasCoverBanner && !isMobilePerfOutsideArena;
+    const shellBorder = isArena
+        ? "none"
+        : isMobilePerfOutsideArena
+            ? "1px solid rgba(var(--accent-rgb), 0.14)"
+            : "1px solid rgba(var(--accent-rgb), 0.3)";
+    const shellShadow = isArena ? "none" : isMobilePerfOutsideArena ? "none" : "0 0 8px rgba(var(--accent-rgb), 0.16)";
+    const headerHeight = isArena
+        ? "300px"
+        : isMobilePerfOutsideArena
+            ? (hasCoverBanner ? "160px" : "136px")
+            : hasCoverBanner
+                ? "240px"
+                : "180px";
 
     return (
-        <div className="header-container" style={{
+        <div className={`header-container${isMobilePerfOutsideArena ? " mobile-perf-outside-arena" : ""}`} style={{
             position: 'relative',
             marginTop: '70px',
             width: '100%',
-            height: '300px',
+            height: headerHeight,
             zIndex: 101,
             overflow: 'visible',
-            borderTop: isArena ? 'none' : '3px solid var(--accent-color)',
-            borderBottom: isArena ? 'none' : '3px solid var(--accent-color)',
-            borderLeft: isArena ? 'none' : '3px solid var(--accent-color)',
-            borderRight: isArena ? 'none' : '3px solid var(--accent-color)',
+            borderTop: shellBorder,
+            borderBottom: shellBorder,
+            borderLeft: shellBorder,
+            borderRight: shellBorder,
             boxSizing: 'border-box',
-            boxShadow: isArena ? 'none' : '0 0 20px rgba(var(--accent-rgb), 0.6), inset 0 0 20px rgba(var(--accent-rgb), 0.2)',
-            transition: 'all 0.5s ease-in-out',
+            boxShadow: shellShadow,
+            transition: isMobilePerfOutsideArena ? 'none' : 'border-color 0.3s ease, box-shadow 0.3s ease',
             background: 'transparent'
         }}>
-            {imageUrl && !isArena ? (
-                <>
-                    <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        backgroundImage: `url(${imageUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                    }} />
-                    <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(8,8,8,1) 100%)',
-                        opacity: 0.8
-                    }} />
-                </>
+            {hasCoverBanner ? (
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: renderImageBanner
+                        ? `linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(8,8,8,0.92) 100%), url(${imageUrl})`
+                        : 'linear-gradient(180deg, rgba(var(--accent-rgb), 0.12) 0%, rgba(10, 10, 10, 0.92) 58%, rgba(8, 8, 8, 0.98) 100%)',
+                    backgroundSize: renderImageBanner ? 'cover, cover' : 'cover',
+                    backgroundPosition: renderImageBanner ? 'center, center' : 'center',
+                }} />
             ) : !isArena ? (
                 <div style={{
                     position: 'absolute',
@@ -149,6 +174,10 @@ export function SessionHeader({
                         height: auto !important;
                         min-height: 200px;
                         padding-bottom: 60px;
+                    }
+                    .header-container.mobile-perf-outside-arena {
+                        min-height: 150px;
+                        padding-bottom: 44px;
                     }
                     .gm-actions-top {
                         position: relative !important;
@@ -198,7 +227,7 @@ export function SessionHeader({
                                 background: 'rgba(0,0,0,0.6)',
                                 border: '1px solid var(--accent-color)',
                                 color: 'var(--accent-color)',
-                                backdropFilter: 'blur(4px)',
+                                backdropFilter: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -267,7 +296,7 @@ export function SessionHeader({
                                 background: 'rgba(0,0,0,0.6)',
                                 border: '1px solid rgba(var(--accent-rgb), 0.4)',
                                 color: 'var(--accent-color)',
-                                backdropFilter: 'blur(4px)',
+                                backdropFilter: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',

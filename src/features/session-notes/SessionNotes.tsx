@@ -1,5 +1,5 @@
 import { Book, Globe, Clock, Swords, Search, X, Filter, ChevronDown, RotateCw, Check } from "lucide-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { memo, useState, useRef, useEffect, useCallback } from "react";
 import { Character, SessionState } from "@/types/domain";
 import { useSessionNotes } from "./hooks/useSessionNotes";
 import { NotesTab } from "./components/NotesTab";
@@ -109,7 +109,7 @@ interface SessionNotesProps {
     onMentionNavigationConsumed?: () => void;
 }
 
-export function SessionNotes({
+function SessionNotesComponent({
     sessionId,
     userId,
     userRole,
@@ -899,3 +899,6 @@ export function SessionNotes({
         </div>
     );
 }
+
+export const SessionNotes = memo(SessionNotesComponent);
+SessionNotes.displayName = "SessionNotes";

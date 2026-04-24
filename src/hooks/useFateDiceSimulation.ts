@@ -163,6 +163,8 @@ interface SceneState {
     containerW: number;
     containerH: number;
     trapWalls: TrapWalls;
+    idleLastRenderAt: number;
+    visibilityPaused: boolean;
 }
 
 interface UseFateDiceSimulationProps {
@@ -485,6 +487,8 @@ export function useFateDiceSimulation({
                 containerW: W,
                 containerH: H,
                 trapWalls: computeTrapWalls(THREE, camera),
+                idleLastRenderAt: 0,
+                visibilityPaused: false,
             };
             sceneRef.current = state;
 
@@ -571,9 +575,22 @@ export function useFateDiceSimulation({
 
             function animate() {
                 if (!alive) return;
+                if (typeof document !== "undefined" && document.hidden) {
+                    state.visibilityPaused = true;
+                    state.animFrameId = 0;
+                    return;
+                }
+
+                state.visibilityPaused = false;
                 state.animFrameId = requestAnimationFrame(animate);
 
                 if (state.phase === "idle") {
+                    const now = performance.now();
+                    if (now - state.idleLastRenderAt < 33) {
+                        return;
+                    }
+                    state.idleLastRenderAt = now;
+
                     const t = Date.now() * 0.001;
                     state.dice.forEach((die, i) => {
                         die.angVel.x *= 0.995;
@@ -639,7 +656,23 @@ export function useFateDiceSimulation({
                 renderer.render(scene, camera);
             }
 
-            requestAnimationFrame(animate);
+            const handleVisibilityChange = () => {
+                if (!alive) return;
+                if (document.hidden) {
+                    state.visibilityPaused = true;
+                    return;
+                }
+                if (state.animFrameId === 0) {
+                    state.visibilityPaused = false;
+                    state.idleLastRenderAt = 0;
+                    state.animFrameId = requestAnimationFrame(animate);
+                }
+            };
+            document.addEventListener("visibilitychange", handleVisibilityChange);
+
+            if (!document.hidden) {
+                state.animFrameId = requestAnimationFrame(animate);
+            }
 
             // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             function startHold(cx: number, cy: number) {
@@ -751,6 +784,7 @@ export function useFateDiceSimulation({
                     window.clearTimeout(settleTimeoutRef.current);
                     settleTimeoutRef.current = null;
                 }
+                document.removeEventListener("visibilitychange", handleVisibilityChange);
                 window.removeEventListener("resize", onResize);
                 container.removeEventListener("mousedown",  onMouseDown);
                 container.removeEventListener("mousemove",  onMouseMove);

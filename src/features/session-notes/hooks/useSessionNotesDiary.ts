@@ -61,12 +61,6 @@ export function useSessionNotesDiary({
         };
     }, []);
 
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    });
-
     const privateNoteFolders = useMemo(() => {
         return (state.noteFolders || [])
             .filter(folder => isAuthor(folder.ownerId))
@@ -106,6 +100,21 @@ export function useSessionNotesDiary({
         }
         return list;
     }, [filteredNotesByTab, filterAuthor, worldFilters.authorId]);
+
+    const lastVisibleNoteId = filteredNotes.length > 0 ? filteredNotes[filteredNotes.length - 1].id : "";
+
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (!container) return;
+
+        const frameId = window.requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [lastVisibleNoteId, notesSubTab, filterAuthor, selectedPrivateFolderId]);
 
     const resolveInventoryCharacterId = () => {
         if (targetInventoryCharacterId && state.characters?.[targetInventoryCharacterId]) {

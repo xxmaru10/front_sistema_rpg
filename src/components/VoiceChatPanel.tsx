@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from "react";
 import { VoiceChatManager, VoicePeer, SessionParticipant } from "@/lib/VoiceChatManager";
-import { useProjectedState } from "@/lib/projectedStateStore";
+import { useProjectedCharacters } from "@/lib/projectedStateStore";
 import { Mic, MicOff, RefreshCw } from "lucide-react";
+import { logStory59 } from "@/lib/story59Debug";
 
 interface VoiceChatPanelProps {
     sessionId: string;
@@ -12,7 +13,81 @@ interface VoiceChatPanelProps {
     isMobile?: boolean;
 }
 
-export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = false }: VoiceChatPanelProps) {
+type VoiceActivitySnapshot = {
+    speaking: boolean;
+    audioLevel: number;
+};
+
+const EMPTY_VOICE_ACTIVITY: VoiceActivitySnapshot = Object.freeze({ speaking: false, audioLevel: 0 });
+const EMPTY_LOCAL_ACTIVITY: VoiceActivitySnapshot & { audioStatus: AudioContextState | 'closed' } = Object.freeze({
+    speaking: false,
+    audioLevel: 0,
+    audioStatus: 'closed',
+});
+
+interface VoiceActivityConsumerProps {
+    managerRef: React.RefObject<VoiceChatManager | null>;
+    managerEpoch: number;
+    peerId: string;
+    isMe: boolean;
+    children: (activity: VoiceActivitySnapshot) => React.ReactNode;
+}
+
+function VoiceActivityConsumer({ managerRef, managerEpoch, peerId, isMe, children }: VoiceActivityConsumerProps) {
+    const activity = useSyncExternalStore(
+        useCallback((onStoreChange) => {
+            const mgr = managerRef.current;
+            if (!mgr) return () => { };
+            return mgr.subscribeSpeakingState(onStoreChange);
+        }, [managerRef, managerEpoch]),
+        useCallback(() => {
+            const mgr = managerRef.current;
+            if (!mgr) return EMPTY_VOICE_ACTIVITY;
+            if (isMe) return mgr.getLocalSpeakingSnapshot();
+            return mgr.getPeerSpeakingSnapshot(peerId);
+        }, [managerRef, managerEpoch, isMe, peerId]),
+        () => EMPTY_VOICE_ACTIVITY
+    );
+
+    return <>{children(activity)}</>;
+}
+
+function areVoicePeersEqual(prev: VoicePeer[], next: VoicePeer[]): boolean {
+    if (prev.length !== next.length) return false;
+    const sortedPrev = [...prev].sort((a, b) => a.peerId.localeCompare(b.peerId));
+    const sortedNext = [...next].sort((a, b) => a.peerId.localeCompare(b.peerId));
+    for (let i = 0; i < sortedPrev.length; i += 1) {
+        const a = sortedPrev[i];
+        const b = sortedNext[i];
+        if (a.peerId !== b.peerId) return false;
+        if (a.stream !== b.stream) return false;
+        if (a.muted !== b.muted) return false;
+        if (Math.abs(a.volume - b.volume) > 0.001) return false;
+        if (a.inVoice !== b.inVoice) return false;
+    }
+    return true;
+}
+
+function areSessionParticipantsEqual(prev: SessionParticipant[], next: SessionParticipant[]): boolean {
+    if (prev.length !== next.length) return false;
+    const norm = (s: string) => (s || "").trim().toLowerCase().normalize("NFC");
+    const sortedPrev = [...prev].sort((a, b) => norm(a.userId).localeCompare(norm(b.userId)));
+    const sortedNext = [...next].sort((a, b) => norm(a.userId).localeCompare(norm(b.userId)));
+    for (let i = 0; i < sortedPrev.length; i += 1) {
+        const a = sortedPrev[i];
+        const b = sortedNext[i];
+        if (norm(a.userId) !== norm(b.userId)) return false;
+        if (a.inVoice !== b.inVoice) return false;
+        if ((a.characterId || "") !== (b.characterId || "")) return false;
+    }
+    return true;
+}
+
+function normalizeVoiceUserId(value: string): string {
+    return (value || "").trim().toLowerCase().normalize("NFC");
+}
+
+function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = false }: VoiceChatPanelProps) {
     const isBluetoothLabel = useCallback((label: string) => {
         const v = (label || "").toLowerCase();
         return v.includes("bluetooth") || v.includes("hands-free") || v.includes("hands free") || v.includes("hfp") || v.includes("airpods");
@@ -24,13 +99,11 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
     const [micVolume, setMicVolume] = useState(100); // 0-100
     const [peers, setPeers] = useState<VoicePeer[]>([]);
     const [participants, setParticipants] = useState<SessionParticipant[]>([]);
-    const [localSpeaking, setLocalSpeaking] = useState(false);
-    const [localAudioLevel, setLocalAudioLevel] = useState(0);
     const [isJoining, setIsJoining] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isManagerReady, setIsManagerReady] = useState(false);
+    const [managerEpoch, setManagerEpoch] = useState(0);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [audioStatus, setAudioStatus] = useState<any>('closed');
     const [showBluetoothWarning, setShowBluetoothWarning] = useState(true);
     const [audioInputDeviceId, setAudioInputDeviceId] = useState<string>('');
     const [audioOutputDeviceId, setAudioOutputDeviceId] = useState<string>('');
@@ -41,11 +114,45 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
     const hasAttemptedAutoJoin = useRef(false);
     const managerRef = useRef<VoiceChatManager | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
-    const speakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const wasConnectedBeforeRefresh = useRef(false);
+    const renderCountRef = useRef(0);
     // Persiste o último characterId conhecido por userId para evitar flicker
     // quando a presença chega com update parcial (sem characterId)
     const lastKnownCharacterIdRef = useRef<Map<string, string>>(new Map());
+
+    renderCountRef.current += 1;
+
+    useEffect(() => {
+        logStory59("VoiceChatPanel", "mount", { sessionId, userId, isMobile });
+        return () => logStory59("VoiceChatPanel", "unmount", { sessionId, userId, isMobile });
+    }, [sessionId, userId, isMobile]);
+
+    useEffect(() => {
+        logStory59("VoiceChatPanel", "render", {
+            count: renderCountRef.current,
+            isConnected,
+            peers: peers.length,
+            participants: participants.length,
+            isOpen,
+        });
+    });
+
+    const localVoice = useSyncExternalStore(
+        useCallback((onStoreChange) => {
+            const mgr = managerRef.current;
+            if (!mgr) return () => { };
+            return mgr.subscribeSpeakingState(onStoreChange);
+        }, [managerEpoch]),
+        useCallback(() => {
+            const mgr = managerRef.current;
+            if (!mgr) return EMPTY_LOCAL_ACTIVITY;
+            return mgr.getLocalSpeakingSnapshot();
+        }, [managerEpoch]),
+        () => EMPTY_LOCAL_ACTIVITY
+    );
+    const localSpeaking = localVoice.speaking;
+    const localAudioLevel = localVoice.audioLevel;
+    const audioStatus = localVoice.audioStatus;
 
     useEffect(() => {
         const savedInput = localStorage.getItem('voice_input_device');
@@ -110,6 +217,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
 
     // Diagnóstico Etapa 1: Sanitização de IDs
     useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
         console.log('[VoiceChatPanel] Mount Props Sync Check:', {
             sessionId: JSON.stringify(sessionId),
             userId: JSON.stringify(userId),
@@ -124,7 +232,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
 
     // Story 46 Prioridade 3: lê estado projetado do singleton (antes mantinha cópia local
     // de events[] + computeState próprio — um de 5 culpados do travamento mobile).
-    const state = useProjectedState();
+    const projectedCharacters = useProjectedCharacters();
 
     const getDisplayName = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
@@ -134,7 +242,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             return uid;
         }
 
-        const allChars = Object.values(state.characters);
+        const allChars = Object.values(projectedCharacters);
 
         // 1. Prioridade absoluta por charId
         if (charId) {
@@ -151,7 +259,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         const matchedChar = candidates.find(c => (c as any).activeInArena) ?? candidates[candidates.length - 1];
 
         return matchedChar ? matchedChar.name : uid;
-    }, [state.characters]);
+    }, [projectedCharacters]);
 
     const getCharacterImage = useCallback((uid: string, charId?: string) => {
         const uidLower = uid.trim().toLowerCase();
@@ -160,7 +268,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             return null;
         }
 
-        const allChars = Object.values(state.characters);
+        const allChars = Object.values(projectedCharacters);
 
         // 1. Prioridade por charId
         if (charId) {
@@ -178,7 +286,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         const matchedChar = candidates.find(c => (c as any).activeInArena) ?? candidates[candidates.length - 1];
 
         return matchedChar?.imageUrl || null;
-    }, [state.characters, userId]);
+    }, [projectedCharacters, userId]);
 
     // Inicializar manager
     useEffect(() => {
@@ -188,13 +296,15 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                     sessionId,
                     userId,
                     (updatedPeers) => {
-                        setPeers([...updatedPeers]);
+                        setPeers((prev) => (areVoicePeersEqual(prev, updatedPeers) ? prev : [...updatedPeers]));
                     },
                     (updatedParticipants) => {
                         // Log inline (não colapsável) para diagnóstico de characterId
-                        console.log('[VoiceChat] Presence Update:', JSON.stringify(
-                            updatedParticipants.map(u => ({ uid: u.userId, charId: u.characterId ?? 'MISSING' }))
-                        ));
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('[VoiceChat] Presence Update:', JSON.stringify(
+                                updatedParticipants.map(u => ({ uid: u.userId, charId: u.characterId ?? 'MISSING' }))
+                            ));
+                        }
 
                         // Persistir characterId válido no Map e restaurar quando vier undefined
                         // Evita flicker e cobre race condition do mount inicial sem ?c=
@@ -205,13 +315,15 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                             }
                             const known = lastKnownCharacterIdRef.current.get(p.userId);
                             if (known) {
-                                console.log(`[VoiceChat] Restoring charId from cache: ${p.userId} → ${known}`);
+                                if (process.env.NODE_ENV === 'development') {
+                                    console.log(`[VoiceChat] Restoring charId from cache: ${p.userId} → ${known}`);
+                                }
                                 return { ...p, characterId: known };
                             }
                             return p;
                         });
 
-                        setParticipants(withKnownIds);
+                        setParticipants((prev) => (areSessionParticipantsEqual(prev, withKnownIds) ? prev : withKnownIds));
                     },
                     characterId
                 );
@@ -219,61 +331,22 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                 manager.initialize();
                 managerRef.current = manager;
                 setIsManagerReady(true);
+                setManagerEpoch((prev) => prev + 1);
             }
         }, 300);
 
         return () => {
             clearTimeout(initTimer);
-            if (speakingPollRef.current) clearInterval(speakingPollRef.current);
             if (managerRef.current) {
                 const mgr = managerRef.current;
                 managerRef.current = null;
                 setIsManagerReady(false);
+                setManagerEpoch((prev) => prev + 1);
                 // Cleanup síncrono para garantir que nenhum canal fique aberto antes do próximo useEffect
                 mgr.disconnect();
             }
         };
     }, [sessionId, userId, refreshKey]);
-
-    // Poll speaking state para feedback visual — intervalo maior em mobile para reduzir carga
-    useEffect(() => {
-        if (isConnected) {
-            const pollInterval = isMobile ? 500 : 300;
-            speakingPollRef.current = setInterval(() => {
-                const mgr = managerRef.current;
-                if (mgr) {
-                    setLocalSpeaking(mgr.localSpeaking);
-                    setLocalAudioLevel(mgr.localAudioLevel);
-                    setAudioStatus(mgr.audioContextState);
-
-                    setPeers(prev => {
-                        let changed = false;
-                        const next = prev.map(p => {
-                            const isSpeaking = mgr.isPeerSpeaking(p.peerId);
-                            const audioLevel = mgr.getPeerAudioLevel(p.peerId);
-                            // Só marcar como alterado se a mudança for significativa (>5% no nível ou mudança no boolean)
-                            if (p.speaking !== isSpeaking || Math.abs(p.audioLevel - audioLevel) > 0.05) {
-                                changed = true;
-                                return { ...p, speaking: isSpeaking, audioLevel: audioLevel };
-                            }
-                            return p;
-                        });
-                        return changed ? next : prev;
-                    });
-                }
-            }, pollInterval);
-        } else {
-            if (speakingPollRef.current) {
-                clearInterval(speakingPollRef.current);
-                speakingPollRef.current = null;
-            }
-        }
-
-        return () => {
-            if (speakingPollRef.current) clearInterval(speakingPollRef.current);
-        };
-    }, [isConnected, isMobile]);
-
     // Fechar painel ao clicar fora
     useEffect(() => {
         const handleClickOutside = (e: any) => {
@@ -324,8 +397,6 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         setIsConnected(false);
         setMicMuted(false);
         setPeers([]);
-        setLocalSpeaking(false);
-        setLocalAudioLevel(0);
         localStorage.removeItem(`voice_autojoin_${sessionId}`);
     }, [sessionId]);
 
@@ -340,16 +411,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                 mgr.softReconnect();
                 setPeers([]);
                 setParticipants([]);
-                setLocalSpeaking(false);
-                setLocalAudioLevel(0);
             } else {
                 // Manager não existe — recriação completa necessária
                 wasConnectedBeforeRefresh.current = isConnected;
                 setIsConnected(false);
                 setPeers([]);
                 setParticipants([]);
-                setLocalSpeaking(false);
-                setLocalAudioLevel(0);
                 setRefreshKey((prev: number) => prev + 1);
             }
         } finally {
@@ -397,18 +464,21 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
     const handlePeerVolume = useCallback((peerId: string, vol: number) => {
         const mgr = managerRef.current;
         if (!mgr) return;
-        mgr.setPeerVolume(peerId, vol / 100);
+        const normalizedPeerId = normalizeVoiceUserId(peerId);
+        const resolvedPeerId = peers.find((p) => normalizeVoiceUserId(p.peerId) === normalizedPeerId)?.peerId ?? normalizedPeerId;
+        mgr.setPeerVolume(resolvedPeerId, vol / 100);
         setPeers(prev => prev.map(p =>
-            p.peerId === peerId ? { ...p, volume: vol / 100 } : p
+            normalizeVoiceUserId(p.peerId) === normalizedPeerId ? { ...p, volume: vol / 100 } : p
         ));
-    }, []);
+    }, [peers]);
 
     const handlePeerMute = useCallback((peerId: string) => {
         const mgr = managerRef.current;
         if (!mgr) return;
-        const peer = peers.find(p => p.peerId === peerId);
+        const normalizedPeerId = normalizeVoiceUserId(peerId);
+        const peer = peers.find((p) => normalizeVoiceUserId(p.peerId) === normalizedPeerId);
         if (peer) {
-            mgr.setPeerMuted(peerId, !peer.muted);
+            mgr.setPeerMuted(peer.peerId, !peer.muted);
         }
     }, [peers]);
 
@@ -440,7 +510,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             let resolvedCharId = isMe ? characterId : p.characterId;
             if (!resolvedCharId) {
                 const uidNorm = norm(p.userId);
-                const allCharsForUser = Object.values(state.characters).filter(c =>
+                const allCharsForUser = Object.values(projectedCharacters).filter(c =>
                     norm(c.ownerUserId) === uidNorm || norm(c.name) === uidNorm
                 );
                 // Bug 3: multi-owner — priorizar activeInArena, depois mais recente por id (fallback)
@@ -453,11 +523,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
 
             return {
                 id: p.userId,
+                voicePeerId: isMe ? userId : (peer?.peerId || p.userId),
                 characterId: resolvedCharId,
                 isMe,
                 inVoice: isMe ? isConnected : remoteInVoice,
-                speaking: isMe ? localSpeaking : (peer?.speaking || false),
-                audioLevel: isMe ? localAudioLevel : (peer?.audioLevel || 0),
                 volume: isMe ? micVolume : (peer ? Math.round(peer.volume * 100) : 100),
                 muted: isMe ? micMuted : (peer?.muted || false),
                 hasPeer: !!peer,
@@ -468,11 +537,10 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         if (!users.find(u => u.isMe)) {
             users.unshift({
                 id: userId,
+                voicePeerId: userId,
                 characterId,
                 isMe: true,
                 inVoice: isConnected,
-                speaking: localSpeaking,
-                audioLevel: localAudioLevel,
                 volume: micVolume,
                 muted: micMuted,
                 hasPeer: false,
@@ -489,7 +557,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
             if (b.isMe) return 1;
             return 0;
         });
-    }, [participants, peers, userId, characterId, isConnected, localSpeaking, localAudioLevel, micVolume, micMuted, state.characters]);
+    }, [participants, peers, userId, characterId, isConnected, micVolume, micMuted, projectedCharacters]);
 
     const voiceCount = allUsers.filter(u => u.inVoice).length;
 
@@ -853,8 +921,15 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                         )}
 
                         {allUsers.map(user => (
-                            <div
+                            <VoiceActivityConsumer
                                 key={user.id}
+                                managerRef={managerRef}
+                                managerEpoch={managerEpoch}
+                                peerId={user.voicePeerId}
+                                isMe={user.isMe}
+                            >
+                                {(activity) => (
+                            <div
                                 style={{
                                     padding: '12px 16px',
                                     borderBottom: '1px solid rgba(255,255,255,0.03)',
@@ -881,12 +956,12 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                                                     background: charImg
                                                         ? 'transparent'
                                                         : (user.inVoice
-                                                            ? (user.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
+                                                            ? (activity.speaking ? 'rgba(80, 200, 120, 0.35)' : 'rgba(80, 200, 120, 0.08)')
                                                             : 'rgba(255,255,255,0.04)'),
                                                     border: `2px solid ${user.inVoice
-                                                        ? (user.speaking ? '#50c878' : 'rgba(80, 200, 120, 0.3)')
+                                                        ? (activity.speaking ? '#50c878' : 'rgba(80, 200, 120, 0.3)')
                                                         : 'rgba(255,255,255,0.08)'}`,
-                                                    boxShadow: user.speaking
+                                                    boxShadow: activity.speaking
                                                         ? '0 0 10px rgba(80, 200, 120, 0.6), 0 0 20px rgba(80, 200, 120, 0.3)'
                                                         : 'none',
                                                     display: 'flex',
@@ -898,7 +973,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                                                 }}>
                                                     {charImg
                                                         ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        : (!user.inVoice ? '👤' : (user.muted ? '🔇' : (user.speaking ? '🔊' : '🎤')))
+                                                        : (!user.inVoice ? '👤' : (user.muted ? '🔇' : (activity.speaking ? '🔊' : '🎤')))
                                                     }
                                                 </div>
                                                 {/* Badge de mudo sobre avatar quando há imagem */}
@@ -920,16 +995,16 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                                                         height: '24px',
                                                         borderRadius: '50%',
                                                         background: user.inVoice
-                                                            ? (user.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)')
+                                                            ? (activity.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)')
                                                             : 'rgba(30, 30, 30, 0.95)',
-                                                        border: `1px solid ${user.inVoice ? (user.speaking ? '#50c878' : 'rgba(80,200,120,0.3)') : 'rgba(255,255,255,0.1)'}`,
+                                                        border: `1px solid ${user.inVoice ? (activity.speaking ? '#50c878' : 'rgba(80,200,120,0.3)') : 'rgba(255,255,255,0.1)'}`,
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         fontSize: '0.85rem',
                                                         fontFamily: 'var(--font-header)',
                                                         fontWeight: 'bold',
-                                                        color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
+                                                        color: activity.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
                                                     }}>
                                                         {displayName.charAt(0).toUpperCase()}
                                                     </span>
@@ -987,7 +1062,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
 
                                     {user.inVoice && !user.isMe && user.hasPeer && (
                                         <button
-                                            onClick={() => handlePeerMute(user.id)}
+                                            onClick={() => handlePeerMute(user.voicePeerId)}
                                             style={{
                                                 background: user.muted ? 'rgba(255, 77, 77, 0.15)' : 'transparent',
                                                 border: `1px solid ${user.muted ? 'rgba(255, 77, 77, 0.3)' : 'rgba(255,255,255,0.1)'}`,
@@ -1043,8 +1118,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                                         }}>
                                             <div style={{
                                                 height: '100%',
-                                                width: `${Math.round(user.audioLevel * 100)}%`,
-                                                background: user.audioLevel > 0.6 ? '#50c878' : (user.audioLevel > 0.3 ? 'var(--accent-color)' : 'rgba(var(--accent-rgb), 0.4)'),
+                                                width: `${Math.round(activity.audioLevel * 100)}%`,
+                                                background: activity.audioLevel > 0.6 ? '#50c878' : (activity.audioLevel > 0.3 ? 'var(--accent-color)' : 'rgba(var(--accent-rgb), 0.4)'),
                                                 transition: 'width 0.1s ease-out, background 0.3s',
                                                 borderRadius: '2px',
                                             }} />
@@ -1066,7 +1141,7 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                                             min="0"
                                             max="200"
                                             value={user.volume}
-                                            onChange={e => handlePeerVolume(user.id, parseInt(e.target.value))}
+                                            onChange={e => handlePeerVolume(user.voicePeerId, parseInt(e.target.value))}
                                             style={sliderTrackStyle}
                                             title={`Volume: ${user.volume}%`}
                                         />
@@ -1074,6 +1149,8 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                                     </div>
                                 )}
                             </div>
+                                )}
+                            </VoiceActivityConsumer>
                         ))}
                     </div>
 
@@ -1109,65 +1186,74 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
                         const charImg = getCharacterImage(user.id, user.characterId);
                         const displayName = getDisplayName(user.id, user.characterId);
                         return (
-                            <div
+                            <VoiceActivityConsumer
                                 key={`indicator-${user.id}`}
-                                title={displayName}
-                                style={{
-                                    position: 'relative',
-                                    width: '48px',
-                                    height: '48px',
-                                    borderRadius: '50%',
-                                    background: charImg
-                                        ? 'transparent'
-                                        : (user.speaking
-                                            ? 'rgba(80, 200, 120, 0.25)'
-                                            : 'rgba(30, 30, 30, 0.6)'),
-                                    border: `2px solid ${user.speaking ? '#50c878' : 'rgba(255,255,255,0.12)'}`,
-                                    boxShadow: user.speaking
-                                        ? '0 0 12px rgba(80, 200, 120, 0.7), 0 0 24px rgba(80, 200, 120, 0.3)'
-                                        : '0 2px 8px rgba(0,0,0,0.4)',
-                                    backdropFilter: 'blur(8px)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    overflow: 'hidden',
-                                    transition: 'all 0.2s ease',
-                                    pointerEvents: 'auto',
-                                    cursor: 'default',
-                                }}
+                                managerRef={managerRef}
+                                managerEpoch={managerEpoch}
+                                peerId={user.voicePeerId}
+                                isMe={user.isMe}
                             >
-                                {charImg
-                                    ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    : <span style={{
-                                        fontSize: '1.15rem',
-                                        fontFamily: 'var(--font-header)',
-                                        fontWeight: 'bold',
-                                        color: user.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
-                                    }}>{displayName.charAt(0).toUpperCase()}</span>
-                                }
-                                
-                                {charImg && (
-                                    <span style={{
-                                        position: 'absolute',
-                                        bottom: '1px',
-                                        right: '1px',
-                                        width: '18px',
-                                        height: '18px',
-                                        borderRadius: '50%',
-                                        background: user.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)',
-                                        border: `1px solid ${user.speaking ? '#50c878' : 'rgba(255,255,255,0.15)'}`,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '0.62rem',
-                                        fontWeight: 'bold',
-                                        color: user.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
-                                        zIndex: 2,
-                                    }}>
-                                        {displayName.charAt(0).toUpperCase()}
-                                    </span>
+                                {(activity) => (
+                                    <div
+                                        title={displayName}
+                                        style={{
+                                            position: 'relative',
+                                            width: '48px',
+                                            height: '48px',
+                                            borderRadius: '50%',
+                                            background: charImg
+                                                ? 'transparent'
+                                                : (activity.speaking
+                                                    ? 'rgba(80, 200, 120, 0.25)'
+                                                    : 'rgba(30, 30, 30, 0.6)'),
+                                            border: `2px solid ${activity.speaking ? '#50c878' : 'rgba(255,255,255,0.12)'}`,
+                                            boxShadow: activity.speaking
+                                                ? '0 0 12px rgba(80, 200, 120, 0.7), 0 0 24px rgba(80, 200, 120, 0.3)'
+                                                : '0 2px 8px rgba(0,0,0,0.4)',
+                                            backdropFilter: 'blur(8px)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            overflow: 'hidden',
+                                            transition: 'all 0.2s ease',
+                                            pointerEvents: 'auto',
+                                            cursor: 'default',
+                                        }}
+                                    >
+                                        {charImg
+                                            ? <img src={charImg} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            : <span style={{
+                                                fontSize: '1.15rem',
+                                                fontFamily: 'var(--font-header)',
+                                                fontWeight: 'bold',
+                                                color: activity.speaking ? '#50c878' : 'rgba(255,255,255,0.5)',
+                                            }}>{displayName.charAt(0).toUpperCase()}</span>
+                                        }
+
+                                        {charImg && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                bottom: '1px',
+                                                right: '1px',
+                                                width: '18px',
+                                                height: '18px',
+                                                borderRadius: '50%',
+                                                background: activity.speaking ? 'rgba(80, 200, 120, 0.9)' : 'rgba(30, 30, 30, 0.95)',
+                                                border: `1px solid ${activity.speaking ? '#50c878' : 'rgba(255,255,255,0.15)'}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '0.62rem',
+                                                fontWeight: 'bold',
+                                                color: activity.speaking ? '#fff' : 'rgba(255,255,255,0.6)',
+                                                zIndex: 2,
+                                            }}>
+                                                {displayName.charAt(0).toUpperCase()}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
-                            </div>
+                            </VoiceActivityConsumer>
                         );
                     })}
                 </div>
@@ -1183,3 +1269,17 @@ export function VoiceChatPanel({ sessionId, userId, characterId, isMobile = fals
         </>
     );
 }
+
+function areVoiceChatPanelPropsEqual(prev: VoiceChatPanelProps, next: VoiceChatPanelProps): boolean {
+    return (
+        prev.sessionId === next.sessionId &&
+        prev.userId === next.userId &&
+        prev.characterId === next.characterId &&
+        prev.isMobile === next.isMobile
+    );
+}
+
+export const VoiceChatPanel = React.memo(VoiceChatPanelComponent, areVoiceChatPanelPropsEqual);
+VoiceChatPanel.displayName = "VoiceChatPanel";
+
+

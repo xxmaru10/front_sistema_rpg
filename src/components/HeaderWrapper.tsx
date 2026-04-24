@@ -5,7 +5,7 @@ import { LogOut } from "lucide-react";
 import { usePathname, useParams, useSearchParams } from "next/navigation";
 import { VoiceChatPanel } from "@/components/VoiceChatPanel";
 import { TextChatPanel } from "@/components/TextChatPanel";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronUp, ChevronDown, Volume2, StickyNote, RefreshCw } from "lucide-react";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
 import { screenShareStore } from "@/lib/screenShareStore";
@@ -14,6 +14,7 @@ import { ThemeSelector } from "@/components/header/ThemeSelector";
 import { BattlemapToolbar } from "@/components/header/BattlemapToolbar";
 import { UnifiedSoundPanel } from "@/components/header/UnifiedSoundPanel";
 import { generateThemeCSS, getThemePreset } from "@/lib/themePresets";
+import { logStory59 } from "@/lib/story59Debug";
 
 type LocalThemePreference = {
     preset?: string;
@@ -61,6 +62,23 @@ export function HeaderWrapper() {
     const [showSoundPanel, setShowSoundPanel] = useState(false);
     const [hasScreenShare, setHasScreenShare] = useState(false);
     const [isMobileHeader, setIsMobileHeader] = useState(false);
+    const renderCountRef = useRef(0);
+
+    renderCountRef.current += 1;
+
+    useEffect(() => {
+        logStory59("HeaderWrapper", "mount", { sessionId: sessionId || "none" });
+        return () => logStory59("HeaderWrapper", "unmount", { sessionId: sessionId || "none" });
+    }, [sessionId]);
+
+    useEffect(() => {
+        logStory59("HeaderWrapper", "render", {
+            count: renderCountRef.current,
+            hasScreenShare,
+            showSoundPanel,
+            isMobileHeader,
+        });
+    });
 
     useEffect(() => {
         const media = window.matchMedia("(max-width: 768px)");

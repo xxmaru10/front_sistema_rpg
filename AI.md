@@ -1,9 +1,10 @@
 ---
 repo: frontend
 language: pt-BR
+last_updated: 2026-04-24 (story-62 aberta para isolar notebook fraco: transmissao inicia, voz falha e a sessao degrada)
 ---
 
-# Cronos Vtt — Frontend 
+# Cronos Vtt — Frontend
 
 > Sistema de Virtual Tabletop (VTT) focado em gerenciamento de sessões de RPG de mesa, inspirado em sistemas de rolagens narrativas, zonas, aspectos de cena, estresse e consequências (Fate Core/Accel). Utiliza uma arquitetura de Event Sourcing para manter a sincronia entre jogadores e mestre.
 
@@ -35,11 +36,21 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 
 ## Épicos ativos
 | Refatoração de Componentes | em andamento | `/epics/epic-01-refatoracao-modular.md` |
+| Battlemap: Camadas, Formas, Edição de Fundo e Grade | planejado | `/epics/epic-03-battlemap-camadas-formas-edicao-fundo-grade.md` |
 | Sincronização Voz WebRTC | em andamento | `/stories/story-05.md` |
 | Layout Perícias Cortadas | concluído | `/stories/story-06-corrigir-layout-pericias-cortadas.md` |
 | Sincronia de Notas de Sessão | concluído | `/stories/story-07-estabilizar-sincronia-notas.md` |
 | Seletor Multi-Dado (Caixa) | concluído | `/stories/story-44-seletor-multi-dado-com-clear-e-notacao-viva.md` |
 | Ocultar Rolagem do Mestre | concluído | `/stories/story-45-olho-ocultar-rolagem-do-mestre.md` |
+| Performance Geral (Transmissão, Voz, Render) | em-revisão | `/stories/story-54-performance-transmissao-voz-e-render-cpu-100.md` |
+| MusicPlayer Receiver YouTube (loop Playing/Buffering) | pronto | `/stories/story-55-musicplayer-receiver-youtube-idempotencia.md` |
+| Shell Visual Ficha/Notas (GPU idle 20% fora da arena) | em-revisão | `/stories/story-56-performance-shell-visual-ficha-notas.md` |
+| Nitidez de Texto na Transmissão (contentHint experimento) | em-revisão | `/stories/story-57-nitidez-texto-transmissao-content-hint.md` |
+| Performance Fora da Arena por Aba (Notas, Ficha, Header) | em-revisão | `/stories/story-58-performance-abas-ficha-notas-header.md` |
+| Re-renders em Cascata no Main Thread (MusicPlayer + DOM) | em-revisÃ£o | `/stories/story-59-rerender-cascata-musicplayer-main-thread.md` |
+| DOM Compacto Mobile e INP Sub-200ms | em-revisao | `/stories/story-60-dom-compacto-mobile-e-inp-sub-200ms.md` |
+| MusicPlayer setState fan-out + iframe YT desacoplado | concluida | `/stories/story-61-musicplayer-yt-setstate-fanout-e-iframe-desacoplado.md` |
+| Estabilizar transmissao com voz em notebook fraco | aberta | `/stories/story-62-estabilizar-transmissao-voz-notebook-fraco.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`

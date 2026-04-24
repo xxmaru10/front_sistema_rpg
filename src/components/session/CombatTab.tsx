@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Character, Aspect, ActionEvent } from "@/types/domain";
 import { ChevronLeft, ChevronRight, ScrollText, UserPlus, Skull, Zap, ListOrdered, Dices } from "lucide-react";
@@ -44,7 +44,7 @@ interface CombatTabProps {
     onOpenTurnOrder?: () => void;
 }
 
-export function CombatTab({
+function CombatTabComponent({
     sessionId,
     actorUserId,
     userRole,
@@ -716,5 +716,8 @@ export function CombatTab({
         </>
     );
 }
+
+export const CombatTab = memo(CombatTabComponent);
+CombatTab.displayName = "CombatTab";
 
 
