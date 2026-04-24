@@ -44,8 +44,9 @@ export interface ScreenShareManagerConfig {
 
 const SCREENSHARE_TIER_STORAGE_KEY = 'screenshare_tier';
 const DEBUG_SCREEN_SHARE_STORAGE_KEY = 'debugScreenShare';
-const QUALITY_MONITOR_INTERVAL_MS = 4000;
+const QUALITY_MONITOR_INTERVAL_MS = 3000;
 const QUALITY_PRESSURE_STREAK_TARGET = 2;
+const QUALITY_CPU_PRESSURE_STREAK_TARGET = 1;
 
 export class ScreenShareManager {
     private sessionId: string;
@@ -640,6 +641,9 @@ export class ScreenShareManager {
                     this.clearPeerFailure(peerId);
                 }
             }
+            if (this.isBroadcaster && pc.connectionState !== 'new' && pc.connectionState !== 'connecting') {
+                void this.rebalanceOutboundSenderBudgets();
+            }
         };
 
         if (this.isBroadcaster && this.localStream) {
@@ -649,41 +653,10 @@ export class ScreenShareManager {
                 if (this.localStream) pc.addTrack(track, this.localStream);
             });
 
-            // Set encoding params for video + audio.
-            // Vídeo é limitado agressivamente para preservar uplink da call de voz.
-            // Áudio recebe prioridade para manter inteligibilidade da transmissão.
             try {
-                const senders = pc.getSenders();
-                const adaptiveVideoBitrate = this.getAdaptiveBitrate();
-                const adaptiveAudioBitrate = this.getAdaptiveAudioBitrate();
-                for (const sender of senders) {
-                    if (sender.track?.kind === 'video') {
-                        const params = sender.getParameters();
-                        if (!params.encodings || params.encodings.length === 0) {
-                            params.encodings = [{}];
-                        }
-                        params.encodings[0].maxBitrate = adaptiveVideoBitrate;
-                        params.encodings[0].priority = 'high';
-                        params.encodings[0].networkPriority = 'high';
-                        params.encodings[0].maxFramerate = this.qualityTier === '720p' ? 24 : 30;
-                        try {
-                            if ('setDegradationPreference' in (sender as any)) {
-                                (sender as any).setDegradationPreference('balanced');
-                            }
-                        } catch (e) { /* ignore */ }
-                        await sender.setParameters(params);
-                    } else if (sender.track?.kind === 'audio') {
-                        const params = sender.getParameters();
-                        if (!params.encodings || params.encodings.length === 0) {
-                            params.encodings = [{}];
-                        }
-                        params.encodings[0].maxBitrate = adaptiveAudioBitrate;
-                        params.encodings[0].priority = 'high';
-                        (params.encodings[0] as any).networkPriority = 'high';
-                        (params.encodings[0] as any).dtx = 'disabled';
-                        await sender.setParameters(params);
-                    }
-                }
+                // Rebalance every sender whenever a new viewer enters so older
+                // peer connections do not keep oversized budgets.
+                await this.rebalanceOutboundSenderBudgets();
             } catch (e) {
                 console.warn('[WebRTC] Could not set encoding params:', e);
             }
@@ -929,6 +902,57 @@ export class ScreenShareManager {
         }
     }
 
+    private async rebalanceOutboundSenderBudgets() {
+        if (!this.isBroadcaster) return;
+
+        const tasks = Array.from(this.peerConnections.values()).map(async (pc) => {
+            if (pc.connectionState === 'closed' || pc.connectionState === 'failed') return;
+            await this.applySenderBudget(pc);
+        });
+
+        await Promise.allSettled(tasks);
+    }
+
+    private async applySenderBudget(pc: RTCPeerConnection) {
+        const adaptiveVideoBitrate = this.getAdaptiveVideoBitrate();
+        const adaptiveAudioBitrate = this.getAdaptiveAudioBitrate();
+        const targetFramerate = this.qualityTier === '720p' ? 24 : 30;
+
+        for (const sender of pc.getSenders()) {
+            if (sender.track?.kind === 'video') {
+                const params = sender.getParameters();
+                if (!params.encodings || params.encodings.length === 0) {
+                    params.encodings = [{}];
+                }
+                params.encodings[0].maxBitrate = adaptiveVideoBitrate;
+                params.encodings[0].priority = 'medium';
+                (params.encodings[0] as any).networkPriority = 'medium';
+                params.encodings[0].maxFramerate = targetFramerate;
+                try {
+                    if ('setDegradationPreference' in (sender as any)) {
+                        (sender as any).setDegradationPreference('balanced');
+                    }
+                } catch {
+                    // Ignore unsupported browsers
+                }
+                await sender.setParameters(params);
+                continue;
+            }
+
+            if (sender.track?.kind === 'audio') {
+                const params = sender.getParameters();
+                if (!params.encodings || params.encodings.length === 0) {
+                    params.encodings = [{}];
+                }
+                params.encodings[0].maxBitrate = adaptiveAudioBitrate;
+                params.encodings[0].priority = 'high';
+                (params.encodings[0] as any).networkPriority = 'high';
+                (params.encodings[0] as any).dtx = 'disabled';
+                await sender.setParameters(params);
+            }
+        }
+    }
+
     private async collectAndEvaluateQualityStats() {
         if (!this.isBroadcaster || !this.localStream || this.hasDowngraded) return;
 
@@ -970,7 +994,7 @@ export class ScreenShareManager {
         this.fpsPressureStreak = !cpuLimited && lowFps ? this.fpsPressureStreak + 1 : 0;
         this.droppedPressureStreak = !cpuLimited && !lowFps && highDroppedRatio ? this.droppedPressureStreak + 1 : 0;
 
-        if (this.cpuPressureStreak >= QUALITY_PRESSURE_STREAK_TARGET) {
+        if (this.cpuPressureStreak >= QUALITY_CPU_PRESSURE_STREAK_TARGET) {
             await this.downgradeTo720p('cpu');
             return;
         }
@@ -1019,9 +1043,10 @@ export class ScreenShareManager {
                 if (!params.encodings || params.encodings.length === 0) {
                     params.encodings = [{}];
                 }
+                params.encodings[0].maxBitrate = this.getAdaptiveVideoBitrate();
                 params.encodings[0].maxFramerate = maxFramerate;
-                params.encodings[0].priority = 'high';
-                params.encodings[0].networkPriority = 'high';
+                params.encodings[0].priority = 'medium';
+                (params.encodings[0] as any).networkPriority = 'medium';
                 try {
                     if ('setDegradationPreference' in (sender as any)) {
                         (sender as any).setDegradationPreference('balanced');
@@ -1037,25 +1062,39 @@ export class ScreenShareManager {
         await Promise.all(tasks);
     }
 
-    private getConnectedPeerCount(): number {
+    private getActivePeerCount(): number {
         let count = 0;
-        this.peerConnections.forEach(pc => { if (pc.connectionState === 'connected') count++; });
-        return count;
+        this.peerConnections.forEach((pc) => {
+            if (pc.connectionState !== 'closed' && pc.connectionState !== 'failed') {
+                count += 1;
+            }
+        });
+        return Math.max(1, count);
     }
 
-    private getAdaptiveBitrate(): number {
-        const peerCount = this.getConnectedPeerCount();
-        if (peerCount <= 2) return 1_800_000;
-        if (peerCount <= 5) return 1_200_000;
-        if (peerCount <= 8) return 900_000;
-        return 600_000;
+    private getAdaptiveVideoBitrate(): number {
+        const peerCount = this.getActivePeerCount();
+        if (this.qualityTier === '720p') {
+            if (peerCount <= 1) return 1_000_000;
+            if (peerCount <= 3) return 800_000;
+            if (peerCount <= 5) return 650_000;
+            if (peerCount <= 8) return 500_000;
+            return 350_000;
+        }
+
+        if (peerCount <= 1) return 1_500_000;
+        if (peerCount <= 3) return 1_100_000;
+        if (peerCount <= 5) return 850_000;
+        if (peerCount <= 8) return 650_000;
+        return 450_000;
     }
 
     private getAdaptiveAudioBitrate(): number {
-        const peerCount = this.getConnectedPeerCount();
-        if (peerCount <= 2) return 128_000;
-        if (peerCount <= 5) return 96_000;
-        if (peerCount <= 8) return 80_000;
-        return 64_000;
+        const peerCount = this.getActivePeerCount();
+        if (peerCount <= 1) return 112_000;
+        if (peerCount <= 3) return 96_000;
+        if (peerCount <= 5) return 80_000;
+        if (peerCount <= 8) return 64_000;
+        return 48_000;
     }
 }

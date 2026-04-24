@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-23 (story-61 planejada: instrumentar setState do MusicPlayer e desacoplar iframe YT do shell)
+last_updated: 2026-04-24 (story-62 aberta para isolar notebook fraco: transmissao inicia, voz falha e a sessao degrada)
 ---
 
 # Cronos Vtt — Frontend
@@ -50,6 +50,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Re-renders em Cascata no Main Thread (MusicPlayer + DOM) | em-revisÃ£o | `/stories/story-59-rerender-cascata-musicplayer-main-thread.md` |
 | DOM Compacto Mobile e INP Sub-200ms | em-revisao | `/stories/story-60-dom-compacto-mobile-e-inp-sub-200ms.md` |
 | MusicPlayer setState fan-out + iframe YT desacoplado | concluida | `/stories/story-61-musicplayer-yt-setstate-fanout-e-iframe-desacoplado.md` |
+| Estabilizar transmissao com voz em notebook fraco | aberta | `/stories/story-62-estabilizar-transmissao-voz-notebook-fraco.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`

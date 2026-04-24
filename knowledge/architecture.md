@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-23 (story-60 DOM compacto player + startTransition na troca de abas + memoizacao de tabs pesadas)
+last_updated: 2026-04-24 (screen share rebalanceia bitrate/prioridade por peer e reage mais cedo a pressao de CPU para preservar voz em notebooks fracos)
 status: ativo
 ---
 
@@ -29,6 +29,7 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | ProjeÃ§Ãµes no Cliente | Reduz carga no backend e permite UI instantÃ¢nea atravÃ©s de otimismo local. | 2026-02-15 |
 | WebRTC nativo | Suporte a Ã¡udio e vÃ­deo sem latÃªncia sem depender de serviÃ§os externos caros. | 2026-03-01 |
 | Tier Adaptativo de TransmissÃ£o | Compartilhamento de tela inicia em 1080p@30 e faz downgrade sticky para 720p@24 sob pressÃ£o de CPU (stats WebRTC), com override manual para 1080p. | 2026-04-23 |
+| OrÃ§amento AssimÃ©trico entre TransmissÃ£o e Voz | Screen share passou a rebalancear bitrate por peer e usar prioridade mÃ©dia no vÃ­deo, preservando prioridade alta para Ã¡udio e reagindo ao primeiro sinal consistente de CPU-limited no `qualityLimitationReason`. | 2026-04-24 |
 | Telemetria + Circuit Breaker por Peer (Screen Share) | InstrumentaÃ§Ã£o com `attemptId` por conexÃ£o, logs estruturados sob flag (`localStorage.debugScreenShare`) e breaker por peer (cooldown/hard stop) para interromper ciclos infinitos de recriaÃ§Ã£o WebRTC no broadcaster. | 2026-04-23 |
 | IdempotÃªncia do Receiver YouTube (MusicPlayer) | Sincronia remota do player YouTube passou a usar guards de drift (epsilon 2s) para `seekTo`, guards de estado para `playVideo`/`pauseVideo` e logs gated por flag (`localStorage.debugMusicPlayer`) para eliminar loops PLAYING/BUFFERING em receivers. | 2026-04-23 |
 | Sincronia de PresenÃ§a HÃ­brida | Uso combinado de WebRTC Signaling e Supabase Presence para limpar zombies e garantir lista de voz fiel. | 2026-03-31 |
