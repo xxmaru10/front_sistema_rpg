@@ -83,6 +83,10 @@ function areSessionParticipantsEqual(prev: SessionParticipant[], next: SessionPa
     return true;
 }
 
+function normalizeVoiceUserId(value: string): string {
+    return (value || "").trim().toLowerCase().normalize("NFC");
+}
+
 function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = false }: VoiceChatPanelProps) {
     const isBluetoothLabel = useCallback((label: string) => {
         const v = (label || "").toLowerCase();
@@ -460,18 +464,21 @@ function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = fa
     const handlePeerVolume = useCallback((peerId: string, vol: number) => {
         const mgr = managerRef.current;
         if (!mgr) return;
-        mgr.setPeerVolume(peerId, vol / 100);
+        const normalizedPeerId = normalizeVoiceUserId(peerId);
+        const resolvedPeerId = peers.find((p) => normalizeVoiceUserId(p.peerId) === normalizedPeerId)?.peerId ?? normalizedPeerId;
+        mgr.setPeerVolume(resolvedPeerId, vol / 100);
         setPeers(prev => prev.map(p =>
-            p.peerId === peerId ? { ...p, volume: vol / 100 } : p
+            normalizeVoiceUserId(p.peerId) === normalizedPeerId ? { ...p, volume: vol / 100 } : p
         ));
-    }, []);
+    }, [peers]);
 
     const handlePeerMute = useCallback((peerId: string) => {
         const mgr = managerRef.current;
         if (!mgr) return;
-        const peer = peers.find(p => p.peerId === peerId);
+        const normalizedPeerId = normalizeVoiceUserId(peerId);
+        const peer = peers.find((p) => normalizeVoiceUserId(p.peerId) === normalizedPeerId);
         if (peer) {
-            mgr.setPeerMuted(peerId, !peer.muted);
+            mgr.setPeerMuted(peer.peerId, !peer.muted);
         }
     }, [peers]);
 
@@ -516,6 +523,7 @@ function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = fa
 
             return {
                 id: p.userId,
+                voicePeerId: isMe ? userId : (peer?.peerId || p.userId),
                 characterId: resolvedCharId,
                 isMe,
                 inVoice: isMe ? isConnected : remoteInVoice,
@@ -529,6 +537,7 @@ function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = fa
         if (!users.find(u => u.isMe)) {
             users.unshift({
                 id: userId,
+                voicePeerId: userId,
                 characterId,
                 isMe: true,
                 inVoice: isConnected,
@@ -916,7 +925,7 @@ function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = fa
                                 key={user.id}
                                 managerRef={managerRef}
                                 managerEpoch={managerEpoch}
-                                peerId={user.id}
+                                peerId={user.voicePeerId}
                                 isMe={user.isMe}
                             >
                                 {(activity) => (
@@ -1053,7 +1062,7 @@ function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = fa
 
                                     {user.inVoice && !user.isMe && user.hasPeer && (
                                         <button
-                                            onClick={() => handlePeerMute(user.id)}
+                                            onClick={() => handlePeerMute(user.voicePeerId)}
                                             style={{
                                                 background: user.muted ? 'rgba(255, 77, 77, 0.15)' : 'transparent',
                                                 border: `1px solid ${user.muted ? 'rgba(255, 77, 77, 0.3)' : 'rgba(255,255,255,0.1)'}`,
@@ -1132,7 +1141,7 @@ function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = fa
                                             min="0"
                                             max="200"
                                             value={user.volume}
-                                            onChange={e => handlePeerVolume(user.id, parseInt(e.target.value))}
+                                            onChange={e => handlePeerVolume(user.voicePeerId, parseInt(e.target.value))}
                                             style={sliderTrackStyle}
                                             title={`Volume: ${user.volume}%`}
                                         />
@@ -1181,7 +1190,7 @@ function VoiceChatPanelComponent({ sessionId, userId, characterId, isMobile = fa
                                 key={`indicator-${user.id}`}
                                 managerRef={managerRef}
                                 managerEpoch={managerEpoch}
-                                peerId={user.id}
+                                peerId={user.voicePeerId}
                                 isMe={user.isMe}
                             >
                                 {(activity) => (
