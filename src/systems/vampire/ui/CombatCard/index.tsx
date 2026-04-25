@@ -194,25 +194,64 @@ export function VampireCombatCard({
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: isMirrored ? 0 : "auto", order: isMirrored ? -1 : 0, flexWrap: "wrap" }}>
-          {/* Compact stress display: PHYSICAL, MENTAL, BLOOD */}
-          <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+          {/* Compact stress display — styled like Fate CombatStressTracks */}
+          <div style={{
+            display: "flex", gap: "16px", alignItems: "center",
+            background: "radial-gradient(circle at 22% 34%,rgba(255,255,255,0.09) 0%,transparent 42%),radial-gradient(circle at 78% 68%,rgba(255,255,255,0.06) 0%,transparent 45%),linear-gradient(to right,rgba(0,0,0,0.6) 0%,rgba(0,0,0,0.3) 55%,transparent 100%)",
+            backdropFilter: "blur(14px) saturate(1.08)",
+            border: "1px solid rgba(var(--accent-rgb),0.52)",
+            borderRadius: "8px",
+            padding: "6px 14px",
+            boxShadow: "0 12px 28px rgba(0,0,0,0.68),inset 0 0 14px rgba(255,255,255,0.04)",
+            transform: "translateY(-2px)",
+          }}>
             {[
-              { boxes: physicalBoxes, vals: physicalValues, track: "PHYSICAL", color: "#d4a269" },
-              { boxes: mentalBoxes, vals: mentalValues, track: "MENTAL", color: "#d79ab9" },
-              { boxes: bloodBoxes, vals: bloodValues, track: "BLOOD", color: BLOOD_ACCENT },
-            ].map(({ boxes, vals, track, color }) => (
-              <div key={track} style={{ display: "flex", gap: "3px" }}>
-                {boxes.map((marked, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleStressToggle(track, i, marked)}
-                    disabled={!canEditSelf}
-                    style={{ width: "22px", height: "22px", borderRadius: "50%", border: `1.5px solid ${color}`, background: marked ? color : "rgba(0,0,0,0.5)", color: marked ? "#fff" : color, fontSize: "0.62rem", fontWeight: 700, cursor: canEditSelf ? "pointer" : "default" }}
-                  >
-                    {getVal(vals, i)}
-                  </button>
-                ))}
-              </div>
+              { boxes: physicalBoxes, vals: physicalValues, track: "PHYSICAL", color: "#e87070", iconUrl: "url('/interface/fisico.png')", accentRgb: "var(--accent-rgb)" },
+              { boxes: mentalBoxes, vals: mentalValues, track: "MENTAL", color: "#b59cff", iconUrl: "url('/interface/mental.png')", accentRgb: "var(--accent-rgb)" },
+              { boxes: bloodBoxes, vals: bloodValues, track: "BLOOD", color: BLOOD_ACCENT, iconUrl: null, emoji: "🩸" },
+            ].map(({ boxes, vals, track, color, iconUrl, emoji }, ti) => (
+              <React.Fragment key={track}>
+                {ti > 0 && <div style={{ width: "1px", height: "20px", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  {/* Track icon */}
+                  {iconUrl ? (
+                    <span style={{
+                      display: "inline-flex", width: "18px", height: "18px", flexShrink: 0,
+                      backgroundColor: color,
+                      WebkitMaskImage: iconUrl, maskImage: iconUrl,
+                      WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                      WebkitMaskPosition: "center", maskPosition: "center",
+                      WebkitMaskSize: "contain", maskSize: "contain",
+                      filter: "drop-shadow(0 0 5px currentColor)",
+                    }} />
+                  ) : (
+                    <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{emoji}</span>
+                  )}
+                  {/* Stress circles */}
+                  <div style={{ display: "flex", gap: "4px", flexWrap: "nowrap" }}>
+                    {boxes.map((marked, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleStressToggle(track, i, marked)}
+                        disabled={!canEditSelf}
+                        style={{
+                          width: "22px", height: "22px", borderRadius: "50%", border: "none",
+                          background: marked
+                            ? `linear-gradient(145deg,${color}ee,${color}aa)`
+                            : "linear-gradient(145deg,rgba(255,255,255,0.14),rgba(255,255,255,0.02))",
+                          color: marked ? "#000" : color,
+                          fontSize: "0.65rem", fontWeight: 700,
+                          cursor: canEditSelf ? "pointer" : "default",
+                          boxShadow: marked ? `0 0 8px ${color}88` : "none",
+                          transition: "all 0.18s",
+                        }}
+                      >
+                        {getVal(vals, i)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </React.Fragment>
             ))}
           </div>
           {onToggleDiceRoller && isOwner && !isGM && (

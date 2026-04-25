@@ -19,8 +19,8 @@ const TRACKS = [
     key: "physical" as const,
     eventKey: "PHYSICAL",
     label: "FÍSICO",
-    symbol: "🥊",
-    accent: "#e74c3c",
+    iconUrl: "url('/interface/fisico.png')",
+    accent: "#e87070",
     border: "rgba(231, 76, 60, 0.22)",
     bg: "linear-gradient(180deg, rgba(231, 76, 60, 0.07), rgba(255, 255, 255, 0.015))",
     activeNode: "linear-gradient(180deg, rgba(235, 80, 65, 0.85), rgba(180, 35, 25, 0.92))",
@@ -29,8 +29,8 @@ const TRACKS = [
     key: "mental" as const,
     eventKey: "MENTAL",
     label: "MENTAL",
-    symbol: "🧠",
-    accent: "#3498db",
+    iconUrl: "url('/interface/mental.png')",
+    accent: "#b59cff",
     border: "rgba(52, 152, 219, 0.22)",
     bg: "linear-gradient(180deg, rgba(52, 152, 219, 0.07), rgba(255, 255, 255, 0.015))",
     activeNode: "linear-gradient(180deg, rgba(60, 160, 225, 0.85), rgba(25, 90, 160, 0.92))",
@@ -39,7 +39,7 @@ const TRACKS = [
     key: "blood" as const,
     eventKey: "BLOOD",
     label: "SANGUE",
-    symbol: "🩸",
+    iconUrl: null as string | null,
     accent: "#c0392b",
     border: "rgba(192,57,43,0.22)",
     bg: "linear-gradient(180deg,rgba(192,57,43,0.07),rgba(255,255,255,0.015))",
@@ -105,7 +105,7 @@ export function VampireVitality({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
       {/* Fate Points */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(0,0,0,0.18)", border: "1px solid rgba(var(--accent-rgb),0.12)", borderRadius: "14px", padding: "10px 14px" }}>
         <span style={{ fontSize: "0.7rem", letterSpacing: "0.22em", color: "rgba(var(--accent-rgb),0.88)" }}>PONTOS DE DESTINO</span>
@@ -143,10 +143,22 @@ export function VampireVitality({
               padding: "10px 14px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontSize: "0.78rem" }}>{t.symbol}</span>
-                <span style={{ fontSize: "0.68rem", letterSpacing: "0.22em", color: t.accent }}>{t.label}</span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {t.iconUrl ? (
+                  <span style={{
+                    display: "inline-flex", width: "20px", height: "20px", flexShrink: 0,
+                    backgroundColor: t.accent,
+                    WebkitMaskImage: t.iconUrl, maskImage: t.iconUrl,
+                    WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                    WebkitMaskPosition: "center", maskPosition: "center",
+                    WebkitMaskSize: "contain", maskSize: "contain",
+                    filter: `drop-shadow(0 0 5px ${t.accent}88)`,
+                  }} />
+                ) : (
+                  <span style={{ fontSize: "1rem", lineHeight: 1 }}>🩸</span>
+                )}
+                <span style={{ fontSize: "0.68rem", letterSpacing: "0.22em", color: t.accent, fontWeight: 700 }}>{t.label}</span>
               </div>
               {isGM && (
                 <div style={{ display: "flex", gap: "4px" }}>

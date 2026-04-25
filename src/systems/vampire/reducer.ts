@@ -152,9 +152,15 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
 
     // ── Skills ───────────────────────────────────────────────────────────────
     case "CHARACTER_SKILL_UPDATED": {
-      return patchSd(state, p.characterId, (data) => ({
-        skills: { ...data.skills, [p.skill]: p.rank },
-      }));
+      // Keep both systemData.skills AND the flat character.skills in sync so that
+      // generic components (SkillsSection) that read the flat field stay current.
+      const char = state.characters[p.characterId];
+      if (!char) return state;
+      const data = sd(char);
+      const newSkills = { ...data.skills, [p.skill]: p.rank };
+      const nextData: VampireSystemData = { ...data, skills: newSkills };
+      const nextChar: VampireCharacter = { ...char, systemData: nextData, skills: newSkills } as VampireCharacter;
+      return { ...state, characters: { ...state.characters, [p.characterId]: nextChar } };
     }
 
     case "SKILL_RESOURCE_INIT": {
