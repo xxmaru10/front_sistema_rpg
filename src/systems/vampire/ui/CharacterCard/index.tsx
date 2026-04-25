@@ -11,7 +11,7 @@ import { VampireVitality } from "./VampireVitality";
 import { VampireHungerConsequences } from "./VampireHungerConsequences";
 import { VampireDisciplines } from "./VampireDisciplines";
 import { CharacterConsequences } from "@/components/CharacterCard/CharacterConsequences";
-import { SkillsSection } from "@/components/CharacterCard/SkillsSection";
+import { VampireSkillsSection } from "./VampireSkillsSection";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
 
 interface VampireCharacterCardProps {
@@ -284,8 +284,11 @@ export default function VampireCharacterCard({
         )}
 
         {tab === "skills" && (
-          <SkillsSection
-            character={{ ...character, skills: data.skills ?? {} } as any}
+          <VampireSkillsSection
+            skills={data.skills ?? {}}
+            skillResources={(character as any).skillResources}
+            consequences={data.consequences ?? {}}
+            characterId={character.id}
             sessionId={sessionId}
             actorUserId={userId}
             canEdit={canEdit}
