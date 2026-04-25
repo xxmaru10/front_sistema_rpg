@@ -17,7 +17,7 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
     const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
 
     const handleInitResource = (skill: string) => {
-        const initialMax = character.skills[skill] || 0;
+        const initialMax = character.skills?.[skill] || 0;
         if (initialMax <= 0) return;
 
         globalEventStore.append({
@@ -79,7 +79,7 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
         let totalDebuff = 0;
         const slots: ("mild" | "mild2" | "moderate" | "severe")[] = ["mild", "mild2", "moderate", "severe"];
         for (const slot of slots) {
-            const consData = character.consequences[slot];
+            const consData = character.consequences?.[slot];
             if (consData?.debuff?.skill === skillName && consData.debuff.value) {
                 totalDebuff += consData.debuff.value;
             }
@@ -91,7 +91,7 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
         <div className="skills-section">
                             <h4 className="section-title">✦ PERÍCIAS ✦</h4>
                             <div className="skills-grid">
-                                {DEFAULT_SKILLS.map(skill => ({ skill, level: character.skills[skill] || 0 }))
+                                {DEFAULT_SKILLS.map(skill => ({ skill, level: character.skills?.[skill] || 0 }))
                                     .sort((a, b) => {
                                         if (b.level !== a.level) return b.level - a.level;
                                         return a.skill.localeCompare(b.skill);

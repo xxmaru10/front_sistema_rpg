@@ -199,7 +199,7 @@ export function InventorySection({
         let currentItem: Item;
 
         if (containerId) {
-            const container = character.inventory.find(i => i.id === containerId);
+            const container = (character.inventory || []).find(i => i.id === containerId);
             currentItem = container?.contents?.[index] || createEmptyInventorySlot();
         } else {
             currentItem = character.inventory?.[index] || createEmptyInventorySlot();
@@ -223,7 +223,7 @@ export function InventorySection({
         // Slot level restriction check
         let slotMaxSize: string | undefined;
         if (inventoryModal.containerId) {
-            const container = character.inventory.find(i => i.id === inventoryModal.containerId);
+            const container = (character.inventory || []).find(i => i.id === inventoryModal.containerId);
             slotMaxSize = container?.contents?.[inventoryModal.index]?.maxSize;
         } else {
             slotMaxSize = character.inventory?.[inventoryModal.index]?.maxSize;
@@ -257,7 +257,7 @@ export function InventorySection({
         };
 
         if (inventoryModal.containerId) {
-            const container = character.inventory.find(i => i.id === inventoryModal.containerId);
+            const container = (character.inventory || []).find(i => i.id === inventoryModal.containerId);
             if (container) {
                 const newContents = [...(container.contents || [])];
                 while (newContents.length <= inventoryModal.index) {
@@ -378,7 +378,7 @@ export function InventorySection({
 
     const handleUpdateItemQuantity = (index: number, delta: number, containerId: string | null = null) => {
         if (containerId) {
-            const container = character.inventory.find(i => i.id === containerId);
+            const container = (character.inventory || []).find(i => i.id === containerId);
             if (!container) return;
 
             const currentItem = container.contents?.[index];
@@ -429,7 +429,7 @@ export function InventorySection({
 
     const handleClearInventorySlot = (index: number, containerId: string | null = null) => {
         if (containerId) {
-            const container = character.inventory.find(i => i.id === containerId);
+            const container = (character.inventory || []).find(i => i.id === containerId);
             if (!container) return;
 
             const targetItem = container.contents?.[index];

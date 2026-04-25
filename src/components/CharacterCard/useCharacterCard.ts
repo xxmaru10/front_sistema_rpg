@@ -357,7 +357,7 @@ export function useCharacterCard({
     const handleConsequenceChange = (slot: string, value: string | null, debuff?: ConsequenceDebuff) => {
         if (!canEdit) return;
         if (value === null) {
-            const currentData = character.consequences[slot];
+            const currentData = character.consequences?.[slot];
             setConsequenceModal({
                 slot,
                 current: currentData?.text || "",
