@@ -1,6 +1,7 @@
 import type { ActionEvent, SessionState, Character } from "@/types/domain";
 import type { VampireCharacter, VampireSystemData, Discipline } from "./types";
 import { migrateLegacyVampireCharacter } from "./migrations";
+import { createVampireCharacter } from "./characterTemplate";
 import { VAMPIRE_SKILLS } from "./utils";
 
 function clamp(v: number, min: number, max: number): number {
@@ -51,21 +52,31 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
   switch (type) {
     // ── Character lifecycle ───────────────────────────────────────────────────
     case "CHARACTER_CREATED": {
-      const char: VampireCharacter = {
-        ...p,
-        activeInArena: p.activeInArena ?? false,
-        fatePoints: p.fatePoints ?? 3,
-        stress: p.stress ?? { blood: [false, false, false] },
-        skills: p.skills ?? VAMPIRE_SKILLS.reduce<Record<string, number>>((a, sk) => ({ ...a, [sk]: 0 }), {}),
-        consequences: p.consequences ?? {},
-        inventory: p.inventory ?? [],
-        stunts: p.stunts ?? [],
-        spells: [],
-        magicLevel: 0,
+      // The generic CharacterCreator emits a Fate-shaped payload (Fate skills,
+      // 2-track stress, mild/moderate/severe consequences). For the vampire
+      // system we throw away that Fate shape and rebuild the character from
+      // the vampire template, preserving only identity/role fields and any
+      // explicit overrides the caller actually intended (e.g. NPC presets that
+      // already supplied vampire-shaped data via systemData).
+      const callerProvidedSystemData = p.systemData && typeof p.systemData === "object" && Object.keys(p.systemData).length > 0;
+      const overrides: Partial<Character> = {
+        id: p.id,
+        name: p.name ?? "Novo Vampiro",
+        ownerUserId: p.ownerUserId ?? "",
+        isNPC: p.isNPC ?? false,
+        npcType: p.npcType,
+        religionId: p.religionId,
         source: p.source ?? "active",
-        systemData: p.systemData ?? {},
-      } as VampireCharacter;
-      return { ...state, characters: { ...state.characters, [p.id]: migrateLegacyVampireCharacter(char) } };
+        scope: p.scope,
+        activeInArena: p.activeInArena ?? false,
+      } as Partial<Character>;
+      let char = createVampireCharacter(overrides);
+      // If a caller explicitly provided vampire-shaped systemData (e.g. import
+      // flow), respect it via the migration path.
+      if (callerProvidedSystemData) {
+        char = migrateLegacyVampireCharacter({ ...char, ...p } as Character) as VampireCharacter;
+      }
+      return { ...state, characters: { ...state.characters, [p.id]: char } };
     }
 
     case "CHARACTER_DELETED": {
