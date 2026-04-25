@@ -25,6 +25,7 @@ import { VIControlPanel } from "@/components/VIControlPanel";
 import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";
+import { loadSystem } from "@/systems/registry";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
 import { DamageResolutionModal } from "@/components/DamageResolutionModal";
 import { AtmosphericEffects } from "@/components/AtmosphericEffects";
@@ -205,6 +206,13 @@ export default function SessionPage() {
     // â”€â”€â”€ EARLY PROJECTION (feeds useVictoryDefeat before full derivations) â”€â”€â”€â”€
     // Story 46 Prioridade 3: lÃª do projectedStateStore em vez de recomputar localmente.
     const _earlyState = useProjectedState();
+
+    // ─── PLUGIN PRÉ-LOAD ─────────────────────────────────────────────────────
+    const [systemReady, setSystemReady] = useState(false);
+    useEffect(() => {
+        const system = _earlyState.system ?? "fate";
+        loadSystem(system).then(() => setSystemReady(true)).catch(() => setSystemReady(true));
+    }, [_earlyState.system]);
 
     const _activePlayers = useMemo(() =>
         Object.values(_earlyState.characters).filter((c: any) => !c.isNPC),
@@ -555,7 +563,7 @@ export default function SessionPage() {
 
     // â”€â”€â”€ LOADING SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    if (isLoading) {
+    if (isLoading || !systemReady) {
         return (
             <div style={{
                 position: "fixed", inset: 0, display: "flex", flexDirection: "column",
@@ -572,7 +580,7 @@ export default function SessionPage() {
                     color: "var(--text-secondary, #aaa)", fontSize: "14px",
                     letterSpacing: "0.08em", fontFamily: "inherit",
                 }}>
-                    Carregando dados...
+                    {!systemReady ? "Carregando sistema..." : "Carregando dados..."}
                 </span>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>

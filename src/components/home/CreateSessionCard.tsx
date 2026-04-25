@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { AVAILABLE_SYSTEMS } from "@/systems/registry";
 
 interface CreateSessionCardProps {
     userName: string;
@@ -9,6 +10,8 @@ interface CreateSessionCardProps {
     setCustomGmCode: (v: string) => void;
     customPlayerCode: string;
     setCustomPlayerCode: (v: string) => void;
+    selectedSystem: string;
+    setSelectedSystem: (v: string) => void;
     onCreate: () => void;
     isLoading: boolean;
 }
@@ -22,6 +25,8 @@ export function CreateSessionCard({
     setCustomGmCode,
     customPlayerCode,
     setCustomPlayerCode,
+    selectedSystem,
+    setSelectedSystem,
     onCreate,
     isLoading
 }: CreateSessionCardProps) {
@@ -59,6 +64,15 @@ export function CreateSessionCard({
                             value={customPlayerCode}
                             onChange={(e) => setCustomPlayerCode(e.target.value)}
                         />
+                        <select
+                            className="mystic-input"
+                            value={selectedSystem}
+                            onChange={(e) => setSelectedSystem(e.target.value)}
+                        >
+                            {AVAILABLE_SYSTEMS.map((s) => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
                     </div>
 
                      <button 

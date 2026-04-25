@@ -1,4 +1,4 @@
-﻿---
+---
 title: Arquitetura do Sistema
 description: VisÃ£o geral das decisÃµes de design, padrÃµes e estrutura baseada em Event Sourcing.
 tags: [arquitetura, decisÃµes, padrÃµes, eventsourcing]
@@ -258,11 +258,13 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Logs de diagnostico sob flag**: logs de render/mount da Story 59 foram adicionados em `HeaderWrapper`, `UnifiedSoundPanel`, `MusicPlayer` e `VoiceChatPanel` com gate por `localStorage.debugStory59 = "1"`.
 - **Subtrees pesadas do header memoizadas**: `VoiceChatPanel`, `UnifiedSoundPanel` e `MusicPlayer` receberam `React.memo` com comparacao explicita de props para isolar re-renders vindos do `HeaderWrapper`.
 
-## Registro de Decisoes (Story 60)
-- **DOM compacto no modo PLAYER**: `CharactersTab` deixou de montar `CharacterCard` para todos os PCs e agora monta apenas a ficha vinculada ao jogador (`fixedCharacterId`, com fallback por `ownerUserId`), eliminando cards ocultos sem funcao.
-- **Troca de abas como transicao concorrente**: navegacao lateral e navegacao por mencao passaram a usar `startTransition` antes de alterar `activeTab`, reduzindo blocos sincronos longos no main thread durante mount de abas pesadas.
-- **Memoizacao de componentes de alto custo**: `CharacterCard`, `CharacterSummary`, `SessionNotes` e `CombatTab` passaram para `React.memo`; callbacks principais em `page.tsx` e `CharactersTab` foram estabilizados para aumentar reaproveitamento de render.
-- **Kill-switch de animacao de tema mantido para mobile**: a Story 60 reaproveita o gate existente por `data-disable-theme-animation` (ativado em touch/mobile e fora da arena), sem introduzir nova camada de animacao no fluxo mobile.
+## Registro de Decisões (Story 65)
+- **Extensão via SystemPlugin**: O sistema Vampire foi implementado como o segundo plugin oficial (`src/systems/vampire/`), provando a viabilidade da interface `SystemPlugin` para extensões homebrew complexas sem tocar no core do Fate ou na plataforma.
+- **Trilha de Estresse de Sangue**: Reuso dos eventos genéricos de estresse (`STRESS_MARKED`, etc.) com o rótulo `track: "BLOOD"`, tratado exclusivamente no reducer de Vampiro.
+- **Consequências de Fome**: Implementação de uma segunda coluna de consequências ("Fome") com tipos de evento próprios (`VAMPIRE_HUNGER_CONSEQUENCE_*`) para evitar conflitos com a mecânica de consequências padrão do Fate.
+- **Geração em Algarismo Romano**: Campo `generation` (1-13) renderizado via helper `toRoman` na ficha e cards da arena, com edição restrita ao Mestre (GM).
+- **Disciplinas em vez de Magias**: A aba de Magias foi substituída por Disciplinas, removendo o conceito de barras de nível roxas e utilizando o campo `disciplines: Discipline[]` no estado do personagem.
+- **Eliminação Híbrida**: A regra `isCharacterEliminated` foi customizada para considerar o preenchimento total de ambas as colunas (Consequências + Fome), garantindo paridade com a letalidade do cenário de Vampiro.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.

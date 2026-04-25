@@ -17,11 +17,13 @@ export interface SessionData {
     id: string;
     name: string;
     gmUserId: string;
+    system?: string;
 }
 
 export interface SessionJoinInfo {
     gmCode: string;
     playerCode: string;
+    system: string;
     characters: any[];
 }
 

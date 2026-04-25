@@ -4,11 +4,14 @@
  * Contains the initial state and the 'reduce' function that processes each ActionEvent.
  * @note: This is a synthesis guide for architectural understanding.
  */
-import { ActionEvent, SessionState, Character, Aspect, DEFAULT_SKILLS, StressTrackValues, Note, EntityNote } from "@/types/domain";
+import { ActionEvent, SessionState, Character, Aspect, Note, EntityNote } from "@/types/domain";
+import { DEFAULT_SKILLS, StressTrackValues } from "@/systems/fate/types";
+import { getCachedSystem } from "@/systems/registry";
 
 /** The initial state for a new game session */
 export const initialState: SessionState = {
     id: "",
+    system: "fate",
     seats: [],
     characters: {},
     aspects: {},
@@ -77,7 +80,7 @@ function clearFolderIdFromNotes(notes: Note[], folderId: string): Note[] {
     return notes.map(note => note.folderId === folderId ? { ...note, folderId: undefined } : note);
 }
 
-export function reduce(state: SessionState, event: ActionEvent): SessionState {
+function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState {
     const { type, payload } = event;
 
     // Safety check: if payload is somehow missing (e.g., stripped by Supabase Realtime size limits),
@@ -1261,6 +1264,11 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
     }
 }
 
+export function reduce(state: SessionState, event: ActionEvent): SessionState {
+    const plugin = getCachedSystem(state.system ?? "fate");
+    if (plugin) return plugin.reducer(state, event);
+    return reduceFateLegacy(state, event);
+}
 
 export function computeState(events: ActionEvent[], baseState?: SessionState): SessionState {
   return events.reduce(reduce, baseState ?? initialState);
