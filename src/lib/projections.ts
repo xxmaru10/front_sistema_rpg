@@ -92,7 +92,12 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
 
     switch (type) {
         case "SESSION_CREATED":
-            return { ...state, id: payload.sessionId, name: payload.name };
+            return {
+                ...state,
+                id: payload.sessionId,
+                name: payload.name,
+                system: payload.system ?? state.system,
+            };
 
         case "TURN_GRANTED":
             return { ...state, currentTurnUserId: payload.userId };

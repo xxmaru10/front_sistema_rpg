@@ -396,7 +396,7 @@ export type WorldEntity = {
 };
 
 export type ActionEvent =
-  | EventEnvelope<"SESSION_CREATED", { sessionId: string; name?: string; gmCode?: string; playerCode?: string }>
+  | EventEnvelope<"SESSION_CREATED", { sessionId: string; name?: string; gmCode?: string; playerCode?: string; system?: string }>
   | EventEnvelope<"TURN_GRANTED", { userId: string }>
   | EventEnvelope<"TURN_REVOKED", { userId: string }>
   | EventEnvelope<"SEAT_STATE_CHANGED", { userId: string; state: SeatState }>

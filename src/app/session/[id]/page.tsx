@@ -11,7 +11,8 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
-import { useProjectedState } from "@/lib/projectedStateStore";
+import { useProjectedState, projectedStateStore } from "@/lib/projectedStateStore";
+import * as apiClient from "@/lib/apiClient";
 import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw, Eye, VenetianMask } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
@@ -57,7 +58,20 @@ export default function SessionPage() {
     const userRole = (searchParams.get("r") as "GM" | "PLAYER") || "PLAYER";
     const fixedCharacterId = searchParams.get("c") || undefined;
 
-    // â”€â”€â”€ UI STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── SYSTEM HINT (legacy sessions) ─────────────────────────────────────────
+    // For sessions created before the system was stored in the SESSION_CREATED
+    // event payload, seed the projectedStateStore with the system from the API so
+    // that useSystemPlugin() picks up the correct plugin even on old events.
+    useEffect(() => {
+        if (!sessionId) return;
+        apiClient.fetchSessionJoinInfo(sessionId as string)
+            .then((info) => {
+                if (info?.system) projectedStateStore.setSystemHint(info.system);
+            })
+            .catch(() => { /* silently ignore — fallback to "fate" */ });
+    }, [sessionId]);
+
+    // â"€â"€â"€ UI STATE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     const {
         challengeMode, setChallengeMode,
         activeTab, setActiveTab,
@@ -198,12 +212,12 @@ export default function SessionPage() {
         return unsub;
     }, []);
 
-    // â”€â”€â”€ EVENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ EVENTS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const { events, isLoading, isRefreshing, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
         useSessionEvents(sessionId as string, actorUserId);
 
-    // â”€â”€â”€ EARLY PROJECTION (feeds useVictoryDefeat before full derivations) â”€â”€â”€â”€
+    // â"€â"€â"€ EARLY PROJECTION (feeds useVictoryDefeat before full derivations) â"€â"€â"€â"€
     // Story 46 Prioridade 3: lÃª do projectedStateStore em vez de recomputar localmente.
     const _earlyState = useProjectedState();
 
@@ -231,7 +245,7 @@ export default function SessionPage() {
         [_earlyState.characters]
     );
 
-    // â”€â”€â”€ VICTORY / DEFEAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ VICTORY / DEFEAT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         showVictory, showDefeat, showCombat,
@@ -255,7 +269,7 @@ export default function SessionPage() {
         return _earlyState.turnOrder[index < _earlyState.turnOrder.length ? index : 0];
     }, [_earlyState.turnOrder, _earlyState.currentTurnIndex, _earlyState.isReaction, _earlyState.targetId]);
 
-    // â”€â”€â”€ FULL DERIVATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ FULL DERIVATIONS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         state,
@@ -299,7 +313,7 @@ export default function SessionPage() {
         }
     }, [isCurrentPlayerActive, userRole, showDiceRoller, setShowDiceRoller]);
 
-    // â”€â”€â”€ SCREEN SHARE / AUDIO LIFECYCLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ SCREEN SHARE / AUDIO LIFECYCLE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Must come before useSessionActions so screenShareManagerRef is available.
 
     const { screenVideoRef, screenShareManagerRef, videoNoSignal } = useSessionScreenControl({
@@ -315,7 +329,7 @@ export default function SessionPage() {
     });
 
     // GM preview pause: after 4s of broadcasting, pause the local <video> element to stop
-    // frame decoding â€” real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
+    // frame decoding â€" real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
     // Clicking the hint or video resumes the element.
     useEffect(() => {
         const isBroadcasting = userRole === "GM" && !!videoStream && (screenShareManagerRef.current?.broadcasting ?? false);
@@ -331,7 +345,7 @@ export default function SessionPage() {
         return () => clearTimeout(timer);
     }, [videoStream, userRole]);
 
-    // â”€â”€â”€ COMBAT AUTOMATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ COMBAT AUTOMATION â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         activeConsequence,
@@ -346,7 +360,7 @@ export default function SessionPage() {
         isSessionEventsLoading: isLoading,
     });
 
-    // â”€â”€â”€ SESSION ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ SESSION ACTIONS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         handleChallengeUpdate, handleHeaderUpdate,
@@ -359,7 +373,7 @@ export default function SessionPage() {
         setSpectatorMode, screenShareManagerRef,
     });
 
-    // â”€â”€â”€ SHARED GM CALLBACKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ SHARED GM CALLBACKS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     const handleToggleChallengeMode = () => {
         const newState = !challengeMode;
         lastToggleTimeRef.current = Date.now();
@@ -424,7 +438,7 @@ export default function SessionPage() {
         }
     }, [state.battlemap?.isActive, isTheaterMode]);
 
-    // â”€â”€â”€ REMAINING EFFECTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ REMAINING EFFECTS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 
     // Controla o background do body no modo combate com header image.
@@ -441,7 +455,7 @@ export default function SessionPage() {
                 `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
             document.body.style.backgroundSize = "cover, cover";
             document.body.style.backgroundPosition = "center center, center center";
-            // background-attachment: fixed causa repaint contÃ­nuo no Chromium mobile â€” usar scroll em mobile
+            // background-attachment: fixed causa repaint contÃ­nuo no Chromium mobile â€" usar scroll em mobile
             document.body.style.backgroundAttachment = isMobileNav ? "scroll" : "fixed";
             document.body.style.backgroundRepeat = "no-repeat, no-repeat";
             document.body.style.backgroundColor = "#000";
@@ -458,7 +472,7 @@ export default function SessionPage() {
         }
     }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive, isMobileNav]);
 
-    // â”€â”€â”€ Gerencia Google Fonts + theme-preset-css via efeito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ Gerencia Google Fonts + theme-preset-css via efeito â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Antes era um IIFE no JSX: executava a cada render â†’ re-fazia download do .woff2
     // Agora sÃ³ executa quando state.themePreset muda de fato.
     useEffect(() => {
@@ -489,7 +503,7 @@ export default function SessionPage() {
         }
     }, [state.themePreset]);
 
-    // â”€â”€â”€ Gerencia o override de cor personalizada via efeito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ Gerencia o override de cor personalizada via efeito â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Antes era um IIFE no JSX com dangerouslySetInnerHTML: re-montava a cada render
     // Agora sÃ³ executa quando state.themeColor muda.
     useEffect(() => {
@@ -561,7 +575,7 @@ export default function SessionPage() {
         }
     }, [currentTurnActorId, characterList]);
 
-    // â”€â”€â”€ LOADING SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ LOADING SCREEN â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     if (isLoading || !systemReady) {
         return (
@@ -587,7 +601,7 @@ export default function SessionPage() {
         );
     }
 
-    // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ RENDER â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const tacticalNav = (
         <nav
@@ -715,7 +729,7 @@ export default function SessionPage() {
     return (
         <div className={`session-view-wrapper${spectatorMode && videoStream ? " spectator-mode-active" : ""}`}>
             {isNavPortalReady ? createPortal(tacticalNav, document.body) : null}
-            {/* Screen share video â€” mantido montado enquanto stream ativa; oculto via CSS
+            {/* Screen share video â€" mantido montado enquanto stream ativa; oculto via CSS
                 em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
                 <video
@@ -755,11 +769,11 @@ export default function SessionPage() {
                 </div>
             )}
 
-            {/* Badge "Sem sinal" â€” exibido quando stream estÃ¡ ativa mas vÃ­deo nÃ£o avanÃ§a. */}
+            {/* Badge "Sem sinal" â€" exibido quando stream estÃ¡ ativa mas vÃ­deo nÃ£o avanÃ§a. */}
             {videoStream && activeTab === "combat" && videoNoSignal && (
                 <div className="screenshare-nosignal">
-                    <span className="screenshare-nosignal-icon">ðŸ“¡</span>
-                    <span>Sem sinal â€” tente reconectar no botÃ£o <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
+                    <span className="screenshare-nosignal-icon">ðŸ"¡</span>
+                    <span>Sem sinal â€" tente reconectar no botÃ£o <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
                 </div>
             )}
 
@@ -889,7 +903,7 @@ export default function SessionPage() {
                         }}
                     />
                 )}
-                {showVictory && <div className="victory-announcement">VITÃ“RIA</div>}
+                {showVictory && <div className="victory-announcement">VITÃ"RIA</div>}
                 {showDefeat && <div className="defeat-announcement">DERROTA</div>}
                 {showCombat && <div className="combat-announcement">COMBATE</div>}
             </SessionHeader>

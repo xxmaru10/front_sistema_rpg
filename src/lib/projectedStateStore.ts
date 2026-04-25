@@ -33,6 +33,8 @@ class ProjectedStateStore {
     private currentState: SessionState = initialState;
     private listeners = new Set<Listener>();
     private bootstrapped = false;
+    /** Fallback system id for legacy sessions whose SESSION_CREATED event lacks a system field. */
+    private systemHint: string | null = null;
 
     private recompute = (events: ActionEvent[]) => {
         const sorted = sortEvents(events);
@@ -45,6 +47,17 @@ class ProjectedStateStore {
         this.currentState = computeState(projectionEvents, snapshot ?? undefined);
         this.listeners.forEach((l) => l());
     };
+
+    /**
+     * Seeds the system id from the backend API for sessions that pre-date the
+     * `system` field being stored in the SESSION_CREATED event payload.
+     * Ignored if the projected state already has a system from event replay.
+     */
+    setSystemHint(system: string): void {
+        if (!system || this.systemHint === system) return;
+        this.systemHint = system;
+        this.listeners.forEach((l) => l());
+    }
 
     private ensureSubscribed = () => {
         if (this.bootstrapped) return;
@@ -71,6 +84,10 @@ class ProjectedStateStore {
 
     getState = (): SessionState => {
         this.ensureSubscribed();
+        // Apply system hint for legacy sessions that lack system in their events.
+        if (!this.currentState.system && this.systemHint) {
+            return { ...this.currentState, system: this.systemHint };
+        }
         return this.currentState;
     };
 }

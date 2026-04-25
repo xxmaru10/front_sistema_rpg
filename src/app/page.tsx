@@ -99,8 +99,9 @@ export default function Home() {
       payload: {
         sessionId,
         name: sessionName.trim(),
-        gmCode: finalGmCode, // Salva o código no evento
-        playerCode: finalPlayerCode
+        gmCode: finalGmCode,
+        playerCode: finalPlayerCode,
+        system: selectedSystem,
       }
     });
 
