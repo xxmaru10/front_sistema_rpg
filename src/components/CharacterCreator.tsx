@@ -13,11 +13,13 @@ interface CharacterCreatorProps {
     onClose: () => void;
     source?: "active" | "bestiary";
     religionsList?: any[];
+    /** System id of the current session (used to tag bestiary characters). */
+    system?: string;
 }
 
 type NpcTypeOption = "capanga" | "batedor" | "ameaca" | "boss" | "vilao";
 
-export function CharacterCreator({ sessionId, actorUserId, onClose, source = "active", religionsList = [] }: CharacterCreatorProps) {
+export function CharacterCreator({ sessionId, actorUserId, onClose, source = "active", religionsList = [], system }: CharacterCreatorProps) {
     const normalizedActorUserId = actorUserId.trim().toLowerCase();
     const [name, setName] = useState("");
     const [owner, setOwner] = useState(normalizedActorUserId);
@@ -85,6 +87,7 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                 isNPC,
                 religionId: religionId || undefined,
                 npcType: isNPC ? npcType : undefined,
+                system: system || undefined,
                 // If NPC, always add to bestiary (even from active tab)
                 source: (isNPC && source === "bestiary") ? "bestiary" : source,
                 // If NPC, default scope is session (unless already set to global)

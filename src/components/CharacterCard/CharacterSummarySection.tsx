@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode } from "react";
 import { Character } from "@/types/domain";
 import { CharacterConsequences } from "./CharacterConsequences";
 import { CharacterSummarySkills } from "./CharacterSummarySkills";
@@ -18,6 +19,12 @@ interface CharacterSummarySectionProps {
     isCompact: boolean;
     canEditStressOrFP: boolean;
     canEditConsequences?: boolean;
+    /** Replaces the CharacterVitality block (stress tracks + FP). */
+    vitalityOverride?: ReactNode;
+    /** Rendered as a second column alongside the normal consequence panel. */
+    extraConsequenceColumn?: ReactNode;
+    /** Rendered next to the character name (e.g. generation badge). */
+    headerBadge?: ReactNode;
     isEditingName: boolean;
     tempName: string;
     onTempNameChange: (value: string) => void;
@@ -47,6 +54,9 @@ export function CharacterSummarySection({
     isCompact,
     canEditStressOrFP,
     canEditConsequences,
+    vitalityOverride,
+    extraConsequenceColumn,
+    headerBadge,
     isEditingName,
     tempName,
     onTempNameChange,
@@ -385,6 +395,7 @@ export function CharacterSummarySection({
                                 >
                                     {character.name.toUpperCase()}
                                 </h2>
+                                {headerBadge}
                                 {isGM && (
                                     <button
                                         className="character-summary-edit-name-btn"
@@ -428,31 +439,41 @@ export function CharacterSummarySection({
                         gap: "12px",
                     }}
                 >
-                    <CharacterVitality
-                        stressPhysical={character.stress?.physical || []}
-                        stressMental={character.stress?.mental || []}
-                        stressValuesPhysical={character.stressValues?.physical || []}
-                        stressValuesMental={character.stressValues?.mental || []}
-                        fatePoints={character.fatePoints ?? 0}
-                        refresh={character.refresh ?? 3}
-                        isNPC={!!character.isNPC}
-                        isGM={isGM}
-                        isCompact={isCompact}
-                        compactNodes={true}
-                        hideFateReserve={true}
-                        canEditStressOrFP={canEditStressOrFP}
-                        onStressToggle={onStressToggle}
-                        onAddStressBox={onAddStressBox}
-                        onRemoveStressBox={onRemoveStressBox}
-                        onUpdateStressBoxValue={onUpdateStressBoxValue}
-                        onFPChange={onFPChange}
-                        onRefreshChange={onRefreshChange}
-                    />
+                    {vitalityOverride ?? (
+                        <CharacterVitality
+                            stressPhysical={character.stress?.physical || []}
+                            stressMental={character.stress?.mental || []}
+                            stressValuesPhysical={character.stressValues?.physical || []}
+                            stressValuesMental={character.stressValues?.mental || []}
+                            fatePoints={character.fatePoints ?? 0}
+                            refresh={character.refresh ?? 3}
+                            isNPC={!!character.isNPC}
+                            isGM={isGM}
+                            isCompact={isCompact}
+                            compactNodes={true}
+                            hideFateReserve={true}
+                            canEditStressOrFP={canEditStressOrFP}
+                            onStressToggle={onStressToggle}
+                            onAddStressBox={onAddStressBox}
+                            onRemoveStressBox={onRemoveStressBox}
+                            onUpdateStressBoxValue={onUpdateStressBoxValue}
+                            onFPChange={onFPChange}
+                            onRefreshChange={onRefreshChange}
+                        />
+                    )}
 
                     <CharacterSummarySkills character={character} />
                 </div>
 
-                <div className="character-summary-panel" style={{ minWidth: 0 }}>
+                <div
+                    className="character-summary-panel"
+                    style={{
+                        minWidth: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                    }}
+                >
                     <CharacterConsequences
                         character={character}
                         isGM={isGM}
@@ -467,6 +488,7 @@ export function CharacterSummarySection({
                         onOpenAddModal={onOpenAddModal}
                         onCloseAddModal={onCloseAddModal}
                     />
+                    {extraConsequenceColumn}
                 </div>
             </div>
         </section>

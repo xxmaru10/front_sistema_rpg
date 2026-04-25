@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useState, ReactNode } from "react";
 import { Character, SessionState } from "@/types/domain";
 import { InventorySection } from "./InventorySection";
 import { SkillsSection } from "./SkillsSection";
@@ -26,6 +26,16 @@ interface CharacterCardProps {
     sessionState?: SessionState;
     userRole?: "GM" | "PLAYER";
     onMentionNavigate?: (request: MentionNavigationRequest) => void;
+    /** Override the skill list in the Perícias tab. Defaults to DEFAULT_SKILLS. */
+    skillsOverride?: readonly string[];
+    /** Replaces the vitality (stress + FP) block in the summary card. */
+    vitalityOverride?: ReactNode;
+    /** Rendered as a second panel below consequences (e.g. hunger column). */
+    extraConsequenceColumn?: ReactNode;
+    /** Badge rendered next to the character name (e.g. generation for vampire). */
+    headerBadge?: ReactNode;
+    /** Replaces the Magias tab in the powers section. */
+    replaceSpellsTab?: { label: string; icon: ReactNode; content: ReactNode };
 }
 
 type CharacterCardTab = "lore" | "powers" | "inventory" | "notes";
@@ -42,6 +52,11 @@ function FateCharacterCardComponent({
     sessionState,
     userRole,
     onMentionNavigate,
+    skillsOverride,
+    vitalityOverride,
+    extraConsequenceColumn,
+    headerBadge,
+    replaceSpellsTab,
 }: CharacterCardProps) {
     const [activeTab, setActiveTab] = useState<CharacterCardTab>("lore");
 
@@ -128,6 +143,7 @@ function FateCharacterCardComponent({
                         magicLevel={character.magicLevel || 0}
                         onMagicLevelChange={hook.handleMagicLevelChange}
                         includeInventory={false}
+                        replaceSpellsTab={replaceSpellsTab}
                     />
 
                     <SkillsSection
@@ -135,6 +151,7 @@ function FateCharacterCardComponent({
                         sessionId={sessionId}
                         actorUserId={actorUserId}
                         canEdit={canEdit}
+                        skills={skillsOverride}
                     />
                 </div>
             );
@@ -191,6 +208,9 @@ function FateCharacterCardComponent({
                     isCompact={isCompact}
                     canEditStressOrFP={canEditStressOrFP}
                     canEditConsequences={canEdit}
+                    vitalityOverride={vitalityOverride}
+                    extraConsequenceColumn={extraConsequenceColumn}
+                    headerBadge={headerBadge}
                     isEditingName={hook.isEditingName}
                     tempName={hook.tempName}
                     onTempNameChange={hook.setTempName}

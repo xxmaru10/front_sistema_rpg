@@ -11,9 +11,12 @@ interface SkillsSectionProps {
     sessionId: string;
     actorUserId: string;
     canEdit: boolean;
+    /** Override the skill list iterated. Defaults to DEFAULT_SKILLS. */
+    skills?: readonly string[];
 }
 
-export function SkillsSection({ character, sessionId, actorUserId, canEdit }: SkillsSectionProps) {
+export function SkillsSection({ character, sessionId, actorUserId, canEdit, skills: skillsList }: SkillsSectionProps) {
+    const skillNames = skillsList ?? DEFAULT_SKILLS;
     const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
 
     const handleInitResource = (skill: string) => {
@@ -91,7 +94,7 @@ export function SkillsSection({ character, sessionId, actorUserId, canEdit }: Sk
         <div className="skills-section">
                             <h4 className="section-title">✦ PERÍCIAS ✦</h4>
                             <div className="skills-grid">
-                                {DEFAULT_SKILLS.map(skill => ({ skill, level: character.skills?.[skill] || 0 }))
+                                {skillNames.map(skill => ({ skill, level: character.skills?.[skill] || 0 }))
                                     .sort((a, b) => {
                                         if (b.level !== a.level) return b.level - a.level;
                                         return a.skill.localeCompare(b.skill);
