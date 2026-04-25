@@ -26,7 +26,7 @@ import { VIControlPanel } from "@/components/VIControlPanel";
 import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";
-import { loadSystem } from "@/systems/registry";
+import { loadSystem, getCachedSystem } from "@/systems/registry";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
 import { DamageResolutionModal } from "@/components/DamageResolutionModal";
 import { AtmosphericEffects } from "@/components/AtmosphericEffects";
@@ -225,6 +225,14 @@ export default function SessionPage() {
     const [systemReady, setSystemReady] = useState(false);
     useEffect(() => {
         const system = _earlyState.system ?? "fate";
+        // If the plugin is already cached (e.g. same system), resolve immediately.
+        if (getCachedSystem(system)) {
+            setSystemReady(true);
+            return;
+        }
+        // Plugin not yet cached — show loading screen while we fetch it so that
+        // useSystemPlugin() never runs with an unloaded plugin (which throws).
+        setSystemReady(false);
         loadSystem(system).then(() => {
             // Once the plugin is in the cache, force a recompute so its reducer
             // runs across the entire event log (essential for legacy sessions
