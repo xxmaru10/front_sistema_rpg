@@ -1,11 +1,14 @@
 "use client";
 
-import { DiceRoller as StandardDiceRoller } from "@/components/DiceRoller";
+// IMPORTANT: import FateDiceRoller directly, NOT from @/components/DiceRoller.
+// The generic DiceRoller calls useSystemPlugin() and would render this component
+// again, creating an infinite render loop.
+import { FateDiceRoller } from "@/components/FateDiceRoller";
 
 export function DiceRoller(props: any) {
   return (
     <div className="vampire-dice-roller-container">
-      <StandardDiceRoller {...props} />
+      <FateDiceRoller {...props} />
       <style jsx>{`
         .vampire-dice-roller-container :global(.probability-grid) {
           --accent-color: #c0392b !important;

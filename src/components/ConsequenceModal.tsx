@@ -11,6 +11,8 @@ interface ConsequenceModalProps {
     initialDebuffValue?: number;
     onSave: (text: string, debuffSkill: string, debuffValue: number) => void;
     onCancel: () => void;
+    /** Override the skill list shown in the "PERÍCIA AFETADA" dropdown. Defaults to DEFAULT_SKILLS. */
+    skills?: readonly string[];
 }
 
 export function ConsequenceModal({
@@ -19,8 +21,10 @@ export function ConsequenceModal({
     initialDebuffSkill = "",
     initialDebuffValue = 0,
     onSave,
-    onCancel
+    onCancel,
+    skills,
 }: ConsequenceModalProps) {
+    const skillList = skills ?? DEFAULT_SKILLS;
     const [text, setText] = useState(initialText);
     const [debuffSkill, setDebuffSkill] = useState(initialDebuffSkill);
     const [debuffValue, setDebuffValue] = useState(initialDebuffValue);
@@ -64,7 +68,7 @@ export function ConsequenceModal({
                             onChange={(e) => setDebuffSkill(e.target.value)}
                         >
                             <option value="">— Nenhuma —</option>
-                            {DEFAULT_SKILLS.map(skill => (
+                            {skillList.map(skill => (
                                 <option key={skill} value={skill}>{skill}</option>
                             ))}
                         </select>

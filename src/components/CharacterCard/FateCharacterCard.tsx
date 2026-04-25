@@ -28,6 +28,8 @@ interface CharacterCardProps {
     onMentionNavigate?: (request: MentionNavigationRequest) => void;
     /** Override the skill list in the Perícias tab. Defaults to DEFAULT_SKILLS. */
     skillsOverride?: readonly string[];
+    /** Override the skill list shown in consequence modals. Defaults to DEFAULT_SKILLS. */
+    consequenceSkills?: readonly string[];
     /** Replaces the vitality (stress + FP) block in the summary card. */
     vitalityOverride?: ReactNode;
     /** Rendered as a second panel below consequences (e.g. hunger column). */
@@ -53,6 +55,7 @@ function FateCharacterCardComponent({
     userRole,
     onMentionNavigate,
     skillsOverride,
+    consequenceSkills,
     vitalityOverride,
     extraConsequenceColumn,
     headerBadge,
@@ -208,6 +211,7 @@ function FateCharacterCardComponent({
                     isCompact={isCompact}
                     canEditStressOrFP={canEditStressOrFP}
                     canEditConsequences={canEdit}
+                    consequenceSkills={consequenceSkills}
                     vitalityOverride={vitalityOverride}
                     extraConsequenceColumn={extraConsequenceColumn}
                     headerBadge={headerBadge}

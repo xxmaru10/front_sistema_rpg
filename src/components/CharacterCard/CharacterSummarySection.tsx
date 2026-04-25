@@ -19,6 +19,8 @@ interface CharacterSummarySectionProps {
     isCompact: boolean;
     canEditStressOrFP: boolean;
     canEditConsequences?: boolean;
+    /** Override the skill list in consequence modals. Defaults to DEFAULT_SKILLS. */
+    consequenceSkills?: readonly string[];
     /** Replaces the CharacterVitality block (stress tracks + FP). */
     vitalityOverride?: ReactNode;
     /** Rendered as a second column alongside the normal consequence panel. */
@@ -54,6 +56,7 @@ export function CharacterSummarySection({
     isCompact,
     canEditStressOrFP,
     canEditConsequences,
+    consequenceSkills,
     vitalityOverride,
     extraConsequenceColumn,
     headerBadge,
@@ -487,6 +490,7 @@ export function CharacterSummarySection({
                         onAddConsequence={onAddConsequence}
                         onOpenAddModal={onOpenAddModal}
                         onCloseAddModal={onCloseAddModal}
+                        skills={consequenceSkills}
                     />
                     {extraConsequenceColumn}
                 </div>

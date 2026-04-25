@@ -16,6 +16,8 @@ interface CharacterConsequencesProps {
     isGM: boolean;
     /** Se true, permite edição mesmo para não-GM (ex: dono do personagem). Padrão: isGM */
     canEditConsequences?: boolean;
+    /** Override the skill list in the consequence modal. Defaults to DEFAULT_SKILLS. */
+    skills?: readonly string[];
     consequenceModal: ConsequenceModalState | null;
     showAddConsequenceModal: boolean;
     onConsequenceClick: (slot: string) => void;
@@ -31,6 +33,7 @@ export function CharacterConsequences({
     character,
     isGM,
     canEditConsequences,
+    skills,
     consequenceModal,
     showAddConsequenceModal,
     onConsequenceClick,
@@ -326,6 +329,7 @@ export function CharacterConsequences({
                     initialDebuffValue={consequenceModal.debuffValue}
                     onSave={onSaveConsequence}
                     onCancel={onCancelConsequenceModal}
+                    skills={skills}
                 />
             )}
 

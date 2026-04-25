@@ -39,7 +39,7 @@ const TRACKS = [
     key: "blood" as const,
     eventKey: "BLOOD",
     label: "SANGUE",
-    iconUrl: null as string | null,
+    iconUrl: "url('/interface/sangue.svg')" as string,
     accent: "#c0392b",
     border: "rgba(192,57,43,0.22)",
     bg: "linear-gradient(180deg,rgba(192,57,43,0.07),rgba(255,255,255,0.015))",

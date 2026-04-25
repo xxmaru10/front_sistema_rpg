@@ -6,6 +6,7 @@ import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
 import { useState } from "react";
 import type { VampireSystemData, ConsequenceData } from "../../types";
+import { VAMPIRE_SKILLS } from "../../utils";
 
 interface Props {
   characterId: string;
@@ -94,7 +95,15 @@ export function VampireHungerConsequences({ characterId, sessionId, actorUserId,
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "10px", marginBottom: "12px", borderBottom: "1px solid rgba(192,57,43,0.15)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "0.78rem" }}>🩸</span>
+            <span style={{
+              display: "inline-flex", width: "18px", height: "18px", flexShrink: 0,
+              backgroundColor: "#c0392b",
+              WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')",
+              WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+              WebkitMaskPosition: "center", maskPosition: "center",
+              WebkitMaskSize: "contain", maskSize: "contain",
+              filter: "drop-shadow(0 0 5px #c0392b88)",
+            }} />
             <span style={{ fontSize: "0.7rem", letterSpacing: "0.22em", color: "rgba(192,57,43,0.88)" }}>FOME</span>
             {isGM && (
               <button onClick={() => setShowAddModal(true)} style={{ marginLeft: "4px", background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.3)", color: "#c0392b", borderRadius: "6px", padding: "2px 8px", fontSize: "0.8rem", cursor: "pointer" }}>+</button>
@@ -166,6 +175,7 @@ export function VampireHungerConsequences({ characterId, sessionId, actorUserId,
           initialDebuffValue={modal.debuffValue}
           onSave={handleSave}
           onCancel={() => setModal(null)}
+          skills={VAMPIRE_SKILLS}
         />
       )}
 

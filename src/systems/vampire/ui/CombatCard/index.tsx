@@ -9,7 +9,7 @@ import { ConsequenceModal } from "@/components/ConsequenceModal";
 import { CombatCardStyles } from "@/components/CombatCard/CombatCard.styles";
 import type { VampireCharacter, VampireSystemData, ConsequenceData } from "../../types";
 import { migrateLegacyVampireCharacter } from "../../migrations";
-import { toRoman } from "../../utils";
+import { toRoman, VAMPIRE_SKILLS } from "../../utils";
 
 interface Props {
   character: Character;
@@ -95,6 +95,13 @@ export function VampireCombatCard({
     append(current ? "STRESS_CLEARED" : "STRESS_MARKED", { characterId: character.id, track, boxIndex: index });
   };
 
+  const handleImpulseChange = (delta: number) => {
+    if (!isGM) return;
+    const current = Math.max(0, Math.trunc((character as any).impulseArrows || 0));
+    const next = Math.max(0, current + delta);
+    append("CHARACTER_UPDATED", { characterId: character.id, changes: { impulseArrows: next } });
+  };
+
   const handleFPChange = (amount: number) => {
     if (!canEditSelf) return;
     append(amount > 0 ? "FP_GAINED" : "FP_SPENT", { characterId: character.id, amount: Math.abs(amount), reason: "MANUAL" });
@@ -147,6 +154,7 @@ export function VampireCombatCard({
 
   const activeSkills = Object.entries(data.skills ?? {}).filter(([_, v]) => v > 0);
   const disciplines = data.disciplines ?? [];
+  const impulseCount = Math.max(0, Math.trunc((character as any).impulseArrows || 0));
 
   const consSlotsNormal = ["mild", "moderate", "severe"];
   const consSlotsHunger = ["fome_mild", "fome_moderate", "fome_severe"];
@@ -215,25 +223,21 @@ export function VampireCombatCard({
             {[
               { boxes: physicalBoxes, vals: physicalValues, track: "PHYSICAL", color: "#e87070", iconUrl: "url('/interface/fisico.png')", accentRgb: "var(--accent-rgb)" },
               { boxes: mentalBoxes, vals: mentalValues, track: "MENTAL", color: "#b59cff", iconUrl: "url('/interface/mental.png')", accentRgb: "var(--accent-rgb)" },
-              { boxes: bloodBoxes, vals: bloodValues, track: "BLOOD", color: BLOOD_ACCENT, iconUrl: null, emoji: "🩸" },
-            ].map(({ boxes, vals, track, color, iconUrl, emoji }, ti) => (
+              { boxes: bloodBoxes, vals: bloodValues, track: "BLOOD", color: BLOOD_ACCENT, iconUrl: "url('/interface/sangue.svg')" },
+            ].map(({ boxes, vals, track, color, iconUrl }, ti) => (
               <React.Fragment key={track}>
                 {ti > 0 && <div style={{ width: "1px", height: "20px", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />}
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  {/* Track icon */}
-                  {iconUrl ? (
-                    <span style={{
-                      display: "inline-flex", width: "18px", height: "18px", flexShrink: 0,
-                      backgroundColor: color,
-                      WebkitMaskImage: iconUrl, maskImage: iconUrl,
-                      WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-                      WebkitMaskPosition: "center", maskPosition: "center",
-                      WebkitMaskSize: "contain", maskSize: "contain",
-                      filter: "drop-shadow(0 0 5px currentColor)",
-                    }} />
-                  ) : (
-                    <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{emoji}</span>
-                  )}
+                  {/* Track icon — all three tracks use masked SVG/PNG icons */}
+                  <span style={{
+                    display: "inline-flex", width: "18px", height: "18px", flexShrink: 0,
+                    backgroundColor: color,
+                    WebkitMaskImage: iconUrl, maskImage: iconUrl,
+                    WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                    WebkitMaskPosition: "center", maskPosition: "center",
+                    WebkitMaskSize: "contain", maskSize: "contain",
+                    filter: "drop-shadow(0 0 5px currentColor)",
+                  }} />
                   {/* Stress circles */}
                   <div style={{ display: "flex", gap: "4px", flexWrap: "nowrap" }}>
                     {boxes.map((marked, i) => (
@@ -298,13 +302,37 @@ export function VampireCombatCard({
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.82) 0%,transparent 28%)", pointerEvents: "none", zIndex: 3 }} />
           <div style={{ position: "absolute", inset: 0, background: isMirrored ? "linear-gradient(to right,rgba(0,0,0,0.65) 0%,transparent 18%)" : "linear-gradient(to left,rgba(0,0,0,0.65) 0%,transparent 18%)", pointerEvents: "none", zIndex: 3 }} />
           {(isGM || isOwner) && (
-            <div style={{ position: "absolute", bottom: 8, ...(isMirrored ? { left: 10 } : { right: 10 }), zIndex: 35 }}>
-              <div className="combat-fate" style={{ display: "flex", alignItems: "center", gap: "6px", color: "#fff" }}>
-                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: "transparent", border: "none", color: "#fff", fontSize: "0.8rem", cursor: "pointer", opacity: 0.6, padding: 0 }}>-</button>}
-                <span style={{ fontSize: "1.2rem", fontWeight: 900, textShadow: "0 0 10px rgba(255,255,255,0.5)" }}>{data.fatePoints ?? 0}</span>
-                {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: "transparent", border: "none", color: "#fff", fontSize: "0.8rem", cursor: "pointer", opacity: 0.6, padding: 0 }}>+</button>}
+            <>
+              {/* Impulse arrows — top of portrait */}
+              <div style={{
+                position: "absolute",
+                top: "8px",
+                ...(isMirrored ? { right: "calc(10px + 10%)" } : { left: "calc(10px + 10%)" }),
+                display: "flex", flexDirection: "column", gap: "2px",
+                zIndex: 65, pointerEvents: "auto",
+              }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+                  {impulseCount > 0 && Array.from({ length: impulseCount }).map((_, idx) => (
+                    <span key={idx} className="impulse-arrow-inline" style={{ color: "#fff", textShadow: "0 0 8px var(--card-accent)" }}>{"➤"}</span>
+                  ))}
+                </div>
+                {isGM && (
+                  <div style={{ display: "flex", gap: "4px", marginTop: "2px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.28)", borderRadius: "999px", padding: "1px 4px", width: "fit-content" }}>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleImpulseChange(-1); }} disabled={impulseCount === 0} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.24)", color: "#fff", fontSize: "0.82rem", lineHeight: 1, cursor: "pointer", borderRadius: "6px", width: "18px", height: "16px", padding: 0 }}>-</button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleImpulseChange(1); }} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.24)", color: "#fff", fontSize: "0.82rem", lineHeight: 1, cursor: "pointer", borderRadius: "6px", width: "18px", height: "16px", padding: 0 }}>+</button>
+                  </div>
+                )}
               </div>
-            </div>
+
+              {/* Fate Points — bottom of portrait */}
+              <div style={{ position: "absolute", bottom: 8, ...(isMirrored ? { left: 10 } : { right: 10 }), zIndex: 35 }}>
+                <div className="combat-fate" style={{ display: "flex", alignItems: "center", gap: "6px", color: "#fff" }}>
+                  {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: "transparent", border: "none", color: "#fff", fontSize: "0.8rem", cursor: "pointer", opacity: 0.6, padding: 0 }}>-</button>}
+                  <span style={{ fontSize: "1.2rem", fontWeight: 900, textShadow: "0 0 10px rgba(255,255,255,0.5)" }}>{data.fatePoints ?? 0}</span>
+                  {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: "transparent", border: "none", color: "#fff", fontSize: "0.8rem", cursor: "pointer", opacity: 0.6, padding: 0 }}>+</button>}
+                </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -329,7 +357,9 @@ export function VampireCombatCard({
           )}
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             {disciplines.length > 0 && (
-              <button onClick={() => setExpandedExtra(expandedExtra === "disciplines" ? null : "disciplines")} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.22)", borderRadius: 4, color: BLOOD_ACCENT, cursor: "pointer", opacity: expandedExtra === "disciplines" ? 1 : 0.65 }} title="Disciplinas">🩸</button>
+              <button onClick={() => setExpandedExtra(expandedExtra === "disciplines" ? null : "disciplines")} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.22)", borderRadius: 4, color: BLOOD_ACCENT, cursor: "pointer", opacity: expandedExtra === "disciplines" ? 1 : 0.65 }} title="Disciplinas">
+                <span style={{ display: "inline-flex", width: "14px", height: "14px", flexShrink: 0, backgroundColor: BLOOD_ACCENT, WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskSize: "contain", maskSize: "contain", filter: `drop-shadow(0 0 4px ${BLOOD_ACCENT}88)` }} />
+              </button>
             )}
             {(data.stunts?.length ?? 0) > 0 && (
               <button onClick={() => setExpandedExtra(expandedExtra === "stunts" ? null : "stunts")} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: "#fff", cursor: "pointer", opacity: expandedExtra === "stunts" ? 1 : 0.6 }} title="Façanhas"><Star size={16} /></button>
@@ -389,7 +419,10 @@ export function VampireCombatCard({
 
           {/* Hunger consequences */}
           <div>
-            <div style={{ fontSize: "0.58rem", letterSpacing: "0.18em", color: "rgba(192,57,43,0.8)", marginBottom: 4 }}>🩸 FOME</div>
+            <div style={{ fontSize: "0.58rem", letterSpacing: "0.18em", color: "rgba(192,57,43,0.8)", marginBottom: 4, display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ display: "inline-flex", width: "10px", height: "10px", flexShrink: 0, backgroundColor: "#c0392b", WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskSize: "contain", maskSize: "contain" }} />
+              FOME
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {consSlotsHunger.map((slot) => {
                 const cons = data.hungerConsequences?.[slot] as ConsequenceData | undefined;
@@ -421,6 +454,7 @@ export function VampireCombatCard({
           initialDebuffValue={consequenceModal.debuffValue}
           onSave={handleSaveConsequence}
           onCancel={() => setConsequenceModal(null)}
+          skills={VAMPIRE_SKILLS}
         />
       )}
 

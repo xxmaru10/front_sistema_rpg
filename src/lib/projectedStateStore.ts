@@ -71,6 +71,17 @@ class ProjectedStateStore {
         this.recompute(globalEventStore.getEvents());
     }
 
+    /**
+     * Clears the system hint when switching between sessions. This prevents a
+     * stale hint (e.g. "fate") from being applied to a new session (e.g. "vampire")
+     * before that session's events are loaded and produce their own system value.
+     */
+    clearSystemHint(): void {
+        if (!this.systemHint) return;
+        this.systemHint = null;
+        this.recompute(globalEventStore.getEvents());
+    }
+
     private ensureSubscribed = () => {
         if (this.bootstrapped) return;
         this.bootstrapped = true;

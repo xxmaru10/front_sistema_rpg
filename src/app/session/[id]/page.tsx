@@ -225,18 +225,15 @@ export default function SessionPage() {
     const [systemReady, setSystemReady] = useState(false);
     useEffect(() => {
         const system = _earlyState.system ?? "fate";
-        // If the plugin is already cached (e.g. same system), resolve immediately.
-        if (getCachedSystem(system)) {
-            setSystemReady(true);
-            return;
-        }
-        // Plugin not yet cached — show loading screen while we fetch it so that
-        // useSystemPlugin() never runs with an unloaded plugin (which throws).
+        // Always mark not-ready first so we never render with the wrong plugin.
+        // loadSystem() is instant when the plugin is already cached, so there's
+        // no visible flash when switching between sessions of the same system.
         setSystemReady(false);
         loadSystem(system).then(() => {
             // Once the plugin is in the cache, force a recompute so its reducer
             // runs across the entire event log (essential for legacy sessions
-            // whose events were initially replayed before the plugin loaded).
+            // whose events were initially replayed before the plugin loaded, and
+            // for session switches where stale hint may have been cleared).
             projectedStateStore.forceRecompute();
             setSystemReady(true);
         }).catch(() => setSystemReady(true));

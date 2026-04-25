@@ -145,6 +145,7 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
     <FateCharacterCard
       {...props}
       skillsOverride={VAMPIRE_SKILLS}
+      consequenceSkills={VAMPIRE_SKILLS}
       vitalityOverride={vitalityNode}
       extraConsequenceColumn={hungerNode}
       headerBadge={
