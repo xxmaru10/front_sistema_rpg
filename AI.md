@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-24 (story-62 aberta para isolar notebook fraco: transmissao inicia, voz falha e a sessao degrada)
+last_updated: 2026-04-24 (epic-04 aberto: suporte a multiplos sistemas de RPG via plugin; stories 63 e 64 abertas)
 ---
 
 # Cronos Vtt — Frontend
@@ -37,6 +37,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 ## Épicos ativos
 | Refatoração de Componentes | em andamento | `/epics/epic-01-refatoracao-modular.md` |
 | Battlemap: Camadas, Formas, Edição de Fundo e Grade | planejado | `/epics/epic-03-battlemap-camadas-formas-edicao-fundo-grade.md` |
+| Suporte a Múltiplos Sistemas de RPG (Plugin) | planejado | `/epics/epic-04-suporte-a-multiplos-sistemas-rpg.md` |
 | Sincronização Voz WebRTC | em andamento | `/stories/story-05.md` |
 | Layout Perícias Cortadas | concluído | `/stories/story-06-corrigir-layout-pericias-cortadas.md` |
 | Sincronia de Notas de Sessão | concluído | `/stories/story-07-estabilizar-sincronia-notas.md` |
@@ -51,6 +52,8 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | DOM Compacto Mobile e INP Sub-200ms | em-revisao | `/stories/story-60-dom-compacto-mobile-e-inp-sub-200ms.md` |
 | MusicPlayer setState fan-out + iframe YT desacoplado | concluida | `/stories/story-61-musicplayer-yt-setstate-fanout-e-iframe-desacoplado.md` |
 | Estabilizar transmissao com voz em notebook fraco | aberta | `/stories/story-62-estabilizar-transmissao-voz-notebook-fraco.md` |
+| Infraestrutura de Plugin de Sistema (campo system, registry, seletor) | planejada | `/stories/story-63-infraestrutura-plugin-sistema.md` |
+| Extrair Fate Core como primeiro plugin | planejada | `/stories/story-64-extrair-fate-como-primeiro-plugin.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`
