@@ -143,7 +143,7 @@ export function useDiceRoller({
         const itemBonus = selectedItemData?.bonus || 0;
         const itemPayload = selectedItemData ? { name: selectedItemData.name, bonus: selectedItemData.bonus } : undefined;
 
-        const effectiveSkills = activeChar?.skills || DEFAULT_SKILLS;
+        const effectiveSkills = (activeChar?.skills || {}) as Record<string, number>;
         const skillRank = selectedSkill ? (effectiveSkills[selectedSkill] || 0) : 0;
         const finalModifier = skillRank + manualBonus + itemBonus;
 
@@ -306,7 +306,7 @@ export function useDiceRoller({
         setIsRolling(true);
         setLastTotal(null);
         
-        const effectiveSkills = activeChar?.skills || DEFAULT_SKILLS;
+        const effectiveSkills = (activeChar?.skills || {}) as Record<string, number>;
         const skillRank = selectedSkill ? (effectiveSkills[selectedSkill] || 0) : 0;
         const selectedItemData = selectedItemId ? allItems.find(i => i.id === selectedItemId) : undefined;
         const itemBonus = selectedItemData?.bonus || 0;
