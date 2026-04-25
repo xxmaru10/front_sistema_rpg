@@ -1059,6 +1059,7 @@ export default function SessionPage() {
                     onClose={() => setShowCreator(false)}
                     source={creatorSource}
                     religionsList={Object.values(state.worldEntities || {}).filter((e: any) => e.type === "RELIGIAO")}
+                    system={_earlyState.system ?? "fate"}
                 />
             )}
 

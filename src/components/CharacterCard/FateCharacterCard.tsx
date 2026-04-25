@@ -293,7 +293,7 @@ function FateCharacterCardComponent({
                                 boxShadow: visibleTab === "powers" ? "inset 0 -2px 0 var(--accent-color)" : "none",
                             }}
                         >
-                            FAÇANHAS & MAGIA
+                            {replaceSpellsTab ? "FAÇANHAS & DISCIPLINAS" : "FAÇANHAS & MAGIA"}
                         </button>
                         {showInventoryTab && (
                             <button

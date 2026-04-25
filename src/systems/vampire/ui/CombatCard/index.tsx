@@ -134,6 +134,8 @@ export function VampireCombatCard({
   const physicalBoxes = data.stress?.physical ?? [];
   const mentalBoxes = data.stress?.mental ?? [];
   const bloodValues = data.stressValues?.blood ?? [];
+  const physicalValues = data.stressValues?.physical ?? [];
+  const mentalValues = data.stressValues?.mental ?? [];
   const getVal = (arr: number[], i: number) => Math.max(1, Math.trunc(arr[i] ?? (i + 1)));
 
   const activeSkills = Object.entries(data.skills ?? {}).filter(([_, v]) => v > 0);
@@ -195,6 +197,8 @@ export function VampireCombatCard({
           {/* Compact stress display: PHYSICAL, MENTAL, BLOOD */}
           <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
             {[
+              { boxes: physicalBoxes, vals: physicalValues, track: "PHYSICAL", color: "#d4a269" },
+              { boxes: mentalBoxes, vals: mentalValues, track: "MENTAL", color: "#d79ab9" },
               { boxes: bloodBoxes, vals: bloodValues, track: "BLOOD", color: BLOOD_ACCENT },
             ].map(({ boxes, vals, track, color }) => (
               <div key={track} style={{ display: "flex", gap: "3px" }}>
