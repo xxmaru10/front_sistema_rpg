@@ -1266,9 +1266,18 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
 }
 
 export function reduce(state: SessionState, event: ActionEvent): SessionState {
-    const plugin = getCachedSystem(state.system ?? "fate");
-    if (plugin) return plugin.reducer(state, event);
-    return reduceFateLegacy(state, event);
+    // 1. Run the base/legacy reducer which handles all platform events (themes, notes, seats, etc.)
+    // as well as the base character logic (legacy fields).
+    let nextState = reduceFateLegacy(state, event);
+    
+    // 2. Run the active system plugin reducer (if loaded) to handle system-specific schemas
+    // and override character representations (e.g. systemData).
+    const plugin = getCachedSystem(nextState.system ?? "fate");
+    if (plugin) {
+        nextState = plugin.reducer(nextState, event);
+    }
+    
+    return nextState;
 }
 
 export function computeState(events: ActionEvent[], baseState?: SessionState): SessionState {
