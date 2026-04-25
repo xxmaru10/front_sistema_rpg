@@ -124,7 +124,7 @@ export function CharacterConsequences({
 
                 <div className="consequences-list" style={{ display: "grid", gap: "10px" }}>
                     {sortedSlots.map((cons) => {
-                        const consData = character.consequences[cons.slot as "mild" | "mild2" | "moderate" | "severe"];
+                        const consData = character.consequences?.[cons.slot as "mild" | "mild2" | "moderate" | "severe"];
                         const textValue = consData?.text || "";
                         const isFilled = textValue.trim().length > 0;
 
