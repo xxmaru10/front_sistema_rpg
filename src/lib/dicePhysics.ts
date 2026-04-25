@@ -322,7 +322,7 @@ function rebuildWithFaceGroups(
  *  - lista de normais + valores por face para leitura determinÃ­stica de "face up".
  *
  * Notas:
- *  - d4 usa convenÃ§Ã£o "face inferior" â€” quem chama deve inverter o dot para leitura.
+ *  - d4 usa convenÃ§Ã£o "face inferior" — quem chama deve inverter o dot para leitura.
  *  - d10 (e cada metade de d100) usa bipirÃ¢mide pentagonal com 10 faces triangulares.
  */
 export function createFacedDieGeometry(type: DieType, THREE: any): FacedDieGeometry {

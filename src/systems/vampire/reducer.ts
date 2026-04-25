@@ -71,6 +71,12 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
         activeInArena: p.activeInArena ?? false,
       } as Partial<Character>;
       let char = createVampireCharacter(overrides);
+      
+      // Preserve blinkmotion credentials if provided
+      if (p.blinkmotion) {
+        char.systemData.blinkmotion = p.blinkmotion;
+      }
+
       // If a caller explicitly provided vampire-shaped systemData (e.g. import
       // flow), respect it via the migration path.
       if (callerProvidedSystemData) {

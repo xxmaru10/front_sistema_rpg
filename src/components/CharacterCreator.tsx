@@ -30,6 +30,8 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
     const [mounted, setMounted] = useState(false);
     const [npcType, setNpcType] = useState<"capanga" | "batedor" | "ameaca" | "boss" | "vilao" | "">(source === "bestiary" ? "capanga" : "");
     const [religionId, setReligionId] = useState("");
+    const [blinkUsername, setBlinkUsername] = useState("");
+    const [blinkPassword, setBlinkPassword] = useState("");
 
     // Stress values by NPC type
     const getStressForType = (type: string) => {
@@ -114,7 +116,11 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                     moderate: { text: "" },
                     severe: { text: "" }
                 },
-                stunts: preset?.stunts ?? []
+                stunts: preset?.stunts ?? [],
+                blinkmotion: {
+                    username: blinkUsername,
+                    password: blinkPassword
+                }
             }
         } as any);
         onClose();
@@ -389,6 +395,36 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                         </div>
                     </div>
 
+                    <div className="blinkmotion-section">
+                        <div className="section-divider">
+                            <span className="divider-line"></span>
+                            <span className="divider-text">PROTOCOLO BLINKMOTION</span>
+                            <span className="divider-line"></span>
+                        </div>
+                        
+                        <div className="dual-inputs">
+                            <div className="input-field">
+                                <label>USUÁRIO DE ACESSO</label>
+                                <input
+                                    placeholder="Login..."
+                                    value={blinkUsername}
+                                    onChange={e => setBlinkUsername(e.target.value)}
+                                    className="occult-input blink-input"
+                                />
+                            </div>
+                            <div className="input-field">
+                                <label>SENHA CRIPTOGRÁFICA</label>
+                                <input
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={blinkPassword}
+                                    onChange={e => setBlinkPassword(e.target.value)}
+                                    className="occult-input blink-input"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     <button
                         type="submit"
                         className="ritual-action-btn"
@@ -620,6 +656,44 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
 
                 .tarot-reveal {
                     animation: tarotReveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+                }
+
+                .blinkmotion-section {
+                    margin-top: 10px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                }
+
+                .section-divider {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 5px;
+                }
+
+                .divider-line {
+                    flex: 1;
+                    height: 1px;
+                    background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.3), transparent);
+                }
+
+                .divider-text {
+                    font-family: var(--font-header);
+                    font-size: 0.55rem;
+                    letter-spacing: 0.2em;
+                    color: var(--accent-color);
+                    opacity: 0.6;
+                }
+
+                .blink-input {
+                    border-color: rgba(var(--accent-rgb), 0.1) !important;
+                    background: rgba(0, 255, 255, 0.02) !important;
+                }
+
+                .blink-input:focus {
+                    border-color: #0ff !important;
+                    box-shadow: 0 0 15px rgba(0, 255, 255, 0.1) !important;
                 }
             `}</style>
         </div>,

@@ -440,7 +440,7 @@ export function CombatCard({
                         )}
                     </div>
                     
-                    {/* Persona vignettes and slash effects â€” zIndex 3 para ficar acima do combat-image-frame (zIndex 2) */}
+                    {/* Persona vignettes and slash effects — zIndex 3 para ficar acima do combat-image-frame (zIndex 2) */}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
                     <div style={{ position: 'absolute', inset: 0, background: isMirroredThreatLayout ? 'linear-gradient(to right, rgba(0,0,0,0.65) 0%, transparent 18%)' : 'linear-gradient(to left, rgba(0,0,0,0.65) 0%, transparent 18%)', pointerEvents: 'none', zIndex: 3 }} />

@@ -914,7 +914,7 @@ export default function SessionPage() {
                         }}
                     />
                 )}
-                {showVictory && <div className="victory-announcement">VITÃ"RIA</div>}
+                {showVictory && <div className="victory-announcement">VITÓRIA</div>}
                 {showDefeat && <div className="defeat-announcement">DERROTA</div>}
                 {showCombat && <div className="combat-announcement">COMBATE</div>}
             </SessionHeader>

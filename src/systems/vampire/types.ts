@@ -35,6 +35,10 @@ export type VampireSystemData = {
   extraConsequenceSlots: string[];
   removedDefaultHungerSlots: string[];
   extraHungerSlots: string[];
+  blinkmotion?: {
+    username?: string;
+    password?: string;
+  };
 }
 
 export interface VampireCharacter extends Character {
