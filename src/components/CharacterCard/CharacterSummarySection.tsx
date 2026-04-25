@@ -433,7 +433,7 @@ export function CharacterSummarySection({
                         stressMental={character.stress?.mental || []}
                         stressValuesPhysical={character.stressValues?.physical || []}
                         stressValuesMental={character.stressValues?.mental || []}
-                        fatePoints={character.fatePoints}
+                        fatePoints={character.fatePoints ?? 0}
                         refresh={character.refresh ?? 3}
                         isNPC={!!character.isNPC}
                         isGM={isGM}
