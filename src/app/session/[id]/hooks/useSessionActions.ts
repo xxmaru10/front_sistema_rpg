@@ -185,12 +185,12 @@ export function useSessionActions({
 
         // Logic 2: Clone the character (spawning minions / generic NPCs)
         const newCharId = uuidv4();
-        const clonedStunts = originalChar.stunts.map((s: any) => ({ ...s, id: uuidv4() }));
-        const clonedInventory = originalChar.inventory.map((i: any) => ({ ...i, id: uuidv4() }));
+        const clonedStunts = (originalChar.stunts || []).map((s: any) => ({ ...s, id: uuidv4() }));
+        const clonedInventory = (originalChar.inventory || []).map((i: any) => ({ ...i, id: uuidv4() }));
         const clonedSpells = originalChar.spells?.map((s: any) => ({ ...s, id: uuidv4() })) || [];
         const stress = {
-            physical: new Array(originalChar.stress.physical.length).fill(false),
-            mental: new Array(originalChar.stress.mental.length).fill(false)
+            physical: new Array(originalChar.stress?.physical?.length || 0).fill(false),
+            mental: new Array(originalChar.stress?.mental?.length || 0).fill(false)
         };
         const stressValues = {
             physical: stress.physical.map((_: boolean, index: number) => Math.max(1, Math.min(1000, Math.trunc(originalChar.stressValues?.physical?.[index] ?? (index + 1))))),
