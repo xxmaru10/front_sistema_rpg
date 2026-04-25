@@ -225,7 +225,13 @@ export default function SessionPage() {
     const [systemReady, setSystemReady] = useState(false);
     useEffect(() => {
         const system = _earlyState.system ?? "fate";
-        loadSystem(system).then(() => setSystemReady(true)).catch(() => setSystemReady(true));
+        loadSystem(system).then(() => {
+            // Once the plugin is in the cache, force a recompute so its reducer
+            // runs across the entire event log (essential for legacy sessions
+            // whose events were initially replayed before the plugin loaded).
+            projectedStateStore.forceRecompute();
+            setSystemReady(true);
+        }).catch(() => setSystemReady(true));
     }, [_earlyState.system]);
 
     const _activePlayers = useMemo(() =>
