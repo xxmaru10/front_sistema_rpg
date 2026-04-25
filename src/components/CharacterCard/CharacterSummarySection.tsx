@@ -114,7 +114,7 @@ export function CharacterSummarySection({
                             color: "#f6e7bf",
                         }}
                     >
-                        {character.fatePoints}
+                        {character.fatePoints ?? 0}
                     </span>
                     <span
                         style={{
@@ -429,8 +429,8 @@ export function CharacterSummarySection({
                     }}
                 >
                     <CharacterVitality
-                        stressPhysical={character.stress.physical}
-                        stressMental={character.stress.mental}
+                        stressPhysical={character.stress?.physical || []}
+                        stressMental={character.stress?.mental || []}
                         stressValuesPhysical={character.stressValues?.physical || []}
                         stressValuesMental={character.stressValues?.mental || []}
                         fatePoints={character.fatePoints}

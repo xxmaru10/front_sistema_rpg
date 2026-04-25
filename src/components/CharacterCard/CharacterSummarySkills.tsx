@@ -10,7 +10,7 @@ interface CharacterSummarySkillsProps {
 export function CharacterSummarySkills({ character }: CharacterSummarySkillsProps) {
     const visibleSkills = DEFAULT_SKILLS.map((skill) => ({
         skill,
-        level: character.skills[skill] || 0,
+        level: character.skills?.[skill] || 0,
     }))
         .filter(({ level }) => level !== 0)
         .sort((a, b) => {
