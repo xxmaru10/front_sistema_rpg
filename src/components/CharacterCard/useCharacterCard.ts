@@ -414,7 +414,7 @@ export function useCharacterCard({
         Object.keys(character.consequences || {}).forEach(k => allSlots.add(k));
 
         allSlots.forEach(slot => {
-            const existing = (character.consequences as any)[slot];
+            const existing = (character.consequences as any)?.[slot];
             if (!existing?.text?.trim()) {
                 globalEventStore.append({
                     id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",

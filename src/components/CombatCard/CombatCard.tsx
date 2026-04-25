@@ -483,7 +483,7 @@ export function CombatCard({
                             }}>
                                 <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', border: 'none', background: 'transparent', padding: 0 }}>
                                     {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>-</button>}
-                                    <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints}</span>
+                                    <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints ?? 0}</span>
                                     {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>+</button>}
                                 </div>
                             </div>

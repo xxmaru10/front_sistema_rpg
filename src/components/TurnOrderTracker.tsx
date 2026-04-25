@@ -102,19 +102,19 @@ const TrackerItem = ({
             ? '#ff4444'
             : '#3b82f6'; // Azul para jogadores e aliados
 
-    const physicalTotal = char.stress.physical.length;
-    const physicalMarked = char.stress.physical.filter(Boolean).length;
-    const mentalTotal = char.stress.mental.length;
-    const mentalMarked = char.stress.mental.filter(Boolean).length;
+    const physicalTotal = (char.stress?.physical || []).length;
+    const physicalMarked = (char.stress?.physical || []).filter(Boolean).length;
+    const mentalTotal = (char.stress?.mental || []).length;
+    const mentalMarked = (char.stress?.mental || []).filter(Boolean).length;
 
-    const consequenceKeys = Object.keys(char.consequences);
+    const consequenceKeys = Object.keys(char.consequences || {});
     const standardSlots = ["mild", "moderate", "severe"];
     const extraSlots = consequenceKeys.filter(k => !standardSlots.includes(k));
     const totalCapacity = physicalTotal + mentalTotal + standardSlots.length + extraSlots.length;
 
     let filledConsequences = 0;
     consequenceKeys.forEach(key => {
-        if (char.consequences[key]?.text && typeof char.consequences[key]?.text === 'string' && char.consequences[key]?.text.trim().length > 0) {
+        if (char.consequences?.[key]?.text && typeof char.consequences?.[key]?.text === 'string' && char.consequences?.[key]?.text.trim().length > 0) {
             filledConsequences++;
         }
     });

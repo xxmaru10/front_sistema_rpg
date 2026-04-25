@@ -318,7 +318,7 @@ export function useCombatAutomation({
         if (isLethalFinal && liveDefender) {
             Object.keys(liveDefender.consequences || {}).forEach(slot => {
                 if (!appliedSlots.has(slot)) {
-                    const existing = liveDefender.consequences[slot];
+                    const existing = liveDefender.consequences?.[slot];
                     if (!existing || !existing.text || existing.text.trim().length === 0) {
                         globalEventStore.append({
                             id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",

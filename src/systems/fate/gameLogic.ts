@@ -97,7 +97,7 @@ export function calculateAutomaticDamageSelection(
     }
 
     const c = character as any;
-    const stressTrack = track === "PHYSICAL" ? c.stress.physical : c.stress.mental;
+    const stressTrack = track === "PHYSICAL" ? (c.stress?.physical || []) : (c.stress?.mental || []);
     const stressValues = track === "PHYSICAL" ? c.stressValues?.physical : c.stressValues?.mental;
     const availableStress = stressTrack
         .map((isMarked: boolean, index: number) => ({ index, isMarked, value: getStressBoxValue(stressValues?.[index], index) }))
@@ -180,7 +180,7 @@ export function calculateAbsorption(
     track: "PHYSICAL" | "MENTAL"
 ): DamageAbsorptionResult {
     const c = character as any;
-    const stressBoxes = track === "PHYSICAL" ? c.stress.physical : c.stress.mental;
+    const stressBoxes = track === "PHYSICAL" ? (c.stress?.physical || []) : (c.stress?.mental || []);
     const stressValues = track === "PHYSICAL" ? c.stressValues?.physical : c.stressValues?.mental;
     const stressToMarkIndices: number[] = [];
     let currentDamage = damage;
@@ -206,7 +206,7 @@ export function calculateAbsorption(
     const characterSlots = Array.from(mergedKeys);
 
     const availableSlots = characterSlots.filter(slot => {
-        const data = c.consequences[slot];
+        const data = c.consequences?.[slot];
         return !data || !data.text || data.text.trim() === "";
     }).sort((a, b) => {
         const indexA = slotsOrder.indexOf(a);
