@@ -157,7 +157,8 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
       const char = state.characters[p.characterId];
       if (!char) return state;
       const data = sd(char);
-      const newSkills = { ...data.skills, [p.skill]: p.rank };
+      if (!data) return state; // defensive: migrateAll should ensure this never trips
+      const newSkills = { ...(data.skills ?? {}), [p.skill]: p.rank };
       const nextData: VampireSystemData = { ...data, skills: newSkills };
       const nextChar: VampireCharacter = { ...char, systemData: nextData, skills: newSkills } as VampireCharacter;
       return { ...state, characters: { ...state.characters, [p.characterId]: nextChar } };

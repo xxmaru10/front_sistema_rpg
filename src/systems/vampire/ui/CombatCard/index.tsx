@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Character } from "@/types/domain";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronDown, Trash2, Star, Target, Dices, Skull } from "lu
 import { ConsequenceModal } from "@/components/ConsequenceModal";
 import { CombatCardStyles } from "@/components/CombatCard/CombatCard.styles";
 import type { VampireCharacter, VampireSystemData, ConsequenceData } from "../../types";
+import { migrateLegacyVampireCharacter } from "../../migrations";
 import { toRoman } from "../../utils";
 
 interface Props {
@@ -56,8 +57,14 @@ export function VampireCombatCard({
   stripRank = 0,
   stripWidthPercent = 100,
 }: Props) {
-  const vc = character as VampireCharacter;
-  const data = vc.systemData as VampireSystemData;
+  // Always derive a valid VampireSystemData. If the projected state somehow has
+  // a character without systemData, build it on the fly so the card never crashes
+  // on `data.stress` / `data.stressValues` access.
+  const data: VampireSystemData = useMemo(() => {
+    const vc = character as VampireCharacter;
+    if (vc.systemData?.generation !== undefined) return vc.systemData;
+    return (migrateLegacyVampireCharacter(character) as VampireCharacter).systemData;
+  }, [character]);
   const userId = actorUserId.trim().toLowerCase();
 
   const isOwner = (actorUserId && character.ownerUserId && userId === character.ownerUserId.trim().toLowerCase()) || isLinkedCharacter;

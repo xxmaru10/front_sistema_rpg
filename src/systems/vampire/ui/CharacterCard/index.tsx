@@ -1,7 +1,7 @@
 "use client";
 
 import { Zap } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Character, SessionState } from "@/types/domain";
 import { FateCharacterCard } from "@/components/CharacterCard/FateCharacterCard";
 import { globalEventStore } from "@/lib/eventStore";
@@ -10,6 +10,7 @@ import { VAMPIRE_SKILLS, toRoman } from "../../utils";
 import { VampireHungerConsequences } from "./VampireHungerConsequences";
 import { VampireDisciplines } from "./VampireDisciplines";
 import { VampireVitality } from "./VampireVitality";
+import { migrateLegacyVampireCharacter } from "../../migrations";
 import type { VampireCharacter, VampireSystemData } from "../../types";
 import type { MentionNavigationRequest } from "@/lib/mentionNavigation";
 
@@ -84,9 +85,17 @@ function GenerationBadge({
 
 export default function VampireCharacterCard(props: VampireCharacterCardProps) {
   const { character, sessionId, actorUserId, isGM = false, isLinkedCharacter } = props;
-  const vc = character as VampireCharacter;
-  const data = vc.systemData as VampireSystemData | undefined;
   const userId = actorUserId.trim().toLowerCase();
+
+  // Always derive a valid VampireSystemData. If the projected state has a
+  // character without systemData (e.g. created before plugin loaded, or before
+  // migration ran), build it on the fly via the migration helper. This guarantees
+  // VampireVitality / VampireHungerConsequences / VampireDisciplines always render.
+  const data: VampireSystemData = useMemo(() => {
+    const vc = character as VampireCharacter;
+    if (vc.systemData?.generation !== undefined) return vc.systemData;
+    return (migrateLegacyVampireCharacter(character) as VampireCharacter).systemData;
+  }, [character]);
 
   const isOwner =
     !!(actorUserId &&
@@ -95,9 +104,9 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
     !!isLinkedCharacter;
   const canEdit = isGM || isOwner;
 
-  const generation = data?.generation ?? 13;
+  const generation = data.generation ?? 13;
 
-  const vitalityNode = data ? (
+  const vitalityNode = (
     <VampireVitality
       characterId={character.id}
       sessionId={sessionId}
@@ -106,9 +115,9 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
       isGM={isGM}
       canEditStressOrFP={canEdit}
     />
-  ) : undefined;
+  );
 
-  const hungerNode = data ? (
+  const hungerNode = (
     <VampireHungerConsequences
       characterId={character.id}
       sessionId={sessionId}
@@ -116,7 +125,7 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
       data={data}
       isGM={isGM}
     />
-  ) : undefined;
+  );
 
   const replaceSpellsTab = {
     label: "DISCIPLINAS",
@@ -126,7 +135,7 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
         characterId={character.id}
         sessionId={sessionId}
         actorUserId={userId}
-        disciplines={data?.disciplines ?? []}
+        disciplines={data.disciplines ?? []}
         canEdit={canEdit}
       />
     ),
