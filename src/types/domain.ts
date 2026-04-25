@@ -67,7 +67,8 @@ export type NoteFolder = {
 
 // Fate-specific types are now in src/systems/fate/types.ts.
 // Re-exported here for backward compatibility with existing imports.
-export { DEFAULT_SKILLS, Item, ItemSize, Stunt, Spell, ConsequenceDebuff, ConsequenceData, StressTrackValues } from "@/systems/fate/types";
+export { DEFAULT_SKILLS } from "@/systems/fate/types";
+export type { Item, ItemSize, Stunt, Spell, ConsequenceDebuff, ConsequenceData, StressTrackValues } from "@/systems/fate/types";
 
 export type ArenaPortraitFocus = {
   x: number; // percent 0..100

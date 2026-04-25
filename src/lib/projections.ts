@@ -5,7 +5,8 @@
  * @note: This is a synthesis guide for architectural understanding.
  */
 import { ActionEvent, SessionState, Character, Aspect, Note, EntityNote } from "@/types/domain";
-import { DEFAULT_SKILLS, StressTrackValues } from "@/systems/fate/types";
+import { DEFAULT_SKILLS } from "@/systems/fate/types";
+import type { StressTrackValues } from "@/systems/fate/types";
 import { getCachedSystem } from "@/systems/registry";
 
 /** The initial state for a new game session */
