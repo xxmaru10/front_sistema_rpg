@@ -197,7 +197,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                 ...state,
                 characters: {
                     ...state.characters,
-                    [payload.characterId]: { ...char, fatePoints: Math.max(0, char.fatePoints - payload.amount) }
+                    [payload.characterId]: { ...char, fatePoints: Math.max(0, (char.fatePoints ?? 0) - payload.amount) }
                 }
             };
         }
@@ -209,7 +209,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                 ...state,
                 characters: {
                     ...state.characters,
-                    [payload.characterId]: { ...char, fatePoints: char.fatePoints + payload.amount }
+                    [payload.characterId]: { ...char, fatePoints: (char.fatePoints ?? 0) + payload.amount }
                 }
             };
         }
@@ -218,7 +218,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const newTrack = [...char.stress[track]];
+            const newTrack = [...(char.stress?.[track] || [])];
             if (payload.boxIndex >= 0 && payload.boxIndex < newTrack.length) {
                 newTrack[payload.boxIndex] = true;
             }
@@ -228,7 +228,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        stress: { ...char.stress, [track]: newTrack }
+                        stress: { ...(char.stress || {}), [track]: newTrack }
                     }
                 }
             };
@@ -238,7 +238,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const newTrack = [...char.stress[track]];
+            const newTrack = [...(char.stress?.[track] || [])];
             if (payload.boxIndex >= 0 && payload.boxIndex < newTrack.length) {
                 newTrack[payload.boxIndex] = false;
             }
@@ -248,7 +248,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        stress: { ...char.stress, [track]: newTrack }
+                        stress: { ...(char.stress || {}), [track]: newTrack }
                     }
                 }
             };
@@ -306,7 +306,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
             const char = state.characters[payload.characterId];
             if (!char) return state;
 
-            const newConsequences = { ...char.consequences };
+            const newConsequences = { ...(char.consequences || {}) };
             delete newConsequences[payload.slot];
 
             // Remover de extra slots se aplicável
@@ -477,7 +477,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        skills: { ...char.skills, [payload.skill]: payload.rank }
+                        skills: { ...(char.skills || {}), [payload.skill]: payload.rank }
                     }
                 }
             };
@@ -511,8 +511,8 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                     [payload.characterId]: {
                         ...char,
                         stress: {
-                            ...char.stress,
-                            [track]: [...char.stress[track], false]
+                            ...(char.stress || {}),
+                            [track]: [...(char.stress?.[track] || []), false]
                         },
                         stressValues: {
                             physical: track === "physical" ? [...currentValues, nextValue] : deriveStressValues(char, "physical"),
@@ -528,7 +528,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const currentTrack = char.stress[track];
+            const currentTrack = char.stress?.[track] || [];
             if (currentTrack.length === 0) return state;
             const currentValues = deriveStressValues(char, track);
             const nextValues = currentValues.slice(0, -1);
@@ -540,7 +540,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                     [payload.characterId]: {
                         ...char,
                         stress: {
-                            ...char.stress,
+                            ...(char.stress || {}),
                             [track]: currentTrack.slice(0, -1)
                         },
                         stressValues: {
@@ -556,7 +556,7 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const currentTrack = char.stress[track];
+            const currentTrack = char.stress?.[track] || [];
             if (payload.boxIndex < 0 || payload.boxIndex >= currentTrack.length) return state;
 
             const values = deriveStressValues(char, track);

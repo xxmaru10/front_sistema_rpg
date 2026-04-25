@@ -60,7 +60,7 @@ export const DEFAULT_SKILLS = [
 // The generic Character has systemData: Record<string, unknown>.
 // In a Fate session, systemData carries all of these fields.
 // Components in fate/ui/ can cast Character → FateCharacter to access them.
-export interface FateSystemData {
+export type FateSystemData = {
   fatePoints: number;
   refresh?: number;
   stress: {

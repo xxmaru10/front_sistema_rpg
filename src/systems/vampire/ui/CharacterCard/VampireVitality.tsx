@@ -16,6 +16,26 @@ interface VampireVitalityProps {
 
 const TRACKS = [
   {
+    key: "physical" as const,
+    eventKey: "PHYSICAL",
+    label: "FÍSICO",
+    symbol: "🥊",
+    accent: "#e74c3c",
+    border: "rgba(231, 76, 60, 0.22)",
+    bg: "linear-gradient(180deg, rgba(231, 76, 60, 0.07), rgba(255, 255, 255, 0.015))",
+    activeNode: "linear-gradient(180deg, rgba(235, 80, 65, 0.85), rgba(180, 35, 25, 0.92))",
+  },
+  {
+    key: "mental" as const,
+    eventKey: "MENTAL",
+    label: "MENTAL",
+    symbol: "🧠",
+    accent: "#3498db",
+    border: "rgba(52, 152, 219, 0.22)",
+    bg: "linear-gradient(180deg, rgba(52, 152, 219, 0.07), rgba(255, 255, 255, 0.015))",
+    activeNode: "linear-gradient(180deg, rgba(60, 160, 225, 0.85), rgba(25, 90, 160, 0.92))",
+  },
+  {
     key: "blood" as const,
     eventKey: "BLOOD",
     label: "SANGUE",

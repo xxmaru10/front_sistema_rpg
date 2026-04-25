@@ -10,14 +10,18 @@ export interface Discipline {
   cost: string;
 }
 
-export interface VampireSystemData {
+export type VampireSystemData = {
   fatePoints: number;
   refresh: number;
   generation: number;
   stress: {
+    physical: boolean[];
+    mental: boolean[];
     blood: boolean[];
   };
   stressValues: {
+    physical: number[];
+    mental: number[];
     blood: number[];
   };
   consequences: Record<string, ConsequenceData>;

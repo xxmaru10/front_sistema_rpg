@@ -8,9 +8,13 @@ export function createVampireCharacter(overrides: Partial<Character> = {}): Vamp
     refresh: 3,
     generation: 13,
     stress: {
+      physical: [false, false],
+      mental: [false, false],
       blood: [false, false, false],
     },
     stressValues: {
+      physical: [1, 2],
+      mental: [1, 2],
       blood: [1, 2, 3],
     },
     consequences: {},
@@ -37,8 +41,8 @@ export function createVampireCharacter(overrides: Partial<Character> = {}): Vamp
     // Legacy flat fields kept for transition compatibility
     fatePoints: systemData.fatePoints,
     refresh: systemData.refresh,
-    stress: { blood: systemData.stress.blood },
-    stressValues: { blood: systemData.stressValues.blood },
+    stress: { physical: systemData.stress.physical, mental: systemData.stress.mental, blood: systemData.stress.blood },
+    stressValues: { physical: systemData.stressValues.physical, mental: systemData.stressValues.mental, blood: systemData.stressValues.blood },
     consequences: systemData.consequences,
     skills: systemData.skills,
     stunts: systemData.stunts,

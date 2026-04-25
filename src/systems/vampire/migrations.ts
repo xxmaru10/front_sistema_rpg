@@ -12,9 +12,13 @@ export function migrateLegacyVampireCharacter(char: Character): VampireCharacter
     refresh: c.refresh ?? 3,
     generation: c.generation ?? 13,
     stress: {
+      physical: c.stress?.physical ?? [false, false],
+      mental: c.stress?.mental ?? [false, false],
       blood: c.stress?.blood ?? [false, false, false],
     },
     stressValues: {
+      physical: c.stressValues?.physical ?? [1, 2],
+      mental: c.stressValues?.mental ?? [1, 2],
       blood: c.stressValues?.blood ?? [1, 2, 3],
     },
     consequences: c.consequences ?? {},

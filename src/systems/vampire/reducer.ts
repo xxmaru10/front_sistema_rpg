@@ -338,7 +338,7 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
     }
 
     // ── Inventory ─────────────────────────────────────────────────────────────
-    case "CHARACTER_INVENTORY_ITEM_UPDATED": {
+    case "CHARACTER_INVENTORY_UPDATED": {
       return patchSd(state, p.characterId, (data) => {
         const inv = data.inventory ?? [];
         const idx = inv.findIndex((i) => i.id === p.item.id);
@@ -349,11 +349,7 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
       });
     }
 
-    case "CHARACTER_INVENTORY_ITEM_DELETED": {
-      return patchSd(state, p.characterId, (data) => ({
-        inventory: (data.inventory ?? []).filter((i) => i.id !== p.itemId),
-      }));
-    }
+
 
     // ── Notes ─────────────────────────────────────────────────────────────────
     case "CHARACTER_NOTE_ADDED": {
@@ -377,30 +373,7 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
     case "ZONE_CREATED": {
       return { ...state, zones: { ...state.zones, [p.id]: { id: p.id, name: p.name, position: p.position, size: p.size, color: p.color, characterIds: [] } } };
     }
-    case "ZONE_UPDATED": {
-      const zone = state.zones?.[p.id];
-      if (!zone) return state;
-      return { ...state, zones: { ...state.zones, [p.id]: { ...zone, ...p.changes } } };
-    }
-    case "ZONE_DELETED": {
-      const zones = { ...state.zones };
-      delete zones[p.id];
-      return { ...state, zones };
-    }
 
-    case "ASPECT_CREATED": {
-      return { ...state, aspects: { ...state.aspects, [p.id]: { id: p.id, name: p.name, freeInvokes: p.freeInvokes ?? 0 } } };
-    }
-    case "ASPECT_UPDATED": {
-      const asp = state.aspects?.[p.id];
-      if (!asp) return state;
-      return { ...state, aspects: { ...state.aspects, [p.id]: { ...asp, ...p.changes } } };
-    }
-    case "ASPECT_DELETED": {
-      const aspects = { ...state.aspects };
-      delete aspects[p.id];
-      return { ...state, aspects };
-    }
 
     default:
       return state;

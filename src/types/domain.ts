@@ -68,7 +68,8 @@ export type NoteFolder = {
 // Fate-specific types are now in src/systems/fate/types.ts.
 // Re-exported here for backward compatibility with existing imports.
 export { DEFAULT_SKILLS } from "@/systems/fate/types";
-export type { Item, ItemSize, Stunt, Spell, ConsequenceDebuff, ConsequenceData, StressTrackValues } from "@/systems/fate/types";
+import type { Item, ItemSize, Stunt, Spell, ConsequenceDebuff, ConsequenceData, StressTrackValues } from "@/systems/fate/types";
+export type { Item, ItemSize, Stunt, Spell, ConsequenceDebuff, ConsequenceData, StressTrackValues };
 
 export type ArenaPortraitFocus = {
   x: number; // percent 0..100
@@ -100,7 +101,7 @@ export type Character = {
   // Legacy Fate fields — kept for transition. Will be removed in a follow-up pass.
   fatePoints?: number;
   refresh?: number;
-  stress?: { physical: boolean[]; mental: boolean[] };
+  stress?: Record<string, boolean[]>;
   stressValues?: import("@/systems/fate/types").StressTrackValues;
   consequences?: { [key: string]: import("@/systems/fate/types").ConsequenceData | undefined };
   skills?: Record<string, number>;
@@ -511,4 +512,12 @@ export type ActionEvent =
   | EventEnvelope<"BATTLEMAP_UPDATED", Partial<BattlemapState>>
   | EventEnvelope<"STICKY_NOTE_CREATED", StickyNote>
   | EventEnvelope<"STICKY_NOTE_UPDATED", { id: string; patch: Partial<StickyNote> }>
-  | EventEnvelope<"STICKY_NOTE_DELETED", { id: string }>;
+  | EventEnvelope<"STICKY_NOTE_DELETED", { id: string }>
+  
+  // Plugin: Vampire
+  | EventEnvelope<"VAMPIRE_GENERATION_UPDATED", { characterId: string; generation: number }>
+  | EventEnvelope<"VAMPIRE_DISCIPLINE_UPDATED", { characterId: string; discipline: import("@/systems/vampire/types").Discipline }>
+  | EventEnvelope<"VAMPIRE_DISCIPLINE_DELETED", { characterId: string; disciplineId: string }>
+  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_UPDATED", { characterId: string; slot: string; value: string | null; debuff?: import("@/systems/fate/types").ConsequenceDebuff }>
+  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_DELETED", { characterId: string; slot: string }>
+  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_SLOT_ADDED", { characterId: string; slot: string }>;
