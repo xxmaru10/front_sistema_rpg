@@ -307,10 +307,15 @@ export class VoiceChatManager {
         return this.sharedPeerAudioContext;
     }
 
+    // AEC desligado por padrão: com echoCancellation:true o Chrome engata o
+    // perfil "communications" para a aba inteira, band-limitando todo áudio
+    // da página (música, SFX, YouTube) à faixa de voz (~200Hz–4kHz). Resultado
+    // observado: vocais audíveis e instrumentos sumindo / som "robótico".
+    // Pressuposto: jogadores usam fone/headset, então não há loop de eco real.
     private getPreferredAudioConstraints(deviceId?: string): MediaTrackConstraints {
         return {
             deviceId: deviceId ? { exact: deviceId } : undefined,
-            echoCancellation: true,
+            echoCancellation: false,
             noiseSuppression: true,
             autoGainControl: true,
             channelCount: { ideal: 1 },
@@ -320,7 +325,7 @@ export class VoiceChatManager {
     private getFallbackAudioConstraints(deviceId?: string): MediaTrackConstraints {
         return {
             deviceId: deviceId ? { exact: deviceId } : undefined,
-            echoCancellation: true,
+            echoCancellation: false,
             noiseSuppression: false,
             autoGainControl: false,
             channelCount: { ideal: 1 },
@@ -514,23 +519,44 @@ export class VoiceChatManager {
     private updatePeerAudioOutputState() {
         this.peerAudioElements.forEach((audioEl, peerId) => {
             const userMuted = this.peerMuted.get(peerId) ?? false;
-            // Permite 0..2 (200%) — gain > 1 amplifica acima do nível original
             const desiredVolume = Math.max(0, Math.min(2, this.peerVolumes.get(peerId) ?? 1));
             const duckingMultiplier = this.suppressPeerPlaybackForScreenShare
                 ? VoiceChatManager.SCREEN_SHARE_PEER_DUCK_FACTOR
                 : 1;
-            const effectiveGain = userMuted ? 0 : desiredVolume * duckingMultiplier;
+            const effectiveLevel = userMuted ? 0 : desiredVolume * duckingMultiplier;
 
-            // Aplica o gain via GainNode (0..2); audioEl.volume fica em 1 fixo.
-            // O GainNode está no caminho de playback (source→gain→dest→audioEl.srcObject).
             const nodes = this.audioNodes.get(peerId);
+            const rawStream = this.peerStreams.get(peerId) || null;
+            // Acima de 100% precisamos amplificar via GainNode (audioEl.volume é capado em 1).
+            // Abaixo/igual mantemos stream cru para evitar que o MediaStreamDestination
+            // arraste a sessão de áudio da página para o pipeline "communications" do Chrome
+            // (que degrada música em playback HTML5: soa robótica/baixa).
+            const needsAmplification = !userMuted && effectiveLevel > 1 && !!nodes;
+
             if (nodes) {
                 const ctx = this.getSharedPeerAudioContext();
-                nodes.gain.gain.setTargetAtTime(effectiveGain, ctx.currentTime, 0.05);
+                // Mantém o nível no GainNode coerente para análise de "speaking" e para o
+                // caminho amplificado quando ativo.
+                nodes.gain.gain.setTargetAtTime(
+                    needsAmplification ? effectiveLevel : (userMuted ? 0 : 1),
+                    ctx.currentTime,
+                    0.05,
+                );
+            }
+
+            if (needsAmplification && nodes) {
+                if (audioEl.srcObject !== nodes.dest.stream) {
+                    audioEl.srcObject = nodes.dest.stream;
+                }
+                audioEl.volume = 1;
+            } else {
+                if (rawStream && audioEl.srcObject !== rawStream) {
+                    audioEl.srcObject = rawStream;
+                }
+                audioEl.volume = userMuted ? 0 : Math.min(1, effectiveLevel);
             }
 
             audioEl.muted = userMuted;
-            audioEl.volume = 1;
             if (audioEl.srcObject && audioEl.paused) {
                 audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
             }
@@ -1140,7 +1166,9 @@ export class VoiceChatManager {
 
             const audioEl = this.peerAudioElements.get(peerId);
             if (audioEl) {
-                audioEl.srcObject = dest.stream;
+                // Inicia com o stream cru — updatePeerAudioOutputState troca para
+                // dest.stream apenas quando o usuário pede amplificação (>100%).
+                audioEl.srcObject = stream;
                 this.updatePeerAudioOutputState();
             }
 
