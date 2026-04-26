@@ -114,7 +114,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         });
 
         (state.missions || []).forEach((m: any) =>
-            results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÃO', type: 'MISSION', color: '#C5A059' })
+            results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÃO', type: 'MISSION', color: 'var(--accent-color)' })
         );
         (state.timeline || []).forEach((ev: any) =>
             results.push({ id: ev.id, name: ev.name, category: 'Tempo', displayType: 'HISTÓRIA', type: 'TIMELINE', color: '#4a90e2' })
@@ -129,7 +129,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         const allTags = new Set<string>();
         Object.values(state.worldEntities || {}).forEach(e => (e.tags || []).forEach(t => allTags.add(t)));
         allTags.forEach(tag =>
-            results.push({ id: `tag-${tag}`, name: tag, category: 'TAG', displayType: 'TAG', color: '#C5A059', isTag: true })
+            results.push({ id: `tag-${tag}`, name: tag, category: 'TAG', displayType: 'TAG', color: 'var(--accent-color)', isTag: true })
         );
 
         return results;
@@ -149,7 +149,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         });
         (state.missions || []).forEach((m: any) => {
             if (m.name.toLowerCase().includes(query) || m.description.toLowerCase().includes(query))
-                results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÃO', color: '#C5A059' });
+                results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÃO', color: 'var(--accent-color)' });
         });
         (state.timeline || []).forEach((ev: any) => {
             if (ev.name.toLowerCase().includes(query) || ev.description.toLowerCase().includes(query))

@@ -327,7 +327,7 @@ export function CreateWorldEntityModal({
                             {newEntityType === "MAPA" && (
                                 <div className="input-group" style={{ marginTop: '15px' }}>
                                     <label>IMAGEM DO MAPA (PNG ou JPEG)</label>
-                                    <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--accent-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
                                         <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> Resolução recomendada: 1280x720 (HD) para melhor performance.
                                     </p>
                                     <input
@@ -361,7 +361,7 @@ export function CreateWorldEntityModal({
                     {["PERSONAGEM", "LOCALIZACAO", "RACA", "FAMILIA", "FACAO", "RELIGIAO", "BESTIARIO", "OUTROS"].includes(newEntityType) && (
                         <div className="input-group" style={{ marginTop: '15px' }}>
                             <label>IMAGEM (PNG ou JPEG)</label>
-                            <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--accent-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
                                 <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> Resolução recomendada: 800x800 para melhor performance.
                             </p>
                             <input

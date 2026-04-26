@@ -420,8 +420,8 @@ export function CharacterConsequences({
                 }
 
                 :global(.modal-option-btn) {
-                    background: rgba(197, 160, 89, 0.05);
-                    border: 1px solid rgba(197, 160, 89, 0.2);
+                    background: rgba(var(--accent-rgb), 0.05);
+                    border: 1px solid rgba(var(--accent-rgb), 0.2);
                     color: var(--accent-color);
                     padding: 12px 20px;
                     font-family: var(--font-header);
@@ -435,7 +435,7 @@ export function CharacterConsequences({
                 }
 
                 :global(.modal-option-btn:hover) {
-                    background: rgba(197, 160, 89, 0.15);
+                    background: rgba(var(--accent-rgb), 0.15);
                     border-color: var(--accent-color);
                 }
 
@@ -458,7 +458,7 @@ export function CharacterConsequences({
 
                 :global(.modal-close-btn) {
                     background: none;
-                    border: 1px solid rgba(197, 160, 89, 0.3);
+                    border: 1px solid rgba(var(--accent-rgb), 0.3);
                     color: var(--accent-color);
                     padding: 10px 20px;
                     font-family: var(--font-header);
@@ -471,7 +471,7 @@ export function CharacterConsequences({
                 }
 
                 :global(.modal-close-btn:hover) {
-                    background: rgba(197, 160, 89, 0.1);
+                    background: rgba(var(--accent-rgb), 0.1);
                 }
             `}</style>
         </>

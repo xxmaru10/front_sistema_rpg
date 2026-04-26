@@ -24,7 +24,7 @@ export function useSessionSkillsItems({
     const [newSkillName, setNewSkillName] = useState("");
     const [newSkillDescription, setNewSkillDescription] = useState("");
     const [newSkillRequirement, setNewSkillRequirement] = useState("");
-    const [newSkillColor, setNewSkillColor] = useState("#C5A059");
+    const [newSkillColor, setNewSkillColor] = useState("var(--accent-color)");
     const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
 
     // --- Item form state ---
@@ -114,7 +114,7 @@ export function useSessionSkillsItems({
         setNewSkillName(skill.name);
         setNewSkillDescription(skill.description || "");
         setNewSkillRequirement(skill.requirement || "");
-        setNewSkillColor(skill.color || "#C5A059");
+        setNewSkillColor(skill.color || "var(--accent-color)");
         setShowAddSkill(true);
     };
 

@@ -5,7 +5,7 @@ export function WorldTabStyles() {
         position: absolute;
         top: -10px;
         right: -10px;
-        background: #c5a059;
+        background: var(--accent-color);
         color: #000;
         font-size: 0.8rem;
         width: 20px;

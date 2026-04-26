@@ -47,7 +47,7 @@ interface NotesTabProps {
 }
 
 const NOTE_FOLDER_COLORS = [
-    "#C5A059",
+    "var(--accent-color)",
     "#4A90E2",
     "#50E3C2",
     "#B8E986",
@@ -236,7 +236,7 @@ export function NotesTab({
                         alignItems: "center",
                         gap: "8px",
                         border: selectedPrivateFolderId === "all" ? "1px solid var(--accent-color)" : "1px solid rgba(255,255,255,0.08)",
-                        background: selectedPrivateFolderId === "all" ? "rgba(197,160,89,0.18)" : "rgba(255,255,255,0.03)",
+                        background: selectedPrivateFolderId === "all" ? "rgba(var(--accent-rgb),0.18)" : "rgba(255,255,255,0.03)",
                         color: selectedPrivateFolderId === "all" ? "#fff" : "#bbb",
                         padding: "8px 12px",
                         borderRadius: "999px",
@@ -308,8 +308,8 @@ export function NotesTab({
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "8px",
-                        border: "1px dashed rgba(197,160,89,0.45)",
-                        background: "rgba(197,160,89,0.08)",
+                        border: "1px dashed rgba(var(--accent-rgb),0.45)",
+                        background: "rgba(var(--accent-rgb),0.08)",
                         color: privateNoteFolders.length >= 10 ? "rgba(255,255,255,0.35)" : "var(--accent-color)",
                         padding: "8px 12px",
                         borderRadius: "999px",
@@ -323,7 +323,7 @@ export function NotesTab({
             </div>
 
             {folderDraft.mode !== "closed" && (
-                <div style={{ border: "1px solid rgba(197,160,89,0.18)", background: "rgba(0,0,0,0.2)", borderRadius: "10px", padding: "12px" }}>
+                <div style={{ border: "1px solid rgba(var(--accent-rgb),0.18)", background: "rgba(0,0,0,0.2)", borderRadius: "10px", padding: "12px" }}>
                     <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                         <input
                             value={folderDraft.name}
@@ -365,7 +365,7 @@ export function NotesTab({
     );
 
     const renderPlayerSubmenus = () => (
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", padding: "8px 10px", border: "1px solid rgba(197,160,89,0.12)", background: "rgba(0,0,0,0.18)", borderRadius: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", padding: "8px 10px", border: "1px solid rgba(var(--accent-rgb),0.12)", background: "rgba(0,0,0,0.18)", borderRadius: "8px" }}>
             <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>
                 JOGADOR:
             </span>
@@ -462,7 +462,7 @@ export function NotesTab({
 
                 return (
                     <>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(197,160,89,0.1)", background: "rgba(0,0,0,0.2)", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(var(--accent-rgb),0.1)", background: "rgba(0,0,0,0.2)", flexWrap: "wrap" }}>
                             <span style={{ fontFamily: "var(--font-header)", fontSize: "0.6rem", letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>
                                 SESSÃƒO:
                             </span>
@@ -627,8 +627,8 @@ export function NotesTab({
                                         <span className="time">{new Date(note.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                                         <span className="actor" style={{ color: authorColor }}>{note.authorName.toUpperCase()}</span>
                                         {noteFolder && (
-                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 8px", borderRadius: "999px", background: `${noteFolder.color || "#C5A059"}22`, color: noteFolder.color || "var(--accent-color)", fontSize: "0.55rem", letterSpacing: "0.12em" }}>
-                                                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: noteFolder.color || "#C5A059" }} />
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 8px", borderRadius: "999px", background: `${noteFolder.color || "var(--accent-color)"}22`, color: noteFolder.color || "var(--accent-color)", fontSize: "0.55rem", letterSpacing: "0.12em" }}>
+                                                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: noteFolder.color || "var(--accent-color)" }} />
                                                 {noteFolder.name.toUpperCase()}
                                             </span>
                                         )}

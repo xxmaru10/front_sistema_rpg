@@ -2,7 +2,7 @@ import { useState } from "react";
 import { WorldEntityType } from "@/types/domain";
 
 export const COLOR_PRESETS = [
-    "#C5A059", "#D0021B", "#4A90E2", "#7ED321",
+    "var(--accent-color)", "#D0021B", "#4A90E2", "#7ED321",
     "#9013FE", "#F5A623", "#50E3C2", "#4A4A4A",
     "#8B572A", "#B00000"
 ];
@@ -30,7 +30,7 @@ export function useWorldEntityForm() {
     const [showAddWorldEntity, setShowAddWorldEntity] = useState(false);
     const [newEntityName, setNewEntityName] = useState("");
     const [newEntityType, setNewEntityType] = useState<WorldEntityType>("PERSONAGEM");
-    const [newEntityColor, setNewEntityColor] = useState("#C5A059");
+    const [newEntityColor, setNewEntityColor] = useState("var(--accent-color)");
     const [newEntityTags, setNewEntityTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState("");
     const [newEntityDescription, setNewEntityDescription] = useState("");

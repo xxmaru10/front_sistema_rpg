@@ -208,7 +208,7 @@ export function useWorldEntities({
         setEditingWorldEntityId(entityId);
         setNewEntityName(entity.name);
         setNewEntityType(entity.type);
-        setNewEntityColor(entity.color || "#C5A059");
+        setNewEntityColor(entity.color || "var(--accent-color)");
         setNewEntityTags(entity.tags || []);
         setNewEntityDescription(entity.description || "");
         setNewEntityFamily(entity.familyId || "");

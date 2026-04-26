@@ -229,7 +229,7 @@ export function WorldTab({
                                                                         onClick={(e) => { e.stopPropagation(); handleUpdateFieldVisibility?.(entity.id, 'name', !fieldVisibility['name']); }}
                                                                         className="visibility-toggle-btn name-toggle"
                                                                         title={fieldVisibility['name'] ? "Mostrar Nome" : "Ocultar Nome"}
-                                                                        style={{ background: 'none', border: 'none', color: fieldVisibility['name'] ? '#c5a059' : '#666', cursor: 'pointer', marginLeft: '6px' }}
+                                                                        style={{ background: 'none', border: 'none', color: fieldVisibility['name'] ? 'var(--accent-color)' : '#666', cursor: 'pointer', marginLeft: '6px' }}
                                                                     >
                                                                         {fieldVisibility['name'] ? <EyeOff size={14} /> : <Eye size={14} />}
                                                                     </button>
@@ -258,7 +258,7 @@ export function WorldTab({
                                                                         className="entity-visibility-btn"
                                                                         onClick={(e) => { e.stopPropagation(); handleToggleAllVisibility?.(entity.id, !isAllHidden); }}
                                                                         title={isAllHidden ? "Mostrar Tudo" : "Ocultar Tudo"}
-                                                                        style={{ color: isAllHidden ? '#666' : '#c5a059', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                        style={{ color: isAllHidden ? '#666' : 'var(--accent-color)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                                                     >
                                                                         {isAllHidden ? <EyeOff size={18} /> : <Eye size={18} />}
                                                                     </button>
@@ -266,7 +266,7 @@ export function WorldTab({
                                                                         className="entity-add-block-btn"
                                                                         onClick={(e) => { e.stopPropagation(); setViewingEntityId(entity.id); }}
                                                                         title="Adicionar Bloco"
-                                                                        style={{ color: '#c5a059', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                        style={{ color: 'var(--accent-color)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                                                     >
                                                                         <Plus size={32} />
                                                                     </button>
@@ -329,13 +329,13 @@ export function WorldTab({
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
-                                                            background: isAllHidden ? 'rgba(255,68,68,0.08)' : 'rgba(197, 160, 89, 0.08)',
+                                                            background: isAllHidden ? 'rgba(255,68,68,0.08)' : 'rgba(var(--accent-rgb), 0.08)',
                                                             borderRight: '1px solid rgba(255,255,255,0.05)',
                                                             cursor: 'pointer',
                                                             flexShrink: 0
                                                         }}
                                                     >
-                                                        {isAllHidden ? <EyeOff size={24} style={{ opacity: 0.3 }} /> : <Eye size={24} style={{ color: '#C5A059', opacity: 0.8 }} />}
+                                                        {isAllHidden ? <EyeOff size={24} style={{ opacity: 0.3 }} /> : <Eye size={24} style={{ color: 'var(--accent-color)', opacity: 0.8 }} />}
                                                     </div>
                                                 )}
 
@@ -376,7 +376,7 @@ export function WorldTab({
                                                                 {isGM && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); handleUpdateFieldVisibility?.(entity.id, 'name', !fieldVisibility['name']); }}
-                                                                        style={{ background: 'none', border: 'none', color: fieldVisibility['name'] ? '#C5A059' : '#555', cursor: 'pointer', marginLeft: '8px' }}
+                                                                        style={{ background: 'none', border: 'none', color: fieldVisibility['name'] ? 'var(--accent-color)' : '#555', cursor: 'pointer', marginLeft: '8px' }}
                                                                     >
                                                                         {fieldVisibility['name'] ? <EyeOff size={14} /> : <Eye size={14} />}
                                                                     </button>
@@ -466,7 +466,7 @@ export function WorldTab({
                                                                     setViewingEntityId(entity.id);
                                                                 }}
                                                                 title="Adicionar Bloco"
-                                                                style={{ color: '#C5A059', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
+                                                                style={{ color: 'var(--accent-color)', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
                                                             >
                                                                 <Plus size={20} />
                                                             </button>
@@ -479,9 +479,9 @@ export function WorldTab({
                                                             title="Notas"
                                                             style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', zIndex: 10000 }}
                                                         >
-                                                            <MessageSquare size={20} style={{ color: '#C5A059' }} />
+                                                            <MessageSquare size={20} style={{ color: 'var(--accent-color)' }} />
                                                             {entity.linkedNotes && entity.linkedNotes.filter((n: any) => !(n.isPrivate || n.is_private) || n.authorId === userId).length > 0 && (
-                                                                <span style={{ position: 'absolute', top: '0', right: '0', background: '#C5A059', color: '#000', fontSize: '0.6rem', fontWeight: 'bold', minWidth: '15px', height: '15px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                                                <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--accent-color)', color: '#000', fontSize: '0.6rem', fontWeight: 'bold', minWidth: '15px', height: '15px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                                                                     {entity.linkedNotes.filter((n: any) => !(n.isPrivate || n.is_private) || n.authorId === userId).length}
                                                                 </span>
                                                             )}

@@ -1054,7 +1054,7 @@ export function InventorySection({
                                                 onClick={() => setShowVISelector(true)}
                                                 title="Selecionar da VI"
                                                 style={{
-                                                    background: 'rgba(197, 160, 89, 0.1)',
+                                                    background: 'rgba(var(--accent-rgb), 0.1)',
                                                     border: '1px solid var(--accent-color)',
                                                     color: 'var(--accent-color)',
                                                     cursor: 'pointer',
@@ -1073,7 +1073,7 @@ export function InventorySection({
                                                 onClick={() => window.open(inventoryModal.item.url, '_blank')}
                                                 title="Abrir Link"
                                                 style={{
-                                                    background: 'rgba(197, 160, 89, 0.1)',
+                                                    background: 'rgba(var(--accent-rgb), 0.1)',
                                                     border: '1px solid var(--accent-color)',
                                                     color: 'var(--accent-color)',
                                                     cursor: 'pointer',

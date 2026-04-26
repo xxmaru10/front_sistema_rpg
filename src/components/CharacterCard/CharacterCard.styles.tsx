@@ -20,8 +20,8 @@ export const CharacterCardStyles = () => (
 
 .operative-arcano {
     --accent-color: #C9A84C;
-    --accent-glow: rgba(197, 160, 89, 0.3);
-    --accent-rgb: 197, 160, 89;
+    --accent-glow: rgba(var(--accent-rgb), 0.3);
+    --accent-rgb: var(--accent-rgb);
 }
 
 .threat-arcano {
@@ -165,7 +165,7 @@ export const CharacterCardStyles = () => (
     left: -260px;
     width: 240px;
     background: rgba(8, 8, 8, 0.98);
-    border: 1px solid rgba(197, 160, 89, 0.4);
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.8);
@@ -175,8 +175,8 @@ export const CharacterCardStyles = () => (
 }
 
 .inventory-floating:hover {
-    border-color: rgba(197, 160, 89, 0.8);
-    box-shadow: 0 15px 40px rgba(197, 160, 89, 0.15);
+    border-color: rgba(var(--accent-rgb), 0.8);
+    box-shadow: 0 15px 40px rgba(var(--accent-rgb), 0.15);
 }
 
 .inventory-floating.dragging {
@@ -222,8 +222,8 @@ export const CharacterCardStyles = () => (
 }
 
 .add-mild2-btn {
-    background: rgba(197, 160, 89, 0.1);
-    border: 1px solid rgba(197, 160, 89, 0.3);
+    background: rgba(var(--accent-rgb), 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
     color: var(--accent-color);
     width: 22px;
     height: 22px;
@@ -237,7 +237,7 @@ export const CharacterCardStyles = () => (
 }
 
 .add-mild2-btn:hover {
-    background: rgba(197, 160, 89, 0.25);
+    background: rgba(var(--accent-rgb), 0.25);
     border-color: var(--accent-color);
 }
 
@@ -278,7 +278,7 @@ export const CharacterCardStyles = () => (
 .inv-slot-number {
     width: 18px;
     height: 18px;
-    background: rgba(197, 160, 89, 0.2);
+    background: rgba(var(--accent-rgb), 0.2);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -304,7 +304,7 @@ export const CharacterCardStyles = () => (
 
 .inv-description-row {
     font-size: 0.6rem;
-    color: rgba(197, 160, 89, 0.7);
+    color: rgba(var(--accent-rgb), 0.7);
     font-style: italic;
     line-height: 1.3;
     overflow: hidden;
@@ -323,7 +323,7 @@ export const CharacterCardStyles = () => (
 }
 
 .qty-label {
-    color: rgba(197, 160, 89, 0.5);
+    color: rgba(var(--accent-rgb), 0.5);
 }
 
 .qty-value {
@@ -344,15 +344,15 @@ export const CharacterCardStyles = () => (
     justify-content: center;
     gap: 8px;
     padding: 4px 8px;
-    background: rgba(197, 160, 89, 0.1);
-    border-top: 1px solid rgba(197, 160, 89, 0.15);
+    background: rgba(var(--accent-rgb), 0.1);
+    border-top: 1px solid rgba(var(--accent-rgb), 0.15);
 }
 
 .qty-btn {
     width: 24px;
     height: 24px;
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(197, 160, 89, 0.3);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
     color: var(--accent-color);
     cursor: pointer;
     display: flex;
@@ -363,7 +363,7 @@ export const CharacterCardStyles = () => (
 }
 
 .qty-btn:hover {
-    background: rgba(197, 160, 89, 0.25);
+    background: rgba(var(--accent-rgb), 0.25);
     border-color: var(--accent-color);
 }
 
@@ -394,8 +394,8 @@ export const CharacterCardStyles = () => (
     gap: 4px;
     font-size: 0.6rem;
     padding: 3px 8px;
-    background: rgba(197, 160, 89, 0.1);
-    border-top: 1px solid rgba(197, 160, 89, 0.15);
+    background: rgba(var(--accent-rgb), 0.1);
+    border-top: 1px solid rgba(var(--accent-rgb), 0.15);
 }
 
 .inv-size-indicator {
@@ -583,7 +583,7 @@ export const CharacterCardStyles = () => (
     padding: 20px;
     min-width: 360px;
     max-width: 420px;
-    box-shadow: 0 0 40px rgba(197, 160, 89, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 40px rgba(var(--accent-rgb), 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);
     animation: scaleIn 0.2s ease;
 }
 
@@ -626,7 +626,7 @@ export const CharacterCardStyles = () => (
     width: 100%;
     box-sizing: border-box;
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(197, 160, 89, 0.3);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
     color: var(--accent-color);
     padding: 8px 10px;
     font-size: 0.85rem;
@@ -647,7 +647,7 @@ export const CharacterCardStyles = () => (
     width: 100%;
     box-sizing: border-box;
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(197, 160, 89, 0.3);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
     color: var(--accent-color);
     padding: 8px 10px;
     font-size: 0.8rem;
@@ -705,7 +705,7 @@ export const CharacterCardStyles = () => (
     display: flex;
     flex-direction: column;
     gap: 20px;
-    box-shadow: 0 0 60px rgba(197, 160, 89, 0.3), inset 0 0 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 60px rgba(var(--accent-rgb), 0.3), inset 0 0 40px rgba(0, 0, 0, 0.5);
     animation: slideUp 0.25s ease;
 }
 
@@ -715,13 +715,13 @@ export const CharacterCardStyles = () => (
     display: flex; align-items: center; gap: 12px;
     font-family: var(--font-header); font-size: 1.1rem;
     color: var(--accent-color); letter-spacing: 0.15em;
-    border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
     padding-bottom: 12px;
 }
 
 .modal-input {
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(197, 160, 89, 0.3);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
     padding: 14px 16px;
     color: var(--text-color);
     font-family: var(--font-header);
@@ -731,16 +731,16 @@ export const CharacterCardStyles = () => (
     transition: all 0.2s;
 }
 
-.modal-input:focus { border-color: var(--accent-color); box-shadow: 0 0 15px rgba(197, 160, 89, 0.2); }
+.modal-input:focus { border-color: var(--accent-color); box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2); }
 .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
 .modal-btn { padding: 10px 20px; font-family: var(--font-header); font-size: 0.85rem; letter-spacing: 0.15em; cursor: pointer; transition: all 0.2s; border: 1px solid; }
-.modal-btn.save { background: rgba(197, 160, 89, 0.15); border-color: var(--accent-color); color: var(--accent-color); }
+.modal-btn.save { background: rgba(var(--accent-rgb), 0.15); border-color: var(--accent-color); color: var(--accent-color); }
 .modal-btn.cancel { background: rgba(100, 50, 50, 0.15); border-color: rgba(200, 100, 100, 0.5); color: rgba(200, 100, 100, 0.8); }
 
 .consequence-debuff-row { display: flex; gap: 16px; align-items: flex-end; }
 .debuff-field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .debuff-field label { font-size: 0.65rem; color: var(--accent-color); opacity: 0.7; letter-spacing: 0.1em; }
-.debuff-skill-select { background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(197, 160, 89, 0.3); padding: 10px 12px; color: var(--text-color); font-family: var(--font-ui); font-size: 0.9rem; outline: none; cursor: pointer; }
+.debuff-skill-select { background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(var(--accent-rgb), 0.3); padding: 10px 12px; color: var(--text-color); font-family: var(--font-ui); font-size: 0.9rem; outline: none; cursor: pointer; }
 .debuff-skill-select option { background: #0a0a0a; color: var(--text-color); }
 .debuff-field.value-field { flex: 0 0 100px; }
 .debuff-value-input { display: flex; align-items: center; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 100, 100, 0.4); padding: 8px 12px; }
@@ -751,24 +751,24 @@ export const CharacterCardStyles = () => (
 .consequence-debuff-badge { font-size: 0.65rem; color: #ff6b6b; background: rgba(255, 100, 100, 0.15); border: 1px solid rgba(255, 100, 100, 0.3); padding: 2px 8px; border-radius: 3px; font-weight: bold; letter-spacing: 0.05em; }
 
 .portrait-column { position: relative; display: flex; flex-direction: column; gap: 12px; height: 100%; }
-.char-name-portrait { font-family: var(--font-victorian); font-size: 1.3rem; font-weight: 600; font-style: italic; line-height: 1.2; color: var(--accent-color); text-align: center; text-shadow: 0 0 20px rgba(197, 160, 89, 0.2); margin: 0; }
+.char-name-portrait { font-family: var(--font-victorian); font-size: 1.3rem; font-weight: 600; font-style: italic; line-height: 1.2; color: var(--accent-color); text-align: center; text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.2); margin: 0; }
 .compact .char-name-portrait { font-size: 1.1rem; }
 
 .character-portrait {
     width: 100%; flex: 1; background-color: rgba(0, 0, 0, 0.3); background-image: url('/fundo_retrato.png');
     background-size: cover; background-position: center; background-repeat: no-repeat;
-    border-style: solid; border-color: rgba(197, 160, 89, 0.6); border-width: 10px 5px 10px 5px;
-    box-shadow: 0 0 20px rgba(197, 160, 89, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
+    border-style: solid; border-color: rgba(var(--accent-rgb), 0.6); border-width: 10px 5px 10px 5px;
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
     display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; transition: all 0.3s;
 }
 
 .portrait-image { width: 100%; height: 100%; background-size: cover; background-position: center; background-repeat: no-repeat; }
-.lore-accordion-box { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(197, 160, 89, 0.1); display: flex; flex-direction: column; transition: all 0.3s; }
+.lore-accordion-box { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(var(--accent-rgb), 0.1); display: flex; flex-direction: column; transition: all 0.3s; }
 .lore-accordion-box.expanded { background: rgba(0, 0, 0, 0.4); border-color: var(--accent-color); }
 
-.skill-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(197, 160, 89, 0.05); border: 1px solid transparent; }
-.skill-row:hover { background: rgba(197, 160, 89, 0.1); }
-.skill-row.has-points { border: 1px solid rgba(197, 160, 89, 0.2); background: rgba(197, 160, 89, 0.08); }
+.skill-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(var(--accent-rgb), 0.05); border: 1px solid transparent; }
+.skill-row:hover { background: rgba(var(--accent-rgb), 0.1); }
+.skill-row.has-points { border: 1px solid rgba(var(--accent-rgb), 0.2); background: rgba(var(--accent-rgb), 0.08); }
 
 .skill-name { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
 .skill-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -818,16 +818,16 @@ export const CharacterCardStyles = () => (
     transform: scale(1.2);
 }
 
-.lore-accordion-header { padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(197, 160, 89, 0.05); }
+.lore-accordion-header { padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(var(--accent-rgb), 0.05); }
 .lore-title { font-family: var(--font-header); font-size: 1.0rem; letter-spacing: 0.2em; color: var(--accent-color); }
-.lore-accordion-content { padding: 12px; border-top: 1px solid rgba(197, 160, 89, 0.1); font-family: var(--font-narrative); font-size: 0.8rem; color: #ccc; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; }
+.lore-accordion-content { padding: 12px; border-top: 1px solid rgba(var(--accent-rgb), 0.1); font-family: var(--font-narrative); font-size: 0.8rem; color: #ccc; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; }
 .religion-banner { 
     font-size: 0.65rem; 
     color: var(--accent-color); 
     letter-spacing: 0.2em; 
     text-align: center; 
     margin-bottom: 15px; 
-    border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
     padding-bottom: 10px;
     font-family: var(--font-header);
 }
@@ -845,18 +845,18 @@ export const CharacterCardStyles = () => (
     word-break: break-word;
 }
 
-.sheet-aspect-box-vertical { background: rgba(197, 160, 89, 0.05); border: 1px solid rgba(197, 160, 89, 0.2); padding: 8px 12px; display: flex; flex-direction: column; min-height: 60px; }
+.sheet-aspect-box-vertical { background: rgba(var(--accent-rgb), 0.05); border: 1px solid rgba(var(--accent-rgb), 0.2); padding: 8px 12px; display: flex; flex-direction: column; min-height: 60px; }
 .sheet-aspect-box-vertical.trouble { background: rgba(255, 50, 50, 0.05); border-color: rgba(255, 50, 50, 0.3); }
 
 .aspect-display-vertical { font-family: var(--font-header); font-size: 0.75rem; color: #ddd; text-transform: uppercase; word-break: break-word; }
 
 .aspects-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 32px; }
 .compact .aspects-row { grid-template-columns: 1fr; }
-.sheet-aspect-box { background: rgba(197, 160, 89, 0.05); border: 1px solid rgba(197, 160, 89, 0.2); padding: 12px; display: flex; flex-direction: column; min-height: 80px; }
+.sheet-aspect-box { background: rgba(var(--accent-rgb), 0.05); border: 1px solid rgba(var(--accent-rgb), 0.2); padding: 12px; display: flex; flex-direction: column; min-height: 80px; }
 .sheet-aspect-box.trouble { background: rgba(255, 50, 50, 0.05); border-color: rgba(255, 50, 50, 0.3); }
 .aspect-display { font-family: var(--font-header); font-size: 0.8rem; color: #ddd; text-transform: uppercase; word-break: break-word; }
 
-.artifact-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(197, 160, 89, 0.1); padding-bottom: 16px; }
+.artifact-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(var(--accent-rgb), 0.1); padding-bottom: 16px; }
 .char-name { 
     font-family: var(--font-header); 
     font-size: 2.2rem; 
@@ -1083,14 +1083,14 @@ export const CharacterCardStyles = () => (
 .integrity-matrix { display: flex; flex-direction: column; gap: 32px; }
 .track-header { display: flex; align-items: center; gap: 12px; font-family: var(--font-header); font-size: 0.75rem; letter-spacing: 0.15em; color: var(--accent-color); margin-bottom: 16px; }
 
-.capability-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(197, 160, 89, 0.05); }
+.capability-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(var(--accent-rgb), 0.05); }
 
 .skill-resource-track { display: flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; }
 .res-val { font-family: monospace; color: #fff; min-width: 12px; text-align: center; }
 .res-val.current { color: #4ade80; }
 .res-val.max { color: #fb923c; }
 
-.anomaly-item { font-family: var(--font-narrative); font-style: italic; font-size: 1rem; margin-bottom: 12px; padding: 16px 20px; background: rgba(197, 160, 89, 0.02); border: 1px solid rgba(197, 160, 89, 0.05); color: var(--text-primary); line-height: 1.5; }
+.anomaly-item { font-family: var(--font-narrative); font-style: italic; font-size: 1rem; margin-bottom: 12px; padding: 16px 20px; background: rgba(var(--accent-rgb), 0.02); border: 1px solid rgba(var(--accent-rgb), 0.05); color: var(--text-primary); line-height: 1.5; }
 
 .skills-auto-grid { 
     display: grid; 
@@ -1100,8 +1100,8 @@ export const CharacterCardStyles = () => (
 }
 
 .skill-slot {
-    background: rgba(197, 160, 89, 0.05);
-    border: 1px solid rgba(197, 160, 89, 0.15);
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
     border-radius: 4px;
     padding: 12px 16px;
     display: flex;
@@ -1112,8 +1112,8 @@ export const CharacterCardStyles = () => (
 }
 
 .skill-slot:hover {
-    background: rgba(197, 160, 89, 0.08);
-    border-color: rgba(197, 160, 89, 0.4);
+    background: rgba(var(--accent-rgb), 0.08);
+    border-color: rgba(var(--accent-rgb), 0.4);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     transform: scale(1.02);
 }
@@ -1155,7 +1155,7 @@ export const CharacterCardStyles = () => (
 .skill-btn {
     background: transparent;
     border: none;
-    color: rgba(197, 160, 89, 0.4);
+    color: rgba(var(--accent-rgb), 0.4);
     cursor: pointer;
     font-size: 0.7rem;
     padding: 2px;
@@ -1197,8 +1197,8 @@ export const CharacterCardStyles = () => (
 
 /* Stunts & Spells Styling */
 .stunt-slot, .spell-slot {
-    background: rgba(197, 160, 89, 0.05);
-    border: 1px solid rgba(197, 160, 89, 0.15);
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
     border-radius: 4px;
     margin-bottom: 12px;
     position: relative;
@@ -1206,9 +1206,9 @@ export const CharacterCardStyles = () => (
 }
 
 .stunt-slot:hover, .spell-slot:hover {
-    background: rgba(197, 160, 89, 0.08);
-    border-color: rgba(197, 160, 89, 0.4);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(197, 160, 89, 0.05);
+    background: rgba(var(--accent-rgb), 0.08);
+    border-color: rgba(var(--accent-rgb), 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(var(--accent-rgb), 0.05);
     transform: translateY(-2px);
 }
 
@@ -1248,8 +1248,8 @@ export const CharacterCardStyles = () => (
 }
 
 .add-stunt-btn, .add-spell-btn {
-    background: rgba(197, 160, 89, 0.03);
-    border: 1px dashed rgba(197, 160, 89, 0.3);
+    background: rgba(var(--accent-rgb), 0.03);
+    border: 1px dashed rgba(var(--accent-rgb), 0.3);
     color: var(--accent-color);
     padding: 12px;
     width: 100%;
@@ -1266,10 +1266,10 @@ export const CharacterCardStyles = () => (
 }
 
 .add-stunt-btn:hover, .add-spell-btn:hover {
-    background: rgba(197, 160, 89, 0.1);
+    background: rgba(var(--accent-rgb), 0.1);
     border-style: solid;
     border-color: var(--accent-color);
-    box-shadow: 0 0 15px rgba(197, 160, 89, 0.2);
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2);
 }
 
 .edit-stunt-trigger, .edit-spell-trigger {
@@ -1299,8 +1299,8 @@ export const CharacterCardStyles = () => (
 }
 
 .stunt-name-input, .spell-name-input {
-    background: rgba(197, 160, 89, 0.05);
-    border: 1px solid rgba(197, 160, 89, 0.2);
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
     color: #fff;
     padding: 8px 12px;
     font-family: var(--font-header);
@@ -1311,7 +1311,7 @@ export const CharacterCardStyles = () => (
 
 .stunt-effect-textarea, .spell-effect-textarea {
     background: rgba(0,0,0,0.2);
-    border: 1px solid rgba(197, 160, 89, 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.1);
     color: #ccc;
     padding: 12px;
     font-family: var(--font-narrative);
@@ -1332,7 +1332,7 @@ export const CharacterCardStyles = () => (
 }
 
 .stunt-action-btn.save, .spell-action-btn.save {
-    background: rgba(197, 160, 89, 0.1);
+    background: rgba(var(--accent-rgb), 0.1);
     border-color: var(--accent-color);
     color: var(--accent-color);
 }
@@ -1448,7 +1448,7 @@ export const CharacterCardStyles = () => (
 /* Stress Grid */
 .logic-readout.stress-matrix {
     background: rgba(0,0,0,0.25);
-    border: 1px solid rgba(197, 160, 89, 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.1);
     border-radius: 8px;
     padding: 24px;
     margin-bottom: 24px;
@@ -1488,7 +1488,7 @@ export const CharacterCardStyles = () => (
     width: 44px;
     height: 44px;
     background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(197, 160, 89, 0.3);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
     color: var(--accent-color);
     font-family: var(--font-header);
     font-size: 1.1rem;
@@ -1501,15 +1501,15 @@ export const CharacterCardStyles = () => (
 }
 
 .stress-btn:hover {
-    background: rgba(197, 160, 89, 0.1);
+    background: rgba(var(--accent-rgb), 0.1);
     border-color: var(--accent-color);
-    box-shadow: 0 0 15px rgba(197, 160, 89, 0.2);
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2);
 }
 
 .stress-btn.filled {
     background: var(--accent-color);
     color: #000;
-    box-shadow: 0 0 20px rgba(197, 160, 89, 0.4);
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4);
     border-color: #fff;
 }
 
@@ -1558,16 +1558,16 @@ export const CharacterCardStyles = () => (
 }
 
 .inventory-slot.compact-slot {
-    background: rgba(197, 160, 89, 0.05);
-    border: 1px solid rgba(197, 160, 89, 0.1);
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1px solid rgba(var(--accent-rgb), 0.1);
     border-radius: 4px;
     transition: all 0.2s;
     overflow: hidden;
 }
 
 .inventory-slot.compact-slot:hover {
-    background: rgba(197, 160, 89, 0.1);
-    border-color: rgba(197, 160, 89, 0.3);
+    background: rgba(var(--accent-rgb), 0.1);
+    border-color: rgba(var(--accent-rgb), 0.3);
     transform: translateX(4px);
 }
 

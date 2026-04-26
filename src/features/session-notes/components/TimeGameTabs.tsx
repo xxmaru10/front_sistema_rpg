@@ -495,7 +495,7 @@ function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelet
                         style={{
                             background: 'none',
                             border: 'none',
-                            borderBottom: '1px solid rgba(197, 160, 89, 0.2)',
+                            borderBottom: '1px solid rgba(var(--accent-rgb), 0.2)',
                             color: '#fff',
                             fontSize: '0.7rem',
                             flex: 1,
@@ -882,7 +882,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                         </div>
                         <div className="form-group">
                             <label>IMAGEM DO ITEM (PNG ou JPEG)</label>
-                            <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--accent-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
                                 <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> ResoluÃ§Ã£o recomendada: 800x800 para melhor performance.
                             </p>
                             <input
