@@ -4,7 +4,7 @@ import { memo, useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { globalEventStore } from "@/lib/eventStore";
 import { v4 as uuidv4 } from "uuid";
-import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link } from "lucide-react";
+import { Play, Pause, Repeat, Volume2, VolumeX, SkipBack, SkipForward, ListMusic, RefreshCw, Link, Youtube, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { logStory59 } from "@/lib/story59Debug";
 import { logStory61 } from "@/lib/story61Debug";
@@ -801,6 +801,27 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
         broadcastUpdate(currentTrack, newState, isLooping);
     };
 
+    /**
+     * Remove a faixa atual de vez: limpa selecao, para audio/YouTube e
+     * sincroniza com PLAYERs (broadcastUpdate com url=""). Diferente de
+     * `togglePlay`, que apenas pausa mantendo a faixa selecionada para
+     * retomada posterior.
+     */
+    const clearTrack = () => {
+        try {
+            stopYouTubeWithLog(ytPlayerRef.current, "gm-clear-track");
+        } catch (_) { }
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current.removeAttribute("src");
+        }
+        setIsPlaying(false);
+        setCurrentTrack("");
+        currentTrackRef.current = "";
+        broadcastUpdate("", false, isLooping);
+    };
+
     const toggleLoop = () => {
         const newState = !isLooping;
         setIsLooping(newState);
@@ -1017,7 +1038,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                 <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0} title="Anterior">
                     <SkipBack size={14} />
                 </button>
-                <button className={`control-btn ${isPlaying ? "active" : ""}`} onClick={togglePlay} disabled={!currentTrack} title={isPlaying ? "Pausar" : "Tocar"}>
+                <button className={`control-btn ${isPlaying ? "active" : ""}`} onClick={togglePlay} disabled={!currentTrack} title={isPlaying ? "Pausar (mantem faixa)" : "Tocar"}>
                     {isPlaying ? <Pause size={14} /> : <Play size={14} />}
                 </button>
                 <button className="control-btn" onClick={playNext} disabled={currentPlaylistTracks.length === 0} title="Próxima">
@@ -1025,6 +1046,9 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                 </button>
                 <button className={`control-btn ${isLooping ? "active" : ""}`} onClick={toggleLoop} title="Loop">
                     <Repeat size={14} />
+                </button>
+                <button className="control-btn" onClick={clearTrack} disabled={!currentTrack} title="Remover faixa (parar de vez)">
+                    <X size={14} />
                 </button>
             </div>
         </>
@@ -1071,7 +1095,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
         >
             <audio ref={audioRef} onEnded={handleTrackEnded} />
 
-            {isMounted && isPlayableYouTubeUrl(currentTrack) && (() => {
+            {isMounted && isPlayableYouTubeUrl(currentTrack) && (userRole !== "GM" || isPlaying) && (() => {
                 return createPortal(
                     <div style={{
                         position: 'fixed',
@@ -1094,10 +1118,24 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                 <button
                     className={`player-toggle ${isPlaying ? "playing" : ""}`}
                     onClick={() => setShowControls(!showControls)}
-                    title="Reprodutor de Música"
+                    title={isPlayableYouTubeUrl(currentTrack) ? "Reprodutor de Música (YouTube)" : "Reprodutor de Música"}
                 >
                     <span style={{ fontSize: '0.8rem' }}>🎵</span>
                     {isPlaying && <span className="pulse-dot" />}
+                    {isPlayableYouTubeUrl(currentTrack) && (
+                        <Youtube
+                            size={10}
+                            style={{
+                                position: 'absolute',
+                                bottom: -2,
+                                right: -2,
+                                color: '#ff0000',
+                                background: '#1a1a1a',
+                                borderRadius: '50%',
+                                padding: '1px',
+                            }}
+                        />
+                    )}
                 </button>
             )}
 
@@ -1124,6 +1162,13 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                         }}
                     >
                         <span>MÚSICA</span>
+                        {isPlayableYouTubeUrl(currentTrack) && (
+                            <Youtube
+                                size={11}
+                                style={{ color: '#ff0000' }}
+                                aria-label="YouTube"
+                            />
+                        )}
                         {isPlaying && <div className="pulse-mini gold" />}
                     </div>
                     {volumeRow}
@@ -1202,7 +1247,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                         <button className="control-btn" onClick={playPrevious} disabled={currentPlaylistTracks.length === 0}>
                             <SkipBack size={12} />
                         </button>
-                        <button className={`control-btn ${isPlaying ? "active" : ""}`} onClick={togglePlay} disabled={!currentTrack}>
+                        <button className={`control-btn ${isPlaying ? "active" : ""}`} onClick={togglePlay} disabled={!currentTrack} title={isPlaying ? "Pausar (mantem faixa)" : "Tocar"}>
                             {isPlaying ? <Pause size={12} /> : <Play size={12} />}
                         </button>
                         <button className="control-btn" onClick={playNext} disabled={currentPlaylistTracks.length === 0}>
@@ -1210,6 +1255,9 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                         </button>
                         <button className={`control-btn ${isLooping ? "active" : ""}`} onClick={toggleLoop}>
                             <Repeat size={12} />
+                        </button>
+                        <button className="control-btn" onClick={clearTrack} disabled={!currentTrack} title="Remover faixa (parar de vez)">
+                            <X size={12} />
                         </button>
                     </div>
                 </div>

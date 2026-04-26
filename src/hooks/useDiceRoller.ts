@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createRollEvent } from "@/lib/dice";
 import { globalEventStore } from "@/lib/eventStore";
 import { diceSimulationStore } from "@/lib/diceSimulationStore";
-import { Character, DEFAULT_SKILLS, DiceBreakdownEntry } from "@/types/domain";
+import { ActionEvent, Character, DEFAULT_SKILLS, DiceBreakdownEntry } from "@/types/domain";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 
 interface UseDiceRollerProps {
@@ -173,7 +173,8 @@ export function useDiceRoller({
         setDiceRotations(finalDice.map(val => getRotationForResult(val)));
         setLastTotal((event.payload as any).total);
 
-        globalEventStore.append(event);
+        const burst: ActionEvent[] = [event];
+
         setSelectedSkill("");
         setManualBonus(0);
         setIsRolling(false);
@@ -193,7 +194,7 @@ export function useDiceRoller({
             const targetChar = characters.find(c => c.id === firstTargetId);
 
             if (targetChar && !isCharacterEliminated(targetChar)) {
-                globalEventStore.append({
+                burst.push({
                     id: uuidv4(),
                     sessionId,
                     seq: 0,
@@ -226,7 +227,7 @@ export function useDiceRoller({
                     ? `DEFESA VENCEU POR ${absoluteResult}!`
                     : "EMPATE!";
 
-            globalEventStore.append({
+            burst.push({
                 id: uuidv4(),
                 sessionId,
                 seq: 0,
@@ -245,6 +246,9 @@ export function useDiceRoller({
                 }
             } as any);
         }
+
+        // Story-66: 1 fan-out local em vez de N (sort + persist + bulk emitidos uma vez).
+        globalEventStore.appendBurst(burst);
     }, [
         selectedSkill, 
         selectedItemId, 

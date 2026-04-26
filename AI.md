@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-25 (regra de escopo de modulo/sistema adicionada; epic-04 ativo: plugins de sistema Fate/Vampiro)
+last_updated: 2026-04-26 (story-66 aplicada: appendBurst no finishRoll, debounce de persist 1500ms, _emitBulk clone-once, gate YouTube iframe GM-only)
 ---
 
 # Cronos Vtt — Frontend
@@ -54,6 +54,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Estabilizar transmissao com voz em notebook fraco | aberta | `/stories/story-62-estabilizar-transmissao-voz-notebook-fraco.md` |
 | Infraestrutura de Plugin de Sistema (campo system, registry, seletor) | planejada | `/stories/story-63-infraestrutura-plugin-sistema.md` |
 | Extrair Fate Core como primeiro plugin | planejada | `/stories/story-64-extrair-fate-como-primeiro-plugin.md` |
+| Performance — finishRoll fan-out + YouTube idle + cache sincrono | concluida | `/stories/story-66-performance-finishroll-eventstore-fanout-e-yt-idle.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`
