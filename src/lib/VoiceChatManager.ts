@@ -1127,7 +1127,8 @@ export class VoiceChatManager {
             const source = audioCtx.createMediaStreamSource(stream);
             const gainNode = audioCtx.createGain();
             const currentVolume = Math.max(0, Math.min(2, this.peerVolumes.get(peerId) ?? 1));
-            gainNode.gain.setValueAtTime(userMuted ? 0 : currentVolume, audioCtx.currentTime);
+            const isMutedNow = this.peerMuted.get(peerId) ?? false;
+            gainNode.gain.setValueAtTime(isMutedNow ? 0 : currentVolume, audioCtx.currentTime);
             const analyser = audioCtx.createAnalyser();
             analyser.fftSize = 512;
             // dest permite amplificação via gain > 1 (até 200%) antes de chegar ao audioEl
