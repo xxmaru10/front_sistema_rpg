@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-26 (story-66 aplicada: appendBurst no finishRoll, debounce de persist 1500ms, _emitBulk clone-once, gate YouTube iframe GM-only)
+last_updated: 2026-04-26 (story-66 validada por trace + boxed-consequence visual unificado entre plugins de sistema)
 ---
 
 # Cronos Vtt — Frontend

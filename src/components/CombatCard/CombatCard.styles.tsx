@@ -913,6 +913,46 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             border: 1px solid rgba(255, 68, 68, 0.3);
         }
 
+        /*
+         * Boxed consequence layout (compartilhado entre plugins de sistema).
+         * Espelha o estilo do componente Fate CombatConsequences.tsx para que
+         * todos os plugins (Fate, Vampire, futuros) renderizem consequências
+         * com a mesma identidade visual de "caixa com borda".
+         */
+        .combat-consequence-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            cursor: ${isGM ? 'pointer' : 'default'};
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .combat-consequence-box:hover {
+            border-color: rgba(197, 160, 89, 0.5);
+            background: rgba(197, 160, 89, 0.05);
+        }
+        .combat-consequence-box.filled {
+            border-color: rgba(255, 68, 68, 0.5);
+            background: rgba(25, 0, 0, 0.9);
+        }
+        .combat-consequence-box .cons-content {
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: #888;
+            text-align: center;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        .combat-consequence-box.filled .cons-content {
+            color: #ff6666;
+            text-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
+        }
+
         /* Stunts and Spells */
         .combat-extras-section {
             display: flex;

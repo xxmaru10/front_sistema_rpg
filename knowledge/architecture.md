@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-26 (story-66: appendBurst no finishRoll, debounce de persist 1500ms, _emitBulk clone-once, gate YouTube iframe GM-only, clearTrack/X button e indicador YouTube)
+last_updated: 2026-04-26 (story-66 validada por trace + estilo boxed-consequence compartilhado entre plugins de sistema via CombatCardStyles global)
 status: ativo
 ---
 
@@ -274,6 +274,8 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Gate do iframe YouTube por role+isPlaying**: o portal do iframe em `MusicPlayer.tsx` ganhou guarda extra `(userRole !== "GM" || isPlaying)`. PLAYER mantem o iframe sempre montado quando ha URL valida (precisa para receber `MUSIC_PLAYBACK_CHANGED` do GM). GM so monta quando esta de fato tocando, eliminando os ~52% de CPU do YouTube ocioso medidos no trace. O `useEffect` existente que destroi `ytPlayerRef.current` quando `currentTrack` deixa de ser YT continua valido e cobre o caso de pause/clear.
 - **`clearTrack()` (botao X) no MusicPlayer**: novo botao GM-only ao lado do controle de loop (em ambos os modos: flutuante e unified) que para o player YT, pausa/limpa o `<audio>`, zera `currentTrack` e broadcast `MUSIC_PLAYBACK_CHANGED { url: "" }` para PLAYERs. Diferente de `togglePlay`, que apenas pausa mantendo a faixa selecionada para retomada. O fluxo dispara em cascata: portal nao renderiza, effect de cleanup chama `ytPlayerRef.current.destroy()`, todos os effects de YT viram no-ops. Estado pos-X: 0% CPU residual de YouTube.
 - **Indicador YouTube visivel a todos**: badge `Youtube` (lucide-react, vermelho) no canto inferior-direito do `player-toggle` flutuante e ao lado do rotulo "MUSICA" no modo unified, condicionado em `isPlayableYouTubeUrl(currentTrack)`. Permite ao usuario identificar visualmente que a faixa atual e do YouTube sem ler texto.
+- **Validacao de trace pos-story-66 (Trace-20260426T104419.json, 37.8s)**: frames dropados 628→6 (-99%), YouTube CPU ~52%→2.8% (-95%), pico main-thread 183ms→74.8ms, `_saveCachedEvents` desapareceu do perfil. Todos os criterios da story atendidos.
+- **Estilo "boxed consequence" compartilhado entre plugins**: classes `.combat-consequence-box` (+ `:hover`, `.filled`, `.cons-content`) movidas para o bloco global de `CombatCard.styles.tsx` para que plugins de sistema (Fate, Vampire, futuros) renderizem consequencias com a mesma identidade visual de "caixa com borda". O componente `CombatConsequences.tsx` (Fate) mantem suas regras locais via `<style jsx>` com prioridade de especificidade — sem regressao visual no Fate. Vampiro CombatCard, que ja referenciava as classes mas nao tinha CSS, agora exibe boxes corretamente para consequencias normais e de Fome.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.
