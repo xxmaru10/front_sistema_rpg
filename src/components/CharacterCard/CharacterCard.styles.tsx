@@ -18,17 +18,9 @@ export const CharacterCardStyles = () => (
     overflow: visible;
 }
 
-.operative-arcano {
-    --accent-color: #C9A84C;
-    --accent-glow: rgba(var(--accent-rgb), 0.3);
-    --accent-rgb: var(--accent-rgb);
-}
 
-.threat-arcano {
-    --accent-color: #ff4444;
-    --accent-glow: rgba(255, 68, 68, 0.3);
-    --accent-rgb: 255, 68, 68;
-}
+
+
 
 .char-artifact.compact {
     min-width: 250px;
