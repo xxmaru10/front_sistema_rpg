@@ -90,6 +90,9 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
     const ytPlayedRef = useRef(false);  // flag para timeout de diagnóstico
     const snapshotInitRef = useRef(false); // garante que o bulk listener só restaura snapshot uma vez por sessão
     const ytLocalGestureUnlockRef = useRef(false);
+    // Verdadeiro quando o usuário gesticulou antes do iframe estar pronto.
+    // Consultado no onReady para não iniciar mutado quando há ativação prévia.
+    const ytGesturedBeforeReadyRef = useRef(false);
     const currentTrackRef = useRef("");
     const sawLiveMusicEventRef = useRef(false);
     const lastMusicEventTsRef = useRef(0);
@@ -301,6 +304,7 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
             setYtNeedsManualUnlock(false);
             ytPlayedRef.current = false;
             ytLocalGestureUnlockRef.current = false;
+            ytGesturedBeforeReadyRef.current = false;
         }
     }, [currentTrack]);
 
@@ -471,7 +475,9 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                             try {
                                 const targetVol = Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100);
                                 ytPlayerRef.current?.setVolume?.(targetVol);
-                                if (isMutedRef.current || !ytAutoplayUnlocked) {
+                                // Não iniciar mutado se o user já gesticulou antes do iframe carregar
+                                const alreadyUnlocked = ytAutoplayUnlocked || ytGesturedBeforeReadyRef.current;
+                                if (isMutedRef.current || !alreadyUnlocked) {
                                     ytPlayerRef.current?.mute?.();
                                 } else {
                                     ytPlayerRef.current?.unMute?.();
@@ -613,7 +619,12 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
                     if (audioRef.current.src !== fullUrl && url) {
                         audioRef.current.src = fullUrl;
                         audioRef.current.load();
+                    }
+                    // Sempre sincroniza currentTrack (inclusive url="" do clearTrack),
+                    // para que o iframe YT seja desmontado e o estado fique coerente.
+                    if (url !== currentTrackRef.current) {
                         setCurrentTrack(url);
+                        currentTrackRef.current = url;
                     }
 
                     if (playing) {
@@ -900,7 +911,12 @@ function MusicPlayerComponent({ sessionId, userId, userRole, unifiedMode }: Musi
 
     useEffect(() => {
         if (!isPlayableYouTubeUrl(currentTrack) || ytAutoplayUnlocked) return;
-        const unlock = () => forceYouTubeAudioUnlock("first-user-gesture");
+        const unlock = () => {
+            // Marca que houve gesto independente de o iframe estar pronto.
+            // O onReady consulta ytGesturedBeforeReadyRef para não iniciar mutado.
+            ytGesturedBeforeReadyRef.current = true;
+            forceYouTubeAudioUnlock("first-user-gesture");
+        };
         window.addEventListener("pointerdown", unlock, { once: true });
         window.addEventListener("touchstart", unlock, { once: true });
         window.addEventListener("keydown", unlock, { once: true });

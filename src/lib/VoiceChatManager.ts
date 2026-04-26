@@ -68,6 +68,7 @@ export class VoiceChatManager {
         source: MediaStreamAudioSourceNode;
         gain: GainNode;
         analyser: AnalyserNode;
+        dest: MediaStreamAudioDestinationNode;
     }> = new Map();
     private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
     private speakingAnalysers: Map<string, PeerSpeakingAnalyser> = new Map();
@@ -513,14 +514,23 @@ export class VoiceChatManager {
     private updatePeerAudioOutputState() {
         this.peerAudioElements.forEach((audioEl, peerId) => {
             const userMuted = this.peerMuted.get(peerId) ?? false;
-            const desiredVolume = Math.max(0, Math.min(1, this.peerVolumes.get(peerId) ?? 1));
+            // Permite 0..2 (200%) — gain > 1 amplifica acima do nível original
+            const desiredVolume = Math.max(0, Math.min(2, this.peerVolumes.get(peerId) ?? 1));
             const duckingMultiplier = this.suppressPeerPlaybackForScreenShare
                 ? VoiceChatManager.SCREEN_SHARE_PEER_DUCK_FACTOR
                 : 1;
-            const finalVolume = Math.max(0, Math.min(1, desiredVolume * duckingMultiplier));
+            const effectiveGain = userMuted ? 0 : desiredVolume * duckingMultiplier;
+
+            // Aplica o gain via GainNode (0..2); audioEl.volume fica em 1 fixo.
+            // O GainNode está no caminho de playback (source→gain→dest→audioEl.srcObject).
+            const nodes = this.audioNodes.get(peerId);
+            if (nodes) {
+                const ctx = this.getSharedPeerAudioContext();
+                nodes.gain.gain.setTargetAtTime(effectiveGain, ctx.currentTime, 0.05);
+            }
 
             audioEl.muted = userMuted;
-            audioEl.volume = userMuted ? 0 : finalVolume;
+            audioEl.volume = 1;
             if (audioEl.srcObject && audioEl.paused) {
                 audioEl.play().catch(e => console.warn('[VoiceChat] Audio play failed:', e));
             }
@@ -1009,6 +1019,7 @@ export class VoiceChatManager {
             nodes.source.disconnect();
             nodes.gain.disconnect();
             nodes.analyser.disconnect();
+            nodes.dest.disconnect();
         });
         this.audioNodes.clear();
 
@@ -1039,7 +1050,7 @@ export class VoiceChatManager {
         if (audioEl) { audioEl.pause(); audioEl.srcObject = null; this.peerAudioElements.delete(key); }
 
         const nodes = this.audioNodes.get(key);
-        if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); this.audioNodes.delete(key); }
+        if (nodes) { nodes.source.disconnect(); nodes.gain.disconnect(); nodes.analyser.disconnect(); nodes.dest.disconnect(); this.audioNodes.delete(key); }
 
         const pc = this.peerConnections.get(key);
         if (pc) { pc.close(); this.peerConnections.delete(key); }
@@ -1115,19 +1126,20 @@ export class VoiceChatManager {
 
             const source = audioCtx.createMediaStreamSource(stream);
             const gainNode = audioCtx.createGain();
-            const currentVolume = this.peerVolumes.get(peerId) ?? 1;
-            gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+            const currentVolume = Math.max(0, Math.min(2, this.peerVolumes.get(peerId) ?? 1));
+            gainNode.gain.setValueAtTime(userMuted ? 0 : currentVolume, audioCtx.currentTime);
             const analyser = audioCtx.createAnalyser();
             analyser.fftSize = 512;
+            // dest permite amplificação via gain > 1 (até 200%) antes de chegar ao audioEl
+            const dest = audioCtx.createMediaStreamDestination();
             source.connect(gainNode);
             gainNode.connect(analyser);
-            this.audioNodes.set(peerId, { source, gain: gainNode, analyser });
+            gainNode.connect(dest);
+            this.audioNodes.set(peerId, { source, gain: gainNode, analyser, dest });
 
             const audioEl = this.peerAudioElements.get(peerId);
             if (audioEl) {
-                // Reproduz diretamente o stream remoto para evitar artefatos de resampling
-                // observados em alguns celulares quando a trilha passa por destino processado.
-                audioEl.srcObject = stream;
+                audioEl.srcObject = dest.stream;
                 this.updatePeerAudioOutputState();
             }
 
