@@ -68,7 +68,7 @@ export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilt
                         >
                             <option value="all">TODAS AS SESSÕES</option>
                             {logSessionNumbers.map(sn => (
-                                <option key={sn} value={String(sn)}>SESSÃO {sn}</option>
+                                <option key={sn} value={String(sn)}>SESSÀO {sn}</option>
                             ))}
                         </select>
                     )}
@@ -97,7 +97,7 @@ export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilt
                                             padding: '4px 14px', border: '1px solid var(--accent-color)',
                                             background: 'rgba(0,0,0,0.5)', whiteSpace: 'nowrap'
                                         }}>
-                                            SESSÃO {sn}
+                                            SESSÀO {sn}
                                         </span>
                                         <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--accent-color))' }} />
                                     </div>
@@ -110,13 +110,13 @@ export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilt
                                                     event.type === "FP_SPENT" ? "PONTO DE DESTINO GASTO" :
                                                         event.type === "FP_GAINED" ? "PONTO DE DESTINO GANHO" :
                                                             event.type === "CHARACTER_CREATED" ? "PERSONAGEM CRIADO" :
-                                                                event.type === "CHARACTER_MOVED" ? "MOVIMENTAÇÃO" :
+                                                                event.type === "CHARACTER_MOVED" ? "MOVIMENTAÇÀO" :
                                                                     event.type === "ASPECT_CREATED" ? "ASPECTO CRIADO" :
-                                                                        event.type === "FREE_INVOKE_PRODUCED" ? "INVOCAÇÃO LIVRE GERADA" :
-                                                                            event.type === "FREE_INVOKE_CONSUMED" ? "INVOCAÇÃO LIVRE USADA" :
+                                                                        event.type === "FREE_INVOKE_PRODUCED" ? "INVOCAÇÀO LIVRE GERADA" :
+                                                                            event.type === "FREE_INVOKE_CONSUMED" ? "INVOCAÇÀO LIVRE USADA" :
                                                                                 event.type === "STRESS_MARKED" ? "ESTRESSE MARCADO" :
                                                                                     event.type === "STRESS_CLEARED" ? "ESTRESSE LIMPO" :
-                                                                                        event.type === "SESSION_CREATED" ? "SESSÃO INICIADA" :
+                                                                                        event.type === "SESSION_CREATED" ? "SESSÀO INICIADA" :
                                                                                             event.type === "CHARACTER_SKILL_UPDATED" ? "PERÍCIA ATUALIZADA" :
                                                                                                 event.type === "CHARACTER_STUNT_UPDATED" ? "FAÇANHA ATUALIZADA" :
                                                                                                     event.type.replace(/_/g, " ")}
@@ -151,10 +151,10 @@ export function LogTab({ filteredEvents, logFilter, setLogFilter, logSessionFilt
                                                 {event.type === "FP_SPENT" && <span> PONTO DE DESTINO GASTO :: {event.payload.amount}</span>}
                                                 {event.type === "FP_GAINED" && <span> PONTO DE DESTINO GANHO :: {event.payload.amount}</span>}
                                                 {event.type === "CHARACTER_CREATED" && <span> PERSONAGEM CRIADO :: {event.payload.name.toUpperCase()}</span>}
-                                                {event.type === "CHARACTER_MOVED" && <span> MOVIMENTAÇÃO REALIZADA </span>}
-                                                {event.type === "ASPECT_CREATED" && <span> ASPECTO CRIADO :: {event.payload.name.toUpperCase()} ({event.payload.scope === "SCENE" ? "SESSÃO" : "SESSÃO"})</span>}
-                                                {event.type === "FREE_INVOKE_PRODUCED" && <span> INVOCAÇÃO LIVRE GERADA :: {state.aspects[event.payload.aspectId]?.name.toUpperCase()}</span>}
-                                                {event.type === "FREE_INVOKE_CONSUMED" && <span> INVOCAÇÃO LIVRE USADA :: {state.aspects[event.payload.aspectId]?.name.toUpperCase()}</span>}
+                                                {event.type === "CHARACTER_MOVED" && <span> MOVIMENTAÇÀO REALIZADA </span>}
+                                                {event.type === "ASPECT_CREATED" && <span> ASPECTO CRIADO :: {event.payload.name.toUpperCase()} ({event.payload.scope === "SCENE" ? "SESSÀO" : "SESSÀO"})</span>}
+                                                {event.type === "FREE_INVOKE_PRODUCED" && <span> INVOCAÇÀO LIVRE GERADA :: {state.aspects[event.payload.aspectId]?.name.toUpperCase()}</span>}
+                                                {event.type === "FREE_INVOKE_CONSUMED" && <span> INVOCAÇÀO LIVRE USADA :: {state.aspects[event.payload.aspectId]?.name.toUpperCase()}</span>}
                                                 {event.type === "STRESS_MARKED" && <span> ESTRESSE MARCADO :: {event.payload.track === "PHYSICAL" ? "FÍSICO" : "MENTAL"} (BOX {event.payload.boxIndex + 1})</span>}
                                                 {event.type === "CHARACTER_STUNT_UPDATED" && <span> FAÇANHA :: {event.payload.stunt.name.toUpperCase()} ({event.payload.stunt.cost} PD)</span>}
                                             </div>

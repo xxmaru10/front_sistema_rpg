@@ -10,7 +10,7 @@ export const MENTION_COLORS: Record<string, string> = {
     "RACA": "#50e3c2", // Ciano (Outros)
     "ITEM": "#4a90e2", // Azul
     "HABILIDADE": "#bd10e0", // Rosa
-    "MISSÃO": "#C5A059", // Dourado
+    "MISSÀO": "#C5A059", // Dourado
     "TAG": "#C5A059" // Dourado
 };
 
@@ -25,7 +25,7 @@ export const getDisplayTypeLabel = (type: string): string => {
         "RACA": "Raça",
         "ITEM": "Item",
         "HABILIDADE": "Habilidade",
-        "MISSÃO": "Missão"
+        "MISSÀO": "Missão"
     };
     return labels[type] || type;
 };

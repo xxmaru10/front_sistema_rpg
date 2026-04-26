@@ -70,9 +70,9 @@ export default function FateDice3D({
 
     // Lógica de bloqueio: 
     // Bloqueia (pointerEvents: 'auto') se:
-    // 1. NÃO for GM
-    // 2. NÃO estiver na Arena (activeTab !== 'combat')
-    // 3. NÃO tiver terminado a rolagem (uiPhase !== 'done')
+    // 1. NÀO for GM
+    // 2. NÀO estiver na Arena (activeTab !== 'combat')
+    // 3. NÀO tiver terminado a rolagem (uiPhase !== 'done')
     const shouldBlock = uiPhase !== "done";
 
     return (

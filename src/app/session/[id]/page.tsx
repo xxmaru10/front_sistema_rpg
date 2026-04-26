@@ -121,7 +121,7 @@ export default function SessionPage() {
     }, []);
 
     useEffect(() => {
-        // Story 45: reset do toggle de rolagem oculta ao trocar de sessÃ£o.
+        // Story 45: reset do toggle de rolagem oculta ao trocar de sessão.
         diceSimulationStore.setHiddenForPlayers(false);
     }, [sessionId]);
 
@@ -218,7 +218,7 @@ export default function SessionPage() {
         useSessionEvents(sessionId as string, actorUserId);
 
     // â"€â"€â"€ EARLY PROJECTION (feeds useVictoryDefeat before full derivations) â"€â"€â"€â"€
-    // Story 46 Prioridade 3: lÃª do projectedStateStore em vez de recomputar localmente.
+    // Story 46 Prioridade 3: lê do projectedStateStore em vez de recomputar localmente.
     const _earlyState = useProjectedState();
 
     // ─── PLUGIN PRÉ-LOAD ─────────────────────────────────────────────────────
@@ -466,7 +466,7 @@ export default function SessionPage() {
                 `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
             document.body.style.backgroundSize = "cover, cover";
             document.body.style.backgroundPosition = "center center, center center";
-            // background-attachment: fixed causa repaint contÃ­nuo no Chromium mobile â€" usar scroll em mobile
+            // background-attachment: fixed causa repaint contínuo no Chromium mobile â€" usar scroll em mobile
             document.body.style.backgroundAttachment = isMobileNav ? "scroll" : "fixed";
             document.body.style.backgroundRepeat = "no-repeat, no-repeat";
             document.body.style.backgroundColor = "#000";
@@ -485,7 +485,7 @@ export default function SessionPage() {
 
     // â"€â"€â"€ Gerencia Google Fonts + theme-preset-css via efeito â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Antes era um IIFE no JSX: executava a cada render â†’ re-fazia download do .woff2
-    // Agora sÃ³ executa quando state.themePreset muda de fato.
+    // Agora só executa quando state.themePreset muda de fato.
     useEffect(() => {
         const activeTheme = getThemePreset(state.themePreset);
 
@@ -516,7 +516,7 @@ export default function SessionPage() {
 
     // â"€â"€â"€ Gerencia o override de cor personalizada via efeito â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Antes era um IIFE no JSX com dangerouslySetInnerHTML: re-montava a cada render
-    // Agora sÃ³ executa quando state.themeColor muda.
+    // Agora só executa quando state.themeColor muda.
     useEffect(() => {
         const hex = state.themeColor;
         let styleEl = document.getElementById("theme-custom-color-override") as HTMLStyleElement | null;
@@ -785,7 +785,7 @@ export default function SessionPage() {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
                             el.srcObject = videoStream;
-                            // play() Ã© gerenciado exclusivamente pelo hook (com muted fallback)
+                            // play() é gerenciado exclusivamente pelo hook (com muted fallback)
                         }
                     }}
                     style={{
@@ -801,7 +801,7 @@ export default function SessionPage() {
                             screenVideoRef.current?.play().catch(() => {});
                         }
                     }}
-                    title={gmPreviewFaded ? "Clique para ver a transmissÃ£o" : undefined}
+                    title={gmPreviewFaded ? "Clique para ver a transmissão" : undefined}
                 />
             )}
 
@@ -815,11 +815,11 @@ export default function SessionPage() {
                 </div>
             )}
 
-            {/* Badge "Sem sinal" â€" exibido quando stream estÃ¡ ativa mas vÃ­deo nÃ£o avanÃ§a. */}
+            {/* Badge "Sem sinal" â€" exibido quando stream está ativa mas vídeo não avança. */}
             {videoStream && activeTab === "combat" && videoNoSignal && (
                 <div className="screenshare-nosignal">
                     <span className="screenshare-nosignal-icon">ðŸ"¡</span>
-                    <span>Sem sinal â€" tente reconectar no botÃ£o <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
+                    <span>Sem sinal â€" tente reconectar no botão <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
                 </div>
             )}
 
@@ -874,7 +874,7 @@ export default function SessionPage() {
             />
 
             <SessionHeader
-                title={state.name || `SessÃ£o: ${state.sessionNumber}`}
+                title={state.name || `Sessão: ${state.sessionNumber}`}
                 imageUrl={headerImageUrl}
                 onUpdate={handleHeaderUpdate}
                 isGM={userRole === "GM"}
@@ -883,7 +883,7 @@ export default function SessionPage() {
                     activeTab === "combat" ? "ARENA" :
                     activeTab === "log" ? "LOGS" :
                     activeTab === "notes" ? "NOTAS" :
-                    activeTab === "vi" ? "VI" : "BESTIÃRIO"
+                    activeTab === "vi" ? "VI" : "BESTIÀRIO"
                 }
                 onSummonAlly={handleOpenSummonAlly}
                 onSummonThreat={handleOpenSummonThreat}

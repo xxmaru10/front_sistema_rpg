@@ -345,7 +345,7 @@ function SessionNotesComponent({
             setViewingBestiaryCharId(entity.id);
         } else if (entity.category === 'Tempo') {
             setActiveTab('Tempo');
-            if (entity.displayType === 'MISSÃO') {
+            if (entity.displayType === 'MISSÀO') {
                 setSubTabTempo('Missões');
             } else if (entity.displayType === 'HISTÓRIA') {
                 setSubTabTempo('Linha do Tempo');
@@ -373,7 +373,7 @@ function SessionNotesComponent({
                 type: request.mentionType,
                 displayType: request.mentionType,
                 category: request.mentionType === 'BESTIARIO' ? 'Criaturas' :
-                         ['MISSÃO', 'HISTÓRIA'].includes(request.mentionType) ? 'Tempo' :
+                         ['MISSÀO', 'HISTÓRIA'].includes(request.mentionType) ? 'Tempo' :
                          ['HABILIDADE', 'ITEM'].includes(request.mentionType) ? 'Jogo' : 'Mundo'
             };
             handleSelectSearchResult(mockEntity);
@@ -586,7 +586,7 @@ function SessionNotesComponent({
                     options={[
                         { value: 'Geral', label: 'DIÁRIO GERAL' },
                         { value: 'Privado', label: 'NOTAS PRIVADAS' },
-                        ...(userRole === "GM" ? [{ value: 'Jogadores', label: 'VISÃO DE JOGADORES' }] : []),
+                        ...(userRole === "GM" ? [{ value: 'Jogadores', label: 'VISÀO DE JOGADORES' }] : []),
                         { value: 'Sessão', label: 'HISTÓRICO SESSÕES' }
                     ]}
                 />
@@ -808,11 +808,11 @@ function SessionNotesComponent({
             ) : (
                 <div className="tab-content-area scrollbar-arcane">
                     <div className="section-block">
-                        <h4 className="section-label">INFORMAÇÕES DA SESSÃO</h4>
+                        <h4 className="section-label">INFORMAÇÕES DA SESSÀO</h4>
                         <div className="system-info-list">
-                            <div className="info-item"><label>ID DA SESSÃO</label><span>{sessionId}</span></div>
+                            <div className="info-item"><label>ID DA SESSÀO</label><span>{sessionId}</span></div>
                             <div className="info-item"><label>USUÁRIO</label><span>{userId.toUpperCase()}</span></div>
-                            <div className="info-item"><label>FUNÇÃO</label><span>{userRole || "DESCONHECIDO"}</span></div>
+                            <div className="info-item"><label>FUNÇÀO</label><span>{userRole || "DESCONHECIDO"}</span></div>
                         </div>
                     </div>
                 </div>

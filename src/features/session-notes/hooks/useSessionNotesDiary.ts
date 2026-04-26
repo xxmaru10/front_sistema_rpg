@@ -271,7 +271,7 @@ export function useSessionNotesDiary({
             else if ((state.skills || []).some((skill: any) => skill.id === id)) noteType = "SKILL";
             else if ((state.items || []).some((item: any) => item.id === id)) noteType = "ITEM";
             else if (characterTypes.includes(upperType)) noteType = "CHARACTER";
-            else if (upperType === "MISSÃO" || upperType === "MISSAO") noteType = "MISSION";
+            else if (upperType === "MISSÀO" || upperType === "MISSAO") noteType = "MISSION";
             else if (upperType === "HISTÓRIA" || upperType === "TIMELINE" || upperType === "EVENTO") noteType = "TIMELINE";
             else if (upperType === "HABILIDADE" || upperType === "SKILL") noteType = "SKILL";
             else if (upperType === "ITEM") noteType = "ITEM";

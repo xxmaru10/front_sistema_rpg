@@ -67,7 +67,7 @@ export interface ThemePreset {
 
 const DEFAULT: ThemePreset = {
     id: "default",
-    label: "PADRÃO",
+    label: "PADRÀO",
     icon: "◆",
     description: "Visual clássico do sistema",
 

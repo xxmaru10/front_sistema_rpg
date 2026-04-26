@@ -534,13 +534,13 @@ export function CombatCard({
 
                     {!isRestrictedThreatView && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
-                            {/* LINHA DE ÃCONES EXPANSÃVEIS */}
+                            {/* LINHA DE ÀCONES EXPANSÀVEIS */}
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 {character.stunts && character.stunts.length > 0 && (
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'stunts' ? null : 'stunts')}
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'stunts' ? 1 : 0.6 }}
-                                        title="FaÃ§anhas"
+                                        title="Façanhas"
                                     >
                                         <Star size={16} />
                                     </button>
@@ -558,7 +558,7 @@ export function CombatCard({
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'skills' ? null : 'skills')}
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'skills' ? 1 : 0.6 }}
-                                        title="PerÃ­cias"
+                                        title="Perícias"
                                     >
                                         <Target size={16} />
                                     </button>
@@ -574,7 +574,7 @@ export function CombatCard({
                                 )}
                             </div>
 
-                            {/* ZONA DE EXPANSÃƒO */}
+                            {/* ZONA DE EXPANSÀO */}
                             {expandedExtra === 'stunts' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', padding: '8px', background: 'rgba(80, 166, 255, 0.05)', borderRadius: '4px', border: '1px solid rgba(80, 166, 255, 0.15)' }}>
                                     {(character.stunts || []).map(stunt => (

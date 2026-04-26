@@ -148,7 +148,7 @@ export function PowerTabsSection({
                              <div className="stunt-slot editing-new">
                                  <input className="stunt-name-input" placeholder="NOME" value={hook.tempStunt?.name || ''} onChange={e => hook.setTempStunt(p => p ? {...p, name: e.target.value.toUpperCase()} : null)} />
                                  <input className="stunt-cost-input" placeholder="CUSTO" value={hook.tempStunt?.cost || ''} onChange={e => hook.setTempStunt(p => p ? {...p, cost: e.target.value} : null)} />
-                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÃO" value={hook.tempStunt?.description || ''} onChange={e => hook.setTempStunt(p => p ? {...p, description: e.target.value} : null)} />
+                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÀO" value={hook.tempStunt?.description || ''} onChange={e => hook.setTempStunt(p => p ? {...p, description: e.target.value} : null)} />
                                  <div className="stunt-actions-row">
                                     <button className="stunt-action-btn save" onClick={hook.handleSaveStunt}>SALVAR</button>
                                     <button className="stunt-action-btn cancel" onClick={() => hook.setEditingStuntId(null)}>CANCELAR</button>
@@ -227,7 +227,7 @@ export function PowerTabsSection({
                              <div className="stunt-slot editing-new">
                                  <input className="stunt-name-input" placeholder="NOME" value={hook.tempSpell?.name || ''} onChange={e => hook.setTempSpell(p => p ? {...p, name: e.target.value.toUpperCase()} : null)} />
                                  <input className="stunt-cost-input" placeholder="CUSTO" value={hook.tempSpell?.cost || ''} onChange={e => hook.setTempSpell(p => p ? {...p, cost: e.target.value} : null)} />
-                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÃO" value={hook.tempSpell?.description || ''} onChange={e => hook.setTempSpell(p => p ? {...p, description: e.target.value} : null)} />
+                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÀO" value={hook.tempSpell?.description || ''} onChange={e => hook.setTempSpell(p => p ? {...p, description: e.target.value} : null)} />
                                  <div className="stunt-actions-row">
                                     <button className="stunt-action-btn save" onClick={hook.handleSaveSpell}>SALVAR</button>
                                     <button className="stunt-action-btn cancel" onClick={() => hook.setEditingSpellId(null)}>CANCELAR</button>

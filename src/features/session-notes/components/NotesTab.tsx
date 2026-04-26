@@ -213,7 +213,7 @@ export function NotesTab({
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
-                    TÃ“PICOS PRIVADOS
+                    TÓPICOS PRIVADOS
                 </span>
                 <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)" }}>
                     {privateNoteFolders.length}/10
@@ -318,7 +318,7 @@ export function NotesTab({
                     title={privateNoteFolders.length >= 10 ? "Limite de 10 submenus atingido" : "Criar submenu"}
                 >
                     <Plus size={12} />
-                    NOVO TÃ“PICO
+                    NOVO TÓPICO
                 </button>
             </div>
 
@@ -433,7 +433,7 @@ export function NotesTab({
             {isOffline && (
                 <div className="connection-warning-bar animate-slide-down">
                     <AlertTriangle size={14} />
-                    <span>CONEXÃƒO INSTÃVEL - TENTANDO RECONECTAR...</span>
+                    <span>CONEXÀO INSTÍVEL - TENTANDO RECONECTAR...</span>
                     <RefreshCw size={12} className="animate-spin" />
                 </div>
             )}
@@ -464,16 +464,16 @@ export function NotesTab({
                     <>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderBottom: "1px solid rgba(var(--accent-rgb),0.1)", background: "rgba(0,0,0,0.2)", flexWrap: "wrap" }}>
                             <span style={{ fontFamily: "var(--font-header)", fontSize: "0.6rem", letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>
-                                SESSÃƒO:
+                                SESSÀO:
                             </span>
                             <select
                                 value={sessionFilter === null ? "all" : String(sessionFilter)}
                                 onChange={e => setSessionFilter(e.target.value === "all" ? null : Number(e.target.value))}
                                 className="author-filter"
                             >
-                                <option value="all">TODAS AS SESSÃ•ES</option>
+                                <option value="all">TODAS AS SESSÍ•ES</option>
                                 {allSessionNumbers.map(sessionNumber => (
-                                    <option key={sessionNumber} value={String(sessionNumber)}>SESSÃƒO {sessionNumber}</option>
+                                    <option key={sessionNumber} value={String(sessionNumber)}>SESSÀO {sessionNumber}</option>
                                 ))}
                             </select>
                         </div>
@@ -486,7 +486,7 @@ export function NotesTab({
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "18px 0 12px", padding: "0 4px" }}>
                                         <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, var(--accent-color))" }} />
                                         <span style={{ fontFamily: "var(--font-header)", fontSize: "0.65rem", letterSpacing: "0.25em", color: "var(--accent-color)", padding: "4px 14px", border: "1px solid var(--accent-color)", background: "rgba(0,0,0,0.5)", whiteSpace: "nowrap" }}>
-                                            SESSÃƒO {sessionNumber}
+                                            SESSÀO {sessionNumber}
                                         </span>
                                         <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, var(--accent-color))" }} />
                                     </div>
@@ -527,7 +527,7 @@ export function NotesTab({
             {notesSubTab === "Jogadores" && (
                 <div className="notes-scroll scrollbar-arcane" style={{ padding: "10px 5px" }}>
                     {playerChars.length === 0 ? (
-                        <div className="empty-notes">NENHUM JOGADOR ENCONTRADO NA SESSÃƒO.</div>
+                        <div className="empty-notes">NENHUM JOGADOR ENCONTRADO NA SESSÀO.</div>
                     ) : (
                         <>
                             {renderPlayerSubmenus()}
@@ -547,7 +547,7 @@ export function NotesTab({
                 <>
                     <div className="notes-header">
                         <h3 className="notes-title">
-                            DIÃRIO DE CAMPANHA {notesSubTab === "Privado" && "(PRIVADO)"}
+                            DIÍRIO DE CAMPANHA {notesSubTab === "Privado" && "(PRIVADO)"}
                             {notesSubTab === "Privado" && currentFolder && (
                                 <span style={{ marginLeft: "10px", fontSize: "0.58rem", letterSpacing: "0.18em", color: currentFolder.color || "var(--accent-color)" }}>
                                     {currentFolder.name.toUpperCase()}
@@ -573,7 +573,7 @@ export function NotesTab({
                                 <button
                                     className="clear-all-btn"
                                     onClick={() => handleClearNotesLocally(notesSubTab as 'Geral' | 'Privado')}
-                                    title="Apagar notas da minha visualizaÃ§Ã£o"
+                                    title="Apagar notas da minha visualizaÍ§ão"
                                 >
                                     LIMPAR PARA MIM
                                 </button>
@@ -600,8 +600,8 @@ export function NotesTab({
                                 {notesSubTab === "Geral"
                                     ? "NENHUMA NOTA ENCONTRADA."
                                     : selectedPrivateFolderId === "all"
-                                        ? "VOCÃŠ AINDA NÃƒO TEM ANOTAÃ‡Ã•ES PRIVADAS."
-                                        : "ESTE SUBMENU AINDA NÃƒO TEM ANOTAÃ‡Ã•ES."}
+                                        ? "VOCÊ AINDA NÀO TEM ANOTAÍ‡Í•ES PRIVADAS."
+                                        : "ESTE SUBMENU AINDA NÀO TEM ANOTAÍ‡Í•ES."}
                             </div>
                         )}
                         {orderedVisibleNotes.map((note) => {
@@ -668,7 +668,7 @@ export function NotesTab({
                         )}
                         <div className="editor-toolbar">
                             <button onClick={() => handleFormat("bold")} className="tool-btn" title="Negrito"><Bold size={14} /></button>
-                            <button onClick={() => handleFormat("italic")} className="tool-btn" title="ItÃ¡lico"><Italic size={14} /></button>
+                            <button onClick={() => handleFormat("italic")} className="tool-btn" title="ItÍ¡lico"><Italic size={14} /></button>
                             <button onClick={() => handleFormat("insertUnorderedList")} className="tool-btn" title="Marcadores"><List size={14} /></button>
                         </div>
                         <div className="editor-input-wrapper">
@@ -694,7 +694,7 @@ export function NotesTab({
                                 onClick={handleSend}
                                 className={`send-btn ${editingNoteId ? "save-mode" : ""}`}
                                 disabled={!editorContent.trim() || isOffline}
-                                title={editingNoteId ? "Salvar AlteraÃ§Ãµes" : "Enviar Nota"}
+                                title={editingNoteId ? "Salvar AlteraÍ§Íµes" : "Enviar Nota"}
                             >
                                 {editingNoteId ? <Check size={16} /> : <Send size={16} />}
                             </button>

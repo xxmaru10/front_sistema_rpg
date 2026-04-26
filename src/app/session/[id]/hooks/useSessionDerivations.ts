@@ -101,7 +101,7 @@ export function useSessionDerivations({
             });
         });
         (state.missions || []).forEach((m: any) =>
-            results.push({ id: m.id, name: m.name, category: "Tempo", displayType: "MISSÃO", type: "MISSION", color: "#C5A059" })
+            results.push({ id: m.id, name: m.name, category: "Tempo", displayType: "MISSÀO", type: "MISSION", color: "#C5A059" })
         );
         (state.timeline || []).forEach((ev: any) =>
             results.push({ id: ev.id, name: ev.name, category: "Tempo", displayType: "HISTÓRIA", type: "TIMELINE", color: "#4a90e2" })

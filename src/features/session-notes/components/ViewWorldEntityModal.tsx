@@ -245,7 +245,7 @@ export function ViewWorldEntityModal({
                                 )}
                             </div>
                             <div className="rel-item" style={{ position: 'relative' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>FACÇÃO</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>FACÇÀO</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('faction') ? (viewingEntity.factionId ? state.worldEntities?.[viewingEntity.factionId]?.name.toUpperCase() : "NENHUMA") : "????"}
                                 </span>
@@ -289,7 +289,7 @@ export function ViewWorldEntityModal({
                                 )}
                             </div>
                             <div className="rel-item" style={{ position: 'relative' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÃO</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÀO</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('religion') ? (viewingEntity.religionId ? state.worldEntities?.[viewingEntity.religionId]?.name.toUpperCase() : "NENHUMA") : "????"}
                                 </span>
@@ -309,13 +309,13 @@ export function ViewWorldEntityModal({
                                 </button>
                             )}
                             <div className="rel-item" style={{ position: 'relative' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>LOCALIZAÇÃO / BASE</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>LOCALIZAÇÀO / BASE</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('location') ? (viewingEntity.currentLocationId ? state.worldEntities?.[viewingEntity.currentLocationId]?.name.toUpperCase() : "DESCONHECIDA") : "????"}
                                 </span>
                             </div>
                             <div className="rel-item" style={{ position: 'relative', marginTop: '10px' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÃO</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÀO</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('religion') ? (viewingEntity.religionId ? state.worldEntities?.[viewingEntity.religionId]?.name.toUpperCase() : "NENHUMA") : "????"}
                                 </span>
@@ -340,7 +340,7 @@ export function ViewWorldEntityModal({
                                     <div className="rel-item">
                                         <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>TIPO DE LOCAL</label>
                                         <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
-                                            {isFieldVisible('location_info') ? (viewingEntity.locationType || "NÃO DEFINIDO") : "????"}
+                                            {isFieldVisible('location_info') ? (viewingEntity.locationType || "NÀO DEFINIDO") : "????"}
                                         </span>
                                     </div>
                                     <div className="rel-item">
@@ -359,7 +359,7 @@ export function ViewWorldEntityModal({
                                             {fieldVisibility['image'] ? <EyeOff size={14} /> : <Eye size={14} />}
                                         </button>
                                     )}
-                                    <label style={{ fontSize: '0.6rem', color: '#666', display: 'block', marginBottom: '8px' }}>VISUALIZAÇÃO</label>
+                                    <label style={{ fontSize: '0.6rem', color: '#666', display: 'block', marginBottom: '8px' }}>VISUALIZAÇÀO</label>
                                     {isFieldVisible('image') ? (
                                         <img
                                             src={viewingEntity.imageUrl}

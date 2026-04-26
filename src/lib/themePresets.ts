@@ -100,6 +100,27 @@ export function generateThemeCSS(theme: ThemePreset): string {
             text-shadow: ${theme.headerTextShadow};
         }
 
+        ${theme.id === 'gotico' ? `
+            .char-artifact {
+                font-size: 1.05rem;
+            }
+            .char-name {
+                font-size: 2.5rem !important;
+            }
+            .section-title {
+                font-size: 1.0rem !important;
+            }
+            .lore-title {
+                font-size: 1.15rem !important;
+            }
+            .aspect-display, .aspect-display-vertical {
+                font-size: 0.95rem !important;
+            }
+            .track-label-row {
+                font-size: 0.85rem !important;
+            }
+        ` : ''}
+
         h1 { text-shadow: ${theme.headerTextShadow}; }
 
         .btn {

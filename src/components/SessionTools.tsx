@@ -146,7 +146,7 @@ export function SessionTools({ sessionId, onImport }: SessionToolsProps) {
             <div className="tarot-inner">
                 <div className="tools-header">
                     <span className="symbol">🜔</span>
-                    <h3>OPÇÕES DA SESSÃO</h3>
+                    <h3>OPÇÕES DA SESSÀO</h3>
                 </div>
 
                 <div className="session-id-box">
@@ -213,12 +213,12 @@ export function SessionTools({ sessionId, onImport }: SessionToolsProps) {
                 <div className="tools-grid">
                     <button onClick={handleExport} className="ritual-tool-btn">
                         <Download size={16} />
-                        <span>SALVAR SESSÃO (BACKUP)</span>
+                        <span>SALVAR SESSÀO (BACKUP)</span>
                     </button>
 
                     <label className="ritual-tool-btn cursor-pointer">
                         <Upload size={16} />
-                        <span>CARREGAR SESSÃO</span>
+                        <span>CARREGAR SESSÀO</span>
                         <input type="file" accept=".json" onChange={handleImport} hidden />
                     </label>
 

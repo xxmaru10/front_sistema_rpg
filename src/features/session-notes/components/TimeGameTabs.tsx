@@ -94,7 +94,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
         [allEvents, sortMode]
     );
 
-    const activeSource = subTabTempo === "MissÃµes" ? orderedMissions : orderedEvents;
+    const activeSource = subTabTempo === "MissÍµes" ? orderedMissions : orderedEvents;
     const totalPages = Math.max(1, Math.ceil(activeSource.length / itemsPerPage));
 
     const paginatedMissions = useMemo(() => {
@@ -173,12 +173,12 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                         PRÓX
                     </button>
                 </div>
-                {(subTabTempo === "MissÃµes" || (subTabTempo === "Linha do Tempo" && userRole === "GM")) && (
+                {(subTabTempo === "MissÍµes" || (subTabTempo === "Linha do Tempo" && userRole === "GM")) && (
                     <button
                         className="add-world-entity-btn-mini"
                         style={{ marginLeft: 'auto', width: '36px', height: '36px', flexShrink: 0 }}
-                        title={`Adicionar ${subTabTempo === "MissÃµes" ? "MissÃ£o" : "Evento"}`}
-                        onClick={() => subTabTempo === "MissÃµes" ? setShowAddMission(true) : setShowAddTimelineEvent(true)}
+                        title={`Adicionar ${subTabTempo === "MissÍµes" ? "Missão" : "Evento"}`}
+                        onClick={() => subTabTempo === "MissÍµes" ? setShowAddMission(true) : setShowAddTimelineEvent(true)}
                     >
                         <Plus size={18} />
                     </button>
@@ -186,15 +186,15 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
             </div>
 
             <div className="sub-content-area scrollbar-arcane">
-                {subTabTempo === "MissÃµes" && (
+                {subTabTempo === "MissÍµes" && (
                     <div className="missions-page">
                         <div className="missions-lists">
 
                             <div className="mission-section">
-                                <h4 className="section-label">MISSÃ•ES ATIVAS</h4>
+                                <h4 className="section-label">MISSÍ•ES ATIVAS</h4>
                                 <div className="missions-grid">
                                     {activeMissions.length === 0 ? (
-                                        <p className="empty-msg">Nenhuma missÃ£o ativa.</p>
+                                        <p className="empty-msg">Nenhuma missão ativa.</p>
                                     ) : (
                                         activeMissions.map((mission: any) => (
                                             <MissionCard key={mission.id} mission={mission} onToggleSubTask={handleToggleSubTask} onAddSubTask={handleAddSubTask} onUpdate={handleUpdateMission} onDelete={handleDeleteMission} onEdit={handleStartEditMission} userRole={userRole} mentionEntities={mentionEntities} onAddNote={handleAddEntityNote} onDeleteNote={handleDeleteEntityNote} userId={userId} />
@@ -205,10 +205,10 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                             </div>
 
                             <div className="mission-section mt-6">
-                                <h4 className="section-label">MISSÃ•ES CONCLUÃDAS</h4>
+                                <h4 className="section-label">MISSÍ•ES CONCLUÍDAS</h4>
                                 <div className="missions-grid completed">
                                     {completedMissions.length === 0 ? (
-                                        <p className="empty-msg">Nenhuma missÃ£o concluÃ­da.</p>
+                                        <p className="empty-msg">Nenhuma missão concluÍ­da.</p>
                                     ) : (
                                         completedMissions.map((mission: any) => (
                                             <MissionCard key={mission.id} mission={mission} onToggleSubTask={handleToggleSubTask} onAddSubTask={handleAddSubTask} onUpdate={handleUpdateMission} onDelete={handleDeleteMission} onEdit={handleStartEditMission} userRole={userRole} mentionEntities={mentionEntities} onAddNote={handleAddEntityNote} onDeleteNote={handleDeleteEntityNote} userId={userId} />
@@ -234,7 +234,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                             <div className="timeline-date">
                                                 <Calendar size={12} />
                                                 <span>{event.day ? `${event.day}/${event.month}/` : ""}{event.year}</span>
-                                                {event.type === 'MISSION' && <span className="mission-tag">MISSÃƒO</span>}
+                                                {event.type === 'MISSION' && <span className="mission-tag">MISSÀO</span>}
                                             </div>
                                             <div className="timeline-title-row">
                                                 <h5 className="event-name">{event.name.toUpperCase()}</h5>
@@ -262,7 +262,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                                             <button
                                                                 className="del-btn"
                                                                 onClick={() => requestDelete(event.id, () => event.type === 'MISSION' ? handleDeleteMission(event.id) : handleDeleteTimelineEvent(event.id))}
-                                                                title={isPending(event.id) ? "Clique para confirmar exclusÃ£o" : "Excluir"}
+                                                                title={isPending(event.id) ? "Clique para confirmar exclusão" : "Excluir"}
                                                                 style={{ color: isPending(event.id) ? '#00cc66' : undefined }}
                                                             >
                                                                 {isPending(event.id) ? <Check size={20} /> : <Trash2 size={20} />}
@@ -295,10 +295,10 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
             {showAddMission && typeof document !== 'undefined' ? createPortal(
                 <div className="modal-overlay">
                     <div className="modal-content solid mission-modal ornate-border">
-                        <h3 className="modal-title gold-text">{handlers.editingMissionId ? "EDITAR MISSÃƒO" : "CRIAR NOVA MISSÃƒO"}</h3>
+                        <h3 className="modal-title gold-text">{handlers.editingMissionId ? "EDITAR MISSÀO" : "CRIAR NOVA MISSÀO"}</h3>
 
                         <div className="form-group">
-                            <label>NOME DA MISSÃƒO</label>
+                            <label>NOME DA MISSÀO</label>
                             <input
                                 type="text"
                                 value={newMissionName}
@@ -307,11 +307,11 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                             />
                         </div>
                         <div className="form-group">
-                            <label>DESCRIÃ‡ÃƒO</label>
+                            <label>DESCRIÍ‡ÀO</label>
                             <MentionEditor
                                 value={newMissionDescription}
                                 onChange={setNewMissionDescription}
-                                placeholder="Detalhes da missÃ£o..."
+                                placeholder="Detalhes da missão..."
                                 mentionEntities={mentionEntities}
                             />
                         </div>
@@ -339,7 +339,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                         <div key={st.id} className="task-preview-item">
                                             <Square size={14} className="gold-text opacity-50" />
                                             <span>{st.text}</span>
-                                            <button className="remove-task-btn" onClick={() => setNewMissionSubTasks(newMissionSubTasks.filter((t: any) => t.id !== st.id))}>Ã—</button>
+                                            <button className="remove-task-btn" onClick={() => setNewMissionSubTasks(newMissionSubTasks.filter((t: any) => t.id !== st.id))}>Í—</button>
                                         </div>
                                     ))
                                 )}
@@ -352,7 +352,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                 <input type="number" value={newMissionDay || ""} onChange={(e) => setNewMissionDay(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
                             </div>
                             <div className="form-group">
-                                <label>MÃŠS (OPCIONAL)</label>
+                                <label>MÊS (OPCIONAL)</label>
                                 <input type="number" value={newMissionMonth || ""} onChange={(e) => setNewMissionMonth(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
                             </div>
                             <div className="form-group">
@@ -364,7 +364,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                         <div className="modal-footer">
                             <button className="cancel-btn" onClick={handleCancelMissionEdit}>CANCELAR</button>
                             <button className="confirm-btn" onClick={handleCreateMission}>
-                                {handlers.editingMissionId ? "SALVAR ALTERAÃ‡Ã•ES" : "CRIAR MISSÃƒO"}
+                                {handlers.editingMissionId ? "SALVAR ALTERAÍ‡Í•ES" : "CRIAR MISSÀO"}
                             </button>
                         </div>
                     </div>
@@ -374,7 +374,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
             {showAddTimelineEvent && typeof document !== 'undefined' ? createPortal(
                 <div className="modal-overlay">
                     <div className="modal-content solid event-modal ornate-border">
-                        <h3 className="modal-title gold-text">{handlers.editingTimelineEventId ? "EDITAR EVENTO" : "REGISTRAR EVENTO HISTÃ“RICO"}</h3>
+                        <h3 className="modal-title gold-text">{handlers.editingTimelineEventId ? "EDITAR EVENTO" : "REGISTRAR EVENTO HISTÓRICO"}</h3>
 
                         <div className="form-group">
                             <label>NOME DO EVENTO</label>
@@ -382,11 +382,11 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                 type="text"
                                 value={newTimelineName}
                                 onChange={(e) => setNewTimelineName(e.target.value)}
-                                placeholder="Ex: O Grande IncÃªndio"
+                                placeholder="Ex: O Grande Incêndio"
                             />
                         </div>
                         <div className="form-group">
-                            <label>DESCRIÃ‡ÃƒO</label>
+                            <label>DESCRIÍ‡ÀO</label>
                             <MentionEditor
                                 value={newTimelineDescription}
                                 onChange={setNewTimelineDescription}
@@ -400,7 +400,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                                 <input type="number" value={newTimelineDay || ""} onChange={(e) => setNewTimelineDay(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
                             </div>
                             <div className="form-group">
-                                <label>MÃŠS (OPCIONAL)</label>
+                                <label>MÊS (OPCIONAL)</label>
                                 <input type="number" value={newTimelineMonth || ""} onChange={(e) => setNewTimelineMonth(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="01" />
                             </div>
                             <div className="form-group">
@@ -412,7 +412,7 @@ export function TimeTab({ subTabTempo, setSubTabTempo, state, handlers, userRole
                         <div className="modal-footer">
                             <button className="cancel-btn" onClick={handleCancelTimelineEdit}>CANCELAR</button>
                             <button className="confirm-btn" onClick={handleCreateTimelineEvent}>
-                                {handlers.editingTimelineEventId ? "SALVAR ALTERAÃ‡Ã•ES" : "REGISTRAR EVENTO"}
+                                {handlers.editingTimelineEventId ? "SALVAR ALTERAÍ‡Í•ES" : "REGISTRAR EVENTO"}
                             </button>
                         </div>
                     </div>
@@ -451,7 +451,7 @@ function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelet
 
                     {userRole === 'GM' && (
                         <>
-                            <button className="edit-btn" onClick={() => onEdit(mission.id)} title="Editar missÃ£o completa">
+                            <button className="edit-btn" onClick={() => onEdit(mission.id)} title="Editar missão completa">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
 
@@ -465,7 +465,7 @@ function MissionCard({ mission, onToggleSubTask, onAddSubTask, onUpdate, onDelet
                         <button
                             className="del-btn"
                             onClick={() => requestDelete(mission.id, () => onDelete(mission.id))}
-                            title={isPending(mission.id) ? "Clique para confirmar exclusÃ£o" : "Excluir"}
+                            title={isPending(mission.id) ? "Clique para confirmar exclusão" : "Excluir"}
                             style={{ color: isPending(mission.id) ? '#00cc66' : undefined }}
                         >
                             {isPending(mission.id) ? <Check size={20} /> : <Trash2 size={20} />}
@@ -703,7 +703,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                                     <button
                                                         className="del-btn-mini"
                                                         onClick={() => requestDelete(skill.id, () => handleDeleteSkill(skill.id))}
-                                                        title={isPending(skill.id) ? "Clique para confirmar exclusÃ£o" : "Excluir"}
+                                                        title={isPending(skill.id) ? "Clique para confirmar exclusão" : "Excluir"}
                                                         style={{ color: isPending(skill.id) ? '#00cc66' : undefined }}
                                                     >
                                                         {isPending(skill.id) ? <Check size={20} /> : <Trash2 size={20} />}
@@ -756,7 +756,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                                                         <button
                                                             className="del-btn-mini"
                                                             onClick={() => requestDelete(item.id, () => handleDeleteItem(item.id))}
-                                                            title={isPending(item.id) ? "Clique para confirmar exclusÃ£o" : "Excluir"}
+                                                            title={isPending(item.id) ? "Clique para confirmar exclusão" : "Excluir"}
                                                             style={{ color: isPending(item.id) ? '#00cc66' : undefined }}
                                                         >
                                                             {isPending(item.id) ? <Check size={20} /> : <Trash2 size={20} />}
@@ -811,10 +811,10 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                         </div>
                         <div className="form-group">
                             <label>REQUISITO</label>
-                            <input type="text" value={newSkillRequirement} onChange={(e) => setNewSkillRequirement(e.target.value)} placeholder="Ex: ForÃ§a 2+" />
+                            <input type="text" value={newSkillRequirement} onChange={(e) => setNewSkillRequirement(e.target.value)} placeholder="Ex: ForÍ§a 2+" />
                         </div>
                         <div className="form-group">
-                            <label>DESCRIÃ‡ÃƒO</label>
+                            <label>DESCRIÍ‡ÀO</label>
                             <MentionEditor value={newSkillDescription} onChange={setNewSkillDescription} placeholder="O que esta habilidade faz?" mentionEntities={mentionEntities} />
                         </div>
                         <div className="form-group">
@@ -833,7 +833,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                         <div className="modal-footer">
                             <button className="cancel-btn" onClick={handleCancelSkillEdit}>CANCELAR</button>
                             <button className="confirm-btn" onClick={handleCreateSkill}>
-                                {handlers.editingSkillId ? "SALVAR ALTERAÃ‡Ã•ES" : "CRIAR"}
+                                {handlers.editingSkillId ? "SALVAR ALTERAÍ‡Í•ES" : "CRIAR"}
                             </button>
                         </div>
                     </div>
@@ -846,20 +846,20 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                         <h3 className="modal-title gold-text">{handlers.editingItemId ? "EDITAR ITEM" : "CRIAR ITEM"}</h3>
                         <div className="form-group">
                             <label>NOME DO ITEM</label>
-                            <input type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Ex: PoÃ§Ã£o de Cura" />
+                            <input type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Ex: PoÍ§ão de Cura" />
                         </div>
                         <div className="form-group">
                             <label>REQUISITO</label>
-                            <input type="text" value={newItemRequirement} onChange={(e) => setNewItemRequirement(e.target.value)} placeholder="Ex: InteligÃªncia 1+" />
+                            <input type="text" value={newItemRequirement} onChange={(e) => setNewItemRequirement(e.target.value)} placeholder="Ex: Inteligência 1+" />
                         </div>
 
                         <div className="form-group">
-                            <label>DESCRIÃ‡ÃƒO</label>
+                            <label>DESCRIÍ‡ÀO</label>
                             <MentionEditor value={newItemDescription} onChange={setNewItemDescription} placeholder="O que este item faz?" mentionEntities={itemDescriptionMentionEntities} />
                         </div>
                         <div className="form-row-double" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
                             <div className="form-group">
-                                <label>PREÃ‡O ($)</label>
+                                <label>PREÍ‡O ($)</label>
                                 <input type="number" value={newItemPrice} onChange={(e) => setNewItemPrice(parseInt(e.target.value))} />
                             </div>
                             <div className="form-group">
@@ -883,7 +883,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                         <div className="form-group">
                             <label>IMAGEM DO ITEM (PNG ou JPEG)</label>
                             <p style={{ fontSize: '0.65rem', color: 'var(--accent-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
-                                <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> ResoluÃ§Ã£o recomendada: 800x800 para melhor performance.
+                                <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> ResoluÍ§ão recomendada: 800x800 para melhor performance.
                             </p>
                             <input
                                 type="file"
@@ -929,7 +929,7 @@ export function GameTab({ subTabJogo, setSubTabJogo, state, handlers, userRole, 
                         <div className="modal-footer">
                             <button className="cancel-btn" onClick={handleCancelItemEdit}>CANCELAR</button>
                             <button className="confirm-btn" onClick={handleCreateItem}>
-                                {handlers.editingItemId ? "SALVAR ALTERAÃ‡Ã•ES" : "CRIAR"}
+                                {handlers.editingItemId ? "SALVAR ALTERAÍ‡Í•ES" : "CRIAR"}
                             </button>
                         </div>
                     </div>

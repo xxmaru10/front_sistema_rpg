@@ -106,7 +106,7 @@ export function VampireDisciplines({ characterId, sessionId, actorUserId, discip
         <div className="stunt-slot editing-new">
           <input className="stunt-name-input" placeholder="NOME" value={temp?.name ?? ""} onChange={(e) => setTemp((p) => p ? { ...p, name: e.target.value.toUpperCase() } : null)} />
           <input className="stunt-cost-input" placeholder="CUSTO" value={temp?.cost ?? ""} onChange={(e) => setTemp((p) => p ? { ...p, cost: e.target.value } : null)} />
-          <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÃO" value={temp?.description ?? ""} onChange={(e) => setTemp((p) => p ? { ...p, description: e.target.value } : null)} />
+          <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÀO" value={temp?.description ?? ""} onChange={(e) => setTemp((p) => p ? { ...p, description: e.target.value } : null)} />
           <div className="stunt-actions-row">
             <button className="stunt-action-btn save" onClick={handleSave}>SALVAR</button>
             <button className="stunt-action-btn cancel" onClick={() => setEditingId(null)}>CANCELAR</button>

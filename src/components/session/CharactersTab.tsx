@@ -96,7 +96,7 @@ export function CharactersTab({
                 <div className="entities-columns">
                     {displayedCharacters.length === 0 ? (
                         <div className="empty-state solid ornate-border">
-                            <p className="narrative-text">NENHUM PERSONAGEM ENCONTRADO NESTA SESSÃO.</p>
+                            <p className="narrative-text">NENHUM PERSONAGEM ENCONTRADO NESTA SESSÀO.</p>
                         </div>
                     ) : (
                         <div className="entities-scroll">

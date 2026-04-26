@@ -87,7 +87,7 @@ export const MentionSuggestions: React.FC<MentionSuggestionsProps> = ({
             }}
         >
             <div style={{ padding: "6px 12px", fontSize: "0.65rem", color: "#C5A059", opacity: 0.6, fontWeight: "bold", borderBottom: "1px solid rgba(197, 160, 89, 0.1)", marginBottom: "4px", letterSpacing: "1px" }}>
-                SUGESTÕES DE MENÇÃO
+                SUGESTÕES DE MENÇÀO
             </div>
             {filteredSuggestions.map((item, index) => (
                 <div

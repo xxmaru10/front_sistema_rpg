@@ -260,7 +260,7 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
         <div className="mystic-modal-overlay tarot-reveal" onClick={onClose}>
             <div className="mystic-modal-container" onClick={e => e.stopPropagation()}>
                 <div className="ritual-header">
-                    <span className="ritual-title">RITUAL DE INICIAÇÃO</span>
+                    <span className="ritual-title">RITUAL DE INICIAÇÀO</span>
                     <button onClick={onClose} className="ritual-close-btn">
                         <X size={20} />
                     </button>
@@ -357,7 +357,7 @@ export function CharacterCreator({ sessionId, actorUserId, onClose, source = "ac
                     )}
                     
                     <div className="input-field">
-                        <label>RELIGIÃO</label>
+                        <label>RELIGIÀO</label>
                         <select
                             className="occult-input"
                             value={religionId}

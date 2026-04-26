@@ -366,7 +366,7 @@ export function TurnOrderTracker({
                                     } as any);
                                 }}
                             >
-                                FINALIZAR REAÇÃO
+                                FINALIZAR REAÇÀO
                             </button>
                         ) : isCurrentPlayerActive ? (
                              <button className="hud-action-btn next-step-btn" onClick={handleNextTurn} title="Passar Turno">

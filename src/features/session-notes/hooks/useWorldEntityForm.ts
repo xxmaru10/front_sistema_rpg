@@ -9,10 +9,10 @@ export const COLOR_PRESETS = [
 
 export const TYPE_LABELS: Record<WorldEntityType, string> = {
     "PERSONAGEM": "PERSONAGEM",
-    "LOCALIZACAO": "LOCALIZAÇÃO",
+    "LOCALIZACAO": "LOCALIZAÇÀO",
     "MAPA": "MAPA",
-    "FACAO": "FACÇÃO",
-    "RELIGIAO": "RELIGIÃO",
+    "FACAO": "FACÇÀO",
+    "RELIGIAO": "RELIGIÀO",
     "FAMILIA": "FAMÍLIA",
     "BESTIARIO": "CRIATURA",
     "RACA": "RAÇA",
@@ -21,8 +21,8 @@ export const TYPE_LABELS: Record<WorldEntityType, string> = {
 
 export const LOCATION_CATEGORIES: Record<string, string[]> = {
     "Geográfico": ["MUNDO", "CONTINENTE", "PAÍS", "REINO", "ESTADO", "FEUDO"],
-    "Urbano": ["CIDADE", "VILA", "BAIRRO", "RUA", "FORTALEZA", "ACAMPAMENTO", "PRISÃO", "FÁBRICA", "RUÍNAS"],
-    "Natureza": ["FLORESTA", "SELVA", "PANTANO", "TUNDRA", "DESERTO", "MONTANHA", "PENHASCO", "VALE", "VULCÃO", "RIO", "CLAREIRA", "CAVERNA"],
+    "Urbano": ["CIDADE", "VILA", "BAIRRO", "RUA", "FORTALEZA", "ACAMPAMENTO", "PRISÀO", "FÁBRICA", "RUÍNAS"],
+    "Natureza": ["FLORESTA", "SELVA", "PANTANO", "TUNDRA", "DESERTO", "MONTANHA", "PENHASCO", "VALE", "VULCÀO", "RIO", "CLAREIRA", "CAVERNA"],
     "Especial": ["MINA", "ESCONDERIJO", "SANTUÁRIO", "EXTRA-DIMENSIONAL", "OUTRO"]
 };
 

@@ -1180,7 +1180,7 @@ export function InventorySection({
                                             </div>
                                         </div>
                                         <div className="inv-modal-field" style={{ marginTop: '12px' }}>
-                                            <label>RESTRIÇÃO DO SLOT (Opcional - L, M, G)</label>
+                                            <label>RESTRIÇÀO DO SLOT (Opcional - L, M, G)</label>
                                             <div className="inv-size-selector">
                                                 <button
                                                     type="button"

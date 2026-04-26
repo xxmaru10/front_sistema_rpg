@@ -88,7 +88,7 @@ export function ZoneEditor({ sessionId, actorUserId, zones, onClose }: ZoneEdito
                                 type="text"
                                 value={desc}
                                 onChange={(e) => setDesc(e.target.value)}
-                                placeholder="DESCRIÇÃO DA ESFERA..."
+                                placeholder="DESCRIÇÀO DA ESFERA..."
                                 className="mystic-input input-ritual"
                             />
                         </div>
@@ -100,7 +100,7 @@ export function ZoneEditor({ sessionId, actorUserId, zones, onClose }: ZoneEdito
                     <div className="link-engine">
                         <div className="engine-header">
                             <span className="symbol">🜖</span>
-                            <span>PROTOCOLOS DE CONEXÃO ASTRAL</span>
+                            <span>PROTOCOLOS DE CONEXÀO ASTRAL</span>
                         </div>
                         <p className="engine-hint">SELECIONE A ORIGEM E O DESTINO PARA CRIAR UMA PONTE ASTRAL</p>
                         <div className="nodes-grid">

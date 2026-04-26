@@ -408,7 +408,7 @@ export function DamageResolutionModal({
                             onClick={onSkip}
                             title="Deixar o jogador resolver"
                         >
-                            NÃO FAZER NADA
+                            NÀO FAZER NADA
                         </button>
                     )}
                 </div>

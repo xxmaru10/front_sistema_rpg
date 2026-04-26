@@ -151,7 +151,7 @@ export function BlinkmotionModal({ characterName, storedUsername, storedPassword
                                 <ShieldCheck size={60} />
                             </div>
                             <h2 className="glitch" data-text="CRIPTOGRAFADO COM SUCESSO">CRIPTOGRAFADO COM SUCESSO</h2>
-                            <p>O CANAL ESTÁ SEGURO. A SESSÃO FOI OCULTADA.</p>
+                            <p>O CANAL ESTÁ SEGURO. A SESSÀO FOI OCULTADA.</p>
                             <div className="success-footer">
                                 <div className="security-code">ID-HASH: {Math.random().toString(36).substring(2, 10).toUpperCase()}</div>
                                 <button onClick={onClose} className="close-btn-final">FECHAR TERMINAL</button>

@@ -72,7 +72,7 @@ export function AspectManager({ sessionId, actorUserId, aspects, onClose }: Aspe
         <div className="mystic-modal-overlay tarot-reveal" onClick={onClose}>
             <div className="mystic-modal-container" onClick={e => e.stopPropagation()}>
                 <div className="ritual-header">
-                    <span className="ritual-title">MANIFESTAÇÃO DE CONCEITOS</span>
+                    <span className="ritual-title">MANIFESTAÇÀO DE CONCEITOS</span>
                     <button onClick={onClose} className="ritual-close-btn">
                         <X size={20} />
                     </button>
@@ -98,7 +98,7 @@ export function AspectManager({ sessionId, actorUserId, aspects, onClose }: Aspe
                                     onChange={e => setScope(e.target.value as AspectScope)}
                                     className="occult-select"
                                 >
-                                    <option value="SCENE">SESSÃO / CENA</option>
+                                    <option value="SCENE">SESSÀO / CENA</option>
                                     <option value="ZONE">LOCAL (ESFERA)</option>
                                     <option value="CHARACTER">VÍNCULO (PERSONAGEM)</option>
                                 </select>

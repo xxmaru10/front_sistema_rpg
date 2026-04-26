@@ -206,7 +206,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
 
     return (
         <>
-            {/* Interface de Câmara (Idle) Ã¢â‚¬â€ Unifica Botão, Instrução e Dados */}
+            {/* Interface de Câmara (Idle) ââ‚¬â€ Unifica Botão, Instrução e Dados */}
             {phase === "idle" && (
                 <div style={{
                     position: "absolute",
@@ -657,7 +657,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                     boxShadow: `0 0 80px rgba(0,0,0,0.9), 0 0 40px ${totalColor}33`,
                     backdropFilter: "blur(16px)",
                 }}>
-                    {/* Breakdown section Ã¢â‚¬â€ cálculos no topo */}
+                    {/* Breakdown section ââ‚¬â€ cálculos no topo */}
                     <div style={{
                         display: "flex",
                         flexDirection: "column",
@@ -713,7 +713,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                             </div>
                         )}
 
-                        {/* Modificadores Ã¢â‚¬â€ só mostra os não-zero */}
+                        {/* Modificadores ââ‚¬â€ só mostra os não-zero */}
                         {calculationBreakdown && (() => {
                             const skillVal = calculationBreakdown.baseSkillValue ?? 0;
                             const itemVal = calculationBreakdown.itemBonusValue ?? 0;

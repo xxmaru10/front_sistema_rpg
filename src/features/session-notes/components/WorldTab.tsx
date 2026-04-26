@@ -521,7 +521,7 @@ export function WorldTab({
                             <div className="empty-state">
                                 NENHUM REGISTRO DE {subTabMundo.toUpperCase()} ENCONTRADO.
                                 <br />
-                                CLIQUE NO BOTÃO "+" PARA ADICIONAR.
+                                CLIQUE NO BOTÀO "+" PARA ADICIONAR.
                             </div>
                         )}
                     </div>
