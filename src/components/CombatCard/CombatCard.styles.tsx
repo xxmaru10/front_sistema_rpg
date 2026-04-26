@@ -147,7 +147,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-pin-btn {
-            color: #f3e1b3 !important;
+            color: var(--title-color) !important;
             text-shadow: 0 0 8px rgba(255, 230, 170, 0.78), 0 0 14px rgba(255, 215, 140, 0.46);
             filter: drop-shadow(0 0 6px rgba(255, 220, 140, 0.55));
         }
@@ -230,7 +230,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             width: 36px;
             height: 36px;
             border-radius: 12px;
-            color: #f3e1b3;
+            color: var(--title-color);
         }
 
         .combat-header-portrait-frame {
@@ -371,7 +371,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             font-family: var(--font-header);
             font-size: 0.92rem;
             letter-spacing: 0.08em;
-            color: #f3e6c1;
+            color: var(--title-color);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -560,7 +560,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             font-family: var(--font-header);
             font-size: 0.92rem;
             letter-spacing: 0.08em;
-            color: #f7ecd0;
+            color: var(--title-color);
             text-shadow: 0 0 10px rgba(255,255,255,0.18);
         }
 
@@ -628,7 +628,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-name {
             font-family: var(--font-header);
             font-size: 1rem;
-            color: #e0e0e0;
+            color: var(--title-color);
             margin: 0;
             letter-spacing: 0.05em;
             white-space: nowrap;

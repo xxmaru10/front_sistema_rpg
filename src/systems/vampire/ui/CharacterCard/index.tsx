@@ -60,8 +60,8 @@ function GenerationBadge({
         onBlur={save}
         onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
         style={{
-          width: "52px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(192,57,43,0.4)",
-          color: "#c0392b", padding: "2px 6px", borderRadius: "6px", textAlign: "center", fontSize: "0.85rem",
+          width: "52px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(var(--accent-rgb),0.4)",
+          color: "var(--accent-color)", padding: "2px 6px", borderRadius: "6px", textAlign: "center", fontSize: "0.85rem",
         }}
       />
     );
@@ -72,8 +72,8 @@ function GenerationBadge({
       onClick={() => isGM && (setTemp(String(generation)), setEditing(true))}
       title={isGM ? "Editar geração" : `Geração ${generation}`}
       style={{
-        fontSize: "0.78rem", fontWeight: 700, color: "#c0392b",
-        background: "rgba(192,57,43,0.12)", border: "1px solid rgba(192,57,43,0.3)",
+        fontSize: "0.78rem", fontWeight: 700, color: "var(--accent-color)",
+        background: "rgba(var(--accent-rgb),0.12)", border: "1px solid rgba(var(--accent-rgb),0.3)",
         borderRadius: "6px", padding: "2px 8px",
         cursor: isGM ? "pointer" : "default", letterSpacing: "0.05em",
       }}

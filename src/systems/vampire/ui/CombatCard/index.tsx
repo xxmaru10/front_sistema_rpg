@@ -39,7 +39,7 @@ function isThreat(c: Character) {
   return c.arenaSide === "THREAT" || (c.isNPC && c.arenaSide !== "HERO");
 }
 
-const BLOOD_ACCENT = "#c0392b";
+const BLOOD_ACCENT = "var(--accent-color)";
 
 export function VampireCombatCard({
   character,
@@ -204,7 +204,7 @@ export function VampireCombatCard({
             {character.name.toUpperCase()}
           </h3>
           {/* Generation in Roman */}
-          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: BLOOD_ACCENT, background: "rgba(192,57,43,0.12)", border: "1px solid rgba(192,57,43,0.3)", borderRadius: "6px", padding: "2px 6px" }}>
+          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: BLOOD_ACCENT, background: "rgba(var(--accent-rgb),0.12)", border: "1px solid rgba(var(--accent-rgb),0.3)", borderRadius: "6px", padding: "2px 6px" }}>
             {toRoman(generation)}
           </span>
         </div>
@@ -357,8 +357,8 @@ export function VampireCombatCard({
           )}
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             {disciplines.length > 0 && (
-              <button onClick={() => setExpandedExtra(expandedExtra === "disciplines" ? null : "disciplines")} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.22)", borderRadius: 4, color: BLOOD_ACCENT, cursor: "pointer", opacity: expandedExtra === "disciplines" ? 1 : 0.65 }} title="Disciplinas">
-                <span style={{ display: "inline-flex", width: "14px", height: "14px", flexShrink: 0, backgroundColor: BLOOD_ACCENT, WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskSize: "contain", maskSize: "contain", filter: `drop-shadow(0 0 4px ${BLOOD_ACCENT}88)` }} />
+              <button onClick={() => setExpandedExtra(expandedExtra === "disciplines" ? null : "disciplines")} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(var(--accent-rgb),0.08)", border: "1px solid rgba(var(--accent-rgb),0.22)", borderRadius: 4, color: BLOOD_ACCENT, cursor: "pointer", opacity: expandedExtra === "disciplines" ? 1 : 0.65 }} title="Disciplinas">
+                <span style={{ display: "inline-flex", width: "14px", height: "14px", flexShrink: 0, backgroundColor: BLOOD_ACCENT, WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskSize: "contain", maskSize: "contain", filter: `drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.5))` }} />
               </button>
             )}
             {(data.stunts?.length ?? 0) > 0 && (
@@ -369,9 +369,9 @@ export function VampireCombatCard({
             )}
           </div>
           {expandedExtra === "disciplines" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4, padding: 8, background: "rgba(192,57,43,0.05)", borderRadius: 4, border: "1px solid rgba(192,57,43,0.15)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4, padding: 8, background: "rgba(var(--accent-rgb),0.05)", borderRadius: 4, border: "1px solid rgba(var(--accent-rgb),0.15)" }}>
               {disciplines.map((d) => (
-                <div key={d.id} style={{ padding: "4px 6px", fontSize: "0.7rem", color: "#ccc", borderLeft: `2px solid rgba(192,57,43,0.5)` }} title={d.description}>
+                <div key={d.id} style={{ padding: "4px 6px", fontSize: "0.7rem", color: "#ccc", borderLeft: `2px solid rgba(var(--accent-rgb),0.5)` }} title={d.description}>
                   <span style={{ color: "#e07070", fontWeight: "bold" }}>{d.name}</span> <span style={{ color: "#888" }}>[{d.cost}]</span>
                 </div>
               ))}
@@ -419,8 +419,8 @@ export function VampireCombatCard({
 
           {/* Hunger consequences */}
           <div>
-            <div style={{ fontSize: "0.58rem", letterSpacing: "0.18em", color: "rgba(192,57,43,0.8)", marginBottom: 4, display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ display: "inline-flex", width: "10px", height: "10px", flexShrink: 0, backgroundColor: "#c0392b", WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskSize: "contain", maskSize: "contain" }} />
+            <div style={{ fontSize: "0.58rem", letterSpacing: "0.18em", color: "rgba(var(--accent-rgb),0.8)", marginBottom: 4, display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ display: "inline-flex", width: "10px", height: "10px", flexShrink: 0, backgroundColor: "var(--accent-color)", WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskSize: "contain", maskSize: "contain" }} />
               FOME
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -429,7 +429,7 @@ export function VampireCombatCard({
                 const isFilled = !!(cons?.text?.trim());
                 const penalty = slot.includes("mild") ? "-2" : slot.includes("moderate") ? "-4" : "-6";
                 return (
-                  <div key={slot} className={`combat-consequence-box ${isFilled ? "filled" : "empty"}`} onClick={() => openConsequenceModal(slot, true, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value)} title={isFilled ? cons!.text.toUpperCase() : `Fome (${penalty})`} style={{ borderColor: "rgba(192,57,43,0.28)" }}>
+                  <div key={slot} className={`combat-consequence-box ${isFilled ? "filled" : "empty"}`} onClick={() => openConsequenceModal(slot, true, cons?.text || "", cons?.debuff?.skill, cons?.debuff?.value)} title={isFilled ? cons!.text.toUpperCase() : `Fome (${penalty})`} style={{ borderColor: "rgba(var(--accent-rgb),0.28)" }}>
                     <span className="cons-content">{isFilled ? cons!.text.toUpperCase() : penalty}</span>
                     {isFilled && cons?.debuff && <span className="cons-debuff-badge">-{cons.debuff.value} {cons.debuff.skill.slice(0, 3).toUpperCase()}</span>}
                   </div>

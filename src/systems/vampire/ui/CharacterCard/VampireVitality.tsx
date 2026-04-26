@@ -40,10 +40,10 @@ const TRACKS = [
     eventKey: "BLOOD",
     label: "SANGUE",
     iconUrl: "url('/interface/sangue.svg')" as string,
-    accent: "#c0392b",
-    border: "rgba(192,57,43,0.22)",
-    bg: "linear-gradient(180deg,rgba(192,57,43,0.07),rgba(255,255,255,0.015))",
-    activeNode: "linear-gradient(180deg,rgba(220,60,50,0.85),rgba(120,15,10,0.92))",
+    accent: "var(--accent-color)",
+    border: "rgba(var(--accent-rgb),0.22)",
+    bg: "linear-gradient(180deg,rgba(var(--accent-rgb),0.07),rgba(255,255,255,0.015))",
+    activeNode: "var(--accent-color)",
   },
 ];
 
@@ -229,7 +229,7 @@ export function VampireVitality({
                   </button>
                   <button
                     onClick={() => handleExpand(t.key, t.eventKey, 1)}
-                    style={{ padding: "4px 10px", background: `rgba(${t.key === "blood" ? "192,57,43" : "var(--accent-rgb)"},0.08)`, border: `1px solid ${t.border}`, color: t.accent, borderRadius: "6px", fontSize: "0.7rem", cursor: "pointer" }}
+                    style={{ padding: "4px 10px", background: `rgba(var(--accent-rgb),0.08)`, border: `1px solid ${t.border}`, color: t.accent, borderRadius: "6px", fontSize: "0.7rem", cursor: "pointer" }}
                   >
                     + ADICIONAR
                   </button>

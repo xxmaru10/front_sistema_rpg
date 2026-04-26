@@ -271,7 +271,7 @@ function FateCharacterCardComponent({
                                     ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
                                     : "transparent",
                                 border: "none",
-                                color: visibleTab === "lore" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                color: visibleTab === "lore" ? "var(--title-color)" : "rgba(255, 255, 255, 0.72)",
                                 cursor: "pointer",
                                 padding: "16px 14px",
                                 fontFamily: "var(--font-header)",
@@ -292,7 +292,7 @@ function FateCharacterCardComponent({
                                     ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
                                     : "transparent",
                                 border: "none",
-                                color: visibleTab === "powers" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                color: visibleTab === "powers" ? "var(--title-color)" : "rgba(255, 255, 255, 0.72)",
                                 cursor: "pointer",
                                 padding: "16px 14px",
                                 fontFamily: "var(--font-header)",
@@ -314,7 +314,7 @@ function FateCharacterCardComponent({
                                         ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
                                         : "transparent",
                                     border: "none",
-                                    color: visibleTab === "inventory" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                    color: visibleTab === "inventory" ? "var(--title-color)" : "rgba(255, 255, 255, 0.72)",
                                     cursor: "pointer",
                                     padding: "16px 14px",
                                     fontFamily: "var(--font-header)",
@@ -336,7 +336,7 @@ function FateCharacterCardComponent({
                                     ? "linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.08))"
                                     : "transparent",
                                 border: "none",
-                                color: visibleTab === "notes" ? "var(--accent-color)" : "rgba(255, 255, 255, 0.72)",
+                                color: visibleTab === "notes" ? "var(--title-color)" : "rgba(255, 255, 255, 0.72)",
                                 cursor: "pointer",
                                 padding: "16px 14px",
                                 fontFamily: "var(--font-header)",

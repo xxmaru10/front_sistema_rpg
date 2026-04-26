@@ -935,7 +935,7 @@
 .consequence-debuff-badge { font-size: 0.65rem; color: #ff6b6b; background: rgba(255, 100, 100, 0.15); border: 1px solid rgba(255, 100, 100, 0.3); padding: 2px 8px; border-radius: 3px; font-weight: bold; letter-spacing: 0.05em; }
 
 .portrait-column { position: relative; display: flex; flex-direction: column; gap: 12px; height: 100%; }
-.char-name-portrait { font-family: var(--font-victorian); font-size: 1.3rem; font-weight: 600; font-style: italic; line-height: 1.2; color: var(--accent-color); text-align: center; text-shadow: 0 0 20px rgba(197, 160, 89, 0.2); margin: 0; }
+.char-name-portrait { font-family: var(--font-header); font-size: 1.3rem; font-weight: 600; font-style: italic; line-height: 1.2; color: var(--title-color); text-align: center; text-shadow: 0 0 20px rgba(var(--title-rgb, 197, 160, 89), 0.2); margin: 0; }
 .compact .char-name-portrait { font-size: 1.1rem; }
 
 .character-portrait {
@@ -989,7 +989,7 @@
 .aspect-label-vertical {
     font-family: var(--font-header);
     font-size: 0.6rem;
-    color: var(--accent-color);
+    color: var(--title-color);
     opacity: 0.7;
     letter-spacing: 0.2em;
     margin-bottom: 4px;
@@ -1018,7 +1018,7 @@
 }
 
 .lore-accordion-header { padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(197, 160, 89, 0.05); }
-.lore-title { font-family: var(--font-header); font-size: 1.0rem; letter-spacing: 0.2em; color: var(--accent-color); }
+.lore-title { font-family: var(--font-header); font-size: 1.0rem; letter-spacing: 0.2em; color: var(--title-color); }
 .lore-accordion-content { padding: 12px; border-top: 1px solid rgba(197, 160, 89, 0.1); font-family: var(--font-narrative); font-size: 0.8rem; color: #ccc; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; }
 
 .lore-textarea-stack { width: 100%; min-height: 80px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent-color); color: white; padding: 8px; font-family: inherit; font-size: 0.8rem; margin-bottom: 8px; resize: vertical; }
@@ -1051,9 +1051,9 @@
     font-family: var(--font-header); 
     font-size: 2.2rem; 
     line-height: 1.2; 
-    color: var(--accent-color); 
+    color: var(--title-color); 
     margin-bottom: 20px; 
-    text-shadow: 0 0 20px var(--accent-glow), 0 0 10px rgba(0,0,0,0.5); 
+    text-shadow: 0 0 20px rgba(var(--title-rgb, var(--accent-rgb)), 0.3), 0 0 10px rgba(0,0,0,0.5); 
 }
 .compact .char-name { font-size: 1.2rem; }
 
@@ -1063,7 +1063,7 @@
     font-family: var(--font-header);
     font-size: 0.9rem;
     letter-spacing: 0.3em;
-    color: var(--accent-color);
+    color: var(--title-color);
     text-align: center;
     margin: 24px 0 16px 0;
     opacity: 0.9;
@@ -1078,7 +1078,7 @@
     content: "";
     height: 1px;
     flex: 1;
-    background: linear-gradient(to right, transparent, var(--accent-color), transparent);
+    background: linear-gradient(to right, transparent, var(--title-color), transparent);
     opacity: 0.3;
 }
 
@@ -1106,7 +1106,7 @@
     font-family: var(--font-header);
     font-size: 0.75rem;
     letter-spacing: 0.25em;
-    color: var(--accent-color);
+    color: var(--title-color);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1170,7 +1170,7 @@
 .integrity-node-header .node-index {
     font-family: var(--font-header);
     font-size: 1.1rem;
-    color: var(--accent-color);
+    color: var(--title-color);
     z-index: 2;
     font-weight: bold;
     text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
@@ -1216,7 +1216,7 @@
 }
 
 .integrity-matrix { display: flex; flex-direction: column; gap: 32px; }
-.track-header { display: flex; align-items: center; gap: 12px; font-family: var(--font-header); font-size: 0.75rem; letter-spacing: 0.15em; color: var(--accent-color); margin-bottom: 16px; }
+.track-header { display: flex; align-items: center; gap: 12px; font-family: var(--font-header); font-size: 0.75rem; letter-spacing: 0.15em; color: var(--title-color); margin-bottom: 16px; }
 
 .capability-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(197, 160, 89, 0.05); }
 
@@ -1257,7 +1257,7 @@
     font-family: var(--font-header);
     font-size: 0.9rem;
     letter-spacing: 0.1em;
-    color: var(--accent-color);
+    color: var(--title-color);
 }
 
 .skill-value {
@@ -1357,7 +1357,7 @@
 
 .stunt-name, .spell-name {
     font-family: var(--font-header);
-    color: var(--accent-color);
+    color: var(--title-color);
     font-size: 1.1rem;
     letter-spacing: 0.1rem;
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);

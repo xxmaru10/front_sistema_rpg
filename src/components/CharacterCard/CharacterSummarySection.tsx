@@ -473,12 +473,12 @@ export function CharacterSummarySection({
                                     className="character-summary-name"
                                     style={{
                                         margin: 0,
-                                        fontFamily: "var(--font-victorian)",
+                                        fontFamily: "var(--font-header)",
                                         fontSize: isCompact ? "1.08rem" : "clamp(1.2rem, 1.7vw, 1.9rem)",
                                         lineHeight: 1.05,
-                                        color: "#f6e7bf",
+                                        color: "var(--title-color)",
                                         textTransform: "uppercase",
-                                        textShadow: "0 0 20px rgba(var(--accent-rgb), 0.18)",
+                                        textShadow: "0 0 20px rgba(var(--title-rgb, var(--accent-rgb)), 0.18)",
                                         wordBreak: "break-word",
                                     }}
                                 >

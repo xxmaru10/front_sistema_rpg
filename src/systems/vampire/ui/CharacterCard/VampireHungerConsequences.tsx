@@ -88,25 +88,25 @@ export function VampireHungerConsequences({ characterId, sessionId, actorUserId,
       <div
         style={{
           background: "rgba(120,10,10,0.10)",
-          border: "1px solid rgba(192,57,43,0.22)",
+          border: "1px solid rgba(var(--accent-rgb),0.22)",
           borderRadius: "18px",
           padding: "14px 16px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "10px", marginBottom: "12px", borderBottom: "1px solid rgba(192,57,43,0.15)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "10px", marginBottom: "12px", borderBottom: "1px solid rgba(var(--accent-rgb),0.15)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{
               display: "inline-flex", width: "18px", height: "18px", flexShrink: 0,
-              backgroundColor: "#c0392b",
+              backgroundColor: "var(--accent-color)",
               WebkitMaskImage: "url('/interface/sangue.svg')", maskImage: "url('/interface/sangue.svg')",
               WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
               WebkitMaskPosition: "center", maskPosition: "center",
               WebkitMaskSize: "contain", maskSize: "contain",
-              filter: "drop-shadow(0 0 5px #c0392b88)",
+              filter: "drop-shadow(0 0 5px var(--accent-color))",
             }} />
-            <span style={{ fontSize: "0.7rem", letterSpacing: "0.22em", color: "rgba(192,57,43,0.88)" }}>FOME</span>
+            <span style={{ fontSize: "0.7rem", letterSpacing: "0.22em", color: "var(--accent-color)" }}>FOME</span>
             {isGM && (
-              <button onClick={() => setShowAddModal(true)} style={{ marginLeft: "4px", background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.3)", color: "#c0392b", borderRadius: "6px", padding: "2px 8px", fontSize: "0.8rem", cursor: "pointer" }}>+</button>
+              <button onClick={() => setShowAddModal(true)} style={{ marginLeft: "4px", background: "rgba(var(--accent-rgb),0.1)", border: "1px solid rgba(var(--accent-rgb),0.3)", color: "var(--accent-color)", borderRadius: "6px", padding: "2px 8px", fontSize: "0.8rem", cursor: "pointer" }}>+</button>
             )}
           </div>
         </div>
@@ -123,15 +123,15 @@ export function VampireHungerConsequences({ characterId, sessionId, actorUserId,
                   display: "grid", gridTemplateColumns: "auto 1fr",
                   alignItems: "center", gap: "10px",
                   padding: "10px 12px", borderRadius: "14px",
-                  border: "1px solid rgba(192,57,43,0.18)",
-                  background: isFilled ? "rgba(192,57,43,0.05)" : "rgba(255,255,255,0.01)",
+                  border: "1px solid rgba(var(--accent-rgb),0.18)",
+                  background: isFilled ? "rgba(var(--accent-rgb),0.05)" : "rgba(255,255,255,0.01)",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ minWidth: "38px", height: "26px", padding: "0 8px", borderRadius: "999px", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(192,57,43,0.12)", border: "1px solid rgba(192,57,43,0.25)", color: "#e07070", fontSize: "0.76rem" }}>
+                  <span style={{ minWidth: "38px", height: "26px", padding: "0 8px", borderRadius: "999px", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(var(--accent-rgb),0.12)", border: "1px solid rgba(var(--accent-rgb),0.25)", color: "var(--accent-color)", fontSize: "0.76rem" }}>
                     {penalty}
                   </span>
-                  <span style={{ fontSize: "0.72rem", letterSpacing: "0.18em", color: "rgba(192,57,43,0.88)" }}>{label}</span>
+                  <span style={{ fontSize: "0.72rem", letterSpacing: "0.18em", color: "var(--accent-color)" }}>{label}</span>
                 </div>
 
                 {isGM ? (
