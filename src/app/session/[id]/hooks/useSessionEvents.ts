@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { globalEventStore, ConnectionStatus } from "@/lib/eventStore";
+import { projectedStateStore } from "@/lib/projectedStateStore";
 import { ActionEvent, Character } from "@/types/domain";
 
 export function useSessionEvents(sessionId: string, actorUserId: string) {
@@ -33,6 +34,10 @@ export function useSessionEvents(sessionId: string, actorUserId: string) {
     };
 
     useEffect(() => {
+        // Clear the system hint when the session changes so that a stale hint
+        // from the previous session (e.g. "fate") doesn't bleed into this one
+        // (e.g. "vampire") during the initial event replay.
+        projectedStateStore.clearSystemHint();
         setIsLoading(true);
         const loadingTimeout = setTimeout(() => setIsLoading(false), 20000); // Reduced to 20s for better UX
         runInit(false);

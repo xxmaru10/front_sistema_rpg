@@ -1,6 +1,6 @@
 ﻿/**
- * Hook customizado para gerenciar a simulaÃ§Ã£o 3D dos dados Fate.
- * Encapsula Three.js, fÃ­sica e interaÃ§Ãµes.
+ * Hook customizado para gerenciar a simulação 3D dos dados Fate.
+ * Encapsula Three.js, física e interações.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -188,7 +188,7 @@ export function useFateDiceSimulation({
     const onSettledRef = useRef(onSettled);
     const onPreResultRef = useRef(onPreResult);
     
-    // Atualiza refs para evitar stale closures no loop de animaÃ§Ã£o
+    // Atualiza refs para evitar stale closures no loop de animação
     onSettledRef.current = onSettled;
     onPreResultRef.current = onPreResult;
 
@@ -235,7 +235,7 @@ export function useFateDiceSimulation({
             settleTimeoutRef.current = null;
         }
 
-        // PrÃ©-busca nÃºmeros aleatÃ³rios
+        // Pré-busca números aleatórios
         fetchRandomOrg(80).then(nums => { if (alive) randBufRef.current = nums; });
 
         import("three").then((THREE) => {
@@ -246,7 +246,7 @@ export function useFateDiceSimulation({
                 return Math.random();
             }
 
-            // â”€â”€ Ler variÃ¡veis CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // â”€â”€ Ler variáveis CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const root = document.documentElement;
             const cssProp = (name: string, fallback: string) =>
                 getComputedStyle(root).getPropertyValue(name).trim() || fallback;
@@ -279,7 +279,7 @@ export function useFateDiceSimulation({
                 renderer = new THREE.WebGLRenderer({
                     antialias: false, // Otimizado para low-end (removido MSAA)
                     alpha: true,
-                    powerPreference: "low-power", // Sugere que use menos GPU se possÃ­vel
+                    powerPreference: "low-power", // Sugere que use menos GPU se possível
                 });
 
                 // Tratar perda de contexto WebGL
@@ -295,7 +295,7 @@ export function useFateDiceSimulation({
 
                 webglReadyRef.current = true;
             } catch (e) {
-                console.warn("Falha crÃ­tica ao iniciar WebGL. Mantendo overlay em fallback atÃ© click em Play.", e);
+                console.warn("Falha crítica ao iniciar WebGL. Mantendo overlay em fallback até click em Play.", e);
                 return;
             }
 
@@ -304,14 +304,14 @@ export function useFateDiceSimulation({
             renderer.shadowMap.enabled = false; // Sombras desativadas para performance no mobile
             container.appendChild(renderer.domElement);
 
-            // â”€â”€ Cena e cÃ¢mera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // â”€â”€ Cena e câmera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
             const cameraXOffset = -0.65; // Deslocamento para alinhar com o 'left: 52.5%'
             camera.position.set(cameraXOffset, 9, 13);
             camera.lookAt(cameraXOffset, 0, 0);
 
-            // â”€â”€ IluminaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // â”€â”€ Iluminação â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const dirLight = new THREE.DirectionalLight(0xffdda0, 1.0);
             dirLight.position.set(4, 14, 7);
@@ -329,7 +329,7 @@ export function useFateDiceSimulation({
                 color: bgNum,
                 roughness: 0.95,
                 transparent: true,
-                opacity: 0, // Piso invisÃ­vel para os dados flutuarem sobre a arena
+                opacity: 0, // Piso invisível para os dados flutuarem sobre a arena
             });
             const tableMesh = new THREE.Mesh(tableGeo, tableMat);
             tableMesh.rotation.x = -Math.PI / 2;

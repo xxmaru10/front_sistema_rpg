@@ -22,7 +22,7 @@ export function CombatExtras({ character, isGM, isOwner }: CombatExtrasProps) {
                 <div className="combat-extra-group stunts-group">
                     <div className="extra-title">FAÇANHAS</div>
                     <div className="extra-list">
-                        {character.stunts.map(stunt => (
+                        {(character.stunts || []).map(stunt => (
                             <div key={stunt.id} className="extra-item" title={stunt.description}>
                                 <span className="extra-name">{stunt.name.toUpperCase()}</span>
                                 <span className="extra-cost">{stunt.cost}</span>
@@ -36,7 +36,7 @@ export function CombatExtras({ character, isGM, isOwner }: CombatExtrasProps) {
                 <div className="combat-extra-group spells-group">
                     <div className="extra-title">MAGIAS</div>
                     <div className="extra-list">
-                        {character.spells.map(spell => (
+                        {(character.spells || []).map(spell => (
                             <div key={spell.id} className="extra-item" title={spell.description}>
                                 <span className="extra-name">{spell.name.toUpperCase()}</span>
                                 <span className="extra-cost">{spell.cost}</span>

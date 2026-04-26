@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -138,7 +138,7 @@ export function DamageResolutionModal({
     if (!mounted || !isOpen || !defender) return null;
 
     const togglePhysical = (idx: number) => {
-        if (defender.stress.physical[idx]) return;
+        if (defender.stress?.physical?.[idx]) return;
         setMarkedPhysical(prev => {
             const next = new Set(prev);
             if (next.has(idx)) next.delete(idx);
@@ -148,7 +148,7 @@ export function DamageResolutionModal({
     };
 
     const toggleMental = (idx: number) => {
-        if (defender.stress.mental[idx]) return;
+        if (defender.stress?.mental?.[idx]) return;
         setMarkedMental(prev => {
             const next = new Set(prev);
             if (next.has(idx)) next.delete(idx);
@@ -280,10 +280,10 @@ export function DamageResolutionModal({
                 <div className="dmg-section">
                     <div className="dmg-section-title">ESTRESSE FÍSICO</div>
                     <div className="dmg-stress-row">
-                        {defender.stress.physical.length === 0 && (
+                        {(defender.stress?.physical || []).length === 0 && (
                             <div className="dmg-empty">—</div>
                         )}
-                        {defender.stress.physical.map((isMarked, idx) => {
+                        {(defender.stress?.physical || []).map((isMarked, idx) => {
                             const raw = defender.stressValues?.physical?.[idx];
                             const value = raw !== undefined ? Math.max(1, Math.trunc(raw)) : idx + 1;
                             const isNew = markedPhysical.has(idx);
@@ -306,10 +306,10 @@ export function DamageResolutionModal({
                 <div className="dmg-section">
                     <div className="dmg-section-title">ESTRESSE MENTAL</div>
                     <div className="dmg-stress-row">
-                        {defender.stress.mental.length === 0 && (
+                        {(defender.stress?.mental || []).length === 0 && (
                             <div className="dmg-empty">—</div>
                         )}
-                        {defender.stress.mental.map((isMarked, idx) => {
+                        {(defender.stress?.mental || []).map((isMarked, idx) => {
                             const raw = defender.stressValues?.mental?.[idx];
                             const value = raw !== undefined ? Math.max(1, Math.trunc(raw)) : idx + 1;
                             const isNew = markedMental.has(idx);
@@ -408,7 +408,7 @@ export function DamageResolutionModal({
                             onClick={onSkip}
                             title="Deixar o jogador resolver"
                         >
-                            NÃO FAZER NADA
+                            NÀO FAZER NADA
                         </button>
                     )}
                 </div>

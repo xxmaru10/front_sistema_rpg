@@ -97,7 +97,7 @@ export function ViewWorldEntityModal({
                                     onClick={() => handleToggleAllVisibility?.(viewingEntity.id, !Object.values(fieldVisibility).every(v => v))}
                                     className="visibility-toggle-btn bulk-toggle"
                                     title="Alternar Tudo (Visível/Oculto)"
-                                    style={{ marginLeft: '10px', padding: '2px 8px', background: 'rgba(197, 160, 89, 0.2)', borderRadius: '4px' }}
+                                    style={{ marginLeft: '10px', padding: '2px 8px', background: 'rgba(var(--accent-rgb), 0.2)', borderRadius: '4px' }}
                                 >
                                     <Eye size={18} />
                                 </button>
@@ -159,7 +159,7 @@ export function ViewWorldEntityModal({
                                             style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '10px', minHeight: '80px', borderRadius: '4px', marginBottom: '10px' }}
                                         />
                                         <div style={{ display: 'flex', gap: '10px' }}>
-                                            <button onClick={() => handleUpdateBlock(block.id)} className="save-btn" style={{ background: '#c5a059', color: '#000', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>SALVAR</button>
+                                            <button onClick={() => handleUpdateBlock(block.id)} className="save-btn" style={{ background: 'var(--accent-color)', color: '#000', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>SALVAR</button>
                                             <button onClick={() => setEditingBlockId(null)} className="cancel-btn" style={{ background: '#444', color: '#eee', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer' }}>CANCELAR</button>
                                         </div>
                                     </div>
@@ -169,7 +169,7 @@ export function ViewWorldEntityModal({
                                         {isGM && (
                                             <div className="block-actions" style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px' }}>
                                                 <button onClick={() => { setEditingBlockId(block.id); setEditBlockContent(block.content); }} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }} title="Editar Bloco"><Edit2 size={14} /></button>
-                                                <button onClick={() => handleUpdateDescriptionBlock?.(viewingEntity.id, block.id, { hidden: !block.hidden })} style={{ background: 'none', border: 'none', color: block.hidden ? '#c5a059' : '#666', cursor: 'pointer' }} title={block.hidden ? "Mostrar Bloco" : "Ocultar Bloco"}>{block.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                <button onClick={() => handleUpdateDescriptionBlock?.(viewingEntity.id, block.id, { hidden: !block.hidden })} style={{ background: 'none', border: 'none', color: block.hidden ? 'var(--accent-color)' : '#666', cursor: 'pointer' }} title={block.hidden ? "Mostrar Bloco" : "Ocultar Bloco"}>{block.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                                                 <button onClick={() => handleDeleteDescriptionBlock?.(viewingEntity.id, block.id)} style={{ background: 'none', border: 'none', color: '#ff4444', opacity: 0.6, cursor: 'pointer' }} title="Excluir Bloco"><Trash2 size={14} /></button>
                                             </div>
                                         )}
@@ -181,15 +181,15 @@ export function ViewWorldEntityModal({
 
                     {isGM && !isAddingBlock && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 0' }}>
-                            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(197, 160, 89, 0.2))' }}></div>
+                            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.2))' }}></div>
                             <button
                                 className="add-block-btn"
                                 onClick={() => setIsAddingBlock(true)}
                                 title="Adicionar Bloco de Descrição"
                                 style={{
-                                    background: 'rgba(197, 160, 89, 0.05)',
-                                    border: '1px solid rgba(197, 160, 89, 0.2)',
-                                    color: '#c5a059',
+                                    background: 'rgba(var(--accent-rgb), 0.05)',
+                                    border: '1px solid rgba(var(--accent-rgb), 0.2)',
+                                    color: 'var(--accent-color)',
                                     borderRadius: '50%',
                                     width: '32px',
                                     height: '32px',
@@ -200,24 +200,24 @@ export function ViewWorldEntityModal({
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(197, 160, 89, 0.15)';
+                                    e.currentTarget.style.background = 'rgba(var(--accent-rgb), 0.15)';
                                     e.currentTarget.style.transform = 'scale(1.1)';
-                                    e.currentTarget.style.borderColor = 'rgba(197, 160, 89, 0.5)';
+                                    e.currentTarget.style.borderColor = 'rgba(var(--accent-rgb), 0.5)';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(197, 160, 89, 0.05)';
+                                    e.currentTarget.style.background = 'rgba(var(--accent-rgb), 0.05)';
                                     e.currentTarget.style.transform = 'scale(1)';
-                                    e.currentTarget.style.borderColor = 'rgba(197, 160, 89, 0.2)';
+                                    e.currentTarget.style.borderColor = 'rgba(var(--accent-rgb), 0.2)';
                                 }}
                             >
                                 <Plus size={20} />
                             </button>
-                            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(197, 160, 89, 0.2), transparent)' }}></div>
+                            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(var(--accent-rgb), 0.2), transparent)' }}></div>
                         </div>
                     )}
 
                     {isAddingBlock && (
-                        <div className="add-block-form" style={{ background: 'rgba(197, 160, 89, 0.05)', border: '1px dashed #c5a059', padding: '20px', borderRadius: '4px' }}>
+                        <div className="add-block-form" style={{ background: 'rgba(var(--accent-rgb), 0.05)', border: '1px dashed var(--accent-color)', padding: '20px', borderRadius: '4px' }}>
                             <textarea
                                 placeholder="Escreva o novo bloco de descrição..."
                                 value={newBlockContent}
@@ -225,7 +225,7 @@ export function ViewWorldEntityModal({
                                 style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '10px', minHeight: '100px', borderRadius: '4px', marginBottom: '10px' }}
                             />
                             <div style={{ display: 'flex', gap: '10px' }}>
-                                <button onClick={handleSaveBlock} className="save-btn" style={{ background: '#c5a059', color: '#000', border: 'none', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>ADICIONAR</button>
+                                <button onClick={handleSaveBlock} className="save-btn" style={{ background: 'var(--accent-color)', color: '#000', border: 'none', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>ADICIONAR</button>
                                 <button onClick={() => setIsAddingBlock(false)} className="cancel-btn" style={{ background: 'none', border: '1px solid #666', color: '#666', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer' }}>CANCELAR</button>
                             </div>
                         </div>
@@ -245,7 +245,7 @@ export function ViewWorldEntityModal({
                                 )}
                             </div>
                             <div className="rel-item" style={{ position: 'relative' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>FACÇÃO</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>FACÇÀO</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('faction') ? (viewingEntity.factionId ? state.worldEntities?.[viewingEntity.factionId]?.name.toUpperCase() : "NENHUMA") : "????"}
                                 </span>
@@ -289,7 +289,7 @@ export function ViewWorldEntityModal({
                                 )}
                             </div>
                             <div className="rel-item" style={{ position: 'relative' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÃO</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÀO</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('religion') ? (viewingEntity.religionId ? state.worldEntities?.[viewingEntity.religionId]?.name.toUpperCase() : "NENHUMA") : "????"}
                                 </span>
@@ -309,13 +309,13 @@ export function ViewWorldEntityModal({
                                 </button>
                             )}
                             <div className="rel-item" style={{ position: 'relative' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>LOCALIZAÇÃO / BASE</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>LOCALIZAÇÀO / BASE</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('location') ? (viewingEntity.currentLocationId ? state.worldEntities?.[viewingEntity.currentLocationId]?.name.toUpperCase() : "DESCONHECIDA") : "????"}
                                 </span>
                             </div>
                             <div className="rel-item" style={{ position: 'relative', marginTop: '10px' }}>
-                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÃO</label>
+                                <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>RELIGIÀO</label>
                                 <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
                                     {isFieldVisible('religion') ? (viewingEntity.religionId ? state.worldEntities?.[viewingEntity.religionId]?.name.toUpperCase() : "NENHUMA") : "????"}
                                 </span>
@@ -340,7 +340,7 @@ export function ViewWorldEntityModal({
                                     <div className="rel-item">
                                         <label style={{ fontSize: '0.6rem', color: '#666', display: 'block' }}>TIPO DE LOCAL</label>
                                         <span style={{ color: isFieldVisible('color') ? 'var(--accent-color)' : '#888', fontFamily: 'var(--font-header)' }}>
-                                            {isFieldVisible('location_info') ? (viewingEntity.locationType || "NÃO DEFINIDO") : "????"}
+                                            {isFieldVisible('location_info') ? (viewingEntity.locationType || "NÀO DEFINIDO") : "????"}
                                         </span>
                                     </div>
                                     <div className="rel-item">
@@ -359,7 +359,7 @@ export function ViewWorldEntityModal({
                                             {fieldVisibility['image'] ? <EyeOff size={14} /> : <Eye size={14} />}
                                         </button>
                                     )}
-                                    <label style={{ fontSize: '0.6rem', color: '#666', display: 'block', marginBottom: '8px' }}>VISUALIZAÇÃO</label>
+                                    <label style={{ fontSize: '0.6rem', color: '#666', display: 'block', marginBottom: '8px' }}>VISUALIZAÇÀO</label>
                                     {isFieldVisible('image') ? (
                                         <img
                                             src={viewingEntity.imageUrl}
@@ -410,7 +410,7 @@ export function ViewWorldEntityModal({
                     transition: color 0.2s;
                 }
                 .visibility-toggle-btn:hover {
-                    color: #c5a059;
+                    color: var(--accent-color);
                 }
                 .visibility-toggle-btn svg {
                     opacity: 0.6;

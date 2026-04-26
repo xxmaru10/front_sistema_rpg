@@ -44,7 +44,7 @@ export function useSessionMissions({
     const filteredMissions = useMemo(() => {
         const list = state.missions || [];
         if (worldFilters.displayType && worldFilters.displayType.length > 0) {
-            if (!worldFilters.displayType.includes("MISSÃO")) return [];
+            if (!worldFilters.displayType.includes("MISSÀO")) return [];
         }
         return list;
     }, [state.missions, worldFilters.displayType]);

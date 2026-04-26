@@ -3,7 +3,7 @@
 // Safe to import in server components, API routes, and client code
 // ═══════════════════════════════════════════════════════════════
 
-export type ThemePresetId = "default" | "medieval" | "cyberpunk" | "pirata" | "gotico" | "espacial" | "comic";
+export type ThemePresetId = "default" | "medieval" | "cyberpunk" | "pirata" | "gotico" | "espacial" | "comic" | "synthwave";
 
 export interface ThemePreset {
     id: ThemePresetId;
@@ -12,8 +12,10 @@ export interface ThemePreset {
     description: string;
 
     // ─── Colors ──────────────────────────────────────
-    accentColor: string;      // Primary accent hex
+    accentColor: string;      // Primary accent hex (UI: buttons, borders, ornaments)
     accentRgb: string;        // RGB triplet e.g. "197, 160, 89"
+    titleColor: string;       // Title color hex (h1/h2/h3, .display-title)
+    titleRgb: string;         // RGB triplet for title color
     secondaryColor: string;   // Secondary/highlight hex
     secondaryRgb: string;
     bgColor: string;          // Page background
@@ -65,12 +67,14 @@ export interface ThemePreset {
 
 const DEFAULT: ThemePreset = {
     id: "default",
-    label: "PADRÃO",
+    label: "PADRÀO",
     icon: "◆",
     description: "Visual clássico do sistema",
 
     accentColor: "#C5A059",
     accentRgb: "197, 160, 89",
+    titleColor: "#F9E79F",
+    titleRgb: "249, 231, 159",
     secondaryColor: "#F9E79F",
     secondaryRgb: "249, 231, 159",
     bgColor: "#080808",
@@ -118,6 +122,8 @@ const MEDIEVAL: ThemePreset = {
 
     accentColor: "#C9A84C",
     accentRgb: "201, 168, 76",
+    titleColor: "#E8DCC8",
+    titleRgb: "232, 220, 200",
     secondaryColor: "#8B2500",
     secondaryRgb: "139, 37, 0",
     bgColor: "#0d0907",
@@ -171,6 +177,8 @@ const CYBERPUNK: ThemePreset = {
 
     accentColor: "#E83050",
     accentRgb: "232, 48, 80",
+    titleColor: "#00D4FF",
+    titleRgb: "0, 212, 255",
     secondaryColor: "#00D4FF",
     secondaryRgb: "0, 212, 255",
     bgColor: "#0a0608",
@@ -226,6 +234,8 @@ const PIRATA: ThemePreset = {
 
     accentColor: "#C8DD2C",
     accentRgb: "200, 221, 44",
+    titleColor: "#E8D5B8",
+    titleRgb: "232, 213, 184",
     secondaryColor: "#6B3A1F",
     secondaryRgb: "107, 58, 31",
     bgColor: "#0a0704",
@@ -282,6 +292,8 @@ const GOTICO: ThemePreset = {
 
     accentColor: "#9a031d",
     accentRgb: "154, 3, 29",
+    titleColor: "#f5f0ea",
+    titleRgb: "245, 240, 234",
     secondaryColor: "#4a1212",
     secondaryRgb: "74, 18, 18",
     bgColor: "#070303",
@@ -290,10 +302,10 @@ const GOTICO: ThemePreset = {
     textPrimary: "#e8d8d8",
     textSecondary: "#8a7878",
 
-    fontHeader: "'New Rocker', cursive",
-    fontNarrative: "'Cormorant Garamond', serif",
-    fontUI: "'Playfair Display', serif",
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=New+Rocker&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap",
+    fontHeader: "'Grenze Gotisch', cursive",
+    fontNarrative: "'Spectral', serif",
+    fontUI: "'Spectral', serif",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;500;600;700;800&family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap",
 
     ornamentLeft: "❦ ",
     ornamentRight: " ❧",
@@ -335,6 +347,8 @@ const ESPACIAL: ThemePreset = {
 
     accentColor: "#FFFFFF",
     accentRgb: "255, 255, 255",
+    titleColor: "#FF3060",
+    titleRgb: "255, 48, 96",
     secondaryColor: "#1A233A",
     secondaryRgb: "26, 35, 58",
     bgColor: "#03040A",
@@ -391,6 +405,8 @@ const COMIC: ThemePreset = {
 
     accentColor: "#FFCC00",
     accentRgb: "255, 204, 0",
+    titleColor: "#FFFFFF",
+    titleRgb: "255, 255, 255",
     secondaryColor: "#00BFFF",
     secondaryRgb: "0, 191, 255",
     bgColor: "#121212",
@@ -433,6 +449,61 @@ const COMIC: ThemePreset = {
     modalBorderColor: "#000000",
 };
 
+const SYNTHWAVE: ThemePreset = {
+    id: "synthwave",
+    label: "SYNTHWAVE",
+    icon: "▲",
+    description: "Neon retrô e grade infinita",
+
+    accentColor: "#ff2bd6",
+    accentRgb: "255, 43, 214",
+    titleColor: "#00f0ff",
+    titleRgb: "0, 240, 255",
+    secondaryColor: "#7b00ff",
+    secondaryRgb: "123, 0, 255",
+    bgColor: "#0a0010",
+    surfaceColor: "rgba(12, 2, 20, 0.96)",
+    dangerColor: "#ff003c",
+    textPrimary: "#e8e0ff",
+    textSecondary: "#8070a0",
+
+    fontHeader: "'Vampiro One', cursive",
+    fontNarrative: "'Titillium Web', sans-serif",
+    fontUI: "'Titillium Web', sans-serif",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Vampiro+One&family=Titillium+Web:wght@300;400;600;700&display=swap",
+
+    ornamentLeft: "▲ ",
+    ornamentRight: " ▲",
+    ornamentDivider: "─── ▲ ───",
+    borderStyle: "1px solid",
+    borderRadius: "0px",
+    glowIntensity: 2,
+    shadowStyle: "0 0 30px rgba(255, 43, 214, 0.1), 0 10px 40px rgba(0, 0, 0, 0.9)",
+    goldGradient: "linear-gradient(135deg, #ff2bd6 0%, #7b00ff 50%, #ff2bd6 100%)",
+
+    bgPattern: `
+        linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(255, 43, 214, 0.04) 100%),
+        repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(123, 0, 255, 0.05) 60px, rgba(123, 0, 255, 0.05) 61px),
+        repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(123, 0, 255, 0.05) 60px, rgba(123, 0, 255, 0.05) 61px),
+        radial-gradient(ellipse at 50% 120%, rgba(255, 43, 214, 0.15) 0%, transparent 60%),
+        linear-gradient(180deg, #0a0010 0%, #05000a 100%)
+    `,
+    surfacePattern: "linear-gradient(135deg, rgba(255,43,214,0.03) 0%, transparent 50%, rgba(0,240,255,0.02) 100%)",
+
+    transitionSpeed: "0.3s",
+    hoverScale: "1.02",
+    glowAnimation: "none",
+
+    scrollbarThumbColor: "rgba(255, 43, 214, 0.3)",
+    scrollbarTrackColor: "rgba(10, 0, 16, 0.6)",
+
+    navBorderChar: "▲",
+    headerTextShadow: "0 0 4px rgba(0, 240, 255, 0.9), 0 0 10px rgba(0, 240, 255, 0.6), 0 0 22px rgba(255, 43, 214, 0.35)",
+    buttonTextTransform: "uppercase",
+    inputBgColor: "rgba(255, 43, 214, 0.04)",
+    modalBorderColor: "#ff2bd6",
+};
+
 // ═══════════════════════════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════════════════════════
@@ -445,10 +516,11 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemePreset> = {
     gotico: GOTICO,
     espacial: ESPACIAL,
     comic: COMIC,
+    synthwave: SYNTHWAVE,
 };
 
 export const THEME_LIST: ThemePreset[] = [
-    DEFAULT, MEDIEVAL, CYBERPUNK, PIRATA, GOTICO, ESPACIAL, COMIC
+    DEFAULT, MEDIEVAL, CYBERPUNK, PIRATA, GOTICO, ESPACIAL, COMIC, SYNTHWAVE
 ];
 
 export function getThemePreset(id: string | undefined): ThemePreset {

@@ -136,7 +136,7 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
                 <div className="player-controls-panel trans animate-reveal">
                     <div className="now-playing">
                         <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: isActive ? 'var(--accent-color)' : '#666' }}>
-                            CANAL DE TRANSMISSÃO
+                            CANAL DE TRANSMISSÀO
                         </span>
                     </div>
                     {isActive && downgradeActive && (
@@ -173,7 +173,7 @@ export function TransmissionPlayer({ sessionId, userId, userRole, unifiedMode }:
             {unifiedMode && (
                 <div className="unified-vol-row" style={{ order: 0 }}>
                     <div className="unified-ch-label" style={{ color: isActive ? 'var(--accent-color)' : '#666' }}>
-                        <span>TRANSMISSÃO</span>
+                        <span>TRANSMISSÀO</span>
                         {isActive && <div className="pulse-mini" />}
                         {isActive && qualityTier === '720p' && <span className="quality-chip">720p</span>}
                     </div>

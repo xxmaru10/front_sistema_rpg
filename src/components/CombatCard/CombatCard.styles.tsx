@@ -10,7 +10,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
     <style jsx global>{`
         .combat-card {
             background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
-            border: 1px solid rgba(197, 160, 89, 0.2);
+            border: 1px solid rgba(var(--accent-rgb), 0.2);
             padding: 12px;
             display: flex;
             flex-direction: column;
@@ -37,16 +37,16 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
 
         /* Full Coloration / Painted Effects */
         .combat-card.hero-card {
-            border-left: 4px solid #c5a059;
+            border-left: 4px solid var(--accent-color);
             background: linear-gradient(135deg, rgba(30, 25, 15, 1) 0%, rgba(12, 10, 8, 1) 100%);
-            box-shadow: inset 0 0 60px rgba(197, 160, 89, 0.2), 0 0 25px rgba(197, 160, 89, 0.25), 0 4px 20px rgba(0,0,0,0.7);
-            border-color: rgba(197, 160, 89, 0.5);
+            box-shadow: inset 0 0 60px rgba(var(--accent-rgb), 0.2), 0 0 25px rgba(var(--accent-rgb), 0.25), 0 4px 20px rgba(0,0,0,0.7);
+            border-color: rgba(var(--accent-rgb), 0.5);
         }
         .combat-card.hero-card::after {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(45deg, rgba(197, 160, 89, 0.08) 0%, transparent 100%);
+            background: linear-gradient(45deg, rgba(var(--accent-rgb), 0.08) 0%, transparent 100%);
             pointer-events: none;
         }
 
@@ -147,7 +147,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .combat-pin-btn {
-            color: #f3e1b3 !important;
+            color: var(--title-color) !important;
             text-shadow: 0 0 8px rgba(255, 230, 170, 0.78), 0 0 14px rgba(255, 215, 140, 0.46);
             filter: drop-shadow(0 0 6px rgba(255, 220, 140, 0.55));
         }
@@ -230,7 +230,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             width: 36px;
             height: 36px;
             border-radius: 12px;
-            color: #f3e1b3;
+            color: var(--title-color);
         }
 
         .combat-header-portrait-frame {
@@ -371,7 +371,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             font-family: var(--font-header);
             font-size: 0.92rem;
             letter-spacing: 0.08em;
-            color: #f3e6c1;
+            color: var(--title-color);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -560,7 +560,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             font-family: var(--font-header);
             font-size: 0.92rem;
             letter-spacing: 0.08em;
-            color: #f7ecd0;
+            color: var(--title-color);
             text-shadow: 0 0 10px rgba(255,255,255,0.18);
         }
 
@@ -568,9 +568,9 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-avatar-shell.hero-card,
         .combat-header-portrait-frame.hero-card {
             --portrait-ring: rgba(241, 207, 133, 0.68);
-            border-color: rgba(197, 160, 89, 0.48);
+            border-color: rgba(var(--accent-rgb), 0.48);
             background: linear-gradient(135deg, rgba(34, 24, 12, 0.98) 0%, rgba(12, 8, 5, 0.98) 100%);
-            box-shadow: inset 0 0 28px rgba(197, 160, 89, 0.12), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(197, 160, 89, 0.16);
+            box-shadow: inset 0 0 28px rgba(var(--accent-rgb), 0.12), 0 10px 24px rgba(0,0,0,0.45), 0 0 18px rgba(var(--accent-rgb), 0.16);
         }
 
         .combat-return-toggle.own-hero-card,
@@ -628,7 +628,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .combat-name {
             font-family: var(--font-header);
             font-size: 1rem;
-            color: #e0e0e0;
+            color: var(--title-color);
             margin: 0;
             letter-spacing: 0.05em;
             white-space: nowrap;
@@ -723,17 +723,17 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .fate-value { color: inherit; }
-        .hero-card .fate-value { color: #c5a059; }
+        .hero-card .fate-value { color: var(--accent-color); }
         .own-hero-card .fate-value { color: #2ecc71; }
         .npc-hero-card .fate-value { color: #50a6ff; }
         .threat-card .fate-value { color: #ff4444; }
 
         .fate-btn { color: inherit; }
-        .hero-card .fate-btn { border-color: rgba(197,160,89,0.3); color: #c5a059; }
+        .hero-card .fate-btn { border-color: rgba(var(--accent-rgb),0.3); color: var(--accent-color); }
         .own-hero-card .fate-btn { border-color: rgba(46,204,113,0.3); color: #2ecc71; }
         .npc-hero-card .fate-btn { border-color: rgba(80,166,255,0.3); color: #50a6ff; }
         .threat-card .fate-btn { border-color: rgba(255,68,68,0.3); color: #ff4444; }
-        .fate-btn:hover { background: rgba(197,160,89,0.1); }
+        .fate-btn:hover { background: rgba(var(--accent-rgb),0.1); }
         .fate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* Aspects */
@@ -752,7 +752,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             z-index: 2;
         }
 
-        .hero-card .combat-aspect { border-color: rgba(197,160,89,0.1); }
+        .hero-card .combat-aspect { border-color: rgba(var(--accent-rgb),0.1); }
         .own-hero-card .combat-aspect { border-color: rgba(46,204,113,0.1); }
         .npc-hero-card .combat-aspect { border-color: rgba(80,166,255,0.1); }
         .threat-card .combat-aspect { border-color: rgba(255,68,68,0.1); }
@@ -805,7 +805,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .track-icon { color: inherit; }
-        .hero-card .track-icon { color: #c5a059; }
+        .hero-card .track-icon { color: var(--accent-color); }
         .own-hero-card .track-icon { color: #2ecc71; }
         .npc-hero-card .track-icon { color: #50a6ff; }
         .threat-card .track-icon { color: #ff4444; }
@@ -878,7 +878,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .cons-label {
-            color: #c5a059;
+            color: var(--accent-color);
             font-weight: bold;
             min-width: 70px;
             font-size: 0.6rem;
@@ -913,6 +913,46 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             border: 1px solid rgba(255, 68, 68, 0.3);
         }
 
+        /*
+         * Boxed consequence layout (compartilhado entre plugins de sistema).
+         * Espelha o estilo do componente Fate CombatConsequences.tsx para que
+         * todos os plugins (Fate, Vampire, futuros) renderizem consequências
+         * com a mesma identidade visual de "caixa com borda".
+         */
+        .combat-consequence-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            cursor: ${isGM ? 'pointer' : 'default'};
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .combat-consequence-box:hover {
+            border-color: rgba(var(--accent-rgb), 0.5);
+            background: rgba(var(--accent-rgb), 0.05);
+        }
+        .combat-consequence-box.filled {
+            border-color: rgba(255, 68, 68, 0.5);
+            background: rgba(25, 0, 0, 0.9);
+        }
+        .combat-consequence-box .cons-content {
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: #888;
+            text-align: center;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        .combat-consequence-box.filled .cons-content {
+            color: #ff6666;
+            text-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
+        }
+
         /* Stunts and Spells */
         .combat-extras-section {
             display: flex;
@@ -931,10 +971,10 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         .extra-title {
             font-size: 0.55rem;
             letter-spacing: 0.15em;
-            color: rgba(197, 160, 89, 0.5);
+            color: rgba(var(--accent-rgb), 0.5);
             font-weight: bold;
         }
-        .hero-card .extra-title { color: rgba(197, 160, 89, 0.5); }
+        .hero-card .extra-title { color: rgba(var(--accent-rgb), 0.5); }
         .npc-hero-card .extra-title { color: rgba(80, 166, 255, 0.5); }
         .threat-card .extra-title { color: rgba(255, 68, 68, 0.5); }
 
@@ -948,9 +988,9 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(197, 160, 89, 0.03);
+            background: rgba(var(--accent-rgb), 0.03);
             padding: 4px 6px;
-            border: 1px solid rgba(197, 160, 89, 0.1);
+            border: 1px solid rgba(var(--accent-rgb), 0.1);
             border-radius: 2px;
         }
         .hero-card .extra-item { border-color: rgba(var(--accent-rgb), 0.1); }
@@ -960,11 +1000,11 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
 
         .extra-name {
             font-size: 0.65rem;
-            color: #c5a059;
+            color: var(--accent-color);
             font-family: var(--font-header);
             letter-spacing: 0.03em;
         }
-        .hero-card .extra-name { color: #c5a059; }
+        .hero-card .extra-name { color: var(--accent-color); }
         .own-hero-card .extra-name { color: #2ecc71; }
         .npc-hero-card .extra-name { color: #50a6ff; }
         .threat-card .extra-name { color: #ff6666; }
@@ -1144,7 +1184,7 @@ export const CombatCardStyles = ({ isGM }: CombatCardStylesProps) => (
         }
 
         .hazard-aspect-input::placeholder {
-            color: rgba(197, 160, 89, 0.2);
+            color: rgba(var(--accent-rgb), 0.2);
         }
 
         .aspect-text {

@@ -327,7 +327,7 @@ export function CreateWorldEntityModal({
                             {newEntityType === "MAPA" && (
                                 <div className="input-group" style={{ marginTop: '15px' }}>
                                     <label>IMAGEM DO MAPA (PNG ou JPEG)</label>
-                                    <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--accent-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
                                         <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> Resolução recomendada: 1280x720 (HD) para melhor performance.
                                     </p>
                                     <input
@@ -361,7 +361,7 @@ export function CreateWorldEntityModal({
                     {["PERSONAGEM", "LOCALIZACAO", "RACA", "FAMILIA", "FACAO", "RELIGIAO", "BESTIARIO", "OUTROS"].includes(newEntityType) && (
                         <div className="input-group" style={{ marginTop: '15px' }}>
                             <label>IMAGEM (PNG ou JPEG)</label>
-                            <p style={{ fontSize: '0.65rem', color: '#C5A059', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--accent-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }}>
                                 <span style={{ fontWeight: 'bold', letterSpacing: '0.05em' }}>AVISO:</span> Resolução recomendada: 800x800 para melhor performance.
                             </p>
                             <input
@@ -440,7 +440,7 @@ export function CreateWorldEntityModal({
                                             </select>
                                         </div>
                                         <div className="input-group flex-1">
-                                            <label>FACÇÃO</label>
+                                            <label>FACÇÀO</label>
                                             <select value={newEntityFaction} onChange={e => setNewEntityFaction(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
                                                 <option value="">NENHUMA</option>
                                                 {factionsList.map(f => <option key={f.id} value={f.id}>{f.name.toUpperCase()}</option>)}
@@ -454,7 +454,7 @@ export function CreateWorldEntityModal({
                                             </select>
                                         </div>
                                         <div className="input-group flex-1">
-                                            <label>PROFISSÃO</label>
+                                            <label>PROFISSÀO</label>
                                             <input
                                                 type="text"
                                                 value={newEntityProfession}
@@ -467,7 +467,7 @@ export function CreateWorldEntityModal({
                                 )}
                                 {newEntityType === "FACAO" && (
                                     <div className="input-group flex-1">
-                                        <label>LOCALIZAÇÃO / BASE</label>
+                                        <label>LOCALIZAÇÀO / BASE</label>
                                         <select value={newEntityCurrentLoc} onChange={e => setNewEntityCurrentLoc(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
                                             <option value="">NENHUMA (DESCONHECIDA)</option>
                                             {locationsList.map(l => <option key={l.id} value={l.id}>{l.name.toUpperCase()}</option>)}
@@ -476,7 +476,7 @@ export function CreateWorldEntityModal({
                                 )}
                                 {newEntityType === "PERSONAGEM" && (
                                     <div className="input-group flex-1">
-                                        <label>RELIGIÃO</label>
+                                        <label>RELIGIÀO</label>
                                         <select value={newEntityReligion} onChange={e => setNewEntityReligion(e.target.value)} style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', padding: '8px' }}>
                                             <option value="">NENHUMA</option>
                                             {religionsList.map(r => <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>)}
@@ -574,7 +574,7 @@ export function CreateWorldEntityModal({
                     </div>
 
                     <div className="input-group">
-                        <label>DESCRIÇÃO</label>
+                        <label>DESCRIÇÀO</label>
                         <MentionEditor
                             value={newEntityDescription}
                             onChange={setNewEntityDescription}

@@ -113,6 +113,15 @@ export function useCharacterCard({
         } as any);
     };
 
+    const handleMoneyChange = (value: number) => {
+        if (!canEditStressOrFP) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_MONEY_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, value }
+        } as any);
+    };
+
     const handleRefreshChange = (delta: number) => {
         if (!isGM) return;
         const currentRefresh = character.refresh ?? 3;
@@ -357,7 +366,7 @@ export function useCharacterCard({
     const handleConsequenceChange = (slot: string, value: string | null, debuff?: ConsequenceDebuff) => {
         if (!canEdit) return;
         if (value === null) {
-            const currentData = character.consequences[slot];
+            const currentData = character.consequences?.[slot];
             setConsequenceModal({
                 slot,
                 current: currentData?.text || "",
@@ -414,7 +423,7 @@ export function useCharacterCard({
         Object.keys(character.consequences || {}).forEach(k => allSlots.add(k));
 
         allSlots.forEach(slot => {
-            const existing = (character.consequences as any)[slot];
+            const existing = (character.consequences as any)?.[slot];
             if (!existing?.text?.trim()) {
                 globalEventStore.append({
                     id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_CONSEQUENCE_UPDATED",
@@ -476,7 +485,7 @@ export function useCharacterCard({
         // Handlers
         handleStressToggle, handleAddStressBox, handleRemoveStressBox,
         handleUpdateStressBoxValue,
-        handleFPChange, handleRefreshChange,
+        handleFPChange, handleRefreshChange, handleMoneyChange,
         handleMagicLevelChange,
         handleImageUpload,
 

@@ -17,7 +17,7 @@ export const THEME_SLOTS = [
     { key: 'hit', label: 'GOLPE', color: '#ffa500' },
     { key: 'death', label: 'MORTE', color: '#777' },
     { key: 'defense', label: 'DEFESA', color: '#44ff44' },
-    { key: 'dice', label: 'DADOS', color: '#c5a059' },
+    { key: 'dice', label: 'DADOS', color: 'var(--accent-color)' },
     { key: 'portrait', label: 'RETRATO', color: '#a855f7' },
     { key: 'battleStart', label: 'INÍCIO COMBATE', color: '#f59e0b' }
 ];

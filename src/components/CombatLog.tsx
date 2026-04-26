@@ -196,7 +196,7 @@ export function CombatLog({ events, characters, sessionNumber, eventSessionMap, 
         <div className={`combat-log-container solid ornate-border ${compact ? "compact-mode" : ""}`}>
             <div className="log-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {sessionNumber !== undefined && (
-                    <span className="resonance-indicator">SESSÃO {sessionNumber}</span>
+                    <span className="resonance-indicator">SESSÀO {sessionNumber}</span>
                 )}
                 {onRefresh && (
                     <button 

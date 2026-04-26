@@ -65,62 +65,11 @@ export type NoteFolder = {
 };
 
 
-export const DEFAULT_SKILLS = [
-  "Atirar", "Atletismo", "Comunicação", "Condução",
-  "Conhecimentos", "Contatos", "Empatia", "Enganar",
-  "Furtividade", "Investigar", "Lutar", "Ofícios",
-  "Percepção", "Provocar", "Recursos", "Roubo",
-  "Ocultismo", "Vigor", "Vontade"
-];
-
-// Character State
-export type ItemSize = "L" | "M" | "G";
-
-export type Item = {
-  id: string;
-  name: string;
-  description?: string; // Texto médio descritivo do item
-  bonus: number;
-  quantityCurrent?: number; // Quantidade atual
-  quantityTotal?: number; // Quantidade total
-  size?: ItemSize; // L = Leve (verde), M = Médio (laranja), G = Grande (vermelho)
-  url?: string;
-  isContainer?: boolean;
-  contents?: Item[];
-  capacity?: number;
-  maxSize?: ItemSize;
-};
-
-export type Stunt = {
-  id: string;
-  name: string;
-  description: string;
-  cost: string;
-};
-
-export type Spell = {
-  id: string;
-  name: string;
-  description: string;
-  cost: string;
-};
-
-// Consequence Debuff - Links a consequence to a skill penalty
-export type ConsequenceDebuff = {
-  skill: string;  // Name of the skill being debuffed
-  value: number;  // Stored as positive, displayed as negative
-};
-
-// Consequence Data - Text description with optional debuff
-export type ConsequenceData = {
-  text: string;
-  debuff?: ConsequenceDebuff;
-};
-
-export type StressTrackValues = {
-  physical: number[];
-  mental: number[];
-};
+// Fate-specific types are now in src/systems/fate/types.ts.
+// Re-exported here for backward compatibility with existing imports.
+export { DEFAULT_SKILLS } from "@/systems/fate/types";
+import type { Item, ItemSize, Stunt, Spell, ConsequenceDebuff, ConsequenceData, StressTrackValues } from "@/systems/fate/types";
+export type { Item, ItemSize, Stunt, Spell, ConsequenceDebuff, ConsequenceData, StressTrackValues };
 
 export type ArenaPortraitFocus = {
   x: number; // percent 0..100
@@ -128,49 +77,44 @@ export type ArenaPortraitFocus = {
   zoom: number; // multiplier >= 1
 };
 
+// Generic platform character — only platform-level fields.
+// System-specific data lives in systemData (typed by the plugin).
 export type Character = {
   id: string;
   name: string;
-  fatePoints: number;
-  refresh?: number; // Total / Max Fate Points
-  stress: {
-    physical: boolean[]; // boxes
-    mental: boolean[];
-  };
-  stressValues?: StressTrackValues; // Capacity per stress box (legacy fallback: index+1)
-  consequences: {
-    [key: string]: ConsequenceData | undefined;
-    mild?: ConsequenceData;
-    mild2?: ConsequenceData;
-    moderate?: ConsequenceData;
-    severe?: ConsequenceData;
-    extreme?: ConsequenceData;
-  };
   ownerUserId: string;
+  systemData: Record<string, unknown>;
   currentZoneId?: string;
   isNPC?: boolean;
-  source?: "active" | "bestiary"; // Where the character was created
-  scope?: "session" | "global"; // Bestiary scope - session-exclusive or global
-  npcType?: "capanga" | "batedor" | "ameaca" | "boss" | "vilao"; // NPC preset type
-  skills: Record<string, number>;
-  skillResources?: Record<string, { current: number; max: number }>;
-  inventory: Item[];
-  stunts: Stunt[];
-  spells: Spell[];
-  magicLevel: number; // 0-3
+  source?: "active" | "bestiary";
+  scope?: "session" | "global";
+  npcType?: "capanga" | "batedor" | "ameaca" | "boss" | "vilao";
   imageUrl?: string;
   arenaPortraitFocus?: ArenaPortraitFocus;
-  biography?: string;
-  sheetAspects?: string[]; // Array of 4 strings. Index 3 is Trouble (Red).
-  activeInArena?: boolean; // If false, hidden from Arena view but still in session.
-  arenaSide?: 'HERO' | 'THREAT'; // Overrides default side (NPC=Threat, Player=Hero) if set.
-  isHazard?: boolean; // If true, it's a Challenge/Hazard card (Purple)
-  difficulty?: number; // Used for Hazards
+  activeInArena?: boolean;
+  arenaSide?: 'HERO' | 'THREAT';
+  isHazard?: boolean;
+  difficulty?: number;
   impulseArrows?: number;
   linkedNotes?: EntityNote[];
   religionId?: string;
-  removedDefaultSlots?: string[]; // Slots padrão (mild/moderate/severe) removidos pelo mestre
-  extraConsequenceSlots?: string[]; // Slots extras criados pelo mestre (ex: mild_abc123)
+  // Legacy Fate fields — kept for transition. Will be removed in a follow-up pass.
+  fatePoints?: number;
+  refresh?: number;
+  stress?: Record<string, boolean[]>;
+  stressValues?: import("@/systems/fate/types").StressTrackValues;
+  consequences?: { [key: string]: import("@/systems/fate/types").ConsequenceData | undefined };
+  skills?: Record<string, number>;
+  skillResources?: Record<string, { current: number; max: number }>;
+  inventory?: import("@/systems/fate/types").Item[];
+  stunts?: import("@/systems/fate/types").Stunt[];
+  spells?: import("@/systems/fate/types").Spell[];
+  magicLevel?: number;
+  biography?: string;
+  sheetAspects?: string[];
+  removedDefaultSlots?: string[];
+  extraConsequenceSlots?: string[];
+  money?: number;
 };
 
 // Aspect State
@@ -225,6 +169,7 @@ export type Challenge = {
 // Session State - The core state of a game session
 export type SessionState = {
   id: string;
+  system: string;
   seats: PlayerSeat[];
   characters: Record<string, Character>;
   aspects: Record<string, Aspect>;
@@ -253,6 +198,7 @@ export type SessionState = {
   notes?: Note[];
   noteFolders?: NoteFolder[];
   themeColor?: string;
+  themeTitleColor?: string | null;
   themePreset?: string;
   soundSettings?: {
     victory?: string;
@@ -452,7 +398,7 @@ export type WorldEntity = {
 };
 
 export type ActionEvent =
-  | EventEnvelope<"SESSION_CREATED", { sessionId: string; name?: string; gmCode?: string; playerCode?: string }>
+  | EventEnvelope<"SESSION_CREATED", { sessionId: string; name?: string; gmCode?: string; playerCode?: string; system?: string }>
   | EventEnvelope<"TURN_GRANTED", { userId: string }>
   | EventEnvelope<"TURN_REVOKED", { userId: string }>
   | EventEnvelope<"SEAT_STATE_CHANGED", { userId: string; state: SeatState }>
@@ -516,6 +462,7 @@ export type ActionEvent =
   | EventEnvelope<"NOTE_FOLDER_DELETED", { folderId: string }>
 
   | EventEnvelope<"SESSION_THEME_UPDATED", { color: string }>
+  | EventEnvelope<"SESSION_THEME_TITLE_COLOR_UPDATED", { color: string | null }>
   | EventEnvelope<"SESSION_THEME_PRESET_UPDATED", { preset: string }>
   | EventEnvelope<"SESSION_THEME_LOCK_UPDATED", { locked: boolean }>
   | EventEnvelope<"SESSION_SOUNDS_UPDATED", {
@@ -568,4 +515,13 @@ export type ActionEvent =
   | EventEnvelope<"BATTLEMAP_UPDATED", Partial<BattlemapState>>
   | EventEnvelope<"STICKY_NOTE_CREATED", StickyNote>
   | EventEnvelope<"STICKY_NOTE_UPDATED", { id: string; patch: Partial<StickyNote> }>
-  | EventEnvelope<"STICKY_NOTE_DELETED", { id: string }>;
+  | EventEnvelope<"STICKY_NOTE_DELETED", { id: string }>
+  
+  // Plugin: Vampire
+  | EventEnvelope<"VAMPIRE_GENERATION_UPDATED", { characterId: string; generation: number }>
+  | EventEnvelope<"VAMPIRE_DISCIPLINE_UPDATED", { characterId: string; discipline: import("@/systems/vampire/types").Discipline }>
+  | EventEnvelope<"VAMPIRE_DISCIPLINE_DELETED", { characterId: string; disciplineId: string }>
+  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_UPDATED", { characterId: string; slot: string; value: string | null; debuff?: import("@/systems/fate/types").ConsequenceDebuff }>
+  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_DELETED", { characterId: string; slot: string }>
+  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_SLOT_ADDED", { characterId: string; slot: string }>
+  | EventEnvelope<"CHARACTER_MONEY_UPDATED", { characterId: string; value: number }>;

@@ -476,7 +476,7 @@ export function SessionHeader({
                         background: '#fff', 
                         animation: 'blink 1s infinite' 
                     }} />
-                    {connectionStatus === 'CONNECTING' ? 'SINCRONIZANDO...' : 'CONEXÃO INSTÁVEL'}
+                    {connectionStatus === 'CONNECTING' ? 'SINCRONIZANDO...' : 'CONEXÀO INSTÁVEL'}
                 </div>
             )}
         </div>

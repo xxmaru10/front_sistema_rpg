@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createRollEvent } from "@/lib/dice";
 import { globalEventStore } from "@/lib/eventStore";
 import { diceSimulationStore } from "@/lib/diceSimulationStore";
-import { Character, DEFAULT_SKILLS, DiceBreakdownEntry } from "@/types/domain";
+import { ActionEvent, Character, DEFAULT_SKILLS, DiceBreakdownEntry } from "@/types/domain";
 import { isCharacterEliminated } from "@/lib/gameLogic";
 
 interface UseDiceRollerProps {
@@ -143,7 +143,7 @@ export function useDiceRoller({
         const itemBonus = selectedItemData?.bonus || 0;
         const itemPayload = selectedItemData ? { name: selectedItemData.name, bonus: selectedItemData.bonus } : undefined;
 
-        const effectiveSkills = activeChar?.skills || DEFAULT_SKILLS;
+        const effectiveSkills = (activeChar?.skills || {}) as Record<string, number>;
         const skillRank = selectedSkill ? (effectiveSkills[selectedSkill] || 0) : 0;
         const finalModifier = skillRank + manualBonus + itemBonus;
 
@@ -173,7 +173,8 @@ export function useDiceRoller({
         setDiceRotations(finalDice.map(val => getRotationForResult(val)));
         setLastTotal((event.payload as any).total);
 
-        globalEventStore.append(event);
+        const burst: ActionEvent[] = [event];
+
         setSelectedSkill("");
         setManualBonus(0);
         setIsRolling(false);
@@ -193,7 +194,7 @@ export function useDiceRoller({
             const targetChar = characters.find(c => c.id === firstTargetId);
 
             if (targetChar && !isCharacterEliminated(targetChar)) {
-                globalEventStore.append({
+                burst.push({
                     id: uuidv4(),
                     sessionId,
                     seq: 0,
@@ -226,7 +227,7 @@ export function useDiceRoller({
                     ? `DEFESA VENCEU POR ${absoluteResult}!`
                     : "EMPATE!";
 
-            globalEventStore.append({
+            burst.push({
                 id: uuidv4(),
                 sessionId,
                 seq: 0,
@@ -245,6 +246,9 @@ export function useDiceRoller({
                 }
             } as any);
         }
+
+        // Story-66: 1 fan-out local em vez de N (sort + persist + bulk emitidos uma vez).
+        globalEventStore.appendBurst(burst);
     }, [
         selectedSkill, 
         selectedItemId, 
@@ -306,7 +310,7 @@ export function useDiceRoller({
         setIsRolling(true);
         setLastTotal(null);
         
-        const effectiveSkills = activeChar?.skills || DEFAULT_SKILLS;
+        const effectiveSkills = (activeChar?.skills || {}) as Record<string, number>;
         const skillRank = selectedSkill ? (effectiveSkills[selectedSkill] || 0) : 0;
         const selectedItemData = selectedItemId ? allItems.find(i => i.id === selectedItemId) : undefined;
         const itemBonus = selectedItemData?.bonus || 0;

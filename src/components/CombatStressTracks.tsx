@@ -22,7 +22,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     <div className="track-display">
                         <span className="track-icon physical png" aria-hidden="true" />
                         <div className="track-circles">
-                            {character.stress.physical.map((box, i) => (
+                            {(character.stress?.physical || []).map((box, i) => (
                                 <button
                                     key={i}
                                     className={`stress-circle ${box ? "marked" : ""}`}
@@ -40,7 +40,7 @@ export function CombatStressTracks({ character, canEditSelf, handleStressToggle 
                     <div className="track-display">
                         <span className="track-icon mental png" aria-hidden="true" />
                         <div className="track-circles">
-                            {character.stress.mental.map((box, i) => (
+                            {(character.stress?.mental || []).map((box, i) => (
                                 <button
                                     key={i}
                                     className={`stress-circle ${box ? "marked" : ""}`}

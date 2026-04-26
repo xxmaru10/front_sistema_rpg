@@ -215,7 +215,7 @@ export function CombatCard({
     const impulseCount = Math.max(0, Math.trunc(character.impulseArrows || 0));
 
     // Inventory main slots
-    const mainInventoryItems = (character.inventory || []).filter(item => !item.isContainer && !character.inventory.some(c => c.contents?.includes(item)));
+    const mainInventoryItems = (character.inventory || []).filter(item => !item.isContainer && !(character.inventory || []).some(c => c.contents?.includes(item)));
 
     const activeSkills = Object.entries(character.skills || {}).filter(([_, v]) => v > 0);
 
@@ -440,7 +440,7 @@ export function CombatCard({
                         )}
                     </div>
                     
-                    {/* Persona vignettes and slash effects â€” zIndex 3 para ficar acima do combat-image-frame (zIndex 2) */}
+                    {/* Persona vignettes and slash effects — zIndex 3 para ficar acima do combat-image-frame (zIndex 2) */}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 28%)', pointerEvents: 'none', zIndex: 3 }} />
                     <div style={{ position: 'absolute', inset: 0, background: isMirroredThreatLayout ? 'linear-gradient(to right, rgba(0,0,0,0.65) 0%, transparent 18%)' : 'linear-gradient(to left, rgba(0,0,0,0.65) 0%, transparent 18%)', pointerEvents: 'none', zIndex: 3 }} />
@@ -483,7 +483,7 @@ export function CombatCard({
                             }}>
                                 <div className="combat-fate" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', border: 'none', background: 'transparent', padding: 0 }}>
                                     {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(-1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>-</button>}
-                                    <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints}</span>
+                                    <span style={{ fontSize: '1.2rem', fontWeight: '900', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>{character.fatePoints ?? 0}</span>
                                     {canEditSelf && <button onClick={(e) => { e.stopPropagation(); handleFPChange(1); }} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', opacity: 0.6, padding: 0 }}>+</button>}
                                 </div>
                             </div>
@@ -534,13 +534,13 @@ export function CombatCard({
 
                     {!isRestrictedThreatView && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
-                            {/* LINHA DE ÃCONES EXPANSÃVEIS */}
+                            {/* LINHA DE ÀCONES EXPANSÀVEIS */}
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 {character.stunts && character.stunts.length > 0 && (
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'stunts' ? null : 'stunts')}
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'stunts' ? 1 : 0.6 }}
-                                        title="FaÃ§anhas"
+                                        title="Façanhas"
                                     >
                                         <Star size={16} />
                                     </button>
@@ -558,7 +558,7 @@ export function CombatCard({
                                     <button 
                                         onClick={() => setExpandedExtra(expandedExtra === 'skills' ? null : 'skills')}
                                         style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s', opacity: expandedExtra === 'skills' ? 1 : 0.6 }}
-                                        title="PerÃ­cias"
+                                        title="Perícias"
                                     >
                                         <Target size={16} />
                                     </button>
@@ -574,10 +574,10 @@ export function CombatCard({
                                 )}
                             </div>
 
-                            {/* ZONA DE EXPANSÃƒO */}
+                            {/* ZONA DE EXPANSÀO */}
                             {expandedExtra === 'stunts' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', padding: '8px', background: 'rgba(80, 166, 255, 0.05)', borderRadius: '4px', border: '1px solid rgba(80, 166, 255, 0.15)' }}>
-                                    {character.stunts.map(stunt => (
+                                    {(character.stunts || []).map(stunt => (
                                         <div key={stunt.id} style={{ padding: '4px 6px', fontSize: '0.7rem', color: '#ccc', borderLeft: '2px solid rgba(80, 166, 255, 0.4)' }} title={stunt.description}>
                                             <span style={{ color: '#8bc8ff', fontWeight: 'bold' }}>{stunt.name}</span> <span style={{ color: '#888' }}>[{stunt.cost}]</span>
                                         </div>
@@ -587,7 +587,7 @@ export function CombatCard({
 
                             {expandedExtra === 'spells' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', padding: '8px', background: 'rgba(168, 85, 247, 0.05)', borderRadius: '4px', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
-                                    {character.spells.map(spell => (
+                                    {(character.spells || []).map(spell => (
                                         <div key={spell.id} style={{ padding: '4px 6px', fontSize: '0.7rem', color: '#ccc', borderLeft: '2px solid rgba(168, 85, 247, 0.4)' }} title={spell.description}>
                                             <span style={{ color: '#d7b6ff', fontWeight: 'bold' }}>{spell.name}</span> <span style={{ color: '#888' }}>[{spell.cost}]</span>
                                         </div>

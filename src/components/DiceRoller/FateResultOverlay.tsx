@@ -1,6 +1,6 @@
 /**
  * Componente de Overlay para o FateDice3D.
- * Exibe instruÃƒÂ§ÃƒÂµes, botÃƒÂµes de aÃƒÂ§ÃƒÂ£o e o resultado final com estÃƒÂ©tica neon.
+ * Exibe instruções, botões de ação e o resultado final com estética neon.
  */
 
 import React from "react";
@@ -40,12 +40,12 @@ function fmtSigned(n: number): string {
 /** Escada de resultados Fate */
 function ladderLabel(sum: number): string {
     const L: Record<number, string> = {
-        8: "LendÃƒÂ¡rio", 7: "Ãƒâ€°pico", 6: "FantÃƒÂ¡stico", 5: "Excelente",
-        4: "Ãƒâ€œtimo", 3: "Bom", 2: "RazoÃƒÂ¡vel", 1: "Mediano",
-        0: "MedÃƒÂ­ocre", [-1]: "Pobre", [-2]: "TerrÃƒÂ­vel",
+        8: "Lendário", 7: "Épico", 6: "Fantástico", 5: "Excelente",
+        4: "Ótimo", 3: "Bom", 2: "Razoável", 1: "Mediano",
+        0: "Medíocre", [-1]: "Pobre", [-2]: "Terrível",
     };
     if (sum > 8) return "Divino";
-    if (sum < -2) return "CatastrÃƒÂ³fico";
+    if (sum < -2) return "Catastrófico";
     return L[sum] || "N/A";
 }
 
@@ -159,7 +159,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
 
     const label =
         phase === "idle"     ? "CLIQUE E SEGURE PARA PEGAR OS DADOS" :
-        phase === "held"     ? "MOVA PARA BALANÃƒâ€¡AR  Ã‚Â·  SOLTE PARA LANÃƒâ€¡AR" :
+        phase === "held"     ? "MOVA PARA BALANÇAR  ·  SOLTE PARA LANÇAR" :
         phase === "thrown"   ? "CONVOCANDO O DESTINO..." :
         phase === "snapping" ? "REVELANDO O DESTINO..." :
         "";
@@ -206,7 +206,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
 
     return (
         <>
-            {/* Interface de CÃƒÂ¢mara (Idle) Ã¢â‚¬â€ Unifica BotÃƒÂ£o, InstruÃƒÂ§ÃƒÂ£o e Dados */}
+            {/* Interface de Câmara (Idle) ââ‚¬â€ Unifica Botão, Instrução e Dados */}
             {phase === "idle" && (
                 <div style={{
                     position: "absolute",
@@ -221,9 +221,9 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                     justifyContent: "space-between",
                     padding: "24px",
                     zIndex: 10,
-                    pointerEvents: "none", // Container principal nÃƒÂ£o bloqueia cliques
+                    pointerEvents: "none", // Container principal não bloqueia cliques
                 }}>
-                    {/* Toolbar de ediÃƒÂ§ÃƒÂ£o e notaÃƒÂ§ÃƒÂ£o */}
+                    {/* Toolbar de edição e notação */}
                     <div style={{
                         position: "absolute",
                         top: "16px",
@@ -233,7 +233,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         gap: "12px",
                         pointerEvents: "auto",
                     }}>
-                        {/* BotÃƒÂ£o de LÃƒÂ¡pis */}
+                        {/* Botão de Lápis */}
                         <button
                             onMouseDown={blockPointerDown}
                             onTouchStart={blockPointerDown}
@@ -332,7 +332,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         </button>
                     </div>
 
-                    {/* NotaÃƒÂ§ÃƒÂ£o Viva */}
+                    {/* Notação Viva */}
                     <div style={{
                         position: "absolute",
                         top: "16px",
@@ -595,9 +595,9 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
 
 
 
-                    <div style={{ flex: 1 }} /> {/* EspaÃƒÂ§o para os dados 3D ficarem no meio */}
+                    <div style={{ flex: 1 }} /> {/* Espaço para os dados 3D ficarem no meio */}
 
-                    {/* Label de instruÃƒÂ§ÃƒÂ£o interno */}
+                    {/* Label de instrução interno */}
                     <div style={{
                         color: accentColor,
                         fontFamily: "var(--font-header, 'Cinzel', serif)",
@@ -614,7 +614,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                 </div>
             )}
 
-            {/* Labels para outras fases (que nÃƒÂ£o idle) */}
+            {/* Labels para outras fases (que não idle) */}
             {phase !== "idle" && label && (
                 <div style={{
                     position: "absolute",
@@ -635,7 +635,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                 </div>
             )}
 
-            {/* Painel de resultado apÃƒÂ³s 3D: compacto (Arena / desafio) */}
+            {/* Painel de resultado após 3D: compacto (Arena / desafio) */}
             {phase === "done" && results && resultOverlay && (
                 <div style={{
                     position: "absolute",
@@ -657,7 +657,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                     boxShadow: `0 0 80px rgba(0,0,0,0.9), 0 0 40px ${totalColor}33`,
                     backdropFilter: "blur(16px)",
                 }}>
-                    {/* Breakdown section Ã¢â‚¬â€ cÃƒÂ¡lculos no topo */}
+                    {/* Breakdown section ââ‚¬â€ cálculos no topo */}
                     <div style={{
                         display: "flex",
                         flexDirection: "column",
@@ -713,20 +713,20 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                             </div>
                         )}
 
-                        {/* Modificadores Ã¢â‚¬â€ sÃƒÂ³ mostra os nÃƒÂ£o-zero */}
+                        {/* Modificadores ââ‚¬â€ só mostra os não-zero */}
                         {calculationBreakdown && (() => {
                             const skillVal = calculationBreakdown.baseSkillValue ?? 0;
                             const itemVal = calculationBreakdown.itemBonusValue ?? 0;
                             const bonusVal = calculationBreakdown.customModifierValue ?? 0;
                             const lines: { label: string; value: number }[] = [];
-                            if (skillVal !== 0) lines.push({ label: "PerÃƒÂ­cia", value: skillVal });
+                            if (skillVal !== 0) lines.push({ label: "Perícia", value: skillVal });
                             if (itemVal !== 0 || calculationBreakdown.itemName) {
                                 lines.push({
                                     label: calculationBreakdown.itemName || "Item",
                                     value: itemVal,
                                 });
                             }
-                            if (bonusVal !== 0) lines.push({ label: "BÃƒÂ´nus", value: bonusVal });
+                            if (bonusVal !== 0) lines.push({ label: "Bônus", value: bonusVal });
                             if (lines.length === 0) return null;
                             return (
                                 <div style={{
@@ -777,7 +777,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                         {grandTotal > 0 ? `+${grandTotal}` : `${grandTotal}`}
                     </span>
 
-                    {/* RÃƒÂ³tulo da escada */}
+                    {/* Rótulo da escada */}
                     <div style={{
                         fontFamily: "var(--font-header, 'Cinzel', serif)",
                         fontSize: "0.72rem",
@@ -843,7 +843,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                                     color,
                                     textShadow: shadow,
                                 }}>
-                                    {v === 1 ? "+" : v === -1 ? "Ã¢Ë†â€™" : "Ã¢â€”Â"}
+                                    {v === 1 ? "+" : v === -1 ? "−" : "●"}
                                 </div>
                             );
                         })}
@@ -867,16 +867,16 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                             <div>
                                 {results.map((v, i) => (
                                     <span key={i} style={{ fontVariantNumeric: "tabular-nums" }}>
-                                        {i > 0 ? <span style={{ opacity: 0.35 }}> Ã‚Â· </span> : null}
-                                        {v === 1 ? "+1" : v === -1 ? "Ã¢Ë†â€™1" : "0"}
+                                        {i > 0 ? <span style={{ opacity: 0.35 }}> · </span> : null}
+                                        {v === 1 ? "+1" : v === -1 ? "−1" : "0"}
                                     </span>
                                 ))}
-                                <span style={{ opacity: 0.45 }}> Ã¢â€ â€™ </span>
+                                <span style={{ opacity: 0.45 }}> → </span>
                                 <span>dado {fmtSigned(diceSum)}</span>
                             </div>
                             {calculationBreakdown && (
                                 <>
-                                    <div>PerÃƒÂ­cia {fmtSigned(calculationBreakdown.baseSkillValue ?? 0)}</div>
+                                    <div>Perícia {fmtSigned(calculationBreakdown.baseSkillValue ?? 0)}</div>
                                     {(calculationBreakdown.itemName ||
                                         (calculationBreakdown.itemBonusValue ?? 0) !== 0) && (
                                         <div>
@@ -887,7 +887,7 @@ export const FateResultOverlay: React.FC<FateResultOverlayProps> = ({
                                                 : `Item ${fmtSigned(calculationBreakdown.itemBonusValue ?? 0)}`}
                                         </div>
                                     )}
-                                    <div>BÃƒÂ´nus manual {fmtSigned(calculationBreakdown.customModifierValue ?? 0)}</div>
+                                    <div>Bônus manual {fmtSigned(calculationBreakdown.customModifierValue ?? 0)}</div>
                                 </>
                             )}
                         </div>

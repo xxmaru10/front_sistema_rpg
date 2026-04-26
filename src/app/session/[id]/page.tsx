@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file: src/app/session/[id]/page.tsx
  * @summary: Main entry point for the session page. Orchestrates the RPG session UI,
  * including combat, bestiary, logs, and game state management.
@@ -11,7 +11,8 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
-import { useProjectedState } from "@/lib/projectedStateStore";
+import { useProjectedState, projectedStateStore } from "@/lib/projectedStateStore";
+import * as apiClient from "@/lib/apiClient";
 import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw, Eye, VenetianMask } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
@@ -25,6 +26,7 @@ import { VIControlPanel } from "@/components/VIControlPanel";
 import { MentionNavigationRequest } from "@/lib/mentionNavigation";
 import { v4 as uuidv4 } from "uuid";
 import { isCharacterEliminated } from "@/lib/gameLogic";
+import { loadSystem, getCachedSystem } from "@/systems/registry";
 import { ConsequenceModal } from "@/components/ConsequenceModal";
 import { DamageResolutionModal } from "@/components/DamageResolutionModal";
 import { AtmosphericEffects } from "@/components/AtmosphericEffects";
@@ -56,7 +58,20 @@ export default function SessionPage() {
     const userRole = (searchParams.get("r") as "GM" | "PLAYER") || "PLAYER";
     const fixedCharacterId = searchParams.get("c") || undefined;
 
-    // â”€â”€â”€ UI STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── SYSTEM HINT (legacy sessions) ─────────────────────────────────────────
+    // For sessions created before the system was stored in the SESSION_CREATED
+    // event payload, seed the projectedStateStore with the system from the API so
+    // that useSystemPlugin() picks up the correct plugin even on old events.
+    useEffect(() => {
+        if (!sessionId) return;
+        apiClient.fetchSessionJoinInfo(sessionId as string)
+            .then((info) => {
+                if (info?.system) projectedStateStore.setSystemHint(info.system);
+            })
+            .catch(() => { /* silently ignore — fallback to "fate" */ });
+    }, [sessionId]);
+
+    // â"€â"€â"€ UI STATE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     const {
         challengeMode, setChallengeMode,
         activeTab, setActiveTab,
@@ -106,7 +121,7 @@ export default function SessionPage() {
     }, []);
 
     useEffect(() => {
-        // Story 45: reset do toggle de rolagem oculta ao trocar de sessÃ£o.
+        // Story 45: reset do toggle de rolagem oculta ao trocar de sessão.
         diceSimulationStore.setHiddenForPlayers(false);
     }, [sessionId]);
 
@@ -197,14 +212,32 @@ export default function SessionPage() {
         return unsub;
     }, []);
 
-    // â”€â”€â”€ EVENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ EVENTS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const { events, isLoading, isRefreshing, globalBestiaryChars, setGlobalBestiaryChars, connectionStatus, failedEventIds, refresh } =
         useSessionEvents(sessionId as string, actorUserId);
 
-    // â”€â”€â”€ EARLY PROJECTION (feeds useVictoryDefeat before full derivations) â”€â”€â”€â”€
-    // Story 46 Prioridade 3: lÃª do projectedStateStore em vez de recomputar localmente.
+    // â"€â"€â"€ EARLY PROJECTION (feeds useVictoryDefeat before full derivations) â"€â"€â"€â"€
+    // Story 46 Prioridade 3: lê do projectedStateStore em vez de recomputar localmente.
     const _earlyState = useProjectedState();
+
+    // ─── PLUGIN PRÉ-LOAD ─────────────────────────────────────────────────────
+    const [systemReady, setSystemReady] = useState(false);
+    useEffect(() => {
+        const system = _earlyState.system ?? "fate";
+        // Always mark not-ready first so we never render with the wrong plugin.
+        // loadSystem() is instant when the plugin is already cached, so there's
+        // no visible flash when switching between sessions of the same system.
+        setSystemReady(false);
+        loadSystem(system).then(() => {
+            // Once the plugin is in the cache, force a recompute so its reducer
+            // runs across the entire event log (essential for legacy sessions
+            // whose events were initially replayed before the plugin loaded, and
+            // for session switches where stale hint may have been cleared).
+            projectedStateStore.forceRecompute();
+            setSystemReady(true);
+        }).catch(() => setSystemReady(true));
+    }, [_earlyState.system]);
 
     const _activePlayers = useMemo(() =>
         Object.values(_earlyState.characters).filter((c: any) => !c.isNPC),
@@ -223,7 +256,7 @@ export default function SessionPage() {
         [_earlyState.characters]
     );
 
-    // â”€â”€â”€ VICTORY / DEFEAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ VICTORY / DEFEAT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         showVictory, showDefeat, showCombat,
@@ -247,7 +280,7 @@ export default function SessionPage() {
         return _earlyState.turnOrder[index < _earlyState.turnOrder.length ? index : 0];
     }, [_earlyState.turnOrder, _earlyState.currentTurnIndex, _earlyState.isReaction, _earlyState.targetId]);
 
-    // â”€â”€â”€ FULL DERIVATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ FULL DERIVATIONS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         state,
@@ -291,7 +324,7 @@ export default function SessionPage() {
         }
     }, [isCurrentPlayerActive, userRole, showDiceRoller, setShowDiceRoller]);
 
-    // â”€â”€â”€ SCREEN SHARE / AUDIO LIFECYCLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ SCREEN SHARE / AUDIO LIFECYCLE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Must come before useSessionActions so screenShareManagerRef is available.
 
     const { screenVideoRef, screenShareManagerRef, videoNoSignal } = useSessionScreenControl({
@@ -307,7 +340,7 @@ export default function SessionPage() {
     });
 
     // GM preview pause: after 4s of broadcasting, pause the local <video> element to stop
-    // frame decoding â€” real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
+    // frame decoding â€" real CPU/GPU savings. Players are unaffected (they receive via WebRTC).
     // Clicking the hint or video resumes the element.
     useEffect(() => {
         const isBroadcasting = userRole === "GM" && !!videoStream && (screenShareManagerRef.current?.broadcasting ?? false);
@@ -323,7 +356,7 @@ export default function SessionPage() {
         return () => clearTimeout(timer);
     }, [videoStream, userRole]);
 
-    // â”€â”€â”€ COMBAT AUTOMATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ COMBAT AUTOMATION â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         activeConsequence,
@@ -338,7 +371,7 @@ export default function SessionPage() {
         isSessionEventsLoading: isLoading,
     });
 
-    // â”€â”€â”€ SESSION ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ SESSION ACTIONS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const {
         handleChallengeUpdate, handleHeaderUpdate,
@@ -351,7 +384,7 @@ export default function SessionPage() {
         setSpectatorMode, screenShareManagerRef,
     });
 
-    // â”€â”€â”€ SHARED GM CALLBACKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ SHARED GM CALLBACKS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     const handleToggleChallengeMode = () => {
         const newState = !challengeMode;
         lastToggleTimeRef.current = Date.now();
@@ -416,7 +449,7 @@ export default function SessionPage() {
         }
     }, [state.battlemap?.isActive, isTheaterMode]);
 
-    // â”€â”€â”€ REMAINING EFFECTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ REMAINING EFFECTS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 
     // Controla o background do body no modo combate com header image.
@@ -433,7 +466,7 @@ export default function SessionPage() {
                 `radial-gradient(circle, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.85) 100%), url(${headerImageUrl})`;
             document.body.style.backgroundSize = "cover, cover";
             document.body.style.backgroundPosition = "center center, center center";
-            // background-attachment: fixed causa repaint contÃ­nuo no Chromium mobile â€” usar scroll em mobile
+            // background-attachment: fixed causa repaint contínuo no Chromium mobile â€" usar scroll em mobile
             document.body.style.backgroundAttachment = isMobileNav ? "scroll" : "fixed";
             document.body.style.backgroundRepeat = "no-repeat, no-repeat";
             document.body.style.backgroundColor = "#000";
@@ -450,9 +483,9 @@ export default function SessionPage() {
         }
     }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive, isMobileNav]);
 
-    // â”€â”€â”€ Gerencia Google Fonts + theme-preset-css via efeito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ Gerencia Google Fonts + theme-preset-css via efeito â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Antes era um IIFE no JSX: executava a cada render â†’ re-fazia download do .woff2
-    // Agora sÃ³ executa quando state.themePreset muda de fato.
+    // Agora só executa quando state.themePreset muda de fato.
     useEffect(() => {
         const activeTheme = getThemePreset(state.themePreset);
 
@@ -481,9 +514,9 @@ export default function SessionPage() {
         }
     }, [state.themePreset]);
 
-    // â”€â”€â”€ Gerencia o override de cor personalizada via efeito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ Gerencia o override de cor personalizada via efeito â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Antes era um IIFE no JSX com dangerouslySetInnerHTML: re-montava a cada render
-    // Agora sÃ³ executa quando state.themeColor muda.
+    // Agora só executa quando state.themeColor muda.
     useEffect(() => {
         const hex = state.themeColor;
         let styleEl = document.getElementById("theme-custom-color-override") as HTMLStyleElement | null;
@@ -525,6 +558,41 @@ export default function SessionPage() {
         }
     }, [state.themeColor]);
 
+    // ─── Gerencia o override de cor de título personalizada via efeito ──────────
+    // Inserido ANTES do player-override para manter a precedência correta.
+    useEffect(() => {
+        const hex = state.themeTitleColor;
+        let styleEl = document.getElementById("theme-custom-title-color-override") as HTMLStyleElement | null;
+
+        if (!hex) {
+            if (styleEl) styleEl.remove();
+            return;
+        }
+
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!result) return;
+
+        const r = parseInt(result[1], 16);
+        const g = parseInt(result[2], 16);
+        const b = parseInt(result[3], 16);
+
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "theme-custom-title-color-override";
+            document.head.appendChild(styleEl);
+        }
+
+        const newCSS = `
+            :root {
+                --title-color: ${hex};
+                --title-rgb: ${r}, ${g}, ${b};
+            }
+        `;
+        if (styleEl.textContent !== newCSS) {
+            styleEl.textContent = newCSS;
+        }
+    }, [state.themeTitleColor]);
+
     // Initial active chars for combat duel selection
     useEffect(() => {
         if (!combatActivePcId && !combatActiveNpcId) {
@@ -553,9 +621,9 @@ export default function SessionPage() {
         }
     }, [currentTurnActorId, characterList]);
 
-    // â”€â”€â”€ LOADING SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ LOADING SCREEN â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
-    if (isLoading) {
+    if (isLoading || !systemReady) {
         return (
             <div style={{
                 position: "fixed", inset: 0, display: "flex", flexDirection: "column",
@@ -572,14 +640,14 @@ export default function SessionPage() {
                     color: "var(--text-secondary, #aaa)", fontSize: "14px",
                     letterSpacing: "0.08em", fontFamily: "inherit",
                 }}>
-                    Carregando dados...
+                    {!systemReady ? "Carregando sistema..." : "Carregando dados..."}
                 </span>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
 
-    // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â"€â"€â"€ RENDER â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     const tacticalNav = (
         <nav
@@ -707,7 +775,7 @@ export default function SessionPage() {
     return (
         <div className={`session-view-wrapper${spectatorMode && videoStream ? " spectator-mode-active" : ""}`}>
             {isNavPortalReady ? createPortal(tacticalNav, document.body) : null}
-            {/* Screen share video â€” mantido montado enquanto stream ativa; oculto via CSS
+            {/* Screen share video â€" mantido montado enquanto stream ativa; oculto via CSS
                 em outras abas para preservar o MediaStream sem re-handshake ao voltar. */}
             {videoStream && (
                 <video
@@ -717,7 +785,7 @@ export default function SessionPage() {
                         screenVideoRef.current = el;
                         if (el && videoStream && el.srcObject !== videoStream) {
                             el.srcObject = videoStream;
-                            // play() Ã© gerenciado exclusivamente pelo hook (com muted fallback)
+                            // play() é gerenciado exclusivamente pelo hook (com muted fallback)
                         }
                     }}
                     style={{
@@ -733,7 +801,7 @@ export default function SessionPage() {
                             screenVideoRef.current?.play().catch(() => {});
                         }
                     }}
-                    title={gmPreviewFaded ? "Clique para ver a transmissÃ£o" : undefined}
+                    title={gmPreviewFaded ? "Clique para ver a transmissão" : undefined}
                 />
             )}
 
@@ -747,11 +815,11 @@ export default function SessionPage() {
                 </div>
             )}
 
-            {/* Badge "Sem sinal" â€” exibido quando stream estÃ¡ ativa mas vÃ­deo nÃ£o avanÃ§a. */}
+            {/* Badge "Sem sinal" â€" exibido quando stream está ativa mas vídeo não avança. */}
             {videoStream && activeTab === "combat" && videoNoSignal && (
                 <div className="screenshare-nosignal">
-                    <span className="screenshare-nosignal-icon">ðŸ“¡</span>
-                    <span>Sem sinal â€” tente reconectar no botÃ£o <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
+                    <span className="screenshare-nosignal-icon">ðŸ"¡</span>
+                    <span>Sem sinal â€" tente reconectar no botão <RefreshCw size={12} style={{ verticalAlign: "middle" }} /> no topo.</span>
                 </div>
             )}
 
@@ -806,7 +874,7 @@ export default function SessionPage() {
             />
 
             <SessionHeader
-                title={state.name || `SessÃ£o: ${state.sessionNumber}`}
+                title={state.name || `Sessão: ${state.sessionNumber}`}
                 imageUrl={headerImageUrl}
                 onUpdate={handleHeaderUpdate}
                 isGM={userRole === "GM"}
@@ -815,7 +883,7 @@ export default function SessionPage() {
                     activeTab === "combat" ? "ARENA" :
                     activeTab === "log" ? "LOGS" :
                     activeTab === "notes" ? "NOTAS" :
-                    activeTab === "vi" ? "VI" : "BESTIÃRIO"
+                    activeTab === "vi" ? "VI" : "BESTIÀRIO"
                 }
                 onSummonAlly={handleOpenSummonAlly}
                 onSummonThreat={handleOpenSummonThreat}
@@ -881,7 +949,7 @@ export default function SessionPage() {
                         }}
                     />
                 )}
-                {showVictory && <div className="victory-announcement">VITÃ“RIA</div>}
+                {showVictory && <div className="victory-announcement">VITÓRIA</div>}
                 {showDefeat && <div className="defeat-announcement">DERROTA</div>}
                 {showCombat && <div className="combat-announcement">COMBATE</div>}
             </SessionHeader>
@@ -1031,6 +1099,7 @@ export default function SessionPage() {
                     onClose={() => setShowCreator(false)}
                     source={creatorSource}
                     religionsList={Object.values(state.worldEntities || {}).filter((e: any) => e.type === "RELIGIAO")}
+                    system={_earlyState.system ?? "fate"}
                 />
             )}
 

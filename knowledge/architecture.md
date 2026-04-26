@@ -1,4 +1,4 @@
-﻿---
+---
 title: Arquitetura do Sistema
 description: VisÃ£o geral das decisÃµes de design, padrÃµes e estrutura baseada em Event Sourcing.
 tags: [arquitetura, decisÃµes, padrÃµes, eventsourcing]
@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-24 (screen share rebalanceia bitrate/prioridade por peer e reage mais cedo a pressao de CPU para preservar voz em notebooks fracos)
+last_updated: 2026-04-26 (story-66 validada por trace + estilo boxed-consequence compartilhado entre plugins de sistema via CombatCardStyles global)
 status: ativo
 ---
 
@@ -258,11 +258,24 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 - **Logs de diagnostico sob flag**: logs de render/mount da Story 59 foram adicionados em `HeaderWrapper`, `UnifiedSoundPanel`, `MusicPlayer` e `VoiceChatPanel` com gate por `localStorage.debugStory59 = "1"`.
 - **Subtrees pesadas do header memoizadas**: `VoiceChatPanel`, `UnifiedSoundPanel` e `MusicPlayer` receberam `React.memo` com comparacao explicita de props para isolar re-renders vindos do `HeaderWrapper`.
 
-## Registro de Decisoes (Story 60)
-- **DOM compacto no modo PLAYER**: `CharactersTab` deixou de montar `CharacterCard` para todos os PCs e agora monta apenas a ficha vinculada ao jogador (`fixedCharacterId`, com fallback por `ownerUserId`), eliminando cards ocultos sem funcao.
-- **Troca de abas como transicao concorrente**: navegacao lateral e navegacao por mencao passaram a usar `startTransition` antes de alterar `activeTab`, reduzindo blocos sincronos longos no main thread durante mount de abas pesadas.
-- **Memoizacao de componentes de alto custo**: `CharacterCard`, `CharacterSummary`, `SessionNotes` e `CombatTab` passaram para `React.memo`; callbacks principais em `page.tsx` e `CharactersTab` foram estabilizados para aumentar reaproveitamento de render.
-- **Kill-switch de animacao de tema mantido para mobile**: a Story 60 reaproveita o gate existente por `data-disable-theme-animation` (ativado em touch/mobile e fora da arena), sem introduzir nova camada de animacao no fluxo mobile.
+## Registro de Decisões (Story 65)
+- **Extensão via SystemPlugin**: O sistema Vampire foi implementado como o segundo plugin oficial (`src/systems/vampire/`), provando a viabilidade da interface `SystemPlugin` para extensões homebrew complexas sem tocar no core do Fate ou na plataforma.
+- **Trilha de Estresse de Sangue**: Reuso dos eventos genéricos de estresse (`STRESS_MARKED`, etc.) com o rótulo `track: "BLOOD"`, tratado exclusivamente no reducer de Vampiro.
+- **Consequências de Fome**: Implementação de uma segunda coluna de consequências ("Fome") com tipos de evento próprios (`VAMPIRE_HUNGER_CONSEQUENCE_*`) para evitar conflitos com a mecânica de consequências padrão do Fate.
+- **Geração em Algarismo Romano**: Campo `generation` (1-13) renderizado via helper `toRoman` na ficha e cards da arena, com edição restrita ao Mestre (GM).
+- **Disciplinas em vez de Magias**: A aba de Magias foi substituída por Disciplinas, removendo o conceito de barras de nível roxas e utilizando o campo `disciplines: Discipline[]` no estado do personagem.
+- **Eliminação Híbrida**: A regra `isCharacterEliminated` foi customizada para considerar o preenchimento total de ambas as colunas (Consequências + Fome), garantindo paridade com a letalidade do cenário de Vampiro.
+
+## Registro de Decisões (Story 66)
+- **`EventStore.appendBurst(events[])`**: novo metodo para emitir N eventos otimistas com **1 fan-out local** (1 push, 1 `_sort()`, 1 `_schedulePersist()`, 1 `_emitBulk()`). Cada evento ainda e enviado ao backend individualmente via `appendQueue`, preservando ordem e tratamento de erro por evento. Reduz custo do `finishRoll` (ate 3 ciclos completos sequenciais) para 1 ciclo.
+- **`finishRoll` usa `appendBurst`**: `useDiceRoller.finishRoll` passou a coletar `ROLL_RESOLVED` + `COMBAT_TARGET_SET` + `COMBAT_OUTCOME` em um array `burst[]` e despachar com uma unica chamada, eliminando os picos de 167ms / 152ms na main thread medidos no trace.
+- **Persistencia de cache local debounced (1500ms)**: substitui as 6 chamadas diretas a `_persistCurrentSessionCache()` por `_schedulePersist()` (timer reset-on-write). `flushPersist()` registrado em `beforeunload` + `pagehide` garante gravacao final. `initSession` continua sincrono via `flushPersist()` (hydration). `clear()` cancela o timer pendente. Elimina `JSON.stringify` de ate 12k eventos por append.
+- **`_emitBulk()` clone-once**: substitui todos os `this.bulkListeners.forEach(l => l([...this.events]))` por uma unica funcao que clona o array uma vez e compartilha o snapshot entre todos os bulk listeners. Reduz alocacao de memoria e pressao de GC (vinculado ao MajorGC de 33ms visto no trace).
+- **Gate do iframe YouTube por role+isPlaying**: o portal do iframe em `MusicPlayer.tsx` ganhou guarda extra `(userRole !== "GM" || isPlaying)`. PLAYER mantem o iframe sempre montado quando ha URL valida (precisa para receber `MUSIC_PLAYBACK_CHANGED` do GM). GM so monta quando esta de fato tocando, eliminando os ~52% de CPU do YouTube ocioso medidos no trace. O `useEffect` existente que destroi `ytPlayerRef.current` quando `currentTrack` deixa de ser YT continua valido e cobre o caso de pause/clear.
+- **`clearTrack()` (botao X) no MusicPlayer**: novo botao GM-only ao lado do controle de loop (em ambos os modos: flutuante e unified) que para o player YT, pausa/limpa o `<audio>`, zera `currentTrack` e broadcast `MUSIC_PLAYBACK_CHANGED { url: "" }` para PLAYERs. Diferente de `togglePlay`, que apenas pausa mantendo a faixa selecionada para retomada. O fluxo dispara em cascata: portal nao renderiza, effect de cleanup chama `ytPlayerRef.current.destroy()`, todos os effects de YT viram no-ops. Estado pos-X: 0% CPU residual de YouTube.
+- **Indicador YouTube visivel a todos**: badge `Youtube` (lucide-react, vermelho) no canto inferior-direito do `player-toggle` flutuante e ao lado do rotulo "MUSICA" no modo unified, condicionado em `isPlayableYouTubeUrl(currentTrack)`. Permite ao usuario identificar visualmente que a faixa atual e do YouTube sem ler texto.
+- **Validacao de trace pos-story-66 (Trace-20260426T104419.json, 37.8s)**: frames dropados 628→6 (-99%), YouTube CPU ~52%→2.8% (-95%), pico main-thread 183ms→74.8ms, `_saveCachedEvents` desapareceu do perfil. Todos os criterios da story atendidos.
+- **Estilo "boxed consequence" compartilhado entre plugins**: classes `.combat-consequence-box` (+ `:hover`, `.filled`, `.cons-content`) movidas para o bloco global de `CombatCard.styles.tsx` para que plugins de sistema (Fate, Vampire, futuros) renderizem consequencias com a mesma identidade visual de "caixa com borda". O componente `CombatConsequences.tsx` (Fate) mantem suas regras locais via `<style jsx>` com prioridade de especificidade — sem regressao visual no Fate. Vampiro CombatCard, que ja referenciava as classes mas nao tinha CSS, agora exibe boxes corretamente para consequencias normais e de Fome.
 
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.

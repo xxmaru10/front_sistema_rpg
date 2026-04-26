@@ -16,6 +16,8 @@ interface CharacterConsequencesProps {
     isGM: boolean;
     /** Se true, permite edição mesmo para não-GM (ex: dono do personagem). Padrão: isGM */
     canEditConsequences?: boolean;
+    /** Override the skill list in the consequence modal. Defaults to DEFAULT_SKILLS. */
+    skills?: readonly string[];
     consequenceModal: ConsequenceModalState | null;
     showAddConsequenceModal: boolean;
     onConsequenceClick: (slot: string) => void;
@@ -31,6 +33,7 @@ export function CharacterConsequences({
     character,
     isGM,
     canEditConsequences,
+    skills,
     consequenceModal,
     showAddConsequenceModal,
     onConsequenceClick,
@@ -124,7 +127,7 @@ export function CharacterConsequences({
 
                 <div className="consequences-list" style={{ display: "grid", gap: "10px" }}>
                     {sortedSlots.map((cons) => {
-                        const consData = character.consequences[cons.slot as "mild" | "mild2" | "moderate" | "severe"];
+                        const consData = character.consequences?.[cons.slot as "mild" | "mild2" | "moderate" | "severe"];
                         const textValue = consData?.text || "";
                         const isFilled = textValue.trim().length > 0;
 
@@ -326,6 +329,7 @@ export function CharacterConsequences({
                     initialDebuffValue={consequenceModal.debuffValue}
                     onSave={onSaveConsequence}
                     onCancel={onCancelConsequenceModal}
+                    skills={skills}
                 />
             )}
 
@@ -416,8 +420,8 @@ export function CharacterConsequences({
                 }
 
                 :global(.modal-option-btn) {
-                    background: rgba(197, 160, 89, 0.05);
-                    border: 1px solid rgba(197, 160, 89, 0.2);
+                    background: rgba(var(--accent-rgb), 0.05);
+                    border: 1px solid rgba(var(--accent-rgb), 0.2);
                     color: var(--accent-color);
                     padding: 12px 20px;
                     font-family: var(--font-header);
@@ -431,7 +435,7 @@ export function CharacterConsequences({
                 }
 
                 :global(.modal-option-btn:hover) {
-                    background: rgba(197, 160, 89, 0.15);
+                    background: rgba(var(--accent-rgb), 0.15);
                     border-color: var(--accent-color);
                 }
 
@@ -454,7 +458,7 @@ export function CharacterConsequences({
 
                 :global(.modal-close-btn) {
                     background: none;
-                    border: 1px solid rgba(197, 160, 89, 0.3);
+                    border: 1px solid rgba(var(--accent-rgb), 0.3);
                     color: var(--accent-color);
                     padding: 10px 20px;
                     font-family: var(--font-header);
@@ -467,7 +471,7 @@ export function CharacterConsequences({
                 }
 
                 :global(.modal-close-btn:hover) {
-                    background: rgba(197, 160, 89, 0.1);
+                    background: rgba(var(--accent-rgb), 0.1);
                 }
             `}</style>
         </>

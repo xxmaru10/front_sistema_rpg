@@ -26,6 +26,7 @@ export default function Home() {
   const [sessionName, setSessionName] = useState("");
   const [customGmCode, setCustomGmCode] = useState(""); // Novo estado para código do mestre
   const [customPlayerCode, setCustomPlayerCode] = useState(""); // Novo estado para código de jogador
+  const [selectedSystem, setSelectedSystem] = useState("fate");
 
   // Estados de Entrada
   const [sessions, setSessions] = useState<SessionData[]>([]);
@@ -79,6 +80,7 @@ export default function Home() {
         id: sessionId,
         name: sessionName.trim(),
         gmUserId: userName.trim(),
+        system: selectedSystem,
       });
     } catch {
       setHomeError("Erro ao criar sessão no banco.");
@@ -97,8 +99,9 @@ export default function Home() {
       payload: {
         sessionId,
         name: sessionName.trim(),
-        gmCode: finalGmCode, // Salva o código no evento
-        playerCode: finalPlayerCode
+        gmCode: finalGmCode,
+        playerCode: finalPlayerCode,
+        system: selectedSystem,
       }
     });
 
@@ -193,6 +196,8 @@ export default function Home() {
             setCustomGmCode={setCustomGmCode}
             customPlayerCode={customPlayerCode}
             setCustomPlayerCode={setCustomPlayerCode}
+            selectedSystem={selectedSystem}
+            setSelectedSystem={setSelectedSystem}
             onCreate={handleCreateSession}
             isLoading={isActionLoading}
           />

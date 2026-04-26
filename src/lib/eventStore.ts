@@ -27,6 +27,9 @@ export class EventStore {
     private connectionStatus: ConnectionStatus = 'CLOSED';
     private failedEventIds: Set<string> = new Set();
     private reconnectTimeout: any = null;
+    private _pendingPersistTimer: any = null;
+    private static readonly PERSIST_DEBOUNCE_MS = 1500;
+    private _beforeUnloadRegistered = false;
 
     private _getCacheKey(sessionId: string): string {
         return `${EventStore.EVENT_CACHE_PREFIX}:${sessionId}`;
@@ -130,6 +133,38 @@ export class EventStore {
     private _persistCurrentSessionCache() {
         if (!this.currentSessionId) return;
         this._saveCachedEvents(this.currentSessionId, this.events);
+    }
+
+    private _schedulePersist() {
+        if (!this.currentSessionId) return;
+        if (typeof window === "undefined") {
+            this._persistCurrentSessionCache();
+            return;
+        }
+        if (!this._beforeUnloadRegistered) {
+            this._beforeUnloadRegistered = true;
+            window.addEventListener("beforeunload", () => this.flushPersist());
+            window.addEventListener("pagehide", () => this.flushPersist());
+        }
+        if (this._pendingPersistTimer) return;
+        this._pendingPersistTimer = setTimeout(() => {
+            this._pendingPersistTimer = null;
+            this._persistCurrentSessionCache();
+        }, EventStore.PERSIST_DEBOUNCE_MS);
+    }
+
+    flushPersist() {
+        if (this._pendingPersistTimer) {
+            clearTimeout(this._pendingPersistTimer);
+            this._pendingPersistTimer = null;
+        }
+        this._persistCurrentSessionCache();
+    }
+
+    private _emitBulk() {
+        if (this.bulkListeners.length === 0) return;
+        const snapshot = [...this.events];
+        this.bulkListeners.forEach(l => l(snapshot));
     }
 
     private _eventsAfterSnapshot(events: ActionEvent[]): ActionEvent[] {
@@ -267,9 +302,9 @@ export class EventStore {
             if (idx === -1) {
                 this.events.push(formattedEvent);
                 this._sort();
-                this._persistCurrentSessionCache();
+                this._schedulePersist();
                 this.listeners.forEach(l => l(formattedEvent));
-                this.bulkListeners.forEach(l => l([...this.events]));
+                this._emitBulk();
             } else {
                 const updatedEvent = {
                     ...this.events[idx],
@@ -279,9 +314,9 @@ export class EventStore {
                 this._clearEventFailed(updatedEvent);
                 this.events[idx] = updatedEvent;
                 this._sort();
-                this._persistCurrentSessionCache();
+                this._schedulePersist();
                 this.listeners.forEach(l => l(updatedEvent));
-                this.bulkListeners.forEach(l => l([...this.events]));
+                this._emitBulk();
             }
         });
 
@@ -346,8 +381,8 @@ export class EventStore {
         }
 
         this._sort();
-        this._persistCurrentSessionCache();
-        this.bulkListeners.forEach(l => l([...this.events]));
+        this.flushPersist();
+        this._emitBulk();
         if (!force) {
             this._updateSnapshot().catch(() => {});
         }
@@ -370,9 +405,9 @@ export class EventStore {
             if (!this.events.some(e => e.id === event.id)) {
                 this.events.push(optimisticEvent);
                 this._sort();
-                this._persistCurrentSessionCache();
+                this._schedulePersist();
                 this.listeners.forEach(l => l(optimisticEvent));
-                this.bulkListeners.forEach(l => l([...this.events]));
+                this._emitBulk();
             }
         }
 
@@ -385,14 +420,14 @@ export class EventStore {
                     this.events[idx].seq = result.seq;
                     this._clearEventFailed(this.events[idx]);
                     this._sort();
-                    this._persistCurrentSessionCache();
-                    this.bulkListeners.forEach(l => l([...this.events]));
+                    this._schedulePersist();
+                    this._emitBulk();
                 }
             } catch (err) {
                 console.error("[EventStore] Erro no append via NestJS:", err);
                 this._markEventFailed(event);
-                this._persistCurrentSessionCache();
-                this.bulkListeners.forEach(l => l([...this.events]));
+                this._schedulePersist();
+                this._emitBulk();
 
                 // Exponential backoff retry para notas (limitado a 3 tentativas)
                 const isNoteEvent = this._isNoteEventType(event.type);
@@ -402,6 +437,57 @@ export class EventStore {
                 }
             }
         });
+
+        return this.appendQueue;
+    }
+
+    /**
+     * Burst-append varios eventos como um unico ciclo otimista (1 sort + 1 persist + 1 bulk).
+     * Cada evento ainda e enviado individualmente ao backend via appendQueue (preservando
+     * ordem e tratamento de erro por evento). Usado por finishRoll para combinar
+     * ROLL_RESOLVED + COMBAT_TARGET_SET + COMBAT_OUTCOME em um unico fan-out local.
+     */
+    async appendBurst(events: ActionEvent[]) {
+        if (!events || events.length === 0) return;
+
+        const newOptimistic: ActionEvent[] = [];
+        for (const ev of events) {
+            if (this.events.some(e => e.id === ev.id)) continue;
+            const optimistic = { ...ev, seq: 0 } as ActionEvent;
+            this.events.push(optimistic);
+            newOptimistic.push(optimistic);
+        }
+
+        if (newOptimistic.length > 0) {
+            this._sort();
+            this._schedulePersist();
+            for (const optimistic of newOptimistic) {
+                this.listeners.forEach(l => l(optimistic));
+            }
+            this._emitBulk();
+        }
+
+        for (const event of events) {
+            this.appendQueue = this.appendQueue.then(async () => {
+                try {
+                    this._clearEventFailed(event);
+                    const result = await apiClient.appendEvent(event.sessionId, event);
+                    const idx = this.events.findIndex(e => e.id === event.id);
+                    if (idx !== -1 && result.seq) {
+                        this.events[idx].seq = result.seq;
+                        this._clearEventFailed(this.events[idx]);
+                        this._sort();
+                        this._schedulePersist();
+                        this._emitBulk();
+                    }
+                } catch (err) {
+                    console.error("[EventStore] Erro no appendBurst via NestJS:", err);
+                    this._markEventFailed(event);
+                    this._schedulePersist();
+                    this._emitBulk();
+                }
+            });
+        }
 
         return this.appendQueue;
     }
@@ -572,6 +658,10 @@ export class EventStore {
         if (!this.currentSessionId) return;
         try {
             await apiClient.clearSessionEvents(this.currentSessionId);
+            if (this._pendingPersistTimer) {
+                clearTimeout(this._pendingPersistTimer);
+                this._pendingPersistTimer = null;
+            }
             this.events = [];
             this._clearCachedEvents(this.currentSessionId);
             window.location.reload();

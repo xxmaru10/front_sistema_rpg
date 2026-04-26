@@ -4,7 +4,7 @@
     background: #0a0a0a;
     height: 100%;
     scrollbar-width: thin;
-    scrollbar-color: #C5A059 transparent;
+    scrollbar-color: var(--accent-color) transparent;
     overflow: hidden;
     position: relative;
 }
@@ -16,22 +16,22 @@
     gap: 12px;
     padding: 10px 15px;
     background: rgba(0, 0, 0, 0.4);
-    border-bottom: 1px solid rgba(197, 160, 89, 0.3);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.3);
     margin-bottom: 5px;
 }
 
 .navigator-label {
     font-size: 0.7rem;
     font-family: 'Cinzel', serif;
-    color: #C5A059;
+    color: var(--accent-color);
     letter-spacing: 0.1em;
     opacity: 0.8;
 }
 
 .victorian-select {
     background: #111;
-    color: #C5A059;
-    border: 1px solid #C5A059;
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
     padding: 6px 12px;
     border-radius: 4px;
     font-family: 'Cinzel', serif;
@@ -48,18 +48,18 @@
 
 .victorian-select:hover {
     background-color: #1a1a1a;
-    box-shadow: 0 0 8px rgba(197, 160, 89, 0.2);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2);
 }
 
 .victorian-select:focus {
     outline: none;
     border-color: #e5c076;
-    box-shadow: 0 0 12px rgba(197, 160, 89, 0.4);
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.4);
 }
 
 .victorian-select option {
     background: #111;
-    color: #C5A059;
+    color: var(--accent-color);
     padding: 10px;
 }
 
@@ -79,7 +79,7 @@
 
 .notes-player-select option {
     background: #111;
-    color: #C5A059;
+    color: var(--accent-color);
 }
 
 .notes-tabs-main {
@@ -91,7 +91,7 @@
 .main-tab-group {
     flex: 1;
     position: relative;
-    border-right: 1px solid rgba(197, 160, 89, 0.1);
+    border-right: 1px solid rgba(var(--accent-rgb), 0.1);
 }
 
 .main-tab-group:last-child {
@@ -115,7 +115,7 @@
 .main-tab-group.active .main-tab-trigger,
 .main-tab-group:hover .main-tab-trigger {
     color: var(--accent-color);
-    background: rgba(197, 160, 89, 0.12);
+    background: rgba(var(--accent-rgb), 0.12);
     opacity: 1;
 }
 
@@ -143,8 +143,8 @@
     transform: translateX(-50%);
     width: 260px;
     background: #0a0a0a; /* Solid obsidian background */
-    border: 1px solid #C5A059;
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.95), 0 0 15px rgba(197, 160, 89, 0.1);
+    border: 1px solid var(--accent-color);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.95), 0 0 15px rgba(var(--accent-rgb), 0.1);
     z-index: 9999; /* Highest priority */
     margin-top: 5px;
     border-radius: 2px;
@@ -158,8 +158,8 @@
     width: 10px;
     height: 10px;
     background: #0a0a0a;
-    border-left: 1px solid #C5A059;
-    border-top: 1px solid #C5A059;
+    border-left: 1px solid var(--accent-color);
+    border-top: 1px solid var(--accent-color);
     z-index: 10;
 }
 
@@ -188,20 +188,20 @@
 }
 
 .menu-option-item:hover {
-    background: rgba(197, 160, 89, 0.2);
+    background: rgba(var(--accent-rgb), 0.2);
     color: #fff;
     border-left-color: var(--accent-color);
 }
 
 .menu-option-item.selected {
-    background: rgba(197, 160, 89, 0.15);
+    background: rgba(var(--accent-rgb), 0.15);
     color: var(--accent-color);
     border-left-color: var(--accent-color);
 }
 
 .check-icon-gold {
     color: var(--accent-color);
-    filter: drop-shadow(0 0 3px rgba(197, 160, 89, 0.4));
+    filter: drop-shadow(0 0 3px rgba(var(--accent-rgb), 0.4));
 }
 
 .animate-fade-in-up {
@@ -2433,7 +2433,7 @@
    ========================================================================== */
 
 .connection-warning-bar {
-    background: rgba(197, 160, 89, 0.15); /* Muted gold/amber */
+    background: rgba(var(--accent-rgb), 0.15); /* Muted gold/amber */
     color: var(--accent-color);
     padding: 8px 20px;
     display: flex;
@@ -2456,7 +2456,7 @@
     gap: 12px;
     padding: 18px 10px;
     background: none;
-    border-right: 1px solid rgba(197, 160, 89, 0.1);
+    border-right: 1px solid rgba(var(--accent-rgb), 0.1);
     color: var(--text-secondary);
     font-family: var(--font-header);
     transition: all 0.3s;
@@ -2567,7 +2567,7 @@
 }
 
 .tag-suggestions-dropdown .suggestion-item:hover {
-    background: rgba(197, 160, 89, 0.15);
+    background: rgba(var(--accent-rgb), 0.15);
     color: var(--accent-color);
 }
 

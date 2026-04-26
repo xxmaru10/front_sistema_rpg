@@ -221,10 +221,10 @@ export function LinkedNotes({
             gap: "10px",
             flex: 1,
             minWidth: (showNotes && showPrivateNotes) ? "250px" : "100%",
-            background: isPrivateList ? "rgba(197, 160, 89, 0.03)" : "transparent",
+            background: isPrivateList ? "rgba(var(--accent-rgb), 0.03)" : "transparent",
             padding: isPrivateList ? "12px" : "0",
             borderRadius: "4px",
-            border: isPrivateList ? "1px dashed rgba(197, 160, 89, 0.2)" : "none"
+            border: isPrivateList ? "1px dashed rgba(var(--accent-rgb), 0.2)" : "none"
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" }}>
                 {isPrivateList ? <ShieldAlert size={14} style={{ color: "var(--accent-color)" }} /> : <MessageSquare size={14} style={{ color: "var(--accent-color)" }} />}
@@ -297,10 +297,10 @@ export function LinkedNotes({
                             <div
                                 key={note.id}
                                 style={{
-                                    background: (note.isPrivate || (note as any).is_private) ? "rgba(197,160,89,0.06)" : "rgba(255,255,255,0.03)",
+                                    background: (note.isPrivate || (note as any).is_private) ? "rgba(var(--accent-rgb),0.06)" : "rgba(255,255,255,0.03)",
                                     padding: "7px 9px",
                                     borderRadius: "4px",
-                                    border: (note.isPrivate || (note as any).is_private) ? "1px dashed rgba(197,160,89,0.25)" : "1px solid rgba(255,255,255,0.05)"
+                                    border: (note.isPrivate || (note as any).is_private) ? "1px dashed rgba(var(--accent-rgb),0.25)" : "1px solid rgba(255,255,255,0.05)"
                                 }}
                             >
                                 {editingNoteId === note.id ? (
@@ -365,8 +365,8 @@ export function LinkedNotes({
                     <button
                         type="submit"
                         style={{
-                            background: "rgba(197,160,89,0.25)",
-                            border: "1px solid rgba(197,160,89,0.4)",
+                            background: "rgba(var(--accent-rgb),0.25)",
+                            border: "1px solid rgba(var(--accent-rgb),0.4)",
                             borderRadius: "4px",
                             padding: "6px 8px",
                             color: "var(--accent-color)",

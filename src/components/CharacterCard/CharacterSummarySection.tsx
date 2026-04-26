@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode, useState } from "react";
 import { Character } from "@/types/domain";
 import { CharacterConsequences } from "./CharacterConsequences";
 import { CharacterSummarySkills } from "./CharacterSummarySkills";
@@ -18,6 +19,14 @@ interface CharacterSummarySectionProps {
     isCompact: boolean;
     canEditStressOrFP: boolean;
     canEditConsequences?: boolean;
+    /** Override the skill list in consequence modals. Defaults to DEFAULT_SKILLS. */
+    consequenceSkills?: readonly string[];
+    /** Replaces the CharacterVitality block (stress tracks + FP). */
+    vitalityOverride?: ReactNode;
+    /** Rendered as a second column alongside the normal consequence panel. */
+    extraConsequenceColumn?: ReactNode;
+    /** Rendered next to the character name (e.g. generation badge). */
+    headerBadge?: ReactNode;
     isEditingName: boolean;
     tempName: string;
     onTempNameChange: (value: string) => void;
@@ -30,6 +39,7 @@ interface CharacterSummarySectionProps {
     onUpdateStressBoxValue: (track: "PHYSICAL" | "MENTAL", boxIndex: number, value: number) => void;
     onFPChange: (amount: number) => void;
     onRefreshChange: (delta: number) => void;
+    onMoneyChange: (value: number) => void;
     consequenceModal: ConsequenceModalState | null;
     showAddConsequenceModal: boolean;
     onConsequenceClick: (slot: string) => void;
@@ -47,6 +57,10 @@ export function CharacterSummarySection({
     isCompact,
     canEditStressOrFP,
     canEditConsequences,
+    consequenceSkills,
+    vitalityOverride,
+    extraConsequenceColumn,
+    headerBadge,
     isEditingName,
     tempName,
     onTempNameChange,
@@ -59,6 +73,7 @@ export function CharacterSummarySection({
     onUpdateStressBoxValue,
     onFPChange,
     onRefreshChange,
+    onMoneyChange,
     consequenceModal,
     showAddConsequenceModal,
     onConsequenceClick,
@@ -71,6 +86,89 @@ export function CharacterSummarySection({
 }: CharacterSummarySectionProps) {
     const initial = character.name?.trim()?.charAt(0)?.toUpperCase() || "?";
     const showFateInline = !(character.isNPC && !isGM);
+
+    const [editingMoney, setEditingMoney] = useState(false);
+    const [tempMoney, setTempMoney] = useState("");
+
+    const commitMoney = () => {
+        const parsed = parseFloat(tempMoney.replace(",", "."));
+        if (!isNaN(parsed)) onMoneyChange(parsed);
+        setEditingMoney(false);
+    };
+
+    const renderMoneySlot = () => {
+        if (!canEditStressOrFP) return null;
+        return (
+            <div
+                style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "6px 10px",
+                    borderRadius: "999px",
+                    border: "1px solid rgba(var(--accent-rgb), 0.22)",
+                    background: "rgba(0, 0, 0, 0.34)",
+                    boxShadow: "inset 0 0 12px rgba(0, 0, 0, 0.2)",
+                    cursor: "default",
+                }}
+            >
+                <span
+                    style={{
+                        fontFamily: "var(--font-header)",
+                        fontSize: "0.9rem",
+                        color: "var(--accent-color)",
+                        lineHeight: 1,
+                        userSelect: "none",
+                    }}
+                >
+                    $
+                </span>
+                {editingMoney ? (
+                    <input
+                        autoFocus
+                        type="number"
+                        value={tempMoney}
+                        onChange={(e) => setTempMoney(e.target.value)}
+                        onBlur={commitMoney}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") commitMoney();
+                            if (e.key === "Escape") setEditingMoney(false);
+                        }}
+                        style={{
+                            width: "72px",
+                            background: "rgba(0,0,0,0.48)",
+                            border: "1px solid rgba(var(--accent-rgb), 0.34)",
+                            borderRadius: "6px",
+                            color: "#f6e7bf",
+                            padding: "2px 6px",
+                            fontFamily: "var(--font-header)",
+                            fontSize: "0.9rem",
+                            outline: "none",
+                            textAlign: "right",
+                        }}
+                    />
+                ) : (
+                    <span
+                        title="Clique para editar"
+                        onClick={() => {
+                            setTempMoney(String(character.money ?? 0));
+                            setEditingMoney(true);
+                        }}
+                        style={{
+                            fontFamily: "var(--font-header)",
+                            fontSize: isCompact ? "0.9rem" : "1rem",
+                            color: "#f6e7bf",
+                            cursor: "pointer",
+                            minWidth: "28px",
+                            textAlign: "right",
+                        }}
+                    >
+                        {character.money ?? 0}
+                    </span>
+                )}
+            </div>
+        );
+    };
 
     const renderFateInline = () => {
         if (!showFateInline) return null;
@@ -114,7 +212,7 @@ export function CharacterSummarySection({
                             color: "#f6e7bf",
                         }}
                     >
-                        {character.fatePoints}
+                        {character.fatePoints ?? 0}
                     </span>
                     <span
                         style={{
@@ -348,6 +446,7 @@ export function CharacterSummarySection({
                                 </button>
                             </div>
                             {renderFateInline()}
+                            {renderMoneySlot()}
                         </div>
                     ) : (
                         <div
@@ -374,17 +473,18 @@ export function CharacterSummarySection({
                                     className="character-summary-name"
                                     style={{
                                         margin: 0,
-                                        fontFamily: "var(--font-victorian)",
+                                        fontFamily: "var(--font-header)",
                                         fontSize: isCompact ? "1.08rem" : "clamp(1.2rem, 1.7vw, 1.9rem)",
                                         lineHeight: 1.05,
-                                        color: "#f6e7bf",
+                                        color: "var(--title-color)",
                                         textTransform: "uppercase",
-                                        textShadow: "0 0 20px rgba(var(--accent-rgb), 0.18)",
+                                        textShadow: "0 0 20px rgba(var(--title-rgb, var(--accent-rgb)), 0.18)",
                                         wordBreak: "break-word",
                                     }}
                                 >
                                     {character.name.toUpperCase()}
                                 </h2>
+                                {headerBadge}
                                 {isGM && (
                                     <button
                                         className="character-summary-edit-name-btn"
@@ -405,6 +505,7 @@ export function CharacterSummarySection({
                                 )}
                             </div>
                             {renderFateInline()}
+                            {renderMoneySlot()}
                         </div>
                     )}
                 </div>
@@ -428,31 +529,41 @@ export function CharacterSummarySection({
                         gap: "12px",
                     }}
                 >
-                    <CharacterVitality
-                        stressPhysical={character.stress.physical}
-                        stressMental={character.stress.mental}
-                        stressValuesPhysical={character.stressValues?.physical || []}
-                        stressValuesMental={character.stressValues?.mental || []}
-                        fatePoints={character.fatePoints}
-                        refresh={character.refresh ?? 3}
-                        isNPC={!!character.isNPC}
-                        isGM={isGM}
-                        isCompact={isCompact}
-                        compactNodes={true}
-                        hideFateReserve={true}
-                        canEditStressOrFP={canEditStressOrFP}
-                        onStressToggle={onStressToggle}
-                        onAddStressBox={onAddStressBox}
-                        onRemoveStressBox={onRemoveStressBox}
-                        onUpdateStressBoxValue={onUpdateStressBoxValue}
-                        onFPChange={onFPChange}
-                        onRefreshChange={onRefreshChange}
-                    />
+                    {vitalityOverride ?? (
+                        <CharacterVitality
+                            stressPhysical={character.stress?.physical || []}
+                            stressMental={character.stress?.mental || []}
+                            stressValuesPhysical={character.stressValues?.physical || []}
+                            stressValuesMental={character.stressValues?.mental || []}
+                            fatePoints={character.fatePoints ?? 0}
+                            refresh={character.refresh ?? 3}
+                            isNPC={!!character.isNPC}
+                            isGM={isGM}
+                            isCompact={isCompact}
+                            compactNodes={true}
+                            hideFateReserve={true}
+                            canEditStressOrFP={canEditStressOrFP}
+                            onStressToggle={onStressToggle}
+                            onAddStressBox={onAddStressBox}
+                            onRemoveStressBox={onRemoveStressBox}
+                            onUpdateStressBoxValue={onUpdateStressBoxValue}
+                            onFPChange={onFPChange}
+                            onRefreshChange={onRefreshChange}
+                        />
+                    )}
 
                     <CharacterSummarySkills character={character} />
                 </div>
 
-                <div className="character-summary-panel" style={{ minWidth: 0 }}>
+                <div
+                    className="character-summary-panel"
+                    style={{
+                        minWidth: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                    }}
+                >
                     <CharacterConsequences
                         character={character}
                         isGM={isGM}
@@ -466,7 +577,9 @@ export function CharacterSummarySection({
                         onAddConsequence={onAddConsequence}
                         onOpenAddModal={onOpenAddModal}
                         onCloseAddModal={onCloseAddModal}
+                        skills={consequenceSkills}
                     />
+                    {extraConsequenceColumn}
                 </div>
             </div>
         </section>

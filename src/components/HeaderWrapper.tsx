@@ -21,6 +21,12 @@ type LocalThemePreference = {
     color?: string;
 };
 
+function getLocalTitleColorKey(sessionId: string, userId: string): string | null {
+    const normalizedUserId = normalizeUserId(userId);
+    if (!sessionId || !normalizedUserId) return null;
+    return `cronos_local_theme_title_color_${sessionId}_${normalizedUserId}`;
+}
+
 function normalizeUserId(userId: string): string {
     return userId.trim().toLowerCase();
 }
@@ -109,6 +115,10 @@ export function HeaderWrapper() {
         customColorR,
         customColorG,
         customColorB,
+        themeTitleColor,
+        customTitleColorR,
+        customTitleColorG,
+        customTitleColorB,
         isTheaterMode,
         themeLocked,
         changeSessionNumber,
@@ -164,6 +174,23 @@ export function HeaderWrapper() {
                         --theme-modal-border: ${localColor} !important;
                         --theme-scrollbar-thumb: rgba(${r}, ${g}, ${b}, 0.2) !important;
                         --gold-gradient: linear-gradient(135deg, ${localColor} 0%, rgba(${Math.min(255, r + 60)}, ${Math.min(255, g + 60)}, ${Math.min(255, b + 60)}, 1) 50%, ${localColor} 100%) !important;
+                    }
+                `;
+            }
+        }
+
+        const localTitleColorKey = getLocalTitleColorKey(sessionId, userId);
+        const localTitleColor = localTitleColorKey ? localStorage.getItem(localTitleColorKey) : null;
+        if (localTitleColor) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(localTitleColor);
+            if (result) {
+                const r = parseInt(result[1], 16);
+                const g = parseInt(result[2], 16);
+                const b = parseInt(result[3], 16);
+                css += `
+                    :root {
+                        --title-color: ${localTitleColor} !important;
+                        --title-rgb: ${r}, ${g}, ${b} !important;
                     }
                 `;
             }
@@ -243,6 +270,10 @@ export function HeaderWrapper() {
                             customColorR={customColorR}
                             customColorG={customColorG}
                             customColorB={customColorB}
+                            themeTitleColor={themeTitleColor}
+                            customTitleColorR={customTitleColorR}
+                            customTitleColorG={customTitleColorG}
+                            customTitleColorB={customTitleColorB}
                             isGM={isGM}
                             themeLocked={themeLocked}
                             onLocalUpdate={() => setLocalUpdateKey(k => k + 1)}

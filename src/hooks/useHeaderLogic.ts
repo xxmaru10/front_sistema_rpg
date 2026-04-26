@@ -37,6 +37,10 @@ export interface HeaderLogicState {
     customColorR: number;
     customColorG: number;
     customColorB: number;
+    themeTitleColor: string | null;
+    customTitleColorR: number;
+    customTitleColorG: number;
+    customTitleColorB: number;
     isTheaterMode: boolean;
     themeLocked: boolean;
 }
@@ -62,6 +66,10 @@ export function useHeaderLogic(
     const [customColorR, setCustomColorR] = useState(244);
     const [customColorG, setCustomColorG] = useState(180);
     const [customColorB, setCustomColorB] = useState(60);
+    const [themeTitleColor, setThemeTitleColor] = useState<string | null>(null);
+    const [customTitleColorR, setCustomTitleColorR] = useState(249);
+    const [customTitleColorG, setCustomTitleColorG] = useState(231);
+    const [customTitleColorB, setCustomTitleColorB] = useState(159);
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
     const [themeLocked, setThemeLocked] = useState(false);
 
@@ -151,14 +159,30 @@ export function useHeaderLogic(
                     setCustomColorR(parsed.r);
                     setCustomColorG(parsed.g);
                     setCustomColorB(parsed.b);
-                    return;
                 }
+            } else {
+                const { r, g, b } = rgbStringToComponents(getThemePreset(presetId).accentRgb);
+                setCustomColorR(r);
+                setCustomColorG(g);
+                setCustomColorB(b);
             }
 
-            const { r, g, b } = rgbStringToComponents(getThemePreset(presetId).accentRgb);
-            setCustomColorR(r);
-            setCustomColorG(g);
-            setCustomColorB(b);
+            const resolvedTitleColor = projected.themeTitleColor || null;
+            setThemeTitleColor(resolvedTitleColor);
+
+            if (resolvedTitleColor) {
+                const parsed = hexToRgb(resolvedTitleColor);
+                if (parsed) {
+                    setCustomTitleColorR(parsed.r);
+                    setCustomTitleColorG(parsed.g);
+                    setCustomTitleColorB(parsed.b);
+                }
+            } else {
+                const { r, g, b } = rgbStringToComponents(getThemePreset(presetId).titleRgb);
+                setCustomTitleColorR(r);
+                setCustomTitleColorG(g);
+                setCustomTitleColorB(b);
+            }
         };
 
         applyFromProjection();
@@ -211,6 +235,10 @@ export function useHeaderLogic(
         customColorR,
         customColorG,
         customColorB,
+        themeTitleColor,
+        customTitleColorR,
+        customTitleColorG,
+        customTitleColorB,
         isTheaterMode,
         themeLocked,
         changeSessionNumber,

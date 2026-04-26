@@ -4,11 +4,15 @@
  * Contains the initial state and the 'reduce' function that processes each ActionEvent.
  * @note: This is a synthesis guide for architectural understanding.
  */
-import { ActionEvent, SessionState, Character, Aspect, DEFAULT_SKILLS, StressTrackValues, Note, EntityNote } from "@/types/domain";
+import { ActionEvent, SessionState, Character, Aspect, Note, EntityNote } from "@/types/domain";
+import { DEFAULT_SKILLS } from "@/systems/fate/types";
+import type { StressTrackValues } from "@/systems/fate/types";
+import { getCachedSystem } from "@/systems/registry";
 
 /** The initial state for a new game session */
 export const initialState: SessionState = {
     id: "",
+    system: "fate",
     seats: [],
     characters: {},
     aspects: {},
@@ -19,6 +23,7 @@ export const initialState: SessionState = {
     notes: [],
     noteFolders: [],
     themeColor: "#C5A059",
+    themeTitleColor: null,
     themePreset: "medieval",
     missions: [],
     timeline: [],
@@ -77,7 +82,7 @@ function clearFolderIdFromNotes(notes: Note[], folderId: string): Note[] {
     return notes.map(note => note.folderId === folderId ? { ...note, folderId: undefined } : note);
 }
 
-export function reduce(state: SessionState, event: ActionEvent): SessionState {
+function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState {
     const { type, payload } = event;
 
     // Safety check: if payload is somehow missing (e.g., stripped by Supabase Realtime size limits),
@@ -88,7 +93,12 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
 
     switch (type) {
         case "SESSION_CREATED":
-            return { ...state, id: payload.sessionId, name: payload.name };
+            return {
+                ...state,
+                id: payload.sessionId,
+                name: payload.name,
+                system: payload.system ?? state.system,
+            };
 
         case "TURN_GRANTED":
             return { ...state, currentTurnUserId: payload.userId };
@@ -193,7 +203,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 ...state,
                 characters: {
                     ...state.characters,
-                    [payload.characterId]: { ...char, fatePoints: Math.max(0, char.fatePoints - payload.amount) }
+                    [payload.characterId]: { ...char, fatePoints: Math.max(0, (char.fatePoints ?? 0) - payload.amount) }
                 }
             };
         }
@@ -205,7 +215,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 ...state,
                 characters: {
                     ...state.characters,
-                    [payload.characterId]: { ...char, fatePoints: char.fatePoints + payload.amount }
+                    [payload.characterId]: { ...char, fatePoints: (char.fatePoints ?? 0) + payload.amount }
                 }
             };
         }
@@ -214,7 +224,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const newTrack = [...char.stress[track]];
+            const newTrack = [...(char.stress?.[track] || [])];
             if (payload.boxIndex >= 0 && payload.boxIndex < newTrack.length) {
                 newTrack[payload.boxIndex] = true;
             }
@@ -224,7 +234,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        stress: { ...char.stress, [track]: newTrack }
+                        stress: { ...(char.stress || {}), [track]: newTrack }
                     }
                 }
             };
@@ -234,7 +244,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const newTrack = [...char.stress[track]];
+            const newTrack = [...(char.stress?.[track] || [])];
             if (payload.boxIndex >= 0 && payload.boxIndex < newTrack.length) {
                 newTrack[payload.boxIndex] = false;
             }
@@ -244,7 +254,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        stress: { ...char.stress, [track]: newTrack }
+                        stress: { ...(char.stress || {}), [track]: newTrack }
                     }
                 }
             };
@@ -302,7 +312,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const char = state.characters[payload.characterId];
             if (!char) return state;
 
-            const newConsequences = { ...char.consequences };
+            const newConsequences = { ...(char.consequences || {}) };
             delete newConsequences[payload.slot];
 
             // Remover de extra slots se aplicável
@@ -473,7 +483,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     ...state.characters,
                     [payload.characterId]: {
                         ...char,
-                        skills: { ...char.skills, [payload.skill]: payload.rank }
+                        skills: { ...(char.skills || {}), [payload.skill]: payload.rank }
                     }
                 }
             };
@@ -507,8 +517,8 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     [payload.characterId]: {
                         ...char,
                         stress: {
-                            ...char.stress,
-                            [track]: [...char.stress[track], false]
+                            ...(char.stress || {}),
+                            [track]: [...(char.stress?.[track] || []), false]
                         },
                         stressValues: {
                             physical: track === "physical" ? [...currentValues, nextValue] : deriveStressValues(char, "physical"),
@@ -524,7 +534,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const currentTrack = char.stress[track];
+            const currentTrack = char.stress?.[track] || [];
             if (currentTrack.length === 0) return state;
             const currentValues = deriveStressValues(char, track);
             const nextValues = currentValues.slice(0, -1);
@@ -536,7 +546,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                     [payload.characterId]: {
                         ...char,
                         stress: {
-                            ...char.stress,
+                            ...(char.stress || {}),
                             [track]: currentTrack.slice(0, -1)
                         },
                         stressValues: {
@@ -552,7 +562,7 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
             const char = state.characters[payload.characterId];
             if (!char) return state;
             const track = payload.track.toLowerCase() as "physical" | "mental";
-            const currentTrack = char.stress[track];
+            const currentTrack = char.stress?.[track] || [];
             if (payload.boxIndex < 0 || payload.boxIndex >= currentTrack.length) return state;
 
             const values = deriveStressValues(char, track);
@@ -917,11 +927,18 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
                 themeColor: payload.color || undefined
             };
 
+        case "SESSION_THEME_TITLE_COLOR_UPDATED":
+            return {
+                ...state,
+                themeTitleColor: payload.color || null
+            };
+
         case "SESSION_THEME_PRESET_UPDATED":
             return {
                 ...state,
                 themePreset: payload.preset,
-                themeColor: undefined
+                themeColor: undefined,
+                themeTitleColor: null
             };
 
         case "SESSION_SOUNDS_UPDATED":
@@ -1261,6 +1278,20 @@ export function reduce(state: SessionState, event: ActionEvent): SessionState {
     }
 }
 
+export function reduce(state: SessionState, event: ActionEvent): SessionState {
+    // 1. Run the base/legacy reducer which handles all platform events (themes, notes, seats, etc.)
+    // as well as the base character logic (legacy fields).
+    let nextState = reduceFateLegacy(state, event);
+    
+    // 2. Run the active system plugin reducer (if loaded) to handle system-specific schemas
+    // and override character representations (e.g. systemData).
+    const plugin = getCachedSystem(nextState.system ?? "fate");
+    if (plugin) {
+        nextState = plugin.reducer(nextState, event);
+    }
+    
+    return nextState;
+}
 
 export function computeState(events: ActionEvent[], baseState?: SessionState): SessionState {
   return events.reduce(reduce, baseState ?? initialState);

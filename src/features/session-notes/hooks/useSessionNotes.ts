@@ -114,7 +114,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         });
 
         (state.missions || []).forEach((m: any) =>
-            results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÃO', type: 'MISSION', color: '#C5A059' })
+            results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÀO', type: 'MISSION', color: 'var(--accent-color)' })
         );
         (state.timeline || []).forEach((ev: any) =>
             results.push({ id: ev.id, name: ev.name, category: 'Tempo', displayType: 'HISTÓRIA', type: 'TIMELINE', color: '#4a90e2' })
@@ -129,7 +129,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         const allTags = new Set<string>();
         Object.values(state.worldEntities || {}).forEach(e => (e.tags || []).forEach(t => allTags.add(t)));
         allTags.forEach(tag =>
-            results.push({ id: `tag-${tag}`, name: tag, category: 'TAG', displayType: 'TAG', color: '#C5A059', isTag: true })
+            results.push({ id: `tag-${tag}`, name: tag, category: 'TAG', displayType: 'TAG', color: 'var(--accent-color)', isTag: true })
         );
 
         return results;
@@ -149,7 +149,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         });
         (state.missions || []).forEach((m: any) => {
             if (m.name.toLowerCase().includes(query) || m.description.toLowerCase().includes(query))
-                results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÃO', color: '#C5A059' });
+                results.push({ id: m.id, name: m.name, category: 'Tempo', displayType: 'MISSÀO', color: 'var(--accent-color)' });
         });
         (state.timeline || []).forEach((ev: any) => {
             if (ev.name.toLowerCase().includes(query) || ev.description.toLowerCase().includes(query))
@@ -190,7 +190,7 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
             return [{ field: "authorId", label: "AUTOR", options: diary.authors.map(a => ({ id: a.id, name: a.name.toUpperCase() })) }];
         }
         if (activeTab === "Tempo") {
-            return [{ field: "displayType", label: "TIPO", options: [{ id: "MISSÃO", name: "MISSÕES" }, { id: "HISTÓRIA", name: "LINHA DO TEMPO" }] }];
+            return [{ field: "displayType", label: "TIPO", options: [{ id: "MISSÀO", name: "MISSÕES" }, { id: "HISTÓRIA", name: "LINHA DO TEMPO" }] }];
         }
         if (activeTab === "Jogo") {
             return [{ field: "displayType", label: "TIPO", options: [{ id: "HABILIDADE", name: "HABILIDADES" }, { id: "ITEM", name: "ITENS" }] }];
@@ -198,11 +198,11 @@ export function useSessionNotes({ sessionId, userId, userRole, state, globalBest
         if (subTabMundo === "Personagens") {
             return [
                 { field: "raceId", label: "RAÇA", options: getUsedIds("PERSONAGEM", "raceId") },
-                { field: "profession", label: "PROFISSÃO", options: getUsedTextValues("PERSONAGEM", "profession") },
+                { field: "profession", label: "PROFISSÀO", options: getUsedTextValues("PERSONAGEM", "profession") },
                 { field: "familyId", label: "FAMÍLIA", options: getUsedIds("PERSONAGEM", "familyId") },
-                { field: "factionId", label: "FACÇÃO", options: getUsedIds("PERSONAGEM", "factionId") },
+                { field: "factionId", label: "FACÇÀO", options: getUsedIds("PERSONAGEM", "factionId") },
                 { field: "originId", label: "ORIGEM", options: getUsedIds("PERSONAGEM", "originId") },
-                { field: "religionId", label: "RELIGIÃO", options: getUsedIds("PERSONAGEM", "religionId") },
+                { field: "religionId", label: "RELIGIÀO", options: getUsedIds("PERSONAGEM", "religionId") },
                 { field: "currentLocationId", label: "LOCAL ATUAL", options: getUsedIds("PERSONAGEM", "currentLocationId") },
                 { field: "tags", label: "TAGS", options: getTagsForType("PERSONAGEM") }
             ];

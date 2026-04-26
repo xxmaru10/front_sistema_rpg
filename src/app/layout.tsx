@@ -10,22 +10,22 @@ import { Suspense } from "react";
 
 
 const cinzel = Cinzel({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   variable: "--font-header",
 });
 
 const playfair = Playfair_Display({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   variable: "--font-narrative",
 });
 
 const inter = Inter({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   variable: "--font-ui",
 });
 
 const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   weight: ["400", "600", "700"],
   variable: "--font-victorian",
 });

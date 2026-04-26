@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Character } from "@/types/domain";
 import { InventorySection } from "./InventorySection";
 import { usePowerTabs } from "./use-power-tabs";
@@ -12,6 +13,8 @@ interface PowerTabsSectionProps {
     magicLevel: number;
     onMagicLevelChange: (level: number) => void;
     includeInventory?: boolean;
+    /** When provided, replaces the Magias tab with a custom tab. */
+    replaceSpellsTab?: { label: string; icon: ReactNode; content: ReactNode };
 }
 
 
@@ -24,6 +27,7 @@ export function PowerTabsSection({
     magicLevel,
     onMagicLevelChange,
     includeInventory = true,
+    replaceSpellsTab,
 }: PowerTabsSectionProps) {
 
     const hook = usePowerTabs({ character, sessionId, actorUserId });
@@ -74,7 +78,7 @@ export function PowerTabsSection({
                 <button
                     className={`power-tab-btn ${hook.activeTab === 'spells' ? 'active' : ''}`}
                     onClick={() => hook.setActiveTab('spells')}
-                    title="MAGIAS"
+                    title={replaceSpellsTab?.label ?? "MAGIAS"}
                     style={
                         compactHeader
                             ? {
@@ -88,8 +92,8 @@ export function PowerTabsSection({
                             : undefined
                     }
                 >
-                    <Wand2 size={18} />
-                    {compactHeader && <span>MAGIAS</span>}
+                    {replaceSpellsTab ? replaceSpellsTab.icon : <Wand2 size={18} />}
+                    {compactHeader && <span>{replaceSpellsTab?.label ?? "MAGIAS"}</span>}
                 </button>
             </div>
 
@@ -144,7 +148,7 @@ export function PowerTabsSection({
                              <div className="stunt-slot editing-new">
                                  <input className="stunt-name-input" placeholder="NOME" value={hook.tempStunt?.name || ''} onChange={e => hook.setTempStunt(p => p ? {...p, name: e.target.value.toUpperCase()} : null)} />
                                  <input className="stunt-cost-input" placeholder="CUSTO" value={hook.tempStunt?.cost || ''} onChange={e => hook.setTempStunt(p => p ? {...p, cost: e.target.value} : null)} />
-                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÃO" value={hook.tempStunt?.description || ''} onChange={e => hook.setTempStunt(p => p ? {...p, description: e.target.value} : null)} />
+                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÀO" value={hook.tempStunt?.description || ''} onChange={e => hook.setTempStunt(p => p ? {...p, description: e.target.value} : null)} />
                                  <div className="stunt-actions-row">
                                     <button className="stunt-action-btn save" onClick={hook.handleSaveStunt}>SALVAR</button>
                                     <button className="stunt-action-btn cancel" onClick={() => hook.setEditingStuntId(null)}>CANCELAR</button>
@@ -165,7 +169,11 @@ export function PowerTabsSection({
                     />
                 )}
 
-                {hook.activeTab === 'spells' && (
+                {hook.activeTab === 'spells' && replaceSpellsTab && (
+                    <div className="spells-list-compact">{replaceSpellsTab.content}</div>
+                )}
+
+                {hook.activeTab === 'spells' && !replaceSpellsTab && (
                     <div className="spells-list-compact">
                         <div className="magic-reserve-inline">
                             <div className="reserve-label">NÍVEL DE MAGIA</div>
@@ -219,7 +227,7 @@ export function PowerTabsSection({
                              <div className="stunt-slot editing-new">
                                  <input className="stunt-name-input" placeholder="NOME" value={hook.tempSpell?.name || ''} onChange={e => hook.setTempSpell(p => p ? {...p, name: e.target.value.toUpperCase()} : null)} />
                                  <input className="stunt-cost-input" placeholder="CUSTO" value={hook.tempSpell?.cost || ''} onChange={e => hook.setTempSpell(p => p ? {...p, cost: e.target.value} : null)} />
-                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÃO" value={hook.tempSpell?.description || ''} onChange={e => hook.setTempSpell(p => p ? {...p, description: e.target.value} : null)} />
+                                 <textarea className="stunt-effect-textarea" placeholder="DESCRIÇÀO" value={hook.tempSpell?.description || ''} onChange={e => hook.setTempSpell(p => p ? {...p, description: e.target.value} : null)} />
                                  <div className="stunt-actions-row">
                                     <button className="stunt-action-btn save" onClick={hook.handleSaveSpell}>SALVAR</button>
                                     <button className="stunt-action-btn cancel" onClick={() => hook.setEditingSpellId(null)}>CANCELAR</button>

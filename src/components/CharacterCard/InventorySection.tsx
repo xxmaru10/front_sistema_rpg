@@ -199,7 +199,7 @@ export function InventorySection({
         let currentItem: Item;
 
         if (containerId) {
-            const container = character.inventory.find(i => i.id === containerId);
+            const container = (character.inventory || []).find(i => i.id === containerId);
             currentItem = container?.contents?.[index] || createEmptyInventorySlot();
         } else {
             currentItem = character.inventory?.[index] || createEmptyInventorySlot();
@@ -223,7 +223,7 @@ export function InventorySection({
         // Slot level restriction check
         let slotMaxSize: string | undefined;
         if (inventoryModal.containerId) {
-            const container = character.inventory.find(i => i.id === inventoryModal.containerId);
+            const container = (character.inventory || []).find(i => i.id === inventoryModal.containerId);
             slotMaxSize = container?.contents?.[inventoryModal.index]?.maxSize;
         } else {
             slotMaxSize = character.inventory?.[inventoryModal.index]?.maxSize;
@@ -257,7 +257,7 @@ export function InventorySection({
         };
 
         if (inventoryModal.containerId) {
-            const container = character.inventory.find(i => i.id === inventoryModal.containerId);
+            const container = (character.inventory || []).find(i => i.id === inventoryModal.containerId);
             if (container) {
                 const newContents = [...(container.contents || [])];
                 while (newContents.length <= inventoryModal.index) {
@@ -378,7 +378,7 @@ export function InventorySection({
 
     const handleUpdateItemQuantity = (index: number, delta: number, containerId: string | null = null) => {
         if (containerId) {
-            const container = character.inventory.find(i => i.id === containerId);
+            const container = (character.inventory || []).find(i => i.id === containerId);
             if (!container) return;
 
             const currentItem = container.contents?.[index];
@@ -429,7 +429,7 @@ export function InventorySection({
 
     const handleClearInventorySlot = (index: number, containerId: string | null = null) => {
         if (containerId) {
-            const container = character.inventory.find(i => i.id === containerId);
+            const container = (character.inventory || []).find(i => i.id === containerId);
             if (!container) return;
 
             const targetItem = container.contents?.[index];
@@ -1054,7 +1054,7 @@ export function InventorySection({
                                                 onClick={() => setShowVISelector(true)}
                                                 title="Selecionar da VI"
                                                 style={{
-                                                    background: 'rgba(197, 160, 89, 0.1)',
+                                                    background: 'rgba(var(--accent-rgb), 0.1)',
                                                     border: '1px solid var(--accent-color)',
                                                     color: 'var(--accent-color)',
                                                     cursor: 'pointer',
@@ -1073,7 +1073,7 @@ export function InventorySection({
                                                 onClick={() => window.open(inventoryModal.item.url, '_blank')}
                                                 title="Abrir Link"
                                                 style={{
-                                                    background: 'rgba(197, 160, 89, 0.1)',
+                                                    background: 'rgba(var(--accent-rgb), 0.1)',
                                                     border: '1px solid var(--accent-color)',
                                                     color: 'var(--accent-color)',
                                                     cursor: 'pointer',
@@ -1180,7 +1180,7 @@ export function InventorySection({
                                             </div>
                                         </div>
                                         <div className="inv-modal-field" style={{ marginTop: '12px' }}>
-                                            <label>RESTRIÇÃO DO SLOT (Opcional - L, M, G)</label>
+                                            <label>RESTRIÇÀO DO SLOT (Opcional - L, M, G)</label>
                                             <div className="inv-size-selector">
                                                 <button
                                                     type="button"

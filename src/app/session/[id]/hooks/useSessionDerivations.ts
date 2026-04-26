@@ -67,9 +67,15 @@ export function useSessionDerivations({
     const bestiaryList = useMemo(() => {
         const localBestiary = Object.values(state.characters).filter(c => c.source === "bestiary");
         const localIds = new Set(localBestiary.map(c => c.id));
-        const globalNotDuplicated = globalBestiaryChars.filter(c => !localIds.has(c.id));
+        const sessionSystem = state.system ?? "fate";
+        const globalNotDuplicated = globalBestiaryChars.filter(c => {
+            if (localIds.has(c.id)) return false;
+            // Filter by system: treat chars with no system tag as "fate"
+            const charSystem = (c as any).system ?? "fate";
+            return charSystem === sessionSystem;
+        });
         return [...localBestiary, ...globalNotDuplicated];
-    }, [state.characters, globalBestiaryChars]);
+    }, [state.characters, globalBestiaryChars, state.system]);
 
     const findBestiaryChar = (id: string | null): Character | null => {
         if (!id) return null;
@@ -95,7 +101,7 @@ export function useSessionDerivations({
             });
         });
         (state.missions || []).forEach((m: any) =>
-            results.push({ id: m.id, name: m.name, category: "Tempo", displayType: "MISSÃO", type: "MISSION", color: "#C5A059" })
+            results.push({ id: m.id, name: m.name, category: "Tempo", displayType: "MISSÀO", type: "MISSION", color: "#C5A059" })
         );
         (state.timeline || []).forEach((ev: any) =>
             results.push({ id: ev.id, name: ev.name, category: "Tempo", displayType: "HISTÓRIA", type: "TIMELINE", color: "#4a90e2" })

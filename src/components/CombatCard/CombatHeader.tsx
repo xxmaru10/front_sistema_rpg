@@ -117,7 +117,7 @@ export function CombatHeader({
                             <span className="fate-label">{character.isNPC ? "PONTOS DE GM" : "DESTINO"}</span>
                             <div className="fate-controls">
                                 {canEditSelf && <button onClick={() => handleFPChange(-1)} className="fate-btn">-</button>}
-                                <span className="fate-value">{character.fatePoints}</span>
+                                <span className="fate-value">{character.fatePoints ?? 0}</span>
                                 {canEditSelf && <button onClick={() => handleFPChange(1)} className="fate-btn">+</button>}
                             </div>
                         </div>
