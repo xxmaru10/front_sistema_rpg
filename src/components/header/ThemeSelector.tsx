@@ -14,6 +14,10 @@ interface ThemeSelectorProps {
     customColorR: number;
     customColorG: number;
     customColorB: number;
+    themeTitleColor: string | null;
+    customTitleColorR: number;
+    customTitleColorG: number;
+    customTitleColorB: number;
     isGM: boolean;
     themeLocked: boolean;
     onLocalUpdate?: () => void;
@@ -73,6 +77,12 @@ function writeLocalThemePreference(sessionId: string, userId: string, preference
     localStorage.setItem(key, JSON.stringify(normalized));
 }
 
+function getLocalTitleColorKey(sessionId: string, userId: string): string | null {
+    const normalizedUserId = normalizeUserId(userId);
+    if (!sessionId || !normalizedUserId) return null;
+    return `cronos_local_theme_title_color_${sessionId}_${normalizedUserId}`;
+}
+
 export function ThemeSelector({
     sessionId,
     userId,
@@ -81,6 +91,10 @@ export function ThemeSelector({
     customColorR,
     customColorG,
     customColorB,
+    themeTitleColor,
+    customTitleColorR,
+    customTitleColorG,
+    customTitleColorB,
     isGM,
     themeLocked,
     onLocalUpdate,
@@ -90,6 +104,7 @@ export function ThemeSelector({
     // Local Theme State (Players Only)
     const [localPreset, setLocalPreset] = useState<string | null>(null);
     const [localColor, setLocalColor] = useState<string | null>(null);
+    const [localTitleColor, setLocalTitleColor] = useState<string | null>(null);
 
     const isPlayerLocked = themeLocked && !isGM;
 
@@ -99,22 +114,24 @@ export function ThemeSelector({
             const pref = readLocalThemePreference(sessionId, userId);
             setLocalPreset(pref.preset || null);
             setLocalColor(pref.color || null);
+            const titleKey = getLocalTitleColorKey(sessionId, userId);
+            if (titleKey) setLocalTitleColor(localStorage.getItem(titleKey));
         }
     }, [isGM, sessionId, userId]);
 
     // Handle lock synchronization
     useEffect(() => {
         if (themeLocked && !isGM) {
-            // GM locked the theme: temporary clear local override state to force session theme
-            // but keep localStorage so it returns when unlocked
             setShowPanel(false);
             setLocalPreset(null);
             setLocalColor(null);
+            setLocalTitleColor(null);
         } else if (!themeLocked && !isGM) {
-            // Re-load from storage when unlocked
             const pref = readLocalThemePreference(sessionId, userId);
             setLocalPreset(pref.preset || null);
             setLocalColor(pref.color || null);
+            const titleKey = getLocalTitleColorKey(sessionId, userId);
+            if (titleKey) setLocalTitleColor(localStorage.getItem(titleKey));
         }
     }, [themeLocked, isGM, sessionId, userId]);
 
@@ -168,6 +185,36 @@ export function ThemeSelector({
                 preset: localPreset || undefined,
                 color: normalizedHex || undefined,
             });
+            onLocalUpdate?.();
+        }
+    };
+
+    const handleTitleColorChange = (hex: string) => {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId) return;
+
+        if (isGM) {
+            globalEventStore.append({
+                id: uuidv4(),
+                sessionId,
+                seq: 0,
+                type: "SESSION_THEME_TITLE_COLOR_UPDATED",
+                actorUserId: normalizedUserId,
+                createdAt: new Date().toISOString(),
+                visibility: "PUBLIC",
+                payload: { color: hex || null },
+            } as any);
+        } else if (!themeLocked) {
+            const normalizedHex = hex || null;
+            setLocalTitleColor(normalizedHex);
+            const titleKey = getLocalTitleColorKey(sessionId, userId);
+            if (titleKey) {
+                if (normalizedHex) {
+                    localStorage.setItem(titleKey, normalizedHex);
+                } else {
+                    localStorage.removeItem(titleKey);
+                }
+            }
             onLocalUpdate?.();
         }
     };
@@ -332,7 +379,7 @@ export function ThemeSelector({
                                     borderBottom: "1px solid rgba(var(--accent-rgb), 0.15)",
                                 }}
                             >
-                                COR PERSONALIZADA
+                                COR GERAL
                             </div>
                             <div
                                 style={{
@@ -443,6 +490,110 @@ export function ThemeSelector({
                                     <button
                                         title="Resetar para cor do preset"
                                         onClick={() => handleColorChange("")}
+                                        style={{
+                                            background: "rgba(255,100,100,0.1)",
+                                            border: "1px solid rgba(255,100,100,0.3)",
+                                            color: "#ff6666",
+                                            fontSize: "0.8rem",
+                                            padding: "8px 10px",
+                                            cursor: "pointer",
+                                            borderRadius: "4px",
+                                            transition: "all 0.2s",
+                                        }}
+                                    >
+                                        RESET
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Section: Title Color */}
+                        <div>
+                            <div
+                                style={{
+                                    fontFamily: "var(--font-header)",
+                                    fontSize: "0.65rem",
+                                    letterSpacing: "0.2em",
+                                    color: "var(--accent-color)",
+                                    marginBottom: "12px",
+                                    paddingBottom: "8px",
+                                    borderBottom: "1px solid rgba(var(--accent-rgb), 0.15)",
+                                }}
+                            >
+                                COR DE TÍTULO
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <input
+                                    type="color"
+                                    value={
+                                        (isGM ? themeTitleColor : localTitleColor) ||
+                                        getThemePreset(activePreset as any).titleColor
+                                    }
+                                    disabled={isPlayerLocked}
+                                    onChange={(e) => handleTitleColorChange(e.target.value)}
+                                    style={{
+                                        width: "44px",
+                                        height: "44px",
+                                        border: "2px solid rgba(var(--accent-rgb), 0.3)",
+                                        borderRadius: "6px",
+                                        cursor: isPlayerLocked ? "not-allowed" : "pointer",
+                                        background: "transparent",
+                                        padding: 0,
+                                    }}
+                                />
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: 1 }}>
+                                    {(["R", "G", "B"] as const).map((channel) => {
+                                        const val =
+                                            channel === "R"
+                                                ? customTitleColorR
+                                                : channel === "G"
+                                                ? customTitleColorG
+                                                : customTitleColorB;
+                                        const channelColor =
+                                            channel === "R" ? "#ff6666" : channel === "G" ? "#66ff66" : "#6666ff";
+                                        return (
+                                            <div
+                                                key={channel}
+                                                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", flex: 1 }}
+                                            >
+                                                <span style={{ fontSize: "0.6rem", color: channelColor, fontFamily: "var(--font-header)", letterSpacing: "0.1em" }}>
+                                                    {channel}
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={255}
+                                                    value={val}
+                                                    onChange={(e) => {
+                                                        if (isPlayerLocked) return;
+                                                        const v = Math.max(0, Math.min(255, parseInt(e.target.value) || 0));
+                                                        const r = channel === "R" ? v : customTitleColorR;
+                                                        const g = channel === "G" ? v : customTitleColorG;
+                                                        const b = channel === "B" ? v : customTitleColorB;
+                                                        const hex = "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
+                                                        handleTitleColorChange(hex);
+                                                    }}
+                                                    style={{
+                                                        width: "100%",
+                                                        background: "rgba(255,255,255,0.05)",
+                                                        border: "1px solid rgba(var(--accent-rgb), 0.2)",
+                                                        color: "#fff",
+                                                        padding: "8px 4px",
+                                                        fontSize: "0.8rem",
+                                                        textAlign: "center",
+                                                        fontFamily: "var(--font-main)",
+                                                        outline: "none",
+                                                        borderRadius: "4px",
+                                                    }}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {(isGM ? !!themeTitleColor : !!localTitleColor) && (
+                                    <button
+                                        title="Resetar cor de título para o preset"
+                                        onClick={() => handleTitleColorChange("")}
                                         style={{
                                             background: "rgba(255,100,100,0.1)",
                                             border: "1px solid rgba(255,100,100,0.3)",

@@ -23,6 +23,7 @@ export const initialState: SessionState = {
     notes: [],
     noteFolders: [],
     themeColor: "#C5A059",
+    themeTitleColor: null,
     themePreset: "medieval",
     missions: [],
     timeline: [],
@@ -926,11 +927,18 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
                 themeColor: payload.color || undefined
             };
 
+        case "SESSION_THEME_TITLE_COLOR_UPDATED":
+            return {
+                ...state,
+                themeTitleColor: payload.color || null
+            };
+
         case "SESSION_THEME_PRESET_UPDATED":
             return {
                 ...state,
                 themePreset: payload.preset,
-                themeColor: undefined
+                themeColor: undefined,
+                themeTitleColor: null
             };
 
         case "SESSION_SOUNDS_UPDATED":

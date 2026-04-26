@@ -22,6 +22,8 @@ export function generateThemeCSS(theme: ThemePreset): string {
             --accent-color: ${theme.accentColor};
             --accent-glow: ${theme.accentColor}4D;
             --accent-rgb: ${theme.accentRgb};
+            --title-color: ${theme.titleColor};
+            --title-rgb: ${theme.titleRgb};
             --secondary-color: ${theme.secondaryColor};
             --secondary-glow: rgba(${theme.secondaryRgb}, 0.3);
             --secondary-rgb: ${theme.secondaryRgb};
@@ -94,7 +96,7 @@ export function generateThemeCSS(theme: ThemePreset): string {
 
         h1, h2, h3 {
             font-family: ${theme.fontHeader};
-            color: var(--accent-color) !important;
+            color: var(--title-color) !important;
             text-shadow: ${theme.headerTextShadow};
         }
 
@@ -243,7 +245,7 @@ export function generateThemeCSS(theme: ThemePreset): string {
             /* ─── Typography: Ornamental Headers ─── */
             h1, h2, h3, .display-title {
                 text-shadow: ${theme.headerTextShadow};
-                color: var(--accent-color) !important;
+                color: var(--title-color) !important;
             }
             .display-title {
                 position: relative;
@@ -507,7 +509,7 @@ export function generateThemeCSS(theme: ThemePreset): string {
             h1, h2, h3, .display-title {
                 text-shadow: ${theme.headerTextShadow};
                 letter-spacing: 0.2em;
-                color: var(--accent-color) !important;
+                color: var(--title-color) !important;
             }
             .display-title::before {
                 content: "// ";
@@ -1120,11 +1122,11 @@ export function generateThemeCSS(theme: ThemePreset): string {
             h1, h2, h3 {
                 font-style: italic;
                 text-shadow: ${theme.headerTextShadow};
-                color: var(--accent-color) !important;
+                color: var(--title-color) !important;
             }
             .display-title {
                 text-shadow: ${theme.headerTextShadow};
-                color: var(--accent-color) !important;
+                color: var(--title-color) !important;
             }
             .display-title::before {
                 content: "⚓ ";
@@ -1276,7 +1278,7 @@ export function generateThemeCSS(theme: ThemePreset): string {
                 color: #000 !important;
             }
             /* Exception for components that must stay white like the title shadow above */
-            .display-title { color: var(--accent-color) !important; }
+            .display-title { color: var(--title-color) !important; }
 
             /* ─── Navigation: Action Tabs ─── */
             .nav-artifact {
@@ -1467,6 +1469,77 @@ export function generateThemeCSS(theme: ThemePreset): string {
                 font-family: 'Bangers', cursive;
                 transform: rotate(-2deg);
                 display: inline-block;
+            }
+        ` : ''}
+
+        ${theme.id === 'synthwave' ? `
+            /* ═══ SYNTHWAVE NEON UI ═══ */
+
+            .solid {
+                border: 1px solid rgba(${theme.accentRgb}, 0.2) !important;
+                box-shadow:
+                    0 10px 40px rgba(0, 0, 0, 0.9),
+                    0 0 30px rgba(${theme.accentRgb}, 0.04),
+                    inset 0 0 20px rgba(${theme.accentRgb}, 0.02) !important;
+                background: linear-gradient(
+                    180deg,
+                    rgba(18, 4, 30, 0.98) 0%,
+                    rgba(12, 2, 20, 0.99) 100%
+                ) !important;
+            }
+
+            .solid::before {
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(${theme.accentRgb}, 0.3) 30%,
+                    ${theme.accentColor}80 50%,
+                    rgba(${theme.accentRgb}, 0.3) 70%,
+                    transparent 100%
+                ) !important;
+                height: 1px !important;
+            }
+
+            .nav-artifact.active {
+                border-color: rgba(${theme.accentRgb}, 0.5) !important;
+                background: rgba(${theme.accentRgb}, 0.08) !important;
+                box-shadow: inset 0 0 20px rgba(${theme.accentRgb}, 0.05) !important;
+            }
+            .nav-artifact.active .nav-icon {
+                color: var(--accent-color) !important;
+                text-shadow: 0 0 10px rgba(${theme.accentRgb}, 0.7);
+            }
+
+            /* Neon glow on titles — 3 short layers, no keyframes */
+            h1, h2, h3, .display-title {
+                text-shadow:
+                    0 0 4px rgba(0, 240, 255, 0.9),
+                    0 0 10px rgba(0, 240, 255, 0.6),
+                    0 0 22px rgba(255, 43, 214, 0.35) !important;
+                letter-spacing: 0.05em;
+            }
+
+            .btn {
+                border-color: rgba(${theme.accentRgb}, 0.4) !important;
+            }
+            .btn:hover {
+                box-shadow: 0 0 20px rgba(${theme.accentRgb}, 0.3) !important;
+            }
+            .btn-primary {
+                background: ${theme.goldGradient} !important;
+                border: none !important;
+            }
+
+            .modal-content, .consequence-modal {
+                border: 1px solid rgba(${theme.accentRgb}, 0.4) !important;
+                box-shadow:
+                    0 0 30px rgba(${theme.accentRgb}, 0.08),
+                    0 10px 40px rgba(0, 0, 0, 0.9) !important;
+            }
+
+            .glass-input:focus, .select-ritual:focus, .input-ritual:focus, .modal-input:focus {
+                border-color: var(--accent-color) !important;
+                box-shadow: 0 0 10px rgba(${theme.accentRgb}, 0.2) !important;
             }
         ` : ''}
     `;

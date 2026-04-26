@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file: src/app/session/[id]/page.tsx
  * @summary: Main entry point for the session page. Orchestrates the RPG session UI,
  * including combat, bestiary, logs, and game state management.
@@ -557,6 +557,41 @@ export default function SessionPage() {
             styleEl.textContent = newCSS;
         }
     }, [state.themeColor]);
+
+    // ─── Gerencia o override de cor de título personalizada via efeito ──────────
+    // Inserido ANTES do player-override para manter a precedência correta.
+    useEffect(() => {
+        const hex = state.themeTitleColor;
+        let styleEl = document.getElementById("theme-custom-title-color-override") as HTMLStyleElement | null;
+
+        if (!hex) {
+            if (styleEl) styleEl.remove();
+            return;
+        }
+
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!result) return;
+
+        const r = parseInt(result[1], 16);
+        const g = parseInt(result[2], 16);
+        const b = parseInt(result[3], 16);
+
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "theme-custom-title-color-override";
+            document.head.appendChild(styleEl);
+        }
+
+        const newCSS = `
+            :root {
+                --title-color: ${hex};
+                --title-rgb: ${r}, ${g}, ${b};
+            }
+        `;
+        if (styleEl.textContent !== newCSS) {
+            styleEl.textContent = newCSS;
+        }
+    }, [state.themeTitleColor]);
 
     // Initial active chars for combat duel selection
     useEffect(() => {

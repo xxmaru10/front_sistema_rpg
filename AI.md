@@ -55,6 +55,7 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Infraestrutura de Plugin de Sistema (campo system, registry, seletor) | planejada | `/stories/story-63-infraestrutura-plugin-sistema.md` |
 | Extrair Fate Core como primeiro plugin | planejada | `/stories/story-64-extrair-fate-como-primeiro-plugin.md` |
 | Performance — finishRoll fan-out + YouTube idle + cache sincrono | concluida | `/stories/story-66-performance-finishroll-eventstore-fanout-e-yt-idle.md` |
+| Tipografia Gótico, Cor de Título Separada e Tema Synthwave | proposta | `/stories/story-67-tema-gotico-tipografia-cor-titulo-e-tema-synthwave-neon.md` |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`

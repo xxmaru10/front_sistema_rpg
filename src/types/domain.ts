@@ -198,6 +198,7 @@ export type SessionState = {
   notes?: Note[];
   noteFolders?: NoteFolder[];
   themeColor?: string;
+  themeTitleColor?: string | null;
   themePreset?: string;
   soundSettings?: {
     victory?: string;
@@ -461,6 +462,7 @@ export type ActionEvent =
   | EventEnvelope<"NOTE_FOLDER_DELETED", { folderId: string }>
 
   | EventEnvelope<"SESSION_THEME_UPDATED", { color: string }>
+  | EventEnvelope<"SESSION_THEME_TITLE_COLOR_UPDATED", { color: string | null }>
   | EventEnvelope<"SESSION_THEME_PRESET_UPDATED", { preset: string }>
   | EventEnvelope<"SESSION_THEME_LOCK_UPDATED", { locked: boolean }>
   | EventEnvelope<"SESSION_SOUNDS_UPDATED", {
