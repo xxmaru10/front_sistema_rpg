@@ -26,7 +26,7 @@ export function createVampireCharacter(overrides: Partial<Character> = {}): Vamp
     disciplines: [],
     stunts: [],
     inventory: [],
-    sheetAspects: ["", "", "", ""],
+    sheetAspects: ["", "", "", "", ""],
     removedDefaultSlots: [],
     extraConsequenceSlots: [],
     removedDefaultHungerSlots: [],

@@ -38,6 +38,8 @@ interface CharacterCardProps {
     headerBadge?: ReactNode;
     /** Replaces the Magias tab in the powers section. */
     replaceSpellsTab?: { label: string; icon: ReactNode; content: ReactNode };
+    /** Custom labels for each sheet aspect slot. Length controls how many slots render. */
+    aspectLabels?: string[];
 }
 
 type CharacterCardTab = "lore" | "powers" | "inventory" | "notes";
@@ -60,6 +62,7 @@ function FateCharacterCardComponent({
     extraConsequenceColumn,
     headerBadge,
     replaceSpellsTab,
+    aspectLabels,
 }: CharacterCardProps) {
     const [activeTab, setActiveTab] = useState<CharacterCardTab>("lore");
 
@@ -113,6 +116,7 @@ function FateCharacterCardComponent({
                     <CharacterLore
                         biography={character.biography || ""}
                         sheetAspects={character.sheetAspects}
+                        aspectLabels={aspectLabels}
                         religionName={mentionEntities?.find((e) => e.id === character.religionId)?.name}
                         canEdit={canEdit}
                         showLore={hook.showLore}
@@ -227,6 +231,7 @@ function FateCharacterCardComponent({
                     onUpdateStressBoxValue={hook.handleUpdateStressBoxValue}
                     onFPChange={hook.handleFPChange}
                     onRefreshChange={hook.handleRefreshChange}
+                    onMoneyChange={hook.handleMoneyChange}
                     consequenceModal={hook.consequenceModal}
                     showAddConsequenceModal={hook.showAddConsequenceModal}
                     onConsequenceClick={(slot) => hook.handleConsequenceChange(slot as any, null)}

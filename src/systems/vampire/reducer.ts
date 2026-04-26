@@ -118,6 +118,12 @@ export function reduceVampire(state: SessionState, event: ActionEvent): SessionS
       return { ...state, characters: { ...state.characters, [p.characterId]: { ...char, name: p.name } } };
     }
 
+    case "CHARACTER_MONEY_UPDATED": {
+      const char = state.characters[p.characterId];
+      if (!char) return state;
+      return { ...state, characters: { ...state.characters, [p.characterId]: { ...char, money: p.value } } };
+    }
+
     case "CHARACTER_BIO_UPDATED": {
       const char = state.characters[p.characterId];
       if (!char) return state;

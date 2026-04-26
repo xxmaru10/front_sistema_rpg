@@ -114,6 +114,7 @@ export type Character = {
   sheetAspects?: string[];
   removedDefaultSlots?: string[];
   extraConsequenceSlots?: string[];
+  money?: number;
 };
 
 // Aspect State
@@ -520,4 +521,5 @@ export type ActionEvent =
   | EventEnvelope<"VAMPIRE_DISCIPLINE_DELETED", { characterId: string; disciplineId: string }>
   | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_UPDATED", { characterId: string; slot: string; value: string | null; debuff?: import("@/systems/fate/types").ConsequenceDebuff }>
   | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_DELETED", { characterId: string; slot: string }>
-  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_SLOT_ADDED", { characterId: string; slot: string }>;
+  | EventEnvelope<"VAMPIRE_HUNGER_CONSEQUENCE_SLOT_ADDED", { characterId: string; slot: string }>
+  | EventEnvelope<"CHARACTER_MONEY_UPDATED", { characterId: string; value: number }>;

@@ -500,6 +500,13 @@ export function reduceFate(state: SessionState, event: ActionEvent): SessionStat
         case "COMBAT_REACTION_ENDED":
             return { ...state, isReaction: false, targetId: undefined, pendingTargetIds: [], damageType: undefined, timerPaused: false };
 
+        case "CHARACTER_MONEY_UPDATED": {
+            const p = payload as any;
+            const char = state.characters[p.characterId];
+            if (!char) return state;
+            return { ...state, characters: { ...state.characters, [p.characterId]: { ...char, money: p.value } } };
+        }
+
         default:
             return state;
     }

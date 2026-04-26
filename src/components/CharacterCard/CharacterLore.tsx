@@ -1,8 +1,12 @@
 "use client";
 
+const DEFAULT_ASPECT_LABELS = ["ASPECTO", "ASPECTO", "ASPECTO", "DIFICULDADE"] as const;
+
 interface CharacterLoreProps {
     biography: string;
     sheetAspects: Record<number, string> | string[] | undefined;
+    /** Custom labels per aspect index. Length also controls how many slots are rendered. */
+    aspectLabels?: string[];
     canEdit: boolean;
     showLore: boolean;
     onToggleLore: () => void;
@@ -24,6 +28,7 @@ interface CharacterLoreProps {
 export function CharacterLore({
     biography,
     sheetAspects,
+    aspectLabels,
     canEdit,
     showLore,
     onToggleLore,
@@ -90,8 +95,8 @@ export function CharacterLore({
 
             {/* Aspects Stack */}
             <div className="aspects-stack">
-                {[0, 1, 2, 3].map((idx) => {
-                    const isTrouble = idx === 3;
+                {(aspectLabels ?? DEFAULT_ASPECT_LABELS).map((label, idx) => {
+                    const isTrouble = label === "DIFICULDADE";
                     const aspectValue = (sheetAspects as any)?.[idx] || "";
                     const isEditing = editingAspectIndex === idx;
 
@@ -101,7 +106,7 @@ export function CharacterLore({
                             className={`sheet-aspect-box-vertical ${isTrouble ? "trouble" : "normal"}`}
                         >
                             <div className="aspect-label-vertical">
-                                {isTrouble ? "DIFICULDADE" : "ASPECTO"}
+                                {label}
                                 {canEdit && !isEditing && (
                                     <button
                                         className="tiny-edit-btn"

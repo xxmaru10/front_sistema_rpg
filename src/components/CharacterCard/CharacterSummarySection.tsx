@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Character } from "@/types/domain";
 import { CharacterConsequences } from "./CharacterConsequences";
 import { CharacterSummarySkills } from "./CharacterSummarySkills";
@@ -39,6 +39,7 @@ interface CharacterSummarySectionProps {
     onUpdateStressBoxValue: (track: "PHYSICAL" | "MENTAL", boxIndex: number, value: number) => void;
     onFPChange: (amount: number) => void;
     onRefreshChange: (delta: number) => void;
+    onMoneyChange: (value: number) => void;
     consequenceModal: ConsequenceModalState | null;
     showAddConsequenceModal: boolean;
     onConsequenceClick: (slot: string) => void;
@@ -72,6 +73,7 @@ export function CharacterSummarySection({
     onUpdateStressBoxValue,
     onFPChange,
     onRefreshChange,
+    onMoneyChange,
     consequenceModal,
     showAddConsequenceModal,
     onConsequenceClick,
@@ -84,6 +86,89 @@ export function CharacterSummarySection({
 }: CharacterSummarySectionProps) {
     const initial = character.name?.trim()?.charAt(0)?.toUpperCase() || "?";
     const showFateInline = !(character.isNPC && !isGM);
+
+    const [editingMoney, setEditingMoney] = useState(false);
+    const [tempMoney, setTempMoney] = useState("");
+
+    const commitMoney = () => {
+        const parsed = parseFloat(tempMoney.replace(",", "."));
+        if (!isNaN(parsed)) onMoneyChange(parsed);
+        setEditingMoney(false);
+    };
+
+    const renderMoneySlot = () => {
+        if (!canEditStressOrFP) return null;
+        return (
+            <div
+                style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "6px 10px",
+                    borderRadius: "999px",
+                    border: "1px solid rgba(var(--accent-rgb), 0.22)",
+                    background: "rgba(0, 0, 0, 0.34)",
+                    boxShadow: "inset 0 0 12px rgba(0, 0, 0, 0.2)",
+                    cursor: "default",
+                }}
+            >
+                <span
+                    style={{
+                        fontFamily: "var(--font-header)",
+                        fontSize: "0.9rem",
+                        color: "var(--accent-color)",
+                        lineHeight: 1,
+                        userSelect: "none",
+                    }}
+                >
+                    $
+                </span>
+                {editingMoney ? (
+                    <input
+                        autoFocus
+                        type="number"
+                        value={tempMoney}
+                        onChange={(e) => setTempMoney(e.target.value)}
+                        onBlur={commitMoney}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") commitMoney();
+                            if (e.key === "Escape") setEditingMoney(false);
+                        }}
+                        style={{
+                            width: "72px",
+                            background: "rgba(0,0,0,0.48)",
+                            border: "1px solid rgba(var(--accent-rgb), 0.34)",
+                            borderRadius: "6px",
+                            color: "#f6e7bf",
+                            padding: "2px 6px",
+                            fontFamily: "var(--font-header)",
+                            fontSize: "0.9rem",
+                            outline: "none",
+                            textAlign: "right",
+                        }}
+                    />
+                ) : (
+                    <span
+                        title="Clique para editar"
+                        onClick={() => {
+                            setTempMoney(String(character.money ?? 0));
+                            setEditingMoney(true);
+                        }}
+                        style={{
+                            fontFamily: "var(--font-header)",
+                            fontSize: isCompact ? "0.9rem" : "1rem",
+                            color: "#f6e7bf",
+                            cursor: "pointer",
+                            minWidth: "28px",
+                            textAlign: "right",
+                        }}
+                    >
+                        {character.money ?? 0}
+                    </span>
+                )}
+            </div>
+        );
+    };
 
     const renderFateInline = () => {
         if (!showFateInline) return null;
@@ -361,6 +446,7 @@ export function CharacterSummarySection({
                                 </button>
                             </div>
                             {renderFateInline()}
+                            {renderMoneySlot()}
                         </div>
                     ) : (
                         <div
@@ -419,6 +505,7 @@ export function CharacterSummarySection({
                                 )}
                             </div>
                             {renderFateInline()}
+                            {renderMoneySlot()}
                         </div>
                     )}
                 </div>

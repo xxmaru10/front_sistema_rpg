@@ -113,6 +113,15 @@ export function useCharacterCard({
         } as any);
     };
 
+    const handleMoneyChange = (value: number) => {
+        if (!canEditStressOrFP) return;
+        globalEventStore.append({
+            id: uuidv4(), sessionId, seq: 0, type: "CHARACTER_MONEY_UPDATED", actorUserId: normalizedUserId,
+            createdAt: new Date().toISOString(), visibility: "PUBLIC",
+            payload: { characterId: character.id, value }
+        } as any);
+    };
+
     const handleRefreshChange = (delta: number) => {
         if (!isGM) return;
         const currentRefresh = character.refresh ?? 3;
@@ -476,7 +485,7 @@ export function useCharacterCard({
         // Handlers
         handleStressToggle, handleAddStressBox, handleRemoveStressBox,
         handleUpdateStressBoxValue,
-        handleFPChange, handleRefreshChange,
+        handleFPChange, handleRefreshChange, handleMoneyChange,
         handleMagicLevelChange,
         handleImageUpload,
 

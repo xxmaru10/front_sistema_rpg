@@ -27,7 +27,10 @@ export function migrateLegacyVampireCharacter(char: Character): VampireCharacter
     disciplines: c.disciplines ?? [],
     stunts: c.stunts ?? [],
     inventory: c.inventory ?? [],
-    sheetAspects: c.sheetAspects ?? ["", "", "", ""],
+    sheetAspects: (() => {
+      const base: string[] = c.sheetAspects ?? ["", "", "", ""];
+      return base.length >= 5 ? base : [...base, ...Array(5 - base.length).fill("")];
+    })(),
     removedDefaultSlots: c.removedDefaultSlots ?? [],
     extraConsequenceSlots: c.extraConsequenceSlots ?? [],
     removedDefaultHungerSlots: c.removedDefaultHungerSlots ?? [],

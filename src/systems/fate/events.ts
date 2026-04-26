@@ -40,6 +40,7 @@ export const FATE_EVENT_TYPES = [
   "COMBAT_TARGET_SET",
   "COMBAT_REACTION_ENDED",
   "COMBAT_OUTCOME",
+  "CHARACTER_MONEY_UPDATED",
 ] as const;
 
 export type FateEventType = typeof FATE_EVENT_TYPES[number];

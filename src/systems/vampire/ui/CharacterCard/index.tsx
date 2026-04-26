@@ -146,6 +146,8 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
   const [showBlink, setShowBlink] = useState(false);
   const blinkData = data.blinkmotion;
 
+  const vampireAspectLabels = ["ASPECTO", "ASPECTO", "ASPECTO", "DIFICULDADE", "TRILHA ATUAL"];
+
   return (
     <>
     <FateCharacterCard
@@ -154,6 +156,7 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
       consequenceSkills={VAMPIRE_SKILLS}
       vitalityOverride={vitalityNode}
       extraConsequenceColumn={hungerNode}
+      aspectLabels={vampireAspectLabels}
       headerBadge={
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <GenerationBadge

@@ -32,6 +32,7 @@ const SHARED_EVENT_TYPES = [
   // Arena
   "ZONE_CREATED",
   "ASPECT_CREATED",
+  "CHARACTER_MONEY_UPDATED",
 ] as const;
 
 // Vampire-exclusive event types

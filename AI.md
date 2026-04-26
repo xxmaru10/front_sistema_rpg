@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-24 (epic-04 aberto: suporte a multiplos sistemas de RPG via plugin; stories 63 e 64 abertas)
+last_updated: 2026-04-25 (regra de escopo de modulo/sistema adicionada; epic-04 ativo: plugins de sistema Fate/Vampiro)
 ---
 
 # Cronos Vtt — Frontend
@@ -58,7 +58,51 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`
 
+## Arquitetura Plataforma × Sistema (LER ANTES DE QUALQUER TAREFA)
+
+O Cronos VTT é uma **plataforma multi-sistema**. Existem duas camadas independentes:
+
+| Camada | O que mora aqui | Onde fica no código |
+|---|---|---|
+| **Plataforma** (núcleo compartilhado) | Event sourcing, WebSocket, snapshot, battlemap, notas, missões, timeline, música/SFX, voz, VI, chat, imagens, sticky notes, identidade do jogador, autenticação, layout geral | `src/lib/`, `src/hooks/`, `src/app/`, `src/components/` (exceto ficha/combate/dado), backend inteiro exceto reducers de sistema |
+| **Sistema** (plugin de regras de RPG) | Template de personagem, event types específicos, reducer de ações, lógica de dano/morte, ficha, combate, dado, condições/recursos | `src/systems/<id>/` (ex.: `src/systems/fate/`, `src/systems/vampire/`) |
+
+Sistemas existentes/planejados: `fate` (Fate Core, plugin atual), `vampire` (Vampiro homebrew), futuros `dnd-5e`, `coc` etc. Cada mesa (`Session.system`) escolhe **um** plugin no momento da criação.
+
+**Regra de bolso para classificar uma feature**: *"funciona sem saber as regras do RPG?"* → Sim = plataforma. Não = plugin de sistema específico.
+
+Ver detalhes em `/epics/epic-04-suporte-a-multiplos-sistemas-rpg.md` e (após a story-64) `/knowledge/architecture.md` seção "Plugin de Sistema".
+
 ## Regras de comportamento para agentes
+
+### Protocolo de Escopo de Módulo/Sistema (OBRIGATÓRIO — fazer ANTES de codar)
+
+Antes de iniciar qualquer alteração de código ou design, a IA **deve** identificar e confirmar o escopo da mudança em relação à arquitetura plataforma × plugin. Use a árvore de decisão abaixo:
+
+1. **Identificar o tipo de mudança**:
+   - É uma **regra de RPG** (dano, atributo, ficha, dado, condição, recurso de personagem)? → provavelmente plugin.
+   - É uma **ferramenta de mesa** (sincronia, UI genérica, mídia, voz, notas, mapa)? → provavelmente plataforma.
+   - **Em dúvida**: trate como ambígua e pergunte.
+
+2. **Perguntar ao humano explicitamente** antes de tocar em arquivos, usando este formato (em pt-BR):
+   > "Esta mudança se aplica a: (a) **plataforma** (todos os sistemas/mesas), (b) **um plugin específico** — qual? (`fate`, `vampire`, outro), (c) **vários plugins** — quais?, ou (d) **interface `SystemPlugin`** (afeta o contrato de todos os plugins atuais e futuros)? Se eu inferi errado, me corrija antes de eu começar."
+   
+   Sempre proponha sua melhor inferência junto da pergunta (não jogue a decisão crua para o humano), mas **não comece a editar** sem confirmação quando o escopo não estiver explícito no pedido.
+
+3. **Pular a pergunta apenas quando**:
+   - O usuário **já indicou o escopo** explicitamente (ex.: "no plugin Fate", "para todas as mesas", "só Vampiro").
+   - A story atual (`/stories/story-NN-...`) já delimita o escopo no front matter ou no objetivo.
+   - A mudança é puramente cosmética/textual sem ligação com regras (ex.: typo em label genérico).
+
+4. **Ao escrever código**, respeitar a fronteira:
+   - **Nunca** importar tipos/funções de `src/systems/<id>/` em código de plataforma. Se a plataforma precisa saber de algo do sistema, vai pelo `SystemPlugin` via registry.
+   - **Nunca** referenciar mecânicas Fate (stress, aspectos, fate points, perícias, consequências, refresh) fora de `src/systems/fate/`. Mesmo símbolo: vazamento de plugin = bug arquitetural.
+   - Mudança que afeta **vários plugins** quase sempre é mudança na interface `SystemPlugin` — deixe isso explícito na resposta e cheque cada plugin existente.
+   - Se um arquivo de plataforma **precisar** condicionar comportamento ao sistema, use `state.system` / `session.system` e delegue ao plugin; nunca faça `if (system === "fate")` na plataforma.
+
+5. **Ao concluir**, registrar no resumo final qual escopo foi tocado: `escopo: plataforma` | `escopo: plugin/<id>` | `escopo: interface SystemPlugin + plugins [...]`. Isso entra no commit/PR e na atualização de `last_updated`.
+
+> **Nota para mesas legadas**: sessões sem `system` definido são tratadas como `fate` por compatibilidade (ver epic-04). Mudanças "globais em Fate" hoje afetam essas mesas — confirme se é intencional.
 
 ### Regras de Navegação Estrita (CRÍTICO)
 1. **Nunca faça varredura cega**: Não utilize `grep` global ou `list_dir` recursivo sem um objetivo específico baseado na tarefa. Use o Knowledge Graph (`/knowledge`) primeiro.
