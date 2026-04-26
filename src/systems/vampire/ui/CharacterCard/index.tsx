@@ -13,8 +13,6 @@ import { VampireVitality } from "./VampireVitality";
 import { migrateLegacyVampireCharacter } from "../../migrations";
 import type { VampireCharacter, VampireSystemData } from "../../types";
 import type { MentionNavigationRequest } from "@/lib/mentionNavigation";
-import { BlinkmotionModal } from "@/components/BlinkmotionModal";
-import { ShieldAlert } from "lucide-react";
 
 interface VampireCharacterCardProps {
   character: Character;
@@ -143,13 +141,9 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
     ),
   };
 
-  const [showBlink, setShowBlink] = useState(false);
-  const blinkData = data.blinkmotion;
-
   const vampireAspectLabels = ["ASPECTO", "ASPECTO", "ASPECTO", "DIFICULDADE", "TRILHA ATUAL"];
 
   return (
-    <>
     <FateCharacterCard
       {...props}
       skillsOverride={VAMPIRE_SKILLS}
@@ -158,53 +152,15 @@ export default function VampireCharacterCard(props: VampireCharacterCardProps) {
       extraConsequenceColumn={hungerNode}
       aspectLabels={vampireAspectLabels}
       headerBadge={
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <GenerationBadge
-            generation={generation}
-            isGM={isGM}
-            characterId={character.id}
-            sessionId={sessionId}
-            actorUserId={userId}
-          />
-          {canEdit && (
-            <button
-              onClick={() => setShowBlink(true)}
-              title="Acessar Blinkmotion"
-              style={{
-                background: "rgba(0, 255, 255, 0.1)",
-                border: "1px solid rgba(0, 255, 255, 0.3)",
-                borderRadius: "6px",
-                padding: "2px 4px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                color: "#0ff",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = "rgba(0, 255, 255, 0.2)";
-                e.currentTarget.style.boxShadow = "0 0 10px rgba(0, 255, 255, 0.3)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = "rgba(0, 255, 255, 0.1)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              <ShieldAlert size={14} />
-            </button>
-          )}
-        </div>
+        <GenerationBadge
+          generation={generation}
+          isGM={isGM}
+          characterId={character.id}
+          sessionId={sessionId}
+          actorUserId={userId}
+        />
       }
       replaceSpellsTab={replaceSpellsTab}
     />
-    {showBlink && (
-      <BlinkmotionModal
-        characterName={character.name}
-        storedUsername={blinkData?.username}
-        storedPassword={blinkData?.password}
-        onClose={() => setShowBlink(false)}
-      />
-    )}
-    </>
   );
 }
