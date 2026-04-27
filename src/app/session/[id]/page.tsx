@@ -965,6 +965,9 @@ export default function SessionPage() {
                     gridThickness={state.battlemap.gridThickness}
                     strokes={state.battlemap.strokes || []}
                     objects={state.battlemap.objects || []}
+                    shapes={state.battlemap.shapes || []}
+                    layers={state.battlemap.layers}
+                    activeLayerId={state.battlemap.activeLayerId}
                     isGM={userRole === "GM"}
                 />
             )}

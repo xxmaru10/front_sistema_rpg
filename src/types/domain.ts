@@ -247,6 +247,35 @@ export type BattlemapObject = {
     locked: boolean;
 };
 
+export type BattlemapLayerKind = "BACKGROUND_COLOR" | "IMAGE" | "DRAWING" | "OBJECTS";
+
+export type BattlemapLayer = {
+    id: string;
+    kind: BattlemapLayerKind;
+    name: string;
+    order: number;
+    visible: boolean;
+    locked: boolean;
+    color?: string;
+    imageUrl?: string;
+    strokeIds?: string[];
+    objectIds?: string[];
+    shapeIds?: string[];
+};
+
+export type BattlemapShapeKind = "FREEHAND" | "RECT" | "CIRCLE" | "DIAMOND" | "TRIANGLE";
+
+export type BattlemapShape = {
+    id: string;
+    kind: Exclude<BattlemapShapeKind, "FREEHAND">;
+    color: string;
+    strokeWidth: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
 export type BattlemapState = {
     isActive: boolean;
     imageUrl: string;
@@ -258,6 +287,9 @@ export type BattlemapState = {
     zoom: number;
     strokes: Stroke[];
     objects: BattlemapObject[];
+    shapes?: BattlemapShape[];
+    layers?: BattlemapLayer[];
+    activeLayerId?: string;
 };
 
 

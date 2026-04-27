@@ -1,5 +1,6 @@
 
 export type Tool = "MOVE" | "PEN" | "ERASER" | "ZOOM" | "IMAGE";
+export type BattlemapShapeKind = "FREEHAND" | "RECT" | "CIRCLE" | "DIAMOND" | "TRIANGLE";
 
 class BattlemapToolStore {
   activeTool: Tool = "MOVE";
@@ -7,6 +8,8 @@ class BattlemapToolStore {
   showToolbar: boolean = false;
   showLibrary: boolean = false;
   isTheaterMode: boolean = false;
+  showLayersPanel: boolean = false;
+  activeShape: BattlemapShapeKind = "FREEHAND";
   listeners: (() => void)[] = [];
 
   setTool(tool: Tool) {
@@ -55,6 +58,21 @@ class BattlemapToolStore {
 
   closeLibrary() {
     this.showLibrary = false;
+    this.notify();
+  }
+
+  setActiveShape(kind: BattlemapShapeKind) {
+    this.activeShape = kind;
+    this.notify();
+  }
+
+  setShowLayersPanel(show: boolean) {
+    this.showLayersPanel = show;
+    this.notify();
+  }
+
+  toggleLayersPanel() {
+    this.showLayersPanel = !this.showLayersPanel;
     this.notify();
   }
 

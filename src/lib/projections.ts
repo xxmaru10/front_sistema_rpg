@@ -1253,24 +1253,67 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
         }
 
         case "BATTLEMAP_UPDATED": {
-            return {
-                ...state,
-                battlemap: {
-                    ...(state.battlemap || {
-                        isActive: false,
-                        imageUrl: "",
-                        gridSize: 50,
-                        gridColor: "rgba(255,255,255,0.1)",
-                        gridThickness: 1,
-                        offsetX: 0,
-                        offsetY: 0,
-                        zoom: 1,
-                        strokes: [],
-                        objects: []
-                    }),
-                    ...payload
-                }
+            const prevBattlemap = state.battlemap || {
+                isActive: false,
+                imageUrl: "",
+                gridSize: 50,
+                gridColor: "rgba(255,255,255,0.1)",
+                gridThickness: 1,
+                offsetX: 0,
+                offsetY: 0,
+                zoom: 1,
+                strokes: [],
+                objects: [],
+                shapes: [],
             };
+            const merged = { ...prevBattlemap, ...payload };
+            if (!merged.shapes) merged.shapes = [];
+            // Lazy migration: build default layers from legacy flat fields if absent
+            if (!merged.layers) {
+                merged.layers = [
+                    {
+                        id: "layer-bg",
+                        kind: "BACKGROUND_COLOR" as const,
+                        name: "Fundo",
+                        order: 0,
+                        visible: true,
+                        locked: true,
+                        color: "#1a1a1a",
+                    },
+                    {
+                        id: "layer-image",
+                        kind: "IMAGE" as const,
+                        name: "Imagem de Fundo",
+                        order: 1,
+                        visible: true,
+                        locked: true,
+                        imageUrl: merged.imageUrl || "",
+                    },
+                    {
+                        id: "layer-objects",
+                        kind: "OBJECTS" as const,
+                        name: "Tokens",
+                        order: 2,
+                        visible: true,
+                        locked: false,
+                        objectIds: (merged.objects || []).map((o: any) => o.id),
+                    },
+                    {
+                        id: "layer-drawings",
+                        kind: "DRAWING" as const,
+                        name: "Desenhos",
+                        order: 3,
+                        visible: true,
+                        locked: false,
+                        strokeIds: (merged.strokes || []).map((s: any) => s.id),
+                        shapeIds: (merged.shapes || []).map((s: any) => s.id),
+                    },
+                ];
+            }
+            if (!merged.activeLayerId) {
+                merged.activeLayerId = "layer-drawings";
+            }
+            return { ...state, battlemap: merged };
         }
 
         default:

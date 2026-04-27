@@ -2,8 +2,8 @@
 title: "Story 49 — Battlemap: Caneta com Submenu de Formas (quadrado, círculo, losango, triângulo)"
 description: "Evoluir o botão Caneta para ter uma seta lateral que abre dropdown de formas geométricas. Ao escolher uma forma, o próximo drag cria a forma na camada ativa. Traço livre segue como default."
 priority: "alta"
-status: "planejada"
-last_updated: "2026-04-22"
+status: "concluída"
+last_updated: "2026-04-27"
 tags: [ui, vtt, battlemap, componente, eventsourcing]
 epic: epic-03-battlemap-camadas-formas-edicao-fundo-grade
 depends_on: [story-48]

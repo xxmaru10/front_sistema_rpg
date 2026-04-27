@@ -1,7 +1,9 @@
-import { Map, Move, PenTool, Search, Eraser, Grid, Trash2, X, Image as ImageIcon, Monitor, Palette, LineChart } from "lucide-react";
+import { useRef, useState } from "react";
+import { Map, Move, PenTool, Search, Eraser, Grid, Trash2, X, Image as ImageIcon, Monitor, Palette, LineChart, Layers, ChevronDown } from "lucide-react";
 import { globalEventStore } from "@/lib/eventStore";
-import { battlemapToolStore, Tool } from "@/lib/battlemapToolStore";
+import { battlemapToolStore, Tool, BattlemapShapeKind } from "@/lib/battlemapToolStore";
 import { v4 as uuidv4 } from "uuid";
+import { BattlemapShapesMenu, ShapeIcon } from "@/components/BattlemapShapesMenu";
 
 interface BattlemapToolbarProps {
     sessionId: string;
@@ -11,6 +13,8 @@ interface BattlemapToolbarProps {
     activeTool: Tool;
     penColor: string;
     isTheaterMode?: boolean;
+    showLayersPanel?: boolean;
+    activeShape?: BattlemapShapeKind;
 }
 
 export function BattlemapToolbar({
@@ -21,7 +25,12 @@ export function BattlemapToolbar({
     activeTool,
     penColor,
     isTheaterMode = false,
+    showLayersPanel = false,
+    activeShape = "FREEHAND",
 }: BattlemapToolbarProps) {
+    const [shapesMenuOpen, setShapesMenuOpen] = useState(false);
+    const chevronRef = useRef<HTMLButtonElement>(null);
+
     return (
         <div className="battlemap-toolbar-container">
             <button
@@ -49,13 +58,39 @@ export function BattlemapToolbar({
                     >
                         <Move size={14} />
                     </button>
-                    <button
-                        className={`tool-icon-btn ${activeTool === "PEN" ? "active" : ""}`}
-                        onClick={() => battlemapToolStore.setTool("PEN")}
-                        title="Ferramenta: Caneta"
-                    >
-                        <PenTool size={14} />
-                    </button>
+
+                    {/* Pen button + chevron group */}
+                    <div className="bm-pen-group">
+                        <button
+                            className={`tool-icon-btn bm-pen-btn${activeTool === "PEN" ? " active" : ""}`}
+                            onClick={() => battlemapToolStore.setTool("PEN")}
+                            title="Ferramenta: Caneta"
+                        >
+                            <PenTool size={14} />
+                            {activeTool === "PEN" && activeShape !== "FREEHAND" && (
+                                <span className="bm-shape-badge">
+                                    <ShapeIcon kind={activeShape} size={8} />
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            ref={chevronRef}
+                            className={`tool-icon-btn bm-pen-chevron${shapesMenuOpen ? " active" : ""}`}
+                            onClick={() => setShapesMenuOpen(v => !v)}
+                            title="Escolher forma"
+                        >
+                            <ChevronDown size={10} />
+                        </button>
+
+                        {shapesMenuOpen && (
+                            <BattlemapShapesMenu
+                                activeShape={activeShape}
+                                onClose={() => setShapesMenuOpen(false)}
+                                anchorRef={chevronRef}
+                            />
+                        )}
+                    </div>
+
                     <button
                         className={`tool-icon-btn ${activeTool === "ZOOM" ? "active" : ""}`}
                         onClick={() => battlemapToolStore.setTool("ZOOM")}
@@ -92,9 +127,7 @@ export function BattlemapToolbar({
                         className={`tool-icon-btn ${isTheaterMode ? "active" : ""}`}
                         onClick={() => battlemapToolStore.toggleTheaterMode()}
                         title="Modo Teatro (Ocultar Interface)"
-                        style={{
-                            color: isTheaterMode ? "var(--accent-color)" : undefined
-                        }}
+                        style={{ color: isTheaterMode ? "var(--accent-color)" : undefined }}
                     >
                         <Monitor size={14} />
                     </button>
@@ -102,6 +135,14 @@ export function BattlemapToolbar({
                     {userRole === "GM" && (
                         <>
                             <div className="tool-divider" />
+                            <button
+                                className={`tool-icon-btn ${showLayersPanel ? "active" : ""}`}
+                                onClick={() => battlemapToolStore.toggleLayersPanel()}
+                                title="Painel de Camadas"
+                                style={{ color: showLayersPanel ? "var(--accent-color)" : undefined }}
+                            >
+                                <Layers size={14} />
+                            </button>
                             <button
                                 className="tool-icon-btn"
                                 onClick={() => battlemapToolStore.openLibrary()}
@@ -181,7 +222,7 @@ export function BattlemapToolbar({
                                             actorUserId: userId,
                                             createdAt: new Date().toISOString(),
                                             visibility: "PUBLIC",
-                                            payload: { strokes: [] },
+                                            payload: { strokes: [], shapes: [] },
                                         } as any);
                                 }}
                                 title="Limpar Mapa"

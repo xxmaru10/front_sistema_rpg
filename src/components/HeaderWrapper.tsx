@@ -120,6 +120,8 @@ export function HeaderWrapper() {
         customTitleColorG,
         customTitleColorB,
         isTheaterMode,
+        showLayersPanel,
+        activeShape,
         themeLocked,
         changeSessionNumber,
     } = useHeaderLogic(sessionId, searchParams);
@@ -326,6 +328,8 @@ export function HeaderWrapper() {
                                 activeTool={activeTool}
                                 penColor={penColor}
                                 isTheaterMode={isTheaterMode}
+                                showLayersPanel={showLayersPanel}
+                                activeShape={activeShape}
                             />
                         )}
 

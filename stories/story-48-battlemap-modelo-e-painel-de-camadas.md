@@ -2,8 +2,8 @@
 title: "Story 48 — Battlemap: Modelo e Painel de Camadas (estilo Canva/Photoshop)"
 description: "Introduzir o modelo de camadas no Battlemap e um painel lateral (GM-only) com renomear, reordenar por drag, alternar visibilidade, apagar e selecionar camada ativa. Camada 0 = fundo sólido, Camada 1 = imagem, Camadas 2+ = desenhos/formas/tokens. Compatível com sessões antigas."
 priority: "alta"
-status: "planejada"
-last_updated: "2026-04-22"
+status: "concluída"
+last_updated: "2026-04-27"
 tags: [ui, vtt, battlemap, eventsourcing, componente]
 epic: epic-03-battlemap-camadas-formas-edicao-fundo-grade
 ---

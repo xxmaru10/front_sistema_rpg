@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-26 (story-66 validada por trace + boxed-consequence visual unificado entre plugins de sistema)
+last_updated: 2026-04-27 (story-49 concluída — caneta com submenu de formas geométricas)
 ---
 
 # Cronos Vtt — Frontend

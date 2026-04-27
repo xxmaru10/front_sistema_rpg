@@ -44,8 +44,191 @@
     left: 0;
     width: 20000px;
     height: 20000px;
-    background-image: 
+    background-image:
         linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px);
     pointer-events: none;
+}
+
+/* ── Layers Panel ─────────────────────────────────────────── */
+.battlemap-layers-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 220px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 8, 6, 0.88);
+    backdrop-filter: blur(8px);
+    border-left: 1px solid rgba(197, 160, 89, 0.25);
+    font-family: inherit;
+    pointer-events: all;
+}
+
+.battlemap-layers-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px 6px;
+    border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--accent-color, #C5A059);
+    text-transform: uppercase;
+}
+
+.battlemap-layers-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--accent-color, #C5A059);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+
+.battlemap-layers-add-btn:hover {
+    background: rgba(197, 160, 89, 0.1);
+}
+
+.battlemap-layers-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.battlemap-layer-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: background 0.12s, border-color 0.12s;
+    user-select: none;
+}
+
+.battlemap-layer-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.battlemap-layer-item.active {
+    border-left-color: var(--accent-color, #C5A059);
+    background: rgba(197, 160, 89, 0.07);
+}
+
+.battlemap-layer-item.dragging-over {
+    border-top: 2px solid var(--accent-color, #C5A059);
+}
+
+.battlemap-layer-drag-handle {
+    color: rgba(255, 255, 255, 0.25);
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.battlemap-layer-drag-handle:active {
+    cursor: grabbing;
+}
+
+.battlemap-layer-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.battlemap-layer-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.battlemap-layer-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.battlemap-layer-name {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.battlemap-layer-kind {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.battlemap-layer-name-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--accent-color, #C5A059);
+    border-radius: 3px;
+    color: #fff;
+    font-size: 11px;
+    padding: 1px 4px;
+    outline: none;
+}
+
+.battlemap-layer-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.battlemap-layer-action-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    transition: color 0.12s, background 0.12s;
+    line-height: 1;
+}
+
+.battlemap-layer-action-btn:hover:not(:disabled) {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.battlemap-layer-action-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+.battlemap-layer-action-btn.delete:hover:not(:disabled) {
+    color: #ff6b6b;
+}
+
+.battlemap-layer-action-btn.eye-active {
+    color: var(--accent-color, #C5A059);
 }
