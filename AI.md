@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-27 (story-49 concluída — caneta com submenu de formas geométricas)
+last_updated: 2026-04-27 (story-50 concluída — borracha escopada + cursor SVG + batch emit)
 ---
 
 # Cronos Vtt — Frontend

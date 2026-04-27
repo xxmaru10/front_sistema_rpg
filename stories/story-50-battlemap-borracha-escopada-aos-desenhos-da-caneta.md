@@ -2,8 +2,8 @@
 title: "Story 50 — Battlemap: Borracha escopada aos desenhos da caneta"
 description: "Restringir a ferramenta Borracha a apagar apenas conteúdo criado pela Caneta (traços livres e formas geométricas da story-49). Imagem de fundo, tokens/objetos e grade nunca são afetados pela borracha."
 priority: "média"
-status: "planejada"
-last_updated: "2026-04-22"
+status: "concluída"
+last_updated: "2026-04-27"
 tags: [ui, vtt, battlemap, componente, eventsourcing]
 epic: epic-03-battlemap-camadas-formas-edicao-fundo-grade
 depends_on: [story-48, story-49]

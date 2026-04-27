@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut, Users } from "lucide-react";
 import { usePathname, useParams, useSearchParams } from "next/navigation";
 import { VoiceChatPanel } from "@/components/VoiceChatPanel";
 import { TextChatPanel } from "@/components/TextChatPanel";
@@ -361,10 +361,15 @@ export function HeaderWrapper() {
                             />
                         </>
                     )}
+                    <Link href="/social" className="logout-btn" style={{ marginRight: '8px' }}>
+                        <Users size={14} />
+                        <span>Social</span>
+                    </Link>
                     <Link href="/" className="logout-btn">
                         <LogOut size={14} />
                         <span>Sair</span>
                     </Link>
+
                 </div>
             </div>
 
