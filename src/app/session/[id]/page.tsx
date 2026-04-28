@@ -13,7 +13,7 @@ import { globalEventStore } from "@/lib/eventStore";
 import { floatingNotesStore } from "@/lib/floatingNotesStore";
 import { useProjectedState, projectedStateStore } from "@/lib/projectedStateStore";
 import * as apiClient from "@/lib/apiClient";
-import { Users, ScrollText, Swords, History, PawPrint, Settings, Drama, RefreshCw, Eye, VenetianMask } from "lucide-react";
+import { Users, ScrollText, Swords, History, PawPrint, Settings, Monitor, Tv, RefreshCw, Eye, VenetianMask } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CharacterCreator } from "@/components/CharacterCreator";
 import { AspectManager } from "@/components/AspectManager";
@@ -48,7 +48,7 @@ import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 
 const FateDice3D = dynamic(() => import("@/components/FateDice3D"), { ssr: false });
-type SessionTab = "characters" | "log" | "combat" | "theater" | "bestiary" | "notes" | "vi";
+type SessionTab = "characters" | "log" | "combat" | "bestiary" | "notes" | "vi";
 
 export default function SessionPage() {
     const { id: sessionId } = useParams();
@@ -103,6 +103,7 @@ export default function SessionPage() {
     const [suppressHoverOpen, setSuppressHoverOpen] = useState(false);
     const [isNavPortalReady, setIsNavPortalReady] = useState(false);
     const [gmPreviewFaded, setGmPreviewFaded] = useState(false);
+    const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
 
     const handleMentionNavigate = useCallback((request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
@@ -205,8 +206,16 @@ export default function SessionPage() {
     }, [closeNavDrawer, setActiveTab, setViewingBestiaryCharId]);
 
     useEffect(() => {
-        battlemapToolStore.setActiveSurfaceTab(activeTab as any);
-    }, [activeTab]);
+        const currentSurface = activeTab === "combat" && isTheaterMode ? "theater" : activeTab;
+        battlemapToolStore.setActiveSurfaceTab(currentSurface as any);
+    }, [activeTab, isTheaterMode]);
+
+    useEffect(() => {
+        const unsub = battlemapToolStore.subscribe(() => {
+            setIsTheaterMode(battlemapToolStore.isTheaterMode);
+        });
+        return unsub;
+    }, []);
 
     // â"€â"€â"€ EVENTS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
@@ -696,16 +705,6 @@ export default function SessionPage() {
                         <div className="nav-icon"><Swords size={20} /></div>
                         <div className="nav-label">ARENA</div>
                     </button>
-                    <button
-                        className={`nav-artifact ${activeTab === "theater" ? "active" : ""}`}
-                        onClick={() => switchTabFromNav("theater")}
-                        data-tooltip="TEATRO"
-                        title="TEATRO"
-                        aria-label="Abrir Teatro"
-                    >
-                        <div className="nav-icon"><Drama size={20} /></div>
-                        <div className="nav-label">TEATRO</div>
-                    </button>
                     {userRole === "GM" ? (
                         <>
                             <button
@@ -887,7 +886,6 @@ export default function SessionPage() {
                 tabName={
                     activeTab === "characters" ? "PERSONAGEM" :
                     activeTab === "combat" ? "ARENA" :
-                    activeTab === "theater" ? "TEATRO" :
                     activeTab === "log" ? "LOGS" :
                     activeTab === "notes" ? "NOTAS" :
                     activeTab === "vi" ? "VI" : "BESTIÀRIO"
@@ -961,7 +959,7 @@ export default function SessionPage() {
                 {showCombat && <div className="combat-announcement">COMBATE</div>}
             </SessionHeader>
 
-            {state.battlemap?.isActive && (activeTab === "combat" || activeTab === "theater") && (
+            {state.battlemap?.isActive && activeTab === "combat" && (
                 <Battlemap
                     sessionId={sessionId as string}
                     userId={actorUserId}
@@ -975,11 +973,11 @@ export default function SessionPage() {
                     scenes={state.battlemap.scenes}
                     activeSceneId={state.battlemap.activeSceneId}
                     isGM={userRole === "GM"}
-                    mode={activeTab === "theater" ? "theater" : "combat"}
+                    mode={isTheaterMode ? "theater" : "combat"}
                 />
             )}
 
-            {activeTab !== "theater" && (
+            {!isTheaterMode && (
                 <div className={`session-container animate-reveal${activeTab === "combat" ? " in-combat" : ""}`}>
                     <div className={`main-command-layout${isNavExpanded ? " nav-expanded" : ""}`}>
                         <div className="tactical-nav-spacer" aria-hidden="true"></div>
@@ -1144,6 +1142,38 @@ export default function SessionPage() {
                     onCancel={handleConsequenceCancel}
                 />
             )}
+            {state.battlemap?.isActive && activeTab === "combat" && (
+                <button
+                    onClick={() => battlemapToolStore.toggleTheaterMode()}
+                    title={isTheaterMode ? "Sair do Modo Teatro" : "Modo Teatro"}
+                    style={{
+                        position: "fixed",
+                        bottom: "24px",
+                        right: videoStream ? "86px" : "24px",
+                        zIndex: 9999,
+                        width: "52px",
+                        height: "52px",
+                        borderRadius: "50%",
+                        border: isTheaterMode ? "2px solid var(--accent-color)" : "2px solid rgba(200, 160, 89, 0.4)",
+                        background: isTheaterMode ? "rgba(197, 160, 89, 0.2)" : "rgba(10, 10, 10, 0.75)",
+                        color: isTheaterMode ? "var(--accent-color)" : "#C5A059",
+                        backdropFilter: "blur(8px)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: isTheaterMode
+                            ? "0 0 20px rgba(197, 160, 89, 0.4), 0 4px 16px rgba(0,0,0,0.5)"
+                            : "0 0 16px rgba(197, 160, 89, 0.15), 0 4px 12px rgba(0,0,0,0.4)",
+                        transition: "all 0.3s ease",
+                        outline: "none"
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+                >
+                    {isTheaterMode ? <Tv size={24} /> : <Monitor size={24} />}
+                </button>
+            )}
             {diceVisible && (
                 <FateDice3D
                     isVisible={true}
@@ -1169,8 +1199,3 @@ export default function SessionPage() {
         </div>
     );
 }
-
-
-
-
-
