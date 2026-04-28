@@ -8,6 +8,7 @@ class BattlemapToolStore {
   penColor: string = "#ff0000";
   showToolbar: boolean = false;
   showLibrary: boolean = false;
+  showBattlemapSurface: boolean = false;
   isTheaterMode: boolean = false;
   isSceneMode: boolean = false;
   activeSurfaceTab: SessionSurfaceTab = "characters";
@@ -37,10 +38,20 @@ class BattlemapToolStore {
 
   setSceneMode(val: boolean) {
     this.isSceneMode = val;
+    if (val) this.showBattlemapSurface = false;
     if (!val) {
       this.isTheaterMode = false;
       this.theaterLayersOpen = false;
       this.theaterBackgroundEditing = false;
+    }
+    this.notify();
+  }
+
+  setBattlemapSurfaceVisible(val: boolean) {
+    this.showBattlemapSurface = val;
+    if (val) {
+      this.isSceneMode = false;
+      this.isTheaterMode = false;
     }
     this.notify();
   }

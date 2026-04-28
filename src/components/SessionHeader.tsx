@@ -374,6 +374,7 @@ export function SessionHeader({
                                     <button
                                         onClick={() => {
                                             onUpdate("BATTLEMAP_ACTIVATE"); // Special string to trigger battlemap activation in parent
+                                            battlemapToolStore.setBattlemapSurfaceVisible(true);
                                             setShowBgMenu(false);
                                         }}
                                         style={{

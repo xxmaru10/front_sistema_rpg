@@ -110,7 +110,6 @@ function ensureBattlemapScenes(state: BattlemapState): BattlemapState {
                 id: sceneId,
                 name: "Cena 1",
                 backgroundColor: "#0d0907",
-                backgroundImage: state.imageUrl || undefined,
                 backgroundTransform: { x: 0, y: 0, width: 1280, height: 720 },
                 layers: [
                     { id: `layer-bg-${sceneId}`, type: "BACKGROUND", name: "Background" },

@@ -105,6 +105,7 @@ export default function SessionPage() {
     const [gmPreviewFaded, setGmPreviewFaded] = useState(false);
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
     const [isSceneMode, setIsSceneMode] = useState(battlemapToolStore.isSceneMode);
+    const [showBattlemapSurface, setShowBattlemapSurface] = useState(battlemapToolStore.showBattlemapSurface);
 
     const handleMentionNavigate = useCallback((request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
@@ -215,6 +216,7 @@ export default function SessionPage() {
         const unsub = battlemapToolStore.subscribe(() => {
             setIsTheaterMode(battlemapToolStore.isTheaterMode);
             setIsSceneMode(battlemapToolStore.isSceneMode);
+            setShowBattlemapSurface(battlemapToolStore.showBattlemapSurface);
         });
         return unsub;
     }, []);
@@ -457,6 +459,9 @@ export default function SessionPage() {
         if (!state.battlemap?.isActive && battlemapToolStore.isSceneMode) {
             battlemapToolStore.setSceneMode(false);
         }
+        if (!state.battlemap?.isActive && battlemapToolStore.showBattlemapSurface) {
+            battlemapToolStore.setBattlemapSurfaceVisible(false);
+        }
     }, [state.battlemap?.isActive]);
 
     // â"€â"€â"€ REMAINING EFFECTS â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -469,7 +474,7 @@ export default function SessionPage() {
             && !!headerImageUrl
             && !deathFocusCharId
             && !videoStream
-            && !state.battlemap?.isActive;
+            && !(showBattlemapSurface || isSceneMode);
 
         if (showBg) {
             document.body.style.backgroundImage =
@@ -491,7 +496,7 @@ export default function SessionPage() {
             document.body.style.backgroundColor = "";
             document.body.style.animation = "";
         }
-    }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, state.battlemap?.isActive, isMobileNav]);
+    }, [activeTab, headerImageUrl, deathFocusCharId, videoStream, showBattlemapSurface, isSceneMode, isMobileNav]);
 
     // â"€â"€â"€ Gerencia Google Fonts + theme-preset-css via efeito â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     // Antes era um IIFE no JSX: executava a cada render â†’ re-fazia download do .woff2
@@ -964,7 +969,7 @@ export default function SessionPage() {
                 {showCombat && <div className="combat-announcement">COMBATE</div>}
             </SessionHeader>
 
-            {state.battlemap?.isActive && activeTab === "combat" && (
+            {state.battlemap?.isActive && activeTab === "combat" && (showBattlemapSurface || isSceneMode) && (
                 <Battlemap
                     sessionId={sessionId as string}
                     userId={actorUserId}

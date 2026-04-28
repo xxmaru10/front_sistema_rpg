@@ -121,6 +121,7 @@ export function HeaderWrapper() {
         customTitleColorB,
         isTheaterMode,
         isSceneMode,
+        showBattlemapSurface,
         themeLocked,
         changeSessionNumber,
     } = useHeaderLogic(sessionId, searchParams);
@@ -318,7 +319,7 @@ export function HeaderWrapper() {
                             </button>
                         )}
 
-                        {battlemapActive && (
+                        {battlemapActive && (showBattlemapSurface || isSceneMode) && (
                             <BattlemapToolbar
                                 sessionId={sessionId}
                                 userId={userId}

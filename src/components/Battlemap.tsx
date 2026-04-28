@@ -71,7 +71,7 @@ export function Battlemap({
         id: "scene-1",
         name: "Cena 1",
         backgroundColor: "#0d0907",
-        backgroundImage: imageUrl || undefined,
+        backgroundImage: mode === "theater" ? undefined : imageUrl || undefined,
         backgroundTransform: { x: 0, y: 0, width: 1280, height: 720 },
         layers: [
             { id: "layer-bg-scene-1", type: "BACKGROUND", name: "Background" },
@@ -89,6 +89,12 @@ export function Battlemap({
     const resolvedScenes: BattlemapScene[] = scenes && scenes.length > 0 ? scenes : [fallbackScene];
     const resolvedActiveSceneId = activeSceneId || resolvedScenes[0]?.id;
     const activeScene = resolvedScenes.find((scene) => scene.id === resolvedActiveSceneId) || fallbackScene;
+    const sceneBackgroundImage = mode === "theater" && activeScene.backgroundImage === imageUrl
+        ? undefined
+        : activeScene.backgroundImage;
+    const displayedBackgroundImage = mode === "theater"
+        ? sceneBackgroundImage
+        : (sceneBackgroundImage || imageUrl);
 
     // Helper: Convert screen coordinates to canvas coordinates
     const getCanvasPos = (clientX: number, clientY: number) => {
@@ -332,9 +338,9 @@ export function Battlemap({
                         transform: `translate(${localOffset.x}px, ${localOffset.y}px) scale(${localZoom})`,
                     }}
                 >
-                    {(activeScene.backgroundImage || imageUrl) && (
+                    {displayedBackgroundImage && (
                         <img 
-                            src={activeScene.backgroundImage || imageUrl} 
+                            src={displayedBackgroundImage} 
                             alt="Map" 
                             className="battlemap-background-img" 
                             draggable={false}
