@@ -42,6 +42,7 @@ export interface HeaderLogicState {
     customTitleColorG: number;
     customTitleColorB: number;
     isTheaterMode: boolean;
+    isSceneMode: boolean;
     themeLocked: boolean;
 }
 
@@ -71,6 +72,7 @@ export function useHeaderLogic(
     const [customTitleColorG, setCustomTitleColorG] = useState(231);
     const [customTitleColorB, setCustomTitleColorB] = useState(159);
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
+    const [isSceneMode, setIsSceneMode] = useState(battlemapToolStore.isSceneMode);
     const [themeLocked, setThemeLocked] = useState(false);
 
     useEffect(() => {
@@ -192,6 +194,7 @@ export function useHeaderLogic(
             setActiveTool(battlemapToolStore.activeTool);
             setPenColor(battlemapToolStore.penColor);
             setIsTheaterMode(battlemapToolStore.isTheaterMode);
+            setIsSceneMode(battlemapToolStore.isSceneMode);
         });
 
         return () => {
@@ -240,6 +243,7 @@ export function useHeaderLogic(
         customTitleColorG,
         customTitleColorB,
         isTheaterMode,
+        isSceneMode,
         themeLocked,
         changeSessionNumber,
     };

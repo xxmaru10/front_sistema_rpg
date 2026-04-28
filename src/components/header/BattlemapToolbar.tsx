@@ -11,6 +11,7 @@ interface BattlemapToolbarProps {
     activeTool: Tool;
     penColor: string;
     isTheaterMode?: boolean;
+    isSceneMode?: boolean;
 }
 
 export function BattlemapToolbar({
@@ -21,8 +22,41 @@ export function BattlemapToolbar({
     activeTool,
     penColor,
     isTheaterMode = false,
+    isSceneMode = false,
 }: BattlemapToolbarProps) {
-    const isTheaterSurface = battlemapToolStore.activeSurfaceTab === "theater";
+    const isTheaterSurface = isSceneMode || battlemapToolStore.activeSurfaceTab === "theater";
+
+    if (isTheaterSurface) {
+        return (
+            <div className="battlemap-toolbar-container battlemap-toolbar-container--scene">
+                <div className="battlemap-tools-strip">
+                    {(["CAMADAS", "PERSONAGEM", "OBJETO", "CENARIO", "TEXTO"] as const).map((tool) => {
+                        const isPassive = tool === "PERSONAGEM" || tool === "OBJETO" || tool === "TEXTO";
+                        return (
+                            <button
+                                key={tool}
+                                className={`tool-icon-btn theater-tool-btn ${battlemapToolStore.theaterTool === tool ? "active" : ""}`}
+                                disabled={isPassive}
+                                onClick={() => {
+                                    battlemapToolStore.setTheaterTool(tool);
+                                    if (tool === "CAMADAS") {
+                                        battlemapToolStore.setTheaterLayersOpen(!battlemapToolStore.theaterLayersOpen);
+                                    }
+                                    if (tool === "CENARIO") {
+                                        battlemapToolStore.openLibrary();
+                                    }
+                                }}
+                                title={isPassive ? `${tool} (em breve)` : tool}
+                            >
+                                {tool}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="battlemap-toolbar-container">
             <button
@@ -104,33 +138,6 @@ export function BattlemapToolbar({
 
                     {userRole === "GM" && (
                         <>
-                            {isTheaterSurface && (
-                                <>
-                                    <div className="tool-divider" />
-                                    {(["CAMADAS", "PERSONAGEM", "OBJETO", "CENARIO", "TEXTO"] as const).map((tool) => {
-                                        const isPassive = tool === "PERSONAGEM" || tool === "OBJETO" || tool === "TEXTO";
-                                        return (
-                                            <button
-                                                key={tool}
-                                                className={`tool-icon-btn theater-tool-btn ${battlemapToolStore.theaterTool === tool ? "active" : ""}`}
-                                                disabled={isPassive}
-                                                onClick={() => {
-                                                    battlemapToolStore.setTheaterTool(tool);
-                                                    if (tool === "CAMADAS") {
-                                                        battlemapToolStore.setTheaterLayersOpen(!battlemapToolStore.theaterLayersOpen);
-                                                    }
-                                                    if (tool === "CENARIO") {
-                                                        battlemapToolStore.openLibrary();
-                                                    }
-                                                }}
-                                                title={isPassive ? `${tool} (em breve)` : tool}
-                                            >
-                                                {tool}
-                                            </button>
-                                        );
-                                    })}
-                                </>
-                            )}
                             <div className="tool-divider" />
                             <button
                                 className="tool-icon-btn"

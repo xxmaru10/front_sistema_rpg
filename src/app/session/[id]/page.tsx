@@ -104,6 +104,7 @@ export default function SessionPage() {
     const [isNavPortalReady, setIsNavPortalReady] = useState(false);
     const [gmPreviewFaded, setGmPreviewFaded] = useState(false);
     const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
+    const [isSceneMode, setIsSceneMode] = useState(battlemapToolStore.isSceneMode);
 
     const handleMentionNavigate = useCallback((request: MentionNavigationRequest) => {
         setPendingMentionNavigation(request);
@@ -206,13 +207,14 @@ export default function SessionPage() {
     }, [closeNavDrawer, setActiveTab, setViewingBestiaryCharId]);
 
     useEffect(() => {
-        const currentSurface = activeTab === "combat" && isTheaterMode ? "theater" : activeTab;
+        const currentSurface = activeTab === "combat" && isSceneMode ? "theater" : activeTab;
         battlemapToolStore.setActiveSurfaceTab(currentSurface as any);
-    }, [activeTab, isTheaterMode]);
+    }, [activeTab, isSceneMode]);
 
     useEffect(() => {
         const unsub = battlemapToolStore.subscribe(() => {
             setIsTheaterMode(battlemapToolStore.isTheaterMode);
+            setIsSceneMode(battlemapToolStore.isSceneMode);
         });
         return unsub;
     }, []);
@@ -451,6 +453,9 @@ export default function SessionPage() {
     useEffect(() => {
         if (!state.battlemap?.isActive && battlemapToolStore.isTheaterMode) {
             battlemapToolStore.setTheaterMode(false);
+        }
+        if (!state.battlemap?.isActive && battlemapToolStore.isSceneMode) {
+            battlemapToolStore.setSceneMode(false);
         }
     }, [state.battlemap?.isActive]);
 
@@ -973,7 +978,7 @@ export default function SessionPage() {
                     scenes={state.battlemap.scenes}
                     activeSceneId={state.battlemap.activeSceneId}
                     isGM={userRole === "GM"}
-                    mode={isTheaterMode ? "theater" : "combat"}
+                    mode={isSceneMode ? "theater" : "combat"}
                 />
             )}
 
@@ -1142,10 +1147,10 @@ export default function SessionPage() {
                     onCancel={handleConsequenceCancel}
                 />
             )}
-            {state.battlemap?.isActive && activeTab === "combat" && (
+            {state.battlemap?.isActive && activeTab === "combat" && isSceneMode && (
                 <button
                     onClick={() => battlemapToolStore.toggleTheaterMode()}
-                    title={isTheaterMode ? "Sair do Modo Cena" : "Modo Cena"}
+                    title={isTheaterMode ? "Mostrar interface" : "Ocultar interface"}
                     style={{
                         position: "fixed",
                         bottom: "24px",

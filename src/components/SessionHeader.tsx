@@ -91,7 +91,7 @@ export function SessionHeader({
     const [showBgMenu, setShowBgMenu] = useState(false);
     const [showEffectsMenu, setShowEffectsMenu] = useState(false);
     const [isMobilePerfMode, setIsMobilePerfMode] = useState(false);
-    const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
+    const [isSceneMode, setIsSceneMode] = useState(battlemapToolStore.isSceneMode);
 
     useEffect(() => {
         const viewportMedia = window.matchMedia("(max-width: 1024px)");
@@ -110,7 +110,7 @@ export function SessionHeader({
 
     useEffect(() => {
         const unsub = battlemapToolStore.subscribe(() => {
-            setIsTheaterMode(battlemapToolStore.isTheaterMode);
+            setIsSceneMode(battlemapToolStore.isSceneMode);
         });
         return unsub;
     }, []);
@@ -401,16 +401,17 @@ export function SessionHeader({
                                 {isArena && (
                                     <button
                                         onClick={() => {
-                                            if (!isTheaterMode) {
+                                            if (!isSceneMode) {
                                                 onUpdate("BATTLEMAP_ACTIVATE");
-                                                battlemapToolStore.setTheaterMode(true);
-                                            } else {
+                                                battlemapToolStore.setSceneMode(true);
                                                 battlemapToolStore.setTheaterMode(false);
+                                            } else {
+                                                battlemapToolStore.setSceneMode(false);
                                             }
                                             setShowBgMenu(false);
                                         }}
                                         style={{
-                                            background: isTheaterMode ? 'rgba(var(--accent-rgb), 0.18)' : 'transparent',
+                                            background: isSceneMode ? 'rgba(var(--accent-rgb), 0.18)' : 'transparent',
                                             border: 'none',
                                             borderBottom: '1px solid rgba(var(--accent-rgb), 0.3)',
                                             color: '#fff',
@@ -426,13 +427,13 @@ export function SessionHeader({
                                             gap: '8px'
                                         }}
                                         onMouseEnter={(e) => {
-                                            if (!isTheaterMode) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                            if (!isSceneMode) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                                         }}
                                         onMouseLeave={(e) => {
-                                            if (!isTheaterMode) e.currentTarget.style.background = 'transparent';
+                                            if (!isSceneMode) e.currentTarget.style.background = 'transparent';
                                         }}
                                     >
-                                        <Monitor size={14} /> {isTheaterMode ? 'SAIR CENA' : 'MODO CENA'}
+                                        <Monitor size={14} /> {isSceneMode ? 'SAIR CENA' : 'MODO CENA'}
                                     </button>
                                 )}
                                 <button

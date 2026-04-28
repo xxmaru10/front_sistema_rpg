@@ -9,6 +9,7 @@ class BattlemapToolStore {
   showToolbar: boolean = false;
   showLibrary: boolean = false;
   isTheaterMode: boolean = false;
+  isSceneMode: boolean = false;
   activeSurfaceTab: SessionSurfaceTab = "characters";
   theaterTool: TheaterTool = "CAMADAS";
   theaterLayersOpen: boolean = false;
@@ -31,6 +32,16 @@ class BattlemapToolStore {
 
   setTheaterMode(val: boolean) {
     this.isTheaterMode = val;
+    this.notify();
+  }
+
+  setSceneMode(val: boolean) {
+    this.isSceneMode = val;
+    if (!val) {
+      this.isTheaterMode = false;
+      this.theaterLayersOpen = false;
+      this.theaterBackgroundEditing = false;
+    }
     this.notify();
   }
 
