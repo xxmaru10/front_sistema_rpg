@@ -93,7 +93,7 @@ export function BattlemapToolbar({
                         <button
                             className={`tool-icon-btn ${isTheaterMode ? "active" : ""}`}
                             onClick={() => battlemapToolStore.toggleTheaterMode()}
-                            title="Modo Teatro (Ocultar Interface)"
+                            title="Modo Cena (Ocultar Interface)"
                             style={{
                                 color: isTheaterMode ? "var(--accent-color)" : undefined
                             }}

@@ -432,7 +432,7 @@ export function SessionHeader({
                                             if (!isTheaterMode) e.currentTarget.style.background = 'transparent';
                                         }}
                                     >
-                                        <Monitor size={14} /> {isTheaterMode ? 'SAIR TEATRO' : 'MODO TEATRO'}
+                                        <Monitor size={14} /> {isTheaterMode ? 'SAIR CENA' : 'MODO CENA'}
                                     </button>
                                 )}
                                 <button

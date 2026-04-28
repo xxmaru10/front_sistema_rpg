@@ -1145,7 +1145,7 @@ export default function SessionPage() {
             {state.battlemap?.isActive && activeTab === "combat" && (
                 <button
                     onClick={() => battlemapToolStore.toggleTheaterMode()}
-                    title={isTheaterMode ? "Sair do Modo Teatro" : "Modo Teatro"}
+                    title={isTheaterMode ? "Sair do Modo Cena" : "Modo Cena"}
                     style={{
                         position: "fixed",
                         bottom: "24px",
