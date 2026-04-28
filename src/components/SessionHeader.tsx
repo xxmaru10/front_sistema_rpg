@@ -92,6 +92,7 @@ export function SessionHeader({
     const [showEffectsMenu, setShowEffectsMenu] = useState(false);
     const [isMobilePerfMode, setIsMobilePerfMode] = useState(false);
     const [isSceneMode, setIsSceneMode] = useState(battlemapToolStore.isSceneMode);
+    const [showBattlemapSurface, setShowBattlemapSurface] = useState(battlemapToolStore.showBattlemapSurface);
 
     useEffect(() => {
         const viewportMedia = window.matchMedia("(max-width: 1024px)");
@@ -111,6 +112,7 @@ export function SessionHeader({
     useEffect(() => {
         const unsub = battlemapToolStore.subscribe(() => {
             setIsSceneMode(battlemapToolStore.isSceneMode);
+            setShowBattlemapSurface(battlemapToolStore.showBattlemapSurface);
         });
         return unsub;
     }, []);
@@ -373,12 +375,16 @@ export function SessionHeader({
                                 {isArena && (
                                     <button
                                         onClick={() => {
-                                            onUpdate("BATTLEMAP_ACTIVATE"); // Special string to trigger battlemap activation in parent
-                                            battlemapToolStore.setBattlemapSurfaceVisible(true);
+                                            if (!showBattlemapSurface) {
+                                                onUpdate("BATTLEMAP_ACTIVATE"); // Special string to trigger battlemap activation in parent
+                                                battlemapToolStore.setBattlemapSurfaceVisible(true);
+                                            } else {
+                                                battlemapToolStore.setBattlemapSurfaceVisible(false);
+                                            }
                                             setShowBgMenu(false);
                                         }}
                                         style={{
-                                            background: 'transparent',
+                                            background: showBattlemapSurface ? 'rgba(var(--accent-rgb), 0.18)' : 'transparent',
                                             border: 'none',
                                             borderBottom: '1px solid rgba(var(--accent-rgb), 0.3)',
                                             color: '#fff',
@@ -393,10 +399,14 @@ export function SessionHeader({
                                             alignItems: 'center',
                                             gap: '8px'
                                         }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        onMouseEnter={(e) => {
+                                            if (!showBattlemapSurface) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!showBattlemapSurface) e.currentTarget.style.background = 'transparent';
+                                        }}
                                     >
-                                        <Swords size={14} /> BATTLEMAP
+                                        <Swords size={14} /> {showBattlemapSurface ? 'SAIR BATTLEMAP' : 'BATTLEMAP'}
                                     </button>
                                 )}
                                 {isArena && (

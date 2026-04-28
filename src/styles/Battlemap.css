@@ -10,6 +10,14 @@
     overflow: hidden;
 }
 
+.battlemap-container--background {
+    pointer-events: none;
+}
+
+.battlemap-container--interactive {
+    pointer-events: auto;
+}
+
 .battlemap-canvas-area {
     position: absolute;
     inset: 0;

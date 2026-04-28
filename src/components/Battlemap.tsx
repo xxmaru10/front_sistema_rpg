@@ -46,6 +46,7 @@ export function Battlemap({
     const [activeTool, setActiveTool] = useState<Tool>(battlemapToolStore.activeTool);
     const [penColor, setPenColor] = useState(battlemapToolStore.penColor);
     const [showLibrary, setShowLibrary] = useState(battlemapToolStore.showLibrary);
+    const [showToolbar, setShowToolbar] = useState(battlemapToolStore.showToolbar);
     const [isBackgroundEditing, setIsBackgroundEditing] = useState(false);
     const [draftBackgroundUrl, setDraftBackgroundUrl] = useState<string | null>(null);
     const [draftTransform, setDraftTransform] = useState<BattlemapBackgroundTransform>({ x: 0, y: 0, width: 1280, height: 720 });
@@ -58,6 +59,7 @@ export function Battlemap({
             setActiveTool(battlemapToolStore.activeTool);
             setPenColor(battlemapToolStore.penColor);
             setShowLibrary(battlemapToolStore.showLibrary);
+            setShowToolbar(battlemapToolStore.showToolbar);
         });
         return unsub;
     }, []);
@@ -95,6 +97,7 @@ export function Battlemap({
     const displayedBackgroundImage = mode === "theater"
         ? sceneBackgroundImage
         : (sceneBackgroundImage || imageUrl);
+    const isInteractiveSurface = mode === "theater" || showToolbar;
 
     // Helper: Convert screen coordinates to canvas coordinates
     const getCanvasPos = (clientX: number, clientY: number) => {
@@ -296,7 +299,7 @@ export function Battlemap({
     };
 
     return (
-        <div className="battlemap-container">
+        <div className={`battlemap-container ${isInteractiveSurface ? "battlemap-container--interactive" : "battlemap-container--background"}`}>
             {mode === "theater" && (
                 <BattlemapSceneManager
                     scenes={resolvedScenes}

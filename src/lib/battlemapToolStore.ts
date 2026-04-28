@@ -52,6 +52,8 @@ class BattlemapToolStore {
     if (val) {
       this.isSceneMode = false;
       this.isTheaterMode = false;
+    } else {
+      this.showToolbar = false;
     }
     this.notify();
   }
