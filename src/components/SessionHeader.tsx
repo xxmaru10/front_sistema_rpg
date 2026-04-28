@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { AtmosphericEffectType } from "./AtmosphericEffects";
+import { battlemapToolStore } from "@/lib/battlemapToolStore";
 import {
     Sparkles,
     CircleSlash,
@@ -90,6 +91,7 @@ export function SessionHeader({
     const [showBgMenu, setShowBgMenu] = useState(false);
     const [showEffectsMenu, setShowEffectsMenu] = useState(false);
     const [isMobilePerfMode, setIsMobilePerfMode] = useState(false);
+    const [isTheaterMode, setIsTheaterMode] = useState(battlemapToolStore.isTheaterMode);
 
     useEffect(() => {
         const viewportMedia = window.matchMedia("(max-width: 1024px)");
@@ -104,6 +106,13 @@ export function SessionHeader({
             viewportMedia.removeEventListener("change", syncMedia);
             coarsePointerMedia.removeEventListener("change", syncMedia);
         };
+    }, []);
+
+    useEffect(() => {
+        const unsub = battlemapToolStore.subscribe(() => {
+            setIsTheaterMode(battlemapToolStore.isTheaterMode);
+        });
+        return unsub;
     }, []);
 
     if (!imageUrl && !isGM && !videoStream && !children) return null;
@@ -387,6 +396,43 @@ export function SessionHeader({
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                         <Swords size={14} /> BATTLEMAP
+                                    </button>
+                                )}
+                                {isArena && (
+                                    <button
+                                        onClick={() => {
+                                            if (!isTheaterMode) {
+                                                onUpdate("BATTLEMAP_ACTIVATE");
+                                                battlemapToolStore.setTheaterMode(true);
+                                            } else {
+                                                battlemapToolStore.setTheaterMode(false);
+                                            }
+                                            setShowBgMenu(false);
+                                        }}
+                                        style={{
+                                            background: isTheaterMode ? 'rgba(var(--accent-rgb), 0.18)' : 'transparent',
+                                            border: 'none',
+                                            borderBottom: '1px solid rgba(var(--accent-rgb), 0.3)',
+                                            color: '#fff',
+                                            padding: '10px 16px',
+                                            fontFamily: 'var(--font-header)',
+                                            letterSpacing: '0.05em',
+                                            fontSize: '0.65rem',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            transition: 'background 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isTheaterMode) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isTheaterMode) e.currentTarget.style.background = 'transparent';
+                                        }}
+                                    >
+                                        <Monitor size={14} /> {isTheaterMode ? 'SAIR TEATRO' : 'MODO TEATRO'}
                                     </button>
                                 )}
                                 <button
