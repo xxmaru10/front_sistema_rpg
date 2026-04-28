@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { globalEventStore } from "@/lib/eventStore";
-import { Stroke, BattlemapObject } from "@/types/domain";
+import { Stroke, BattlemapObject, BattlemapScene, BattlemapBackgroundTransform } from "@/types/domain";
 import { v4 as uuidv4 } from "uuid";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { battlemapToolStore, Tool } from "@/lib/battlemapToolStore";
 import { BattlemapObjects } from "./BattlemapObjects";
+import { BattlemapSceneManager } from "./BattlemapSceneManager";
+import { BattlemapLayersPanel } from "./BattlemapLayersPanel";
+import { BattlemapBackgroundEditor } from "./BattlemapBackgroundEditor";
 
 interface BattlemapProps {
     sessionId: string;
@@ -16,7 +19,10 @@ interface BattlemapProps {
     gridThickness?: number;
     strokes: Stroke[];
     objects: BattlemapObject[];
+    scenes?: BattlemapScene[];
+    activeSceneId?: string;
     isGM: boolean;
+    mode?: "combat" | "theater";
 }
 
 
@@ -30,13 +36,19 @@ export function Battlemap({
     gridThickness = 1,
     strokes,
     objects,
-    isGM
+    scenes,
+    activeSceneId,
+    isGM,
+    mode = "combat",
 }: BattlemapProps) {
     const [localZoom, setLocalZoom] = useState(1);
     const [localOffset, setLocalOffset] = useState({ x: 0, y: 0 });
     const [activeTool, setActiveTool] = useState<Tool>(battlemapToolStore.activeTool);
     const [penColor, setPenColor] = useState(battlemapToolStore.penColor);
     const [showLibrary, setShowLibrary] = useState(battlemapToolStore.showLibrary);
+    const [isBackgroundEditing, setIsBackgroundEditing] = useState(false);
+    const [draftBackgroundUrl, setDraftBackgroundUrl] = useState<string | null>(null);
+    const [draftTransform, setDraftTransform] = useState<BattlemapBackgroundTransform>({ x: 0, y: 0, width: 1280, height: 720 });
     const [isDragging, setIsDragging] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
@@ -54,6 +66,29 @@ export function Battlemap({
     const lastPos = useRef({ x: 0, y: 0 });
 
     if (!isActive) return null;
+
+    const fallbackScene: BattlemapScene = {
+        id: "scene-1",
+        name: "Cena 1",
+        backgroundColor: "#0d0907",
+        backgroundImage: imageUrl || undefined,
+        backgroundTransform: { x: 0, y: 0, width: 1280, height: 720 },
+        layers: [
+            { id: "layer-bg-scene-1", type: "BACKGROUND", name: "Background" },
+            ...objects.map((obj) => ({
+                id: `layer-object-${obj.id}`,
+                type: "OBJECT" as const,
+                name: "Objeto",
+                objectId: obj.id,
+                thumbnailUrl: obj.imageUrl,
+            })),
+        ],
+        strokes,
+        objects,
+    };
+    const resolvedScenes: BattlemapScene[] = scenes && scenes.length > 0 ? scenes : [fallbackScene];
+    const resolvedActiveSceneId = activeSceneId || resolvedScenes[0]?.id;
+    const activeScene = resolvedScenes.find((scene) => scene.id === resolvedActiveSceneId) || fallbackScene;
 
     // Helper: Convert screen coordinates to canvas coordinates
     const getCanvasPos = (clientX: number, clientY: number) => {
@@ -222,6 +257,14 @@ export function Battlemap({
     };
 
     const handleSelectImage = (url: string) => {
+        if (mode === "theater") {
+            setDraftBackgroundUrl(url);
+            setDraftTransform(activeScene.backgroundTransform || { x: 0, y: 0, width: 1280, height: 720 });
+            setIsBackgroundEditing(true);
+            battlemapToolStore.setTheaterBackgroundEditing(true);
+            battlemapToolStore.closeLibrary();
+            return;
+        }
         const choice = confirm("Clique em OK para definir como FUNDO ou CANCELAR para adicionar como OBJETO (token).");
         if (choice) {
             handleUpdateSettings({ imageUrl: url });
@@ -241,13 +284,40 @@ export function Battlemap({
         battlemapToolStore.closeLibrary();
     };
 
+    const handleSceneUpdate = (patch: Partial<BattlemapScene>) => {
+        const updatedScenes = resolvedScenes.map((scene) => scene.id === activeScene.id ? { ...scene, ...patch } : scene);
+        handleUpdateSettings({ scenes: updatedScenes, activeSceneId: activeScene.id });
+    };
+
     return (
         <div className="battlemap-container">
+            {mode === "theater" && (
+                <BattlemapSceneManager
+                    scenes={resolvedScenes}
+                    activeSceneId={resolvedActiveSceneId}
+                    onSelectScene={(sceneId) => handleUpdateSettings({ activeSceneId: sceneId })}
+                    onCreateScene={() => {
+                        if (resolvedScenes.length >= 5) return;
+                        const sceneId = uuidv4();
+                        const newScene: BattlemapScene = {
+                            id: sceneId,
+                            name: `Cena ${resolvedScenes.length + 1}`,
+                            backgroundColor: "#0d0907",
+                            backgroundTransform: { x: 0, y: 0, width: 1280, height: 720 },
+                            layers: [{ id: `layer-bg-${sceneId}`, type: "BACKGROUND", name: "Background" }],
+                            strokes: [],
+                            objects: [],
+                        };
+                        handleUpdateSettings({ scenes: [...resolvedScenes, newScene], activeSceneId: sceneId });
+                    }}
+                />
+            )}
             <div 
                 ref={containerRef}
                 className="battlemap-canvas-area"
                 style={{
                     cursor: activeTool === "MOVE" ? (isDragging ? "grabbing" : "grab") : "crosshair",
+                    background: activeScene.backgroundColor,
                 }}
                 onWheel={handleWheel}
                 onPointerDown={handlePointerDown}
@@ -262,9 +332,9 @@ export function Battlemap({
                         transform: `translate(${localOffset.x}px, ${localOffset.y}px) scale(${localZoom})`,
                     }}
                 >
-                    {imageUrl && (
+                    {(activeScene.backgroundImage || imageUrl) && (
                         <img 
-                            src={imageUrl} 
+                            src={activeScene.backgroundImage || imageUrl} 
                             alt="Map" 
                             className="battlemap-background-img" 
                             draggable={false}
@@ -272,21 +342,29 @@ export function Battlemap({
                     )}
 
                     <BattlemapObjects 
-                        objects={objects} 
+                        objects={activeScene.objects || objects} 
                         isGM={isGM}
                         zoom={localZoom}
                         onUpdateObject={(id, patch) => {
-                            const newObjects = objects.map(o => o.id === id ? { ...o, ...patch } : o);
-                            handleUpdateSettings({ objects: newObjects });
+                            const newObjects = (activeScene.objects || objects).map(o => o.id === id ? { ...o, ...patch } : o);
+                            if (mode === "theater") {
+                                handleSceneUpdate({ objects: newObjects });
+                            } else {
+                                handleUpdateSettings({ objects: newObjects });
+                            }
                         }}
                         onDeleteObject={(id) => {
-                            const newObjects = objects.filter(o => o.id !== id);
-                            handleUpdateSettings({ objects: newObjects });
+                            const newObjects = (activeScene.objects || objects).filter(o => o.id !== id);
+                            if (mode === "theater") {
+                                handleSceneUpdate({ objects: newObjects, layers: activeScene.layers.filter((layer) => layer.objectId !== id) });
+                            } else {
+                                handleUpdateSettings({ objects: newObjects });
+                            }
                         }}
                     />
 
                     <svg className="battlemap-svg-layer">
-                        {strokes.map(s => (
+                        {(activeScene.strokes || strokes).map(s => (
                             <path 
                                 key={s.id} 
                                 d={drawPath(s.points)} 
@@ -329,6 +407,51 @@ export function Battlemap({
                     isOpen={showLibrary} 
                     onClose={() => battlemapToolStore.closeLibrary()} 
                     onSelect={handleSelectImage}
+                />
+            )}
+
+            {mode === "theater" && battlemapToolStore.theaterLayersOpen && (
+                <BattlemapLayersPanel
+                    scene={activeScene}
+                    onBackgroundColorChange={(color) => handleSceneUpdate({ backgroundColor: color })}
+                    onReorderLayer={(sourceId, targetId) => {
+                        const dynamicLayers = activeScene.layers.filter((l) => l.type !== "BACKGROUND");
+                        const srcIndex = dynamicLayers.findIndex((l) => l.id === sourceId);
+                        const tgtIndex = dynamicLayers.findIndex((l) => l.id === targetId);
+                        if (srcIndex < 0 || tgtIndex < 0) return;
+                        const reordered = [...dynamicLayers];
+                        const [moved] = reordered.splice(srcIndex, 1);
+                        reordered.splice(tgtIndex, 0, moved);
+                        handleSceneUpdate({ layers: [activeScene.layers[0], ...reordered] });
+                    }}
+                />
+            )}
+
+            {mode === "theater" && isBackgroundEditing && draftBackgroundUrl && (
+                <BattlemapBackgroundEditor
+                    imageUrl={draftBackgroundUrl}
+                    transform={draftTransform}
+                    onChange={setDraftTransform}
+                    onConfirm={() => {
+                        handleSceneUpdate({
+                            backgroundImage: draftBackgroundUrl,
+                            backgroundTransform: draftTransform,
+                            layers: activeScene.layers.some((l) => l.id === `layer-bgimg-${activeScene.id}`)
+                                ? activeScene.layers
+                                : [
+                                    ...activeScene.layers,
+                                    { id: `layer-bgimg-${activeScene.id}`, type: "OBJECT", name: "Cenario", thumbnailUrl: draftBackgroundUrl },
+                                ],
+                        });
+                        setIsBackgroundEditing(false);
+                        setDraftBackgroundUrl(null);
+                        battlemapToolStore.setTheaterBackgroundEditing(false);
+                    }}
+                    onCancel={() => {
+                        setIsBackgroundEditing(false);
+                        setDraftBackgroundUrl(null);
+                        battlemapToolStore.setTheaterBackgroundEditing(false);
+                    }}
                 />
             )}
         </div>

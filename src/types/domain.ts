@@ -247,6 +247,34 @@ export type BattlemapObject = {
     locked: boolean;
 };
 
+export type BattlemapLayerType = "BACKGROUND" | "OBJECT";
+
+export type BattlemapLayer = {
+    id: string;
+    type: BattlemapLayerType;
+    name: string;
+    objectId?: string;
+    thumbnailUrl?: string;
+};
+
+export type BattlemapBackgroundTransform = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+export type BattlemapScene = {
+    id: string;
+    name: string;
+    backgroundColor: string;
+    backgroundImage?: string;
+    backgroundTransform?: BattlemapBackgroundTransform;
+    layers: BattlemapLayer[];
+    strokes: Stroke[];
+    objects: BattlemapObject[];
+};
+
 export type BattlemapState = {
     isActive: boolean;
     imageUrl: string;
@@ -258,6 +286,8 @@ export type BattlemapState = {
     zoom: number;
     strokes: Stroke[];
     objects: BattlemapObject[];
+    scenes?: BattlemapScene[];
+    activeSceneId?: string;
 };
 
 

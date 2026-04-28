@@ -10,7 +10,7 @@ import { useState } from "react";
 export function useSessionUIState() {
     const [challengeMode, setChallengeMode] = useState(true);
     const [activeTab, setActiveTab] = useState<
-        "characters" | "log" | "combat" | "bestiary" | "notes" | "vi"
+        "characters" | "log" | "combat" | "theater" | "bestiary" | "notes" | "vi"
     >("characters");
     const [showCreator, setShowCreator] = useState(false);
     const [showSummonModal, setShowSummonModal] = useState(false);

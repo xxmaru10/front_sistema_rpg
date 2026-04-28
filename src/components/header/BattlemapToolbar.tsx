@@ -22,6 +22,7 @@ export function BattlemapToolbar({
     penColor,
     isTheaterMode = false,
 }: BattlemapToolbarProps) {
+    const isTheaterSurface = battlemapToolStore.activeSurfaceTab === "theater";
     return (
         <div className="battlemap-toolbar-container">
             <button
@@ -88,19 +89,48 @@ export function BattlemapToolbar({
                     )}
 
                     <div className="tool-divider" />
-                    <button
-                        className={`tool-icon-btn ${isTheaterMode ? "active" : ""}`}
-                        onClick={() => battlemapToolStore.toggleTheaterMode()}
-                        title="Modo Teatro (Ocultar Interface)"
-                        style={{
-                            color: isTheaterMode ? "var(--accent-color)" : undefined
-                        }}
-                    >
-                        <Monitor size={14} />
-                    </button>
+                    {!isTheaterSurface && (
+                        <button
+                            className={`tool-icon-btn ${isTheaterMode ? "active" : ""}`}
+                            onClick={() => battlemapToolStore.toggleTheaterMode()}
+                            title="Modo Teatro (Ocultar Interface)"
+                            style={{
+                                color: isTheaterMode ? "var(--accent-color)" : undefined
+                            }}
+                        >
+                            <Monitor size={14} />
+                        </button>
+                    )}
 
                     {userRole === "GM" && (
                         <>
+                            {isTheaterSurface && (
+                                <>
+                                    <div className="tool-divider" />
+                                    {(["CAMADAS", "PERSONAGEM", "OBJETO", "CENARIO", "TEXTO"] as const).map((tool) => {
+                                        const isPassive = tool === "PERSONAGEM" || tool === "OBJETO" || tool === "TEXTO";
+                                        return (
+                                            <button
+                                                key={tool}
+                                                className={`tool-icon-btn theater-tool-btn ${battlemapToolStore.theaterTool === tool ? "active" : ""}`}
+                                                disabled={isPassive}
+                                                onClick={() => {
+                                                    battlemapToolStore.setTheaterTool(tool);
+                                                    if (tool === "CAMADAS") {
+                                                        battlemapToolStore.setTheaterLayersOpen(!battlemapToolStore.theaterLayersOpen);
+                                                    }
+                                                    if (tool === "CENARIO") {
+                                                        battlemapToolStore.openLibrary();
+                                                    }
+                                                }}
+                                                title={isPassive ? `${tool} (em breve)` : tool}
+                                            >
+                                                {tool}
+                                            </button>
+                                        );
+                                    })}
+                                </>
+                            )}
                             <div className="tool-divider" />
                             <button
                                 className="tool-icon-btn"

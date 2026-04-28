@@ -4,7 +4,7 @@
  * Contains the initial state and the 'reduce' function that processes each ActionEvent.
  * @note: This is a synthesis guide for architectural understanding.
  */
-import { ActionEvent, SessionState, Character, Aspect, Note, EntityNote } from "@/types/domain";
+import { ActionEvent, SessionState, Character, Aspect, Note, EntityNote, BattlemapState } from "@/types/domain";
 import { DEFAULT_SKILLS } from "@/systems/fate/types";
 import type { StressTrackValues } from "@/systems/fate/types";
 import { getCachedSystem } from "@/systems/registry";
@@ -80,6 +80,53 @@ function patchById<T extends { id: string }>(list: T[], id: string, patch: Parti
 
 function clearFolderIdFromNotes(notes: Note[], folderId: string): Note[] {
     return notes.map(note => note.folderId === folderId ? { ...note, folderId: undefined } : note);
+}
+
+function createDefaultBattlemap(): BattlemapState {
+    return {
+        isActive: false,
+        imageUrl: "",
+        gridSize: 50,
+        gridColor: "rgba(255,255,255,0.1)",
+        gridThickness: 1,
+        offsetX: 0,
+        offsetY: 0,
+        zoom: 1,
+        strokes: [],
+        objects: [],
+        scenes: [],
+        activeSceneId: undefined,
+    };
+}
+
+function ensureBattlemapScenes(state: BattlemapState): BattlemapState {
+    if (state.scenes && state.scenes.length > 0) return state;
+    const sceneId = "scene-1";
+    return {
+        ...state,
+        activeSceneId: sceneId,
+        scenes: [
+            {
+                id: sceneId,
+                name: "Cena 1",
+                backgroundColor: "#0d0907",
+                backgroundImage: state.imageUrl || undefined,
+                backgroundTransform: { x: 0, y: 0, width: 1280, height: 720 },
+                layers: [
+                    { id: `layer-bg-${sceneId}`, type: "BACKGROUND", name: "Background" },
+                    ...(state.objects || []).map((obj) => ({
+                        id: `layer-object-${obj.id}`,
+                        type: "OBJECT" as const,
+                        name: "Objeto",
+                        objectId: obj.id,
+                        thumbnailUrl: obj.imageUrl,
+                    })),
+                ],
+                strokes: state.strokes || [],
+                objects: state.objects || [],
+            },
+        ],
+    };
 }
 
 function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState {
@@ -1253,23 +1300,13 @@ function reduceFateLegacy(state: SessionState, event: ActionEvent): SessionState
         }
 
         case "BATTLEMAP_UPDATED": {
+            const merged = {
+                ...(state.battlemap || createDefaultBattlemap()),
+                ...payload
+            } as BattlemapState;
             return {
                 ...state,
-                battlemap: {
-                    ...(state.battlemap || {
-                        isActive: false,
-                        imageUrl: "",
-                        gridSize: 50,
-                        gridColor: "rgba(255,255,255,0.1)",
-                        gridThickness: 1,
-                        offsetX: 0,
-                        offsetY: 0,
-                        zoom: 1,
-                        strokes: [],
-                        objects: []
-                    }),
-                    ...payload
-                }
+                battlemap: ensureBattlemapScenes(merged)
             };
         }
 

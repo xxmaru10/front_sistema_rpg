@@ -6,7 +6,7 @@ repo: frontend
 related:
   - /knowledge/stack.md
   - /knowledge/shared/api-contract.md
-last_updated: 2026-04-26 (story-66 validada por trace + estilo boxed-consequence compartilhado entre plugins de sistema via CombatCardStyles global)
+last_updated: 2026-04-28 (story-68 modo teatro com cena/camadas sincronizadas por BATTLEMAP_UPDATED)
 status: ativo
 ---
 
@@ -105,7 +105,8 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 | Tema Individual por Jogador com Bloqueio do Mestre (Story 43) | O seletor de tema ficou disponivel para PLAYER em modo local (sem evento PUBLIC), com persistencia por sessao+usuario em `localStorage` (`cronos_local_theme_{sessionId}_{userId}`) e override CSS dedicado (`#theme-player-override`). O mestre controla `SESSION_THEME_LOCK_UPDATED`; quando bloqueado, jogadores veem botao desabilitado com lock/tooltip e o override local e removido temporariamente sem apagar preferencia. | 2026-04-18 |
 | Seletor Multi-Dado com Breakdown Deterministico (Story 44) | O fluxo de rolagem 3D foi alinhado com Event Sourcing: `diceBreakdown` agora percorre fim-a-fim (`useFateDiceSimulation` -> `diceSimulationStore` -> `page.tsx` -> `useDiceRoller` -> `createRollEvent`), mantendo `dice` legado sincronizado por flatten do breakdown. `d100` passa a consolidar par de d10 em valor unico (1..100), o fallback com pool vazio gera `4dF` consistentemente e a overlay final exibe resultados por tipo para evitar perda de semantica em pools heterogeneos. | 2026-04-18 |
 | Story 44 - Guardas de Interacao no Overlay 3D | A camara passou a ter janela curta de armamento de input e hold minimo para lancamento, reduzindo auto-roll acidental por click-through entre menu e canvas. A UI do overlay tambem bloqueia propagacao nos botoes de acao/edicao/clear para manter o estado idle estavel durante selecao de pool. | 2026-04-18 |
-| Story 45 - Rolagem Oculta do Mestre por Evento | `ROLL_RESOLVED` passou a aceitar `payload.hiddenForPlayers` (apenas quando verdadeiro) com `visibility: "GM_ONLY"` para rolagens ocultas. O estado final de visibilidade e resolvido por `payload.hiddenForPlayers` + overrides em `ROLL_VISIBILITY_UPDATED` (`rollVisibilityOverrides[rollEventId]`). O toggle do log emite `ROLL_VISIBILITY_UPDATED` como `PUBLIC`, com `actorUserId` normalizado, e a filtragem para PLAYER ocorre na camada de renderizacao (CombatLog/LogTab), preservando Event Sourcing e replay. | 2026-04-19 |
+
+| Story 68 - Modo Teatro na Plataforma | Nova aba `theater` na sessao, menu de ferramentas no header (Camadas/Cenario funcionais), modelo de `BattlemapState` com `scenes`/`layers` e migracao lazy de legado (`imageUrl`/`strokes`/`objects`) mantendo sincronizacao via `BATTLEMAP_UPDATED`. | 2026-04-28 |
 
 | ConsolidaÃ§Ã£o Feature-based (Session Notes) | MigraÃ§Ã£o completa de SessionNotes para `src/features/session-notes`. Agrupamento de hooks especializados (fragmentaÃ§Ã£o do useSessionNotes), componentes de abas e estilos em um Ãºnico domÃ­nio isolado. SubstituiÃ§Ã£o de `confirm()` nativo por `useDeleteConfirm` (UX de exclusÃ£o segura nÃ£o-bloqueante/portal-based) em todas as abas. | 2026-04-04 |
 
@@ -280,3 +281,4 @@ O Cronos Vtt utiliza uma arquitetura de **Event Sourcing**. Isso significa que a
 ## O que evitar
 - NÃ£o coloque lÃ³gica de cÃ¡lculo de jogo diretamente em componentes de UI. Use `gameLogic.ts`.
 - Evite mutar o estado local sem despachar um evento se a aÃ§Ã£o for visÃ­vel para outros jogadores.
+

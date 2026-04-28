@@ -1,7 +1,7 @@
 ---
 repo: frontend
 language: pt-BR
-last_updated: 2026-04-26 (story-66 validada por trace + boxed-consequence visual unificado entre plugins de sistema)
+last_updated: 2026-04-28 (story-68 modo teatro com cenas/camadas/cenario inicial)
 ---
 
 # Cronos Vtt — Frontend
@@ -55,7 +55,8 @@ Mantenha o uso da janela de contexto entre 50% e 70%.
 | Infraestrutura de Plugin de Sistema (campo system, registry, seletor) | planejada | `/stories/story-63-infraestrutura-plugin-sistema.md` |
 | Extrair Fate Core como primeiro plugin | planejada | `/stories/story-64-extrair-fate-como-primeiro-plugin.md` |
 | Performance — finishRoll fan-out + YouTube idle + cache sincrono | concluida | `/stories/story-66-performance-finishroll-eventstore-fanout-e-yt-idle.md` |
-| Tipografia Gótico, Cor de Título Separada e Tema Synthwave | proposta | `/stories/story-67-tema-gotico-tipografia-cor-titulo-e-tema-synthwave-neon.md` |
+| Tipografia G�tico, Cor de T�tulo Separada e Tema Synthwave | proposta | /stories/story-67-tema-gotico-tipografia-cor-titulo-e-tema-synthwave-neon.md |
+| Modo Teatro na Interface entre Arena e Streaming | em-revisao | /stories/story-68-modo-teatro-na-interface-entre-arena-e-streaming.md |
 
 ## Tags disponíveis no projeto
 `ui` `api` `auth` `eventsourcing` `vtt` `3d` `webrtc` `componente` `fluxo` `schema` `regras` `config` `estável` `em-revisão` `deprecated`
@@ -112,3 +113,4 @@ Antes de iniciar qualquer alteração de código ou design, a IA **deve** identi
 3. **Limite de Contexto**: Mantenha o uso da janela de contexto entre **50% e 70%**. Se precisar carregar mais de 3 arquivos grandes (>500 linhas), **pergunte ao humano primeiro**.
 4. **Foco no Escopo**: Não modifique arquivos fora do escopo descrito na história atual em `/stories`. Se precisar fazer uma alteração "cross-file", registre a necessidade no `AI.md` primeiro.
 5. **Atualização Reativa**: Ao concluir, atualize `last_updated` e registre decisões em `/knowledge/architecture.md`.
+

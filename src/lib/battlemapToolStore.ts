@@ -1,5 +1,7 @@
 
 export type Tool = "MOVE" | "PEN" | "ERASER" | "ZOOM" | "IMAGE";
+export type TheaterTool = "CAMADAS" | "PERSONAGEM" | "OBJETO" | "CENARIO" | "TEXTO";
+export type SessionSurfaceTab = "characters" | "log" | "combat" | "bestiary" | "notes" | "vi" | "theater";
 
 class BattlemapToolStore {
   activeTool: Tool = "MOVE";
@@ -7,6 +9,10 @@ class BattlemapToolStore {
   showToolbar: boolean = false;
   showLibrary: boolean = false;
   isTheaterMode: boolean = false;
+  activeSurfaceTab: SessionSurfaceTab = "characters";
+  theaterTool: TheaterTool = "CAMADAS";
+  theaterLayersOpen: boolean = false;
+  theaterBackgroundEditing: boolean = false;
   listeners: (() => void)[] = [];
 
   setTool(tool: Tool) {
@@ -25,6 +31,26 @@ class BattlemapToolStore {
 
   setTheaterMode(val: boolean) {
     this.isTheaterMode = val;
+    this.notify();
+  }
+
+  setActiveSurfaceTab(tab: SessionSurfaceTab) {
+    this.activeSurfaceTab = tab;
+    this.notify();
+  }
+
+  setTheaterTool(tool: TheaterTool) {
+    this.theaterTool = tool;
+    this.notify();
+  }
+
+  setTheaterLayersOpen(open: boolean) {
+    this.theaterLayersOpen = open;
+    this.notify();
+  }
+
+  setTheaterBackgroundEditing(editing: boolean) {
+    this.theaterBackgroundEditing = editing;
     this.notify();
   }
 

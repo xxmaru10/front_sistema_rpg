@@ -52,3 +52,15 @@
     background: rgba(255,255,255,0.2);
     margin: 0 4px;
 }
+
+.theater-tool-btn {
+    width: auto;
+    padding: 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+}
+
+.theater-tool-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
